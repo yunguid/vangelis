@@ -1,0 +1,53 @@
+<html>
+    <head>
+        <title> lfg rust wasm sound design</title>
+        <style>
+            .key { width: 40px; height: 120px; border: 1px solid black; display: inline-block; cursor: pointer; }
+            </style>
+    </head>
+    <body>
+        <div>
+            <button onclick="setWaveform('Sine')">Sine Wave</button>
+            <button onclick="setWaveform('Sawtooth')">Sawtooth Wave</button>
+        </div>
+        <div id="keyboard"></div>
+
+        <script type="module">
+            import init, { generate_waveform, Waveform } from './pkg/sound_engine.js';
+            await init();
+            
+            let currentWaveform = Waveform.Sine;
+            const sampleRate = 44100;
+
+            window.setWaveform = (waveType) => {
+                currentWaveform = Waveform[waveType];
+            };
+
+            const notes = {
+                'C4': 261.63, 'D4': 293.66, 'E4': 329.63,
+                'F4': 349.23, 'G4': 392.00, 'A4': 440.00,
+                'B4': 493.88, 'C5': 523.25
+            };
+
+            function playNote(freq) {
+                const samples = generate_waveform(currentWaveform, freq, 1.0, sampleRate);
+                const audioCtx = new AudioContext();
+                const buffer = audioCtx.createBuffer(1, samples.length, sampleRate);
+                buffer.copyToChannel(samples, 0);
+                const source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+                source.connect(audioCtx.destination);
+                source.start();
+            }
+
+            const keyboardDiv = document.getElementById('keyboard');
+            Object.entries(notes).forEach(([note, freq]) => {
+                const key = document.createElement('div');
+                key.className = 'key';
+                key.innerText = note;
+                key.onclick = () => playNote(freq);
+                keyboardDiv.appendChild(key);
+            });
+        </script>
+    </body>
+</html>
