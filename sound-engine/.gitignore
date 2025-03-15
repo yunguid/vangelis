@@ -1,4 +1,7 @@
-/target
+target/
+audio-engine/pkg/
+frontend/node_modules/
+dist/
 **/*.rs.bk
 Cargo.lock
 bin/
