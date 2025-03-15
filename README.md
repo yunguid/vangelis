@@ -41,7 +41,7 @@ cargo run
 ```
 ---
 
-## ⚙️ All-in-one Build Script
+## All-in-one Build Script
 
 ```bash
 ./build_and_run.sh
