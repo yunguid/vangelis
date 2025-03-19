@@ -5,7 +5,7 @@ import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
 
 // WASM initialization - Fixed import path
-import init from '/pkg/sound_engine.js';
+import init from './wasm/sound_engine.js';
 
 const App = () => {
   const [wasmLoaded, setWasmLoaded] = useState(false);

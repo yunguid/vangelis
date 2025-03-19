@@ -7,7 +7,7 @@ import {
   wasm_pan_stereo,
   WasmWaveform,
   ADSR
-} from '/public/pkg/sound_engine.js';
+} from '../wasm/sound_engine.js';
 
 // Audio context for the entire application
 let audioContext = null;
