@@ -1,0 +1,22 @@
+{
+  "name": "vangelis-synth-root",
+  "version": "1.0.0",
+  "description": "Vangelis Synthesizer Project",
+  "scripts": {
+    "dev": "cd sound-engine/frontend && npm run dev",
+    "build": "cd sound-engine/frontend && npm run build",
+    "preview": "cd sound-engine/frontend && npm run preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/vangelis.git"
+  },
+  "keywords": [
+    "synthesizer",
+    "audio",
+    "visualization",
+    "web-audio"
+  ],
+  "author": "",
+  "license": "MIT"
+} 

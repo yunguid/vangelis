@@ -1,0 +1,305 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles with enhanced base settings */
+:root {
+  --color-dark-purple: #300A0A;
+  --color-deep-purple: #1A0000;
+  --color-blood-red: #8B0000;
+  --color-orange-red: #FF4500;
+  --color-coral: #FF7F50;
+  --color-tomato: #FF6347;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  font-family: 'Orbitron', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: linear-gradient(to top, var(--color-deep-purple), var(--color-dark-purple));
+  color: #FFF;
+  user-select: none; /* Prevent text selection for better mobile experience */
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Enhanced neon text effects with stronger glow */
+.neon-text {
+  text-shadow:
+    0 0 5px #FFF,
+    0 0 10px #FFF,
+    0 0 20px var(--color-tomato),
+    0 0 30px var(--color-tomato),
+    0 0 40px var(--color-tomato),
+    0 0 50px var(--color-tomato);
+}
+
+.neon-text-pink {
+  text-shadow:
+    0 0 5px #FFF,
+    0 0 10px #FFF,
+    0 0 20px var(--color-orange-red),
+    0 0 30px var(--color-orange-red),
+    0 0 40px var(--color-orange-red),
+    0 0 50px var(--color-orange-red);
+}
+
+.neon-text-cyan {
+  text-shadow:
+    0 0 5px #FFF,
+    0 0 10px #FFF,
+    0 0 20px var(--color-coral),
+    0 0 30px var(--color-coral),
+    0 0 40px var(--color-coral),
+    0 0 50px var(--color-coral);
+}
+
+.neon-text-purple {
+  text-shadow:
+    0 0 5px #FFF,
+    0 0 10px #FFF,
+    0 0 20px var(--color-blood-red),
+    0 0 30px var(--color-blood-red),
+    0 0 40px var(--color-blood-red),
+    0 0 50px var(--color-blood-red);
+}
+
+/* Enhanced glass effect with more futuristic look */
+.glass {
+  background: rgba(48, 10, 10, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 99, 71, 0.1);
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.37),
+    inset 0 0 3px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.glass:hover {
+  background: rgba(48, 10, 10, 0.4);
+  box-shadow: 
+    0 8px 40px 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 5px 0 rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 99, 71, 0.15);
+}
+
+/* More futuristic key styling */
+.key {
+  @apply relative border rounded-b-lg cursor-pointer transition-all duration-200 flex items-end justify-center pb-2 text-xs md:text-sm;
+  background: linear-gradient(to bottom, rgba(48, 10, 10, 0.6), rgba(26, 0, 0, 0.8));
+  border-color: rgba(255, 69, 0, 0.4);
+  color: rgba(255, 127, 80, 0.9);
+  box-shadow: 
+    0 0 5px rgba(255, 69, 0, 0.2),
+    inset 0 -4px 4px rgba(0, 0, 0, 0.3);
+}
+
+.key:hover {
+  border-color: rgba(255, 99, 71, 0.7);
+  background: linear-gradient(to bottom, rgba(58, 14, 14, 0.7), rgba(37, 0, 0, 0.9));
+  box-shadow: 
+    0 0 15px rgba(255, 99, 71, 0.4),
+    inset 0 -4px 4px rgba(0, 0, 0, 0.3);
+}
+
+.key:active {
+  @apply transform scale-95;
+  border-color: rgba(255, 127, 80, 0.7);
+  background: linear-gradient(to bottom, rgba(37, 0, 0, 0.9), rgba(58, 14, 14, 0.7));
+  box-shadow: 
+    0 0 15px rgba(255, 127, 80, 0.5),
+    inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.key.black {
+  @apply absolute z-10;
+  background: linear-gradient(to bottom, rgba(10, 0, 0, 0.9), rgba(0, 0, 0, 0.95));
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 0 10px rgba(0, 0, 0, 0.7),
+    inset 0 -3px 3px rgba(0, 0, 0, 0.6);
+}
+
+.key.black:hover {
+  background: linear-gradient(to bottom, rgba(15, 0, 0, 0.95), rgba(0, 0, 0, 0.98));
+  border-color: rgba(255, 99, 71, 0.5);
+}
+
+/* Enhanced pulsating animation for highlights */
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 5px var(--glow-color), 0 0 10px var(--glow-color); }
+  50% { box-shadow: 0 0 20px var(--glow-color), 0 0 30px var(--glow-color), 0 0 40px var(--glow-color); }
+  100% { box-shadow: 0 0 5px var(--glow-color), 0 0 10px var(--glow-color); }
+}
+
+.pulse-blue {
+  animation: pulse-glow 2s infinite;
+  --glow-color: rgba(255, 69, 0, 0.7);
+}
+
+.pulse-pink {
+  animation: pulse-glow 2s infinite;
+  --glow-color: rgba(255, 99, 71, 0.7);
+}
+
+.pulse-cyan {
+  animation: pulse-glow 2s infinite;
+  --glow-color: rgba(255, 127, 80, 0.7);
+}
+
+.pulse-purple {
+  animation: pulse-glow 2s infinite;
+  --glow-color: rgba(139, 0, 0, 0.7);
+}
+
+/* Enhanced loading animation */
+@keyframes loading-wave {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-10px) scale(1.1); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.loading-wave > * {
+  animation: loading-wave 1.5s infinite;
+}
+
+.loading-wave > *:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-wave > *:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Title animation */
+@keyframes title-glow {
+  0% { text-shadow: 0 0 10px var(--color-orange-red), 0 0 20px var(--color-orange-red); }
+  50% { text-shadow: 0 0 20px var(--color-orange-red), 0 0 30px var(--color-orange-red), 0 0 40px var(--color-orange-red), 0 0 50px var(--color-orange-red); }
+  100% { text-shadow: 0 0 10px var(--color-orange-red), 0 0 20px var(--color-orange-red); }
+}
+
+.title-glow {
+  animation: title-glow 3s infinite;
+  font-family: 'Syncopate', sans-serif;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-orange-red);
+}
+
+/* Retro grid effect for backgrounds */
+.retro-grid {
+  background-image: linear-gradient(rgba(255, 69, 0, 0.2) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 69, 0, 0.2) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: center center;
+  perspective: 500px;
+  transform-style: preserve-3d;
+  animation: grid-move 20s linear infinite;
+}
+
+@keyframes grid-move {
+  from { background-position: 0 0; }
+  to { background-position: 0 20px; }
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .neon-text, .neon-text-pink, .neon-text-cyan, .neon-text-purple {
+    text-shadow:
+      0 0 5px #FFF,
+      0 0 10px #FFF,
+      0 0 15px currentColor;
+  }
+  
+  .glass {
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+  }
+  
+  .title-glow {
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+  }
+}
+
+/* Cyberpunk style buttons */
+.cyber-button {
+  position: relative;
+  background: linear-gradient(45deg, var(--color-dark-purple), var(--color-deep-purple));
+  border: 1px solid var(--color-orange-red);
+  color: var(--color-orange-red);
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 0.5rem 1.5rem;
+  transition: all 0.2s;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(255, 69, 0, 0.3);
+}
+
+.cyber-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 69, 0, 0.2), transparent);
+  transition: all 0.5s;
+}
+
+.cyber-button:hover::before {
+  left: 100%;
+}
+
+.cyber-button:hover {
+  background: linear-gradient(45deg, var(--color-deep-purple), var(--color-dark-purple));
+  box-shadow: 0 0 15px rgba(255, 69, 0, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Improved scrollbar for browsers that support it */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-deep-purple);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-dark-purple);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 69, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(var(--color-dark-purple), var(--color-orange-red));
+}
+
+/* Enhanced accessibility improvements */
+button:focus, a:focus, input:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-coral), 0 0 10px var(--color-coral);
+  outline-offset: 2px;
+} 
