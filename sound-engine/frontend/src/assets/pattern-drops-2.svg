@@ -1,0 +1,15 @@
+<svg width="240" height="480" viewBox="0 0 240 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="dropletSoft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(112 120) scale(60 140)">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.65" />
+      <stop offset="1" stop-color="#E8F0F5" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="dropletSoftSm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(52 340) scale(34 96)">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5" />
+      <stop offset="1" stop-color="#D1DCE5" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <ellipse cx="112" cy="148" rx="34" ry="92" fill="url(#dropletSoft)" />
+  <ellipse cx="172" cy="302" rx="22" ry="78" fill="url(#dropletSoftSm)" />
+  <ellipse cx="62" cy="338" rx="18" ry="64" fill="url(#dropletSoftSm)" transform="rotate(-8 62 338)" />
+</svg>

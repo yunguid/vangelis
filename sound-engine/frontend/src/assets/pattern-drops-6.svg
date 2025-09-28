@@ -1,0 +1,13 @@
+<svg width="280" height="560" viewBox="0 0 280 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="chain" x1="0" y1="0" x2="0" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFB" stop-opacity="0.0" />
+      <stop offset="0.3" stop-color="#FFFFFF" stop-opacity="0.42" />
+      <stop offset="0.75" stop-color="#E8F0F5" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#D1DCE5" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <path d="M40 20C40 20 44 64 40 92C36 120 44 152 40 184C36 216 44 248 40 280C36 312 44 344 40 376C36 408 44 440 40 472C36 504 40 540 40 540" stroke="url(#chain)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M120 0C120 0 122 48 120 80C118 112 122 148 120 180C118 212 122 248 120 280C118 312 122 348 120 380C118 412 122 448 120 480C118 512 120 552 120 552" stroke="url(#chain)" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />
+  <path d="M200 40C200 40 206 76 200 108C194 140 206 176 200 208C194 240 206 276 200 308C194 340 206 376 200 408C194 440 206 476 200 508C194 540 200 560 200 560" stroke="url(#chain)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" />
+</svg>

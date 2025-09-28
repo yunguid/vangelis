@@ -1,0 +1,14 @@
+<svg width="200" height="400" viewBox="0 0 200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="pearl" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(60 200) scale(16 48)">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.75" />
+      <stop offset="1" stop-color="#E8F0F5" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <circle cx="34" cy="72" r="6" fill="#FFFFFF" fill-opacity="0.28" />
+  <circle cx="148" cy="44" r="5" fill="#FFFFFF" fill-opacity="0.18" />
+  <ellipse cx="96" cy="200" rx="12" ry="42" fill="url(#pearl)" />
+  <ellipse cx="164" cy="246" rx="10" ry="36" fill="url(#pearl)" transform="rotate(12 164 246)" />
+  <circle cx="104" cy="332" r="7" fill="#FFFFFF" fill-opacity="0.22" />
+  <circle cx="42" cy="298" r="4" fill="#F8FAFB" fill-opacity="0.18" />
+</svg>

@@ -1,69 +1,39 @@
-# Rust-WASM Audio Synth Engine
+# Vangelis
 
-A synthesizer built with Rust, WebAssembly (WASM), React, and Rocket.
+WebAssembly synthesizer with Rust audio engine and React interface.
 
----
-
-## Project Structure
-
-```
-sound-engine/
-├── audio-engine/      # Rust audio processing (compiled to WASM)
-├── backend/           # Rocket backend server
-├── frontend/          # React/Vite frontend
-└── tests/             # Testing suite
-```
-
----
-
-## Quickstart
-
-### 1. Build the Audio Engine (Rust to WASM)
+## Quick Start
 
 ```bash
-cd audio-engine
+./sound-engine/build_and_run.sh
+```
+
+## Structure
+
+- `sound-engine/audio-engine/` - Rust WASM audio processing
+- `sound-engine/backend/` - Rocket file server  
+- `sound-engine/frontend/` - React UI with keyboard
+
+## Manual Build
+
+```bash
+# Build WASM
+cd sound-engine/audio-engine
 wasm-pack build --target web --out-dir ../frontend/public/pkg
-```
 
-### 2. Build the Frontend (React with Vite)
-
-```bash
+# Build frontend
 cd ../frontend
-npm install
-npm run build
-```
+npm install && npm run build
 
-### 3. Launch the Backend (Rocket Server)
-
-```bash
+# Run server
 cd ../backend
 cargo run
 ```
----
 
-## All-in-one Build Script
+## Dependencies
 
-```bash
-./build_and_run.sh
-```
+- Rust + wasm-pack
+- Node.js + npm
+- Cargo
 
----
-
-### WASM Compilation issues
-
-- Make sure [`wasm-pack`](https://rustwasm.github.io/wasm-pack/) is installed:
-
-```bash
-cargo install wasm-pack
-```
-
----
-
-## Deps
-
-- **Frontend**: React, Vite
-- **Audio Engine**: Rust, wasm-bindgen
-- **Backend**: Rocket v0.5.0
-
----
-
+Open http://localhost:8000

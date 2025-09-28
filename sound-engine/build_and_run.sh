@@ -1,15 +1,24 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "📦 Building audio engine (Rust to WASM)..."
-cd audio-engine
-wasm-pack build --target web --out-dir ../frontend/public/pkg
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "🎨 Building frontend (React/Vite)..."
-cd ../frontend
-npm install
-npm run build
+echo "Building audio engine (Rust to WASM)..."
+(
+  cd "$SCRIPT_DIR/audio-engine"
+  wasm-pack build --target web --out-dir ../frontend/public/pkg
+)
 
-echo "🚀 Launching backend server (Rocket)..."
-cd ../backend
-cargo run
+echo "Building frontend (React/Vite)..."
+(
+  cd "$SCRIPT_DIR/frontend"
+  rm -rf node_modules
+  npm ci
+  npm run build
+)
+
+echo "Launching backend server (Rocket)..."
+(
+  cd "$SCRIPT_DIR/backend"
+  cargo run
+)

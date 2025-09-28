@@ -1,0 +1,12 @@
+# Node build outputs
+sound-engine/frontend/node_modules/
+sound-engine/frontend/dist/
+
+# Rust build outputs
+sound-engine/audio-engine/target/
+
+# wasm-pack artifacts outside canonical public/pkg
+sound-engine/audio-engine/pkg/
+sound-engine/frontend/public/sound_engine*.wasm
+sound-engine/frontend/public/sound_engine*.js
+sound-engine/frontend/public/sound_engine*.d.ts

@@ -1,67 +1,90 @@
-import React, { useState, useEffect, Suspense } from 'react';
-import Scene from './components/Scene';
+import React, { useState, useEffect, useRef } from 'react';
 import SynthKeyboard from './components/SynthKeyboard';
 import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
-
-// WASM initialization - Fixed import path
-import init from './wasm/sound_engine.js';
+import { audioEngine } from './utils/audioEngine.js';
 
 const App = () => {
-  const [wasmLoaded, setWasmLoaded] = useState(false);
+  const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = useState('Sine');
   const [audioParams, setAudioParams] = useState({
-    // Standard controls
     reverb: 0,
     delay: 0,
     distortion: 0,
     volume: 0.7,
-    
-    // New features
-    // ADSR
     useADSR: false,
     attack: 0.05,
     decay: 0.1,
     sustain: 0.7,
     release: 0.3,
-    
-    // FM Synthesis
     useFM: false,
     fmRatio: 2.5,
     fmIndex: 5,
-    
-    // Stereo & Phase
-    pan: 0.5, // center
-    phaseOffset: 0, // no phase offset
-    
-    // Performance
-    useParallel: false
+    pan: 0.5,
+    phaseOffset: 0
   });
-  const [isMobile, setIsMobile] = useState(false);
-  const [showControls, setShowControls] = useState(true);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const scrollRaf = useRef(null);
+  const wasmLoaded = engineStatus.wasmReady;
+  const isGraphWarm = engineStatus.graphWarmed;
 
-  // Initialize WASM
   useEffect(() => {
-    init().then(() => setWasmLoaded(true))
-      .catch(err => console.error('Failed to load WASM module:', err));
+    audioEngine.setGlobalParams(audioParams);
+  }, [audioParams]);
+
+  useEffect(() => {
+    const unsubscribe = audioEngine.subscribe(setEngineStatus);
+
+    audioEngine.ensureWasm().catch(() => {});
+    audioEngine.ensureAudioContext().then(() => {
+      audioEngine.warmGraph();
+    });
+
+    return unsubscribe;
   }, []);
 
-  // Detect mobile devices and handle resize
   useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const handleKeyboardShortcuts = (event) => {
+      if (event.key === '?' || (event.key === '/' && event.shiftKey)) {
+        event.preventDefault();
+        setShowShortcuts(prev => !prev);
+      }
+
+      if (event.key === 'Escape') {
+        setShowShortcuts(false);
+      }
     };
-    
-    // Initial check
-    checkIfMobile();
-    
-    // Set up listener for window resize
-    window.addEventListener('resize', checkIfMobile);
-    
-    return () => window.removeEventListener('resize', checkIfMobile);
+
+    window.addEventListener('keydown', handleKeyboardShortcuts);
+    return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
   }, []);
 
-  // Update audio parameters
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const updateScrollProgress = () => {
+      scrollRaf.current = null;
+      const max = root.scrollHeight - root.clientHeight;
+      const ratio = max > 0 ? window.scrollY / max : 0;
+      root.style.setProperty('--scroll-progress', ratio.toFixed(4));
+    };
+
+    const handleScroll = () => {
+      if (scrollRaf.current !== null) return;
+      scrollRaf.current = requestAnimationFrame(updateScrollProgress);
+    };
+
+    updateScrollProgress();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      if (scrollRaf.current !== null) {
+        cancelAnimationFrame(scrollRaf.current);
+      }
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   const handleAudioParamChange = (paramName, value) => {
     setAudioParams(prev => ({
       ...prev,
@@ -69,105 +92,112 @@ const App = () => {
     }));
   };
 
-  // Toggle mobile controls visibility
-  const toggleControls = () => {
-    setShowControls(prev => !prev);
-  };
-
   return (
-    <div className="h-screen w-screen overflow-hidden flex flex-col relative">
-      {/* 3D Scene Background */}
-      <Suspense fallback={
-        <div className="absolute inset-0 flex items-center justify-center bg-deep-purple">
-          <div className="loading-wave flex space-x-2">
-            <div className="w-4 h-4 bg-orange-red rounded-full"></div>
-            <div className="w-4 h-4 bg-coral rounded-full"></div>
-            <div className="w-4 h-4 bg-tomato rounded-full"></div>
-          </div>
-        </div>
-      }>
-        <div className="absolute inset-0 z-0">
-          <Scene audioParams={audioParams} />
-        </div>
-      </Suspense>
-      
-      {/* Mobile Toggle Button */}
-      {isMobile && (
-        <button 
-          className="absolute top-4 right-4 z-30 p-2 glass rounded-full"
-          onClick={toggleControls}
-        >
-          <svg 
-            xmlns="http://www.w3.org/2000/svg" 
-            width="24" 
-            height="24" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="#FF4500" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            {showControls ? (
-              <path d="M18 6L6 18M6 6l12 12" />
-            ) : (
-              <path d="M4 12h16M12 4v16" />
-            )}
-          </svg>
-        </button>
-      )}
-      
-      {/* Controls Container - Adaptive for Mobile/Desktop */}
-      {(!isMobile || showControls) && (
-        <div className={`
-          absolute z-20 transition-all duration-500 
-          ${isMobile ? 'inset-0 bg-deep-purple bg-opacity-80 backdrop-blur-md p-4 flex flex-col items-center justify-center gap-8' : 'top-0 left-0 right-0 flex justify-between p-4'}
-        `}>
-          {/* Waveform Controls */}
-          <div className={`${isMobile ? 'w-full max-w-xs' : ''}`}>
-            <UIOverlay 
-              currentWaveform={waveformType} 
-              onWaveformChange={setWaveformType} 
-            />
-          </div>
-          
-          {/* Audio Controls */}
-          <div className={`${isMobile ? 'w-full max-w-xs' : ''}`}>
-            <AudioControls 
-              audioParams={audioParams}
-              onParamChange={handleAudioParamChange}
-            />
-          </div>
-
-          {/* Mobile Close Button */}
-          {isMobile && (
-            <button 
-              className="mt-4 cyber-button rounded-lg"
-              onClick={toggleControls}
-            >
-              Close Controls
-            </button>
-          )}
-        </div>
-      )}
-      
-      {/* Title Overlay */}
-      <div className="absolute top-0 left-0 right-0 flex justify-center p-4 z-10 pointer-events-none">
-        <h1 className="text-2xl md:text-4xl font-syncopate title-glow tracking-widest uppercase">
-          Vangelis
-        </h1>
+    <div className="app-stage">
+      <div className="parallax-stage" aria-hidden="true">
+        <div className="parallax-layer parallax-layer--far" />
+        <div className="parallax-layer parallax-layer--mid" />
+        <div className="parallax-layer parallax-layer--near" />
       </div>
-      
-      {/* Keyboard at the bottom */}
-      <div className="mt-auto mb-4 md:mb-8 z-10 w-full flex justify-center items-center">
-        <SynthKeyboard 
-          waveformType={waveformType} 
-          audioParams={audioParams}
-          wasmLoaded={wasmLoaded}
-        />
+
+      <div className="app-shell">
+        <header className="zone-top tier-subtle drift-slow content-tertiary" aria-label="Branding and quick actions">
+          <div className="brand-title">Vangelis</div>
+          <button
+            type="button"
+            className="button-icon"
+            aria-label="View keyboard shortcuts"
+            onClick={() => setShowShortcuts(true)}
+          >
+            <span aria-hidden="true">?</span>
+          </button>
+        </header>
+
+        <main className="zone-center content-primary" aria-label="Keyboard area">
+          <div className="keyboard-surface tier-focus drift-medium" role="region" aria-label="Virtual keyboard">
+            <div className="keyboard-header">
+              <span>Keyboard</span>
+              <span className="keyboard-legend">Waveform · {waveformType}</span>
+            </div>
+            <div className="keyboard-region">
+              <SynthKeyboard
+                waveformType={waveformType}
+                audioParams={audioParams}
+                wasmLoaded={wasmLoaded}
+              />
+              {!isGraphWarm && (
+                <div className="warmup-indicator" aria-live="polite">
+                  <span className="warmup-indicator__pulse" aria-hidden="true" />
+                  <span>Warming up audio engine…</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
+
+        <section className="zone-bottom content-secondary" aria-label="Control surface">
+          <div className="controls-surface tier-support drift-fast">
+            <div className="controls-panel" aria-label="Waveform selection">
+              <UIOverlay
+                currentWaveform={waveformType}
+                onWaveformChange={setWaveformType}
+              />
+            </div>
+            <div className="controls-panel wide" aria-label="Audio controls">
+              <AudioControls
+                audioParams={audioParams}
+                onParamChange={handleAudioParamChange}
+              />
+            </div>
+          </div>
+        </section>
+
+        {showShortcuts && (
+          <div className="shortcuts-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+            <div className="shortcuts-card tier-support">
+              <div className="shortcuts-header">
+                <span>Keyboard Shortcuts</span>
+                <button
+                  type="button"
+                  className="button-icon"
+                  aria-label="Close shortcuts"
+                  onClick={() => setShowShortcuts(false)}
+                >
+                  <span aria-hidden="true"></span>
+                </button>
+              </div>
+              <dl className="shortcuts-grid">
+                <div>
+                  <dt>A – ;</dt>
+                  <dd>Play white keys across the active octave</dd>
+                </div>
+                <div>
+                  <dt>W – P</dt>
+                  <dd>Play black keys across the active octave</dd>
+                </div>
+                <div>
+                  <dt>Z / X</dt>
+                  <dd>Shift octave down or up</dd>
+                </div>
+                <div>
+                  <dt>C / V</dt>
+                  <dd>Adjust key velocity</dd>
+                </div>
+                <div>
+                  <dt>Shift + / (?)</dt>
+                  <dd>Toggle this overlay</dd>
+                </div>
+                <div>
+                  <dt>Escape</dt>
+                  <dd>Close overlays</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
-export default App; 
+export default App;

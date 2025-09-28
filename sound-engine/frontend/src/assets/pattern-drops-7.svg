@@ -1,0 +1,17 @@
+<svg width="320" height="640" viewBox="0 0 320 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(160 220) scale(120 220)">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.38" />
+      <stop offset="1" stop-color="#B8C6DB" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="taper" x1="120" y1="80" x2="220" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.4" />
+      <stop offset="0.6" stop-color="#E8F0F5" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#D1DCE5" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <ellipse cx="160" cy="240" rx="82" ry="180" fill="url(#halo)" />
+  <path d="M140 60C168 140 188 320 180 560" stroke="url(#taper)" stroke-width="1.6" stroke-linecap="round" />
+  <path d="M108 120C132 196 140 312 128 544" stroke="url(#taper)" stroke-width="1.2" stroke-linecap="round" opacity="0.6" />
+  <path d="M208 110C224 200 228 332 220 560" stroke="url(#taper)" stroke-width="1.4" stroke-linecap="round" opacity="0.65" />
+</svg>

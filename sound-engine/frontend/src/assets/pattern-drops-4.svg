@@ -1,0 +1,12 @@
+<svg width="320" height="640" viewBox="0 0 320 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="waveLight" x1="0" y1="0" x2="320" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFB" stop-opacity="0.0" />
+      <stop offset="0.5" stop-color="#E8F0F5" stop-opacity="0.4" />
+      <stop offset="1" stop-color="#F8FAFB" stop-opacity="0.0" />
+    </linearGradient>
+  </defs>
+  <path d="M-20 80C60 52 88 148 168 120C248 92 280 184 360 156" stroke="url(#waveLight)" stroke-width="1.6" stroke-linecap="round" />
+  <path d="M-10 240C70 212 96 308 176 280C256 252 288 344 368 316" stroke="url(#waveLight)" stroke-width="1.2" stroke-linecap="round" opacity="0.6" />
+  <path d="M-40 420C40 392 68 488 148 460C228 432 260 524 340 496" stroke="url(#waveLight)" stroke-width="1.4" stroke-linecap="round" opacity="0.5" />
+</svg>
