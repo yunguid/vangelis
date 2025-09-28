@@ -17,4 +17,7 @@ npm run build
 cd ../..
 
 echo "✅ Build complete! Files ready in sound-engine/frontend/dist/"
+echo "📁 Copying files to root for GitHub Pages..."
+cp -r sound-engine/frontend/dist/* .
+touch .nojekyll
 echo "🌐 Deploy to GitHub Pages by pushing to main branch"

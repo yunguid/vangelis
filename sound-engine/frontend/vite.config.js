@@ -9,7 +9,7 @@ export default defineConfig({
     wasm(),
     topLevelAwait()
   ],
-  base: '/vangelis/',
+  base: './',
   build: {
     outDir: 'dist',
     target: 'esnext',

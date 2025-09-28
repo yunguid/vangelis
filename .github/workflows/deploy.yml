@@ -51,13 +51,19 @@ jobs:
           cd sound-engine/frontend
           npm run build
 
+      - name: Copy built files to root and add .nojekyll
+        run: |
+          cp -r sound-engine/frontend/dist/* .
+          touch .nojekyll
+          ls -la
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: sound-engine/frontend/dist
+          path: .
 
   deploy:
     environment:
