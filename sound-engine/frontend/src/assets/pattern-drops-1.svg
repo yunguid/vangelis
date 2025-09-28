@@ -1,0 +1,13 @@
+<svg width="240" height="480" viewBox="0 0 240 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="glazeA" x1="0" y1="0" x2="0" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFB" stop-opacity="0.0" />
+      <stop offset="0.35" stop-color="#E8F0F5" stop-opacity="0.45" />
+      <stop offset="1" stop-color="#D1DCE5" stop-opacity="0.0" />
+    </linearGradient>
+  </defs>
+  <path d="M28 12V468" stroke="url(#glazeA)" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M78 0V480" stroke="url(#glazeA)" stroke-width="1.1" stroke-linecap="round" />
+  <path d="M138 24V456" stroke="url(#glazeA)" stroke-width="1.6" stroke-linecap="round" />
+  <path d="M198 8V472" stroke="url(#glazeA)" stroke-width="1.2" stroke-linecap="round" />
+</svg>

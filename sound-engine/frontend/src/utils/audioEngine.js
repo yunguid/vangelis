@@ -255,6 +255,15 @@ class AudioEngine {
     }
   }
 
+  markGraphReady() {
+    if (this.graphReady) {
+      return;
+    }
+    this.graphReady = true;
+    this.status.graphWarmed = true;
+    this.notify();
+  }
+
   getStatus() {
     return { ...this.status };
   }
@@ -294,6 +303,9 @@ class AudioEngine {
       this.installUnlockHandlers();
       this.setupGraph(ctx);
       this.ensureVoicePool(ctx);
+      if (ctx.state === 'running') {
+        this.markGraphReady();
+      }
       return ctx;
     });
 
@@ -311,6 +323,9 @@ class AudioEngine {
         } catch (_) {
           /* browsers may keep the context suspended until a trusted gesture */
         }
+      }
+      if (this.context.state === 'running') {
+        this.markGraphReady();
       }
     };
 
@@ -340,10 +355,7 @@ class AudioEngine {
       } catch (_) {
         /* ignore warm-up issues */
       }
-
-      this.graphReady = true;
-      this.status.graphWarmed = true;
-      this.notify();
+      this.markGraphReady();
     })().catch(() => {
       this.graphWarmPromise = null;
     });
@@ -371,8 +383,8 @@ class AudioEngine {
     compressor.threshold.value = -18;
     compressor.knee.value = 24;
     compressor.ratio.value = 4;
-    compressor.attack = 0.003;
-    compressor.release = 0.1;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.1;
 
     const distortion = ctx.createWaveShaper();
     distortion.curve = this.distortionCache.get(0);

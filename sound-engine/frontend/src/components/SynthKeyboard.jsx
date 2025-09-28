@@ -1,22 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { playNote, initAudioContext } from '../utils/audio';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { initAudioContext, playNote, preloadNote } from '../utils/audio.js';
+import { audioEngine } from '../utils/audioEngine.js';
 
-const baseNotes = [
-  { name: 'C', freq: 261.63 },
-  { name: 'C#', freq: 277.18, isBlack: true },
-  { name: 'D', freq: 293.66 },
-  { name: 'D#', freq: 311.13, isBlack: true },
-  { name: 'E', freq: 329.63 },
-  { name: 'F', freq: 349.23 },
-  { name: 'F#', freq: 369.99, isBlack: true },
-  { name: 'G', freq: 392.0 },
-  { name: 'G#', freq: 415.3, isBlack: true },
-  { name: 'A', freq: 440.0 },
-  { name: 'A#', freq: 466.16, isBlack: true },
-  { name: 'B', freq: 493.88 }
+const BASE_OCTAVE = 4;
+const MIN_OFFSET = -5;
+const MAX_OFFSET = 2;
+const NOTE_DURATION = 1.0;
+
+const WHITE_KEY_WIDTH = 'clamp(35px, 6vw, 60px)';
+const WHITE_KEY_HEIGHT = 'clamp(80px, 15vh, 140px)';
+const BLACK_KEY_WIDTH = 'clamp(20px, 4vw, 40px)';
+const BLACK_KEY_HEIGHT = 'clamp(50px, 10vh, 90px)';
+
+const WHITE_KEYS = [
+  { name: 'C', rel: 0 },
+  { name: 'D', rel: 0 },
+  { name: 'E', rel: 0 },
+  { name: 'F', rel: 0 },
+  { name: 'G', rel: 0 },
+  { name: 'A', rel: 0 },
+  { name: 'B', rel: 0 },
+  { name: 'C', rel: 1 },
+  { name: 'D', rel: 1 },
+  { name: 'E', rel: 1 },
+  { name: 'F', rel: 1 }
 ];
 
-const abletonKeyMap = {
+const BLACK_KEYS = [
+  { name: 'C#', rel: 0 },
+  { name: 'D#', rel: 0 },
+  { name: 'F#', rel: 0 },
+  { name: 'G#', rel: 0 },
+  { name: 'A#', rel: 0 },
+  { name: 'C#', rel: 1 },
+  { name: 'D#', rel: 1 }
+];
+
+const BLACK_PLACEMENT = {
+  'C#': 0,
+  'D#': 1,
+  'F#': 3,
+  'G#': 4,
+  'A#': 5
+};
+
+const KEYBOARD_MAP = {
   a: { name: 'C', delta: 0 },
   s: { name: 'D', delta: 0 },
   d: { name: 'E', delta: 0 },
@@ -37,289 +65,486 @@ const abletonKeyMap = {
   p: { name: 'D#', delta: 1 }
 };
 
-const notePrimaryKeyLabel = {
-  'C@0': 'A', 'D@0': 'S', 'E@0': 'D', 'F@0': 'F', 'G@0': 'G', 'A@0': 'H', 'B@0': 'J',
-  'C#@0': 'W', 'D#@0': 'E', 'F#@0': 'T', 'G#@0': 'Y', 'A#@0': 'U',
-  'C@1': 'K', 'D@1': 'L', 'E@1': ';', 'F@1': "'",
-  'C#@1': 'O', 'D#@1': 'P'
+const KEY_LABELS = {
+  C4: 'A',
+  D4: 'S',
+  E4: 'D',
+  F4: 'F',
+  G4: 'G',
+  A4: 'H',
+  B4: 'J',
+  C5: 'K',
+  D5: 'L',
+  E5: ';',
+  F5: "'",
+  'C#4': 'W',
+  'D#4': 'E',
+  'F#4': 'T',
+  'G#4': 'Y',
+  'A#4': 'U',
+  'C#5': 'O',
+  'D#5': 'P'
 };
 
-const whiteNotes = [
-  { name: 'C', rel: 0, index: 0 },
-  { name: 'D', rel: 0, index: 1 },
-  { name: 'E', rel: 0, index: 2 },
-  { name: 'F', rel: 0, index: 3 },
-  { name: 'G', rel: 0, index: 4 },
-  { name: 'A', rel: 0, index: 5 },
-  { name: 'B', rel: 0, index: 6 },
-  { name: 'C', rel: 1, index: 7 },
-  { name: 'D', rel: 1, index: 8 },
-  { name: 'E', rel: 1, index: 9 },
-  { name: 'F', rel: 1, index: 10 }
-];
-
-const blackNotes = [
-  { name: 'C#', rel: 0, positionIndex: 0 },
-  { name: 'D#', rel: 0, positionIndex: 1 },
-  { name: 'F#', rel: 0, positionIndex: 3 },
-  { name: 'G#', rel: 0, positionIndex: 4 },
-  { name: 'A#', rel: 0, positionIndex: 5 },
-  { name: 'C#', rel: 1, positionIndex: 7 },
-  { name: 'D#', rel: 1, positionIndex: 8 }
-];
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false }) => {
-  const [activeNotes, setActiveNotes] = useState({});
-  const [keyToNoteId, setKeyToNoteId] = useState({});
+  const keyboardRef = useRef(null);
+  const keyElementsRef = useRef(new Map());
+  const activeNotesRef = useRef(new Map());
+  const pointerToNoteRef = useRef(new Map());
+  const keyToNoteRef = useRef(new Map());
+  const keyboardVelocityRef = useRef(new Map());
+  const preloadedNoteCacheRef = useRef(new Set());
+
+  const audioParamsRef = useRef(audioParams);
+  const waveformRef = useRef(waveformType);
+  const wasmReadyRef = useRef(wasmLoaded);
+  const octaveOffsetRef = useRef(0);
+
+  const visualQueueRef = useRef(new Map());
+  const visualRafRef = useRef(null);
+  const velocityPendingRef = useRef(null);
+  const velocityRafRef = useRef(null);
+
   const [octaveOffset, setOctaveOffset] = useState(0);
-  const [velocity, setVelocity] = useState(100);
+  const [velocityDisplay, setVelocityDisplay] = useState(100);
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.repeat) return;
-      const key = event.key.toLowerCase();
+    audioParamsRef.current = audioParams;
+  }, [audioParams]);
 
-      if (key === 'z') {
-        setOctaveOffset(oct => oct - 1);
-        event.preventDefault();
-        return;
-      }
+  useEffect(() => {
+    waveformRef.current = waveformType;
+  }, [waveformType]);
 
-      if (key === 'x') {
-        setOctaveOffset(oct => oct + 1);
-        event.preventDefault();
-        return;
-      }
+  useEffect(() => {
+    wasmReadyRef.current = wasmLoaded;
+  }, [wasmLoaded]);
 
-      if (key === 'c') {
-        setVelocity(v => Math.max(1, v - 8));
-        event.preventDefault();
-        return;
-      }
+  useEffect(() => {
+    octaveOffsetRef.current = octaveOffset;
+  }, [octaveOffset]);
 
-      if (key === 'v') {
-        setVelocity(v => Math.min(127, v + 8));
-        event.preventDefault();
-        return;
-      }
+  useEffect(() => () => {
+    if (visualRafRef.current) cancelAnimationFrame(visualRafRef.current);
+    if (velocityRafRef.current) cancelAnimationFrame(velocityRafRef.current);
+  }, []);
 
-      const mapped = abletonKeyMap[key];
-      if (mapped) {
-        const noteObj = baseNotes.find(n => n.name === mapped.name);
-        if (noteObj) handleNoteOn(noteObj, key, mapped.delta);
-        event.preventDefault();
-      }
-    };
-
-    const handleKeyUp = (event) => {
-      const key = event.key.toLowerCase();
-      if (key in keyToNoteId) {
-        const noteId = keyToNoteId[key];
-        handleNoteOffById(noteId, key);
-        event.preventDefault();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
+  useEffect(() => {
+    if (typeof PerformanceObserver === 'undefined' || typeof window === 'undefined') {
+      return () => undefined;
+    }
+    let observer;
+    try {
+      observer = new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        if (!entries.length) return;
+        const entry = entries[entries.length - 1];
+        window.__vangelisMetrics = {
+          ...(window.__vangelisMetrics || {}),
+          lastLongTask: {
+            duration: entry.duration,
+            startTime: entry.startTime
+          },
+          lastUpdated: Date.now()
+        };
+      });
+      observer.observe({ type: 'longtask', buffered: true });
+    } catch (_) {
+      if (observer) observer.disconnect();
+      return () => undefined;
+    }
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      observer.disconnect();
     };
-  }, [octaveOffset, waveformType, audioParams, wasmLoaded, keyToNoteId]);
+  }, []);
 
-  const getFrequencyForNote = (freq, relDelta = 0) => freq * Math.pow(2, octaveOffset + relDelta);
+  const scheduleVisualUpdate = useCallback((noteId, isActive) => {
+    visualQueueRef.current.set(noteId, isActive);
+    if (visualRafRef.current) return;
+    visualRafRef.current = requestAnimationFrame(() => {
+      visualRafRef.current = null;
+      visualQueueRef.current.forEach((active, id) => {
+        const element = keyElementsRef.current.get(id);
+        if (element) {
+          if (active) {
+            element.dataset.active = 'true';
+          } else {
+            delete element.dataset.active;
+          }
+        }
+      });
+      visualQueueRef.current.clear();
+    });
+  }, []);
 
-  const handleNoteOn = (noteObj, physicalKey, relDelta = 0) => {
-    if (!wasmLoaded) return;
-    initAudioContext();
+  const updateVelocityDisplay = useCallback((normalizedVelocity) => {
+    const midiValue = Math.round(clamp(normalizedVelocity, 0, 1) * 126 + 1);
+    velocityPendingRef.current = midiValue;
+    if (velocityRafRef.current) return;
+    velocityRafRef.current = requestAnimationFrame(() => {
+      velocityRafRef.current = null;
+      if (velocityPendingRef.current != null) {
+        setVelocityDisplay(velocityPendingRef.current);
+      }
+    });
+  }, []);
 
-    const noteId = `${noteObj.name}@${octaveOffset + relDelta}`;
-    if (physicalKey) {
-      if (keyToNoteId[physicalKey]) return;
-    } else if (activeNotes[noteId]) {
+  const getNoteMeta = useCallback((noteName, relativeOctave) => {
+    const octave = clamp(BASE_OCTAVE + octaveOffsetRef.current + relativeOctave, MIN_OFFSET + BASE_OCTAVE, MAX_OFFSET + BASE_OCTAVE + 1);
+    const noteId = `${noteName}${octave}`;
+    const frequency = audioEngine.getFrequency(noteName, octave);
+    return {
+      noteName,
+      octave,
+      noteId,
+      frequency
+    };
+  }, []);
+
+  const registerKey = useCallback((noteId, node) => {
+    if (!noteId) return;
+    if (!node) {
+      keyElementsRef.current.delete(noteId);
+      return;
+    }
+    keyElementsRef.current.set(noteId, node);
+  }, []);
+
+  const startNote = useCallback((noteMeta, { pointerId = null, velocity = 0.85 } = {}) => {
+    if (!wasmReadyRef.current || !noteMeta || !noteMeta.frequency) {
+      return;
+    }
+    if (activeNotesRef.current.has(noteMeta.noteId)) {
       return;
     }
 
-    setActiveNotes(prev => ({
-      ...prev,
-      [noteId]: { source: null, time: Date.now(), pending: true }
-    }));
+    initAudioContext();
+    const velocityNormalized = clamp(velocity, 0.05, 1);
+    const perfStart = typeof performance !== 'undefined' ? performance.now() : null;
 
-    const frequency = getFrequencyForNote(noteObj.freq, relDelta);
-    const baseVolume = audioParams.volume ?? 0.7;
-    const volScaled = Math.max(0, Math.min(1, baseVolume * (velocity / 127)));
-    const effectiveParams = { ...audioParams, volume: volScaled };
-    const result = playNote(frequency, 1.0, waveformType, effectiveParams);
-
-    if (result) {
-      const { source, analyser } = result;
-      setActiveNotes(prev => ({
-        ...prev,
-        [noteId]: { source, time: Date.now() }
-      }));
-      if (physicalKey) {
-        setKeyToNoteId(prev => ({ ...prev, [physicalKey]: noteId }));
+    const result = playNote(
+      noteMeta.frequency,
+      NOTE_DURATION,
+      waveformRef.current,
+      audioParamsRef.current,
+      {
+        noteId: noteMeta.noteId,
+        velocity: velocityNormalized
       }
-      window.lastAnalyser = analyser;
-    }
-  };
-
-  const handleNoteOffById = (noteId, physicalKey) => {
-    if (activeNotes[noteId]) {
-      const noteData = activeNotes[noteId];
-      const timePlayed = Date.now() - noteData.time;
-      const stopAndCleanup = () => {
-        if (noteData.source) {
-          noteData.source.stop();
-        }
-        setActiveNotes(prev => {
-          const updated = { ...prev };
-          delete updated[noteId];
-          return updated;
-        });
-        if (physicalKey) {
-          setKeyToNoteId(prev => {
-            const updated = { ...prev };
-            delete updated[physicalKey];
-            return updated;
-          });
-        }
-      };
-
-      if (timePlayed < 100) {
-        setTimeout(stopAndCleanup, 100 - timePlayed);
-      } else {
-        stopAndCleanup();
-      }
-    }
-  };
-
-  const handleNoteOff = (noteObj, relDelta = 0, physicalKey) => {
-    const noteId = `${noteObj.name}@${octaveOffset + relDelta}`;
-    handleNoteOffById(noteId, physicalKey);
-  };
-
-  const handleOnByName = (noteName, relDelta = 0) => {
-    const base = baseNotes.find(n => n.name === noteName);
-    if (base) {
-      handleNoteOn(base, undefined, relDelta);
-    }
-  };
-
-  const handleOffByName = (noteName, relDelta = 0) => {
-    const base = baseNotes.find(n => n.name === noteName);
-    if (base) {
-      handleNoteOff(base, relDelta);
-    }
-  };
-
-  if (!wasmLoaded) {
-    return (
-      <div className="keyboard-loading" role="status" aria-live="polite">
-        Loading synthesizer…
-      </div>
     );
-  }
 
-  const whiteKeyCount = whiteNotes.length;
-  const whiteSegment = 100 / whiteKeyCount;
+    if (result && result.source) {
+      activeNotesRef.current.set(noteMeta.noteId, {
+        source: result.source,
+        pointerId
+      });
+      if (pointerId !== null) {
+        pointerToNoteRef.current.set(pointerId, noteMeta.noteId);
+      }
+      scheduleVisualUpdate(noteMeta.noteId, true);
+      updateVelocityDisplay(velocityNormalized);
+      if (perfStart !== null && typeof window !== 'undefined') {
+        const latency = performance.now() - perfStart;
+        const ctxTime = audioEngine.context ? audioEngine.context.currentTime : null;
+        window.__vangelisMetrics = {
+          ...(window.__vangelisMetrics || {}),
+          lastNoteLatencyMs: latency,
+          lastNoteFrequency: noteMeta.frequency,
+          audioContextTime: ctxTime,
+          lastUpdated: Date.now()
+        };
+      }
+    }
+  }, [scheduleVisualUpdate, updateVelocityDisplay]);
+
+  const stopNote = useCallback((noteId, pointerId = null) => {
+    if (!noteId) return;
+    const entry = activeNotesRef.current.get(noteId);
+    if (!entry) return;
+
+    try {
+      entry.source.stop();
+    } catch (_) {
+      /* source already stopped */
+    }
+
+    activeNotesRef.current.delete(noteId);
+    if (pointerId !== null) {
+      pointerToNoteRef.current.delete(pointerId);
+    } else {
+      for (const [id, mappedNote] of pointerToNoteRef.current) {
+        if (mappedNote === noteId) {
+          pointerToNoteRef.current.delete(id);
+        }
+      }
+    }
+    scheduleVisualUpdate(noteId, false);
+  }, [scheduleVisualUpdate]);
+
+  const switchPointerNote = useCallback((pointerId, nextMeta, velocityHint) => {
+    if (!nextMeta) return;
+    const currentNoteId = pointerToNoteRef.current.get(pointerId);
+    if (currentNoteId === nextMeta.noteId) return;
+    if (currentNoteId) {
+      stopNote(currentNoteId, pointerId);
+    }
+    startNote(nextMeta, { pointerId, velocity: velocityHint });
+  }, [startNote, stopNote]);
+
+  const preloadNoteMeta = useCallback((noteMeta) => {
+    if (!noteMeta || !noteMeta.frequency) return;
+    const cacheKey = `${waveformRef.current}:${noteMeta.noteId}`;
+    if (preloadedNoteCacheRef.current.has(cacheKey)) return;
+    preloadedNoteCacheRef.current.add(cacheKey);
+    preloadNote({
+      frequency: noteMeta.frequency,
+      waveformType: waveformRef.current,
+      audioParams: audioParamsRef.current,
+      duration: NOTE_DURATION
+    }).catch(() => {
+      preloadedNoteCacheRef.current.delete(cacheKey);
+    });
+  }, []);
+
+  const velocityFromKeyboard = useCallback((key) => {
+    const now = performance.now();
+    const last = keyboardVelocityRef.current.get(key) || 0;
+    keyboardVelocityRef.current.set(key, now);
+    if (!last) return 0.85;
+    const delta = now - last;
+    return clamp(1 - delta / 250, 0.3, 1);
+  }, []);
+
+  const handleKeyboardDown = useCallback((event) => {
+    const key = event.key.toLowerCase();
+
+    if (key === 'z') {
+      event.preventDefault();
+      setOctaveOffset((prev) => clamp(prev - 1, MIN_OFFSET, MAX_OFFSET));
+      return;
+    }
+    if (key === 'x') {
+      event.preventDefault();
+      setOctaveOffset((prev) => clamp(prev + 1, MIN_OFFSET, MAX_OFFSET));
+      return;
+    }
+
+    const mapping = KEYBOARD_MAP[key];
+    if (!mapping) {
+      return;
+    }
+
+    event.preventDefault();
+    if (keyToNoteRef.current.has(key)) {
+      return;
+    }
+
+    const meta = getNoteMeta(mapping.name, mapping.delta);
+    if (!meta.frequency) {
+      return;
+    }
+
+    const velocity = velocityFromKeyboard(key);
+    keyToNoteRef.current.set(key, meta.noteId);
+    startNote(meta, { velocity });
+  }, [getNoteMeta, startNote, velocityFromKeyboard]);
+
+  const handleKeyboardUp = useCallback((event) => {
+    const key = event.key.toLowerCase();
+    const noteId = keyToNoteRef.current.get(key);
+    if (!noteId) return;
+    event.preventDefault();
+    keyToNoteRef.current.delete(key);
+    stopNote(noteId);
+  }, [stopNote]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyboardDown, { passive: false });
+    window.addEventListener('keyup', handleKeyboardUp, { passive: false });
+    return () => {
+      window.removeEventListener('keydown', handleKeyboardDown);
+      window.removeEventListener('keyup', handleKeyboardUp);
+    };
+  }, [handleKeyboardDown, handleKeyboardUp]);
+
+  useEffect(() => {
+    const container = keyboardRef.current;
+    if (!container) return;
+
+    const getMetaFromElement = (element) => {
+      if (!element) return null;
+      const noteId = element.dataset.note;
+      const noteName = element.dataset.name;
+      const octave = Number(element.dataset.octave);
+      const frequency = Number(element.dataset.frequency);
+      if (!noteId || !noteName || Number.isNaN(octave) || Number.isNaN(frequency)) return null;
+      return {
+        noteId,
+        noteName,
+        octave,
+        frequency
+      };
+    };
+
+    const pointerDown = (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      const keyElement = event.target.closest('[data-note]');
+      if (!keyElement) return;
+      event.preventDefault();
+      if (keyElement.setPointerCapture) {
+        try {
+          keyElement.setPointerCapture(event.pointerId);
+        } catch (_) {
+          /* capture might fail on some browsers */
+        }
+      }
+      const meta = getMetaFromElement(keyElement);
+      const velocity = event.pressure > 0 ? clamp(event.pressure, 0.05, 1) : 0.85;
+      startNote(meta, { pointerId: event.pointerId, velocity });
+    };
+
+    const pointerMove = (event) => {
+      if (!pointerToNoteRef.current.has(event.pointerId)) return;
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      const keyElement = element ? element.closest('[data-note]') : null;
+      if (!keyElement) return;
+      const meta = getMetaFromElement(keyElement);
+      const velocity = event.pressure > 0 ? clamp(event.pressure, 0.05, 1) : 0.85;
+      switchPointerNote(event.pointerId, meta, velocity);
+    };
+
+    const pointerUp = (event) => {
+      const noteId = pointerToNoteRef.current.get(event.pointerId);
+      if (noteId) {
+        stopNote(noteId, event.pointerId);
+      }
+      const keyElement = event.target.closest('[data-note]');
+      if (keyElement && keyElement.releasePointerCapture) {
+        try {
+          keyElement.releasePointerCapture(event.pointerId);
+        } catch (_) {
+          /* already released */
+        }
+      }
+    };
+
+    const lostPointerCapture = (event) => {
+      const noteId = pointerToNoteRef.current.get(event.pointerId);
+      if (noteId) {
+        stopNote(noteId, event.pointerId);
+      }
+    };
+
+    const pointerEnter = (event) => {
+      const keyElement = event.target.closest('[data-note]');
+      if (!keyElement) return;
+      const meta = getMetaFromElement(keyElement);
+      preloadNoteMeta(meta);
+    };
+
+    const focusIn = (event) => {
+      const keyElement = event.target.closest('[data-note]');
+      if (!keyElement) return;
+      const meta = getMetaFromElement(keyElement);
+      preloadNoteMeta(meta);
+    };
+
+    container.addEventListener('pointerdown', pointerDown, { passive: false });
+    container.addEventListener('pointermove', pointerMove, { passive: false });
+    container.addEventListener('pointerup', pointerUp, { passive: false });
+    container.addEventListener('pointercancel', pointerUp, { passive: false });
+    container.addEventListener('lostpointercapture', lostPointerCapture, true);
+    container.addEventListener('pointerenter', pointerEnter, true);
+    container.addEventListener('focusin', focusIn);
+
+    return () => {
+      container.removeEventListener('pointerdown', pointerDown);
+      container.removeEventListener('pointermove', pointerMove);
+      container.removeEventListener('pointerup', pointerUp);
+      container.removeEventListener('pointercancel', pointerUp);
+      container.removeEventListener('lostpointercapture', lostPointerCapture, true);
+      container.removeEventListener('pointerenter', pointerEnter, true);
+      container.removeEventListener('focusin', focusIn);
+    };
+  }, [preloadNoteMeta, startNote, stopNote, switchPointerNote]);
+
+  const whiteKeyMetas = useMemo(() => {
+    return WHITE_KEYS.map((definition, index) => {
+      const meta = getNoteMeta(definition.name, definition.rel);
+      return {
+        ...meta,
+        order: index
+      };
+    });
+  }, [getNoteMeta]);
+
+  const blackKeyMetas = useMemo(() => {
+    return BLACK_KEYS.map((definition) => {
+      const meta = getNoteMeta(definition.name, definition.rel);
+      const placementIndex = BLACK_PLACEMENT[definition.name] + (definition.rel === 1 ? 7 : 0);
+      const leftOffset = `calc(${placementIndex} * ${WHITE_KEY_WIDTH} + ${WHITE_KEY_WIDTH} / 1.5)`;
+      return {
+        ...meta,
+        leftOffset
+      };
+    });
+  }, [getNoteMeta]);
 
   return (
-    <div className="white-keys" role="application" aria-label="Synth keyboard">
-      {whiteNotes.map(note => {
-        const noteId = `${note.name}@${note.rel + octaveOffset}`;
-        const isActive = Boolean(activeNotes[noteId]);
-        return (
-          <button
-            key={`${note.name}-${note.rel}`}
-            type="button"
-            className={`key-white${isActive ? ' active' : ''}`}
-            aria-label={`${note.name} note`}
-            aria-pressed={isActive}
-            onMouseDown={() => handleOnByName(note.name, note.rel)}
-            onMouseUp={() => handleOffByName(note.name, note.rel)}
-            onMouseLeave={() => handleOffByName(note.name, note.rel)}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              handleOnByName(note.name, note.rel);
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              handleOffByName(note.name, note.rel);
-            }}
-            onTouchCancel={(e) => {
-              e.preventDefault();
-              handleOffByName(note.name, note.rel);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOnByName(note.name, note.rel);
-              }
-            }}
-            onKeyUp={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOffByName(note.name, note.rel);
-              }
+    <div className="keyboard-wrapper" ref={keyboardRef}>
+      <div className="white-keys">
+        {whiteKeyMetas.map((meta) => (
+          <div
+            key={meta.noteId}
+            ref={(node) => registerKey(meta.noteId, node)}
+            className="key-white"
+            data-note={meta.noteId}
+            data-name={meta.noteName}
+            data-octave={meta.octave}
+            data-frequency={meta.frequency}
+            tabIndex={0}
+            style={{
+              height: WHITE_KEY_HEIGHT,
+              width: WHITE_KEY_WIDTH
             }}
           >
-            <span className="note-label">{note.name}</span>
-            <span className="key-label">{notePrimaryKeyLabel[`${note.name}@${note.rel}`] || ''}</span>
-            {isActive && <span className="key-active-indicator" aria-hidden="true" />}
-          </button>
-        );
-      })}
+            <span className="note-label">{meta.noteName}</span>
+            <span className="key-label">{KEY_LABELS[meta.noteId] || ''}</span>
+            <span className="key-active-indicator" aria-hidden="true" />
+          </div>
+        ))}
+      </div>
 
       <div className="black-keys-layer">
-        {blackNotes.map(note => {
-          const noteId = `${note.name}@${note.rel + octaveOffset}`;
-          const isActive = Boolean(activeNotes[noteId]);
-          const leftPercent = ((note.positionIndex + 1) * whiteSegment);
-          return (
-            <button
-              key={`${note.name}-${note.rel}`}
-              type="button"
-              className={`key-black${isActive ? ' active' : ''}`}
-              style={{ left: `${leftPercent}%` }}
-              aria-label={`${note.name} note`}
-              aria-pressed={isActive}
-              onMouseDown={() => handleOnByName(note.name, note.rel)}
-              onMouseUp={() => handleOffByName(note.name, note.rel)}
-              onMouseLeave={() => handleOffByName(note.name, note.rel)}
-              onTouchStart={(e) => {
-                e.preventDefault();
-                handleOnByName(note.name, note.rel);
-              }}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                handleOffByName(note.name, note.rel);
-              }}
-              onTouchCancel={(e) => {
-                e.preventDefault();
-                handleOffByName(note.name, note.rel);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleOnByName(note.name, note.rel);
-                }
-              }}
-              onKeyUp={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleOffByName(note.name, note.rel);
-                }
-              }}
-            >
-              <span className="note-label">{note.name}</span>
-              <span className="key-label">{notePrimaryKeyLabel[`${note.name}@${note.rel}`] || ''}</span>
-              {isActive && <span className="key-active-indicator" aria-hidden="true" />}
-            </button>
-          );
-        })}
+        {blackKeyMetas.map((meta) => (
+          <div
+            key={meta.noteId}
+            ref={(node) => registerKey(meta.noteId, node)}
+            className="key-black"
+            data-note={meta.noteId}
+            data-name={meta.noteName}
+            data-octave={meta.octave}
+            data-frequency={meta.frequency}
+            tabIndex={0}
+            style={{
+              left: meta.leftOffset,
+              width: BLACK_KEY_WIDTH,
+              height: BLACK_KEY_HEIGHT
+            }}
+          >
+            <span className="note-label">{meta.noteName}</span>
+            <span className="key-label">{KEY_LABELS[meta.noteId] || ''}</span>
+            <span className="key-active-indicator" aria-hidden="true" />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 text-center text-xs text-neon-blue opacity-70">
+        <p className="p-2 glass inline-block rounded-lg">
+          Keys: A S D F G H J K L ; ' • W E T Y U O P • Z/X octave ({octaveOffset}) • Current velocity {velocityDisplay}
+        </p>
       </div>
     </div>
   );

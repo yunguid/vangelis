@@ -123,6 +123,9 @@ body {
   position: relative;
   width: 100%;
   height: 100%;
+  touch-action: none;
+  user-select: none;
+  contain: layout paint style;
 }
 
 .white-keys {
@@ -147,16 +150,21 @@ body {
   border-right: 1px solid rgba(0, 0, 0, 0.06);
   background: #FFFFFF;
   color: var(--color-text-secondary);
-  transition: transform 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out;
+  transition: transform 90ms ease-out, opacity 120ms ease-out;
   border-radius: 0 0 12px 12px;
   cursor: pointer;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .key-white:last-child {
   border-right: none;
 }
 
-.key-white.active {
+.key-white.active,
+.key-white[data-active="true"],
+.key-white:active {
   background: #EEF4FF;
   transform: scale(0.98);
   box-shadow: inset 0 -2px 6px rgba(74, 144, 226, 0.25);
@@ -202,12 +210,16 @@ body {
   align-items: flex-end;
   justify-content: center;
   padding-bottom: clamp(6px, 1vw, 10px);
-  transition: transform 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out;
-  transform: translateX(-50%);
+  transition: transform 90ms ease-out, opacity 120ms ease-out;
   cursor: pointer;
+  will-change: transform;
+  transform: translateX(-50%) translateZ(0);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.key-black.active {
+.key-black.active,
+.key-black[data-active="true"],
+.key-black:active {
   background: #2B2B2B;
   transform: translateX(-50%) scale(0.98);
   box-shadow: inset 0 -2px 6px rgba(0, 0, 0, 0.35);

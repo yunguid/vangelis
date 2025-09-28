@@ -70,7 +70,6 @@ const App = () => {
       <header className="zone-top" aria-label="Branding and quick actions">
         <div className="branding">
           <span className="brand-title">Vangelis</span>
-          <span className="brand-subtitle">A refined synthesizer for focused play</span>
         </div>
         <div className="top-actions"
           role="group"
