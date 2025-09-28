@@ -2,6 +2,10 @@
 
 WebAssembly synthesizer with Rust audio engine and React interface.
 
+## Live Demo
+
+ **[Try Vangelis Online](https://yunguid.github.io/vangelis/)**
+
 ## Quick Start
 
 ```bash
@@ -30,10 +34,26 @@ cd ../backend
 cargo run
 ```
 
+## GitHub Pages Deployment
+
+Automatic deployment on push to `main`:
+
+```bash
+git push origin main
+```
+
+Manual build for Pages:
+
+```bash
+./build-pages.sh
+```
+
 ## Dependencies
 
+- **Frontend**: React, Vite
+- **Audio Engine**: Rust, wasm-bindgen  
+- **Backend**: Rocket v0.5.0 (local dev only)
 - Rust + wasm-pack
 - Node.js + npm
-- Cargo
 
 Open http://localhost:8000
