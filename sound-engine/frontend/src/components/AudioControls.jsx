@@ -10,26 +10,36 @@ const SliderControl = ({
   step,
   onChange,
   helpText
-}) => (
-  <div className="slider-group">
-    <div className="label-stack">
-      <label htmlFor={id}>{label}</label>
-      <span className="slider-value">{displayValue}</span>
+}) => {
+  const numericMin = typeof min === 'number' ? min : Number(min ?? 0);
+  const numericMax = typeof max === 'number' ? max : Number(max ?? 1);
+  const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+  const safeRange = numericMax - numericMin === 0 ? 1 : numericMax - numericMin;
+  const progress = Math.min(Math.max((numericValue - numericMin) / safeRange, 0), 1);
+  const sliderProgressStyle = { '--slider-progress': `${(progress * 100).toFixed(2)}%` };
+
+  return (
+    <div className="slider-group">
+      <div className="label-stack">
+        <label htmlFor={id}>{label}</label>
+        <span className="slider-value">{displayValue}</span>
+      </div>
+      {helpText && <p className="slider-description">{helpText}</p>}
+      <div className="slider-input-wrapper" style={sliderProgressStyle}>
+        <input
+          id={id}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          style={sliderProgressStyle}
+        />
+      </div>
     </div>
-    {helpText && <p className="slider-description">{helpText}</p>}
-    <div className="slider-input-wrapper">
-      <input
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-      />
-    </div>
-  </div>
-);
+  );
+};
 
 const AudioControls = ({ audioParams, onParamChange }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);

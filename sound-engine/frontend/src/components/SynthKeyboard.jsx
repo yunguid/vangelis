@@ -7,10 +7,10 @@ const MIN_OFFSET = -5;
 const MAX_OFFSET = 2;
 const NOTE_DURATION = 1.0;
 
-const WHITE_KEY_WIDTH = 'clamp(35px, 6vw, 60px)';
-const WHITE_KEY_HEIGHT = 'clamp(80px, 15vh, 140px)';
-const BLACK_KEY_WIDTH = 'clamp(20px, 4vw, 40px)';
-const BLACK_KEY_HEIGHT = 'clamp(50px, 10vh, 90px)';
+const WHITE_KEY_HEIGHT = 'clamp(72px, 18vh, 120px)';
+const BLACK_KEY_WIDTH = 'clamp(24px, 4.2vw, 48px)';
+const BLACK_KEY_HEIGHT = 'clamp(52px, 17vh, 100px)';
+const BLACK_KEY_OFFSET_RATIO = 2 / 3;
 
 const WHITE_KEYS = [
   { name: 'C', rel: 0 },
@@ -484,7 +484,12 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
     return BLACK_KEYS.map((definition) => {
       const meta = getNoteMeta(definition.name, definition.rel);
       const placementIndex = BLACK_PLACEMENT[definition.name] + (definition.rel === 1 ? 7 : 0);
-      const leftOffset = `calc(${placementIndex} * ${WHITE_KEY_WIDTH} + ${WHITE_KEY_WIDTH} / 1.5)`;
+      const positionRatio = clamp(
+        (placementIndex + BLACK_KEY_OFFSET_RATIO) / WHITE_KEYS.length,
+        0,
+        1
+      );
+      const leftOffset = `${positionRatio * 100}%`;
       return {
         ...meta,
         leftOffset
@@ -494,7 +499,12 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
 
   return (
     <div className="keyboard-wrapper" ref={keyboardRef}>
-      <div className="white-keys">
+      <div
+        className="white-keys"
+        style={{
+          gridTemplateColumns: `repeat(${whiteKeyMetas.length}, minmax(0, 1fr))`
+        }}
+      >
         {whiteKeyMetas.map((meta) => (
           <div
             key={meta.noteId}
@@ -506,8 +516,7 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
             data-frequency={meta.frequency}
             tabIndex={0}
             style={{
-              height: WHITE_KEY_HEIGHT,
-              width: WHITE_KEY_WIDTH
+              height: WHITE_KEY_HEIGHT
             }}
           >
             <span className="note-label">{meta.noteName}</span>
@@ -541,10 +550,8 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
         ))}
       </div>
 
-      <div className="mt-4 text-center text-xs text-neon-blue opacity-70">
-        <p className="p-2 glass inline-block rounded-lg">
-          Keys: A S D F G H J K L ; ' • W E T Y U O P • Z/X octave ({octaveOffset}) • Current velocity {velocityDisplay}
-        </p>
+      <div className="keyboard-meta">
+        Keys A-; | Sharps W-P | Z/X octave ({octaveOffset}) | Velocity {velocityDisplay}
       </div>
     </div>
   );

@@ -5,11 +5,22 @@ import initWasm, {
   WasmWaveform
 } from '../../public/pkg/sound_engine.js';
 
-const DEFAULT_SAMPLE_RATE = 48000;
+const DEFAULT_SAMPLE_RATE = 44100;
 const DEFAULT_DURATION = 1.0;
-const SILENT_BUFFER_LENGTH = 128;
+const BUFFER_SIZE = 512;
+const SILENT_BUFFER_LENGTH = BUFFER_SIZE;
 const POOL_SIZE = 32;
 const MAX_BUFFER_POOL = 96;
+const MICRO_FADE_TIME = 0.01; // short envelope to avoid clicks
+const MINIMUM_GAIN = 0.0001;
+const RELEASE_FALLOFF_TIME = 0.018;
+
+const VOICE_STATE = Object.freeze({
+  IDLE: 'idle',
+  STARTING: 'starting',
+  PLAYING: 'playing',
+  STOPPING: 'stopping'
+});
 const COMMON_PRELOAD_NOTES = ['C3', 'C4', 'C5', 'C6'];
 const WAVEFORMS = ['Sine', 'Square', 'Sawtooth', 'Triangle'];
 const LISTENER_EVENTS = ['pointerdown', 'touchstart', 'mousedown', 'keydown'];
@@ -126,6 +137,8 @@ class NoteVoice {
     this.noteId = null;
     this.active = false;
     this.startTime = 0;
+    this.state = VOICE_STATE.IDLE;
+    this.lastStopTime = 0;
 
     this.prepareNextSource();
   }
@@ -151,18 +164,32 @@ class NoteVoice {
       }
     };
 
+    const ctx = this.ctx;
+    const startAt = Math.max(startTime, this.lastStopTime, ctx.currentTime);
+
     this.playingSource = source;
     this.noteId = noteId;
     this.active = true;
-    this.startTime = startTime;
+    this.startTime = startAt;
+    this.state = VOICE_STATE.STARTING;
 
-    const attack = Math.max(attackTime, 0.0005);
-    this.gain.gain.cancelScheduledValues(startTime);
-    this.gain.gain.setValueAtTime(0.0001, startTime);
-    this.gain.gain.linearRampToValueAtTime(volume, startTime + attack);
+    const gainParam = this.gain.gain;
+    const attack = Math.max(attackTime, MICRO_FADE_TIME);
+    const targetVolume = Math.max(volume, MINIMUM_GAIN);
+    const gainStart = Math.max(MINIMUM_GAIN, gainParam.value || MINIMUM_GAIN);
+
+    gainParam.cancelScheduledValues(startAt);
+    gainParam.setValueAtTime(gainStart, startAt);
+    if (attack > 0) {
+      gainParam.exponentialRampToValueAtTime(targetVolume, startAt + attack);
+    } else {
+      gainParam.setValueAtTime(targetVolume, startAt);
+    }
+    gainParam.setTargetAtTime(targetVolume, startAt + attack, 0.001);
 
     try {
-      source.start(startTime);
+      source.start(startAt);
+      this.state = VOICE_STATE.PLAYING;
     } catch (_) {
       this.cleanup();
     }
@@ -173,18 +200,29 @@ class NoteVoice {
 
   stop(when = this.ctx.currentTime) {
     if (!this.active || !this.playingSource) return;
+    if (this.state === VOICE_STATE.STOPPING) return;
 
     const ctx = this.ctx;
     const stopAt = Math.max(when, ctx.currentTime);
-    this.gain.gain.cancelScheduledValues(stopAt);
-    this.gain.gain.setTargetAtTime(0.0001, stopAt, 0.05);
+    const gainParam = this.gain.gain;
+    const currentValue = Math.max(gainParam.value || MINIMUM_GAIN, MINIMUM_GAIN);
+
+    this.state = VOICE_STATE.STOPPING;
+    gainParam.cancelScheduledValues(stopAt);
+    gainParam.setValueAtTime(currentValue, stopAt);
+    gainParam.exponentialRampToValueAtTime(MINIMUM_GAIN, stopAt + MICRO_FADE_TIME);
+    gainParam.setValueAtTime(0, stopAt + MICRO_FADE_TIME + RELEASE_FALLOFF_TIME);
 
     if (this.stopSource) {
       try {
-        this.stopSource(stopAt + 0.05);
+        const scheduledStop = stopAt + MICRO_FADE_TIME + RELEASE_FALLOFF_TIME;
+        this.stopSource(scheduledStop);
+        this.lastStopTime = scheduledStop;
       } catch (_) {
         /* already stopped */
       }
+    } else {
+      this.lastStopTime = Math.max(this.lastStopTime, stopAt);
     }
   }
 
@@ -195,10 +233,12 @@ class NoteVoice {
     this.noteId = null;
     this.playingSource = null;
     this.stopSource = null;
+    this.state = VOICE_STATE.IDLE;
 
     const now = this.ctx.currentTime;
     this.gain.gain.cancelScheduledValues(now);
     this.gain.gain.setValueAtTime(0, now);
+    this.lastStopTime = Math.max(this.lastStopTime, now);
 
     this.engine.recycleVoice(this);
   }
@@ -290,7 +330,7 @@ class AudioEngine {
       let ctx;
       try {
         ctx = new (window.AudioContext || window.webkitAudioContext)({
-          latencyHint: 'playback',
+          latencyHint: 'interactive',
           sampleRate: DEFAULT_SAMPLE_RATE
         });
       } catch (_) {
@@ -507,7 +547,7 @@ class AudioEngine {
     let candidate = null;
 
     for (const voice of this.voices) {
-      if (!voice.active) {
+      if (!voice.active || voice.state === VOICE_STATE.IDLE) {
         candidate = voice;
         break;
       }
@@ -594,10 +634,10 @@ class AudioEngine {
       return { data: samples, releaseAfterUse: false };
     }
 
-    const attack = clamp(params.attack ?? 0.05, 0, 5);
+    const attack = clamp(params.attack ?? 0.05, MICRO_FADE_TIME, 5);
     const decay = clamp(params.decay ?? 0.1, 0, 5);
     const sustain = clamp(params.sustain ?? 0.7, 0, 1);
-    const release = clamp(params.release ?? 0.3, 0, 5);
+    const release = clamp(params.release ?? 0.3, MICRO_FADE_TIME, 5);
 
     const working = this.floatPool.acquire(samples.length);
     working.set(samples);
@@ -615,10 +655,10 @@ class AudioEngine {
       pan: clamp(params.pan ?? 0.5, 0, 1),
       phaseOffset: clamp(params.phaseOffset ?? 0, 0, Math.PI * 2),
       useADSR: !!params.useADSR,
-      attack: params.attack ?? 0.05,
+      attack: clamp(params.attack ?? 0.05, MICRO_FADE_TIME, 5),
       decay: params.decay ?? 0.1,
       sustain: params.sustain ?? 0.7,
-      release: params.release ?? 0.3,
+      release: clamp(params.release ?? 0.3, MICRO_FADE_TIME, 5),
       useFM: !!params.useFM,
       fmRatio: params.fmRatio ?? 2.5,
       fmIndex: params.fmIndex ?? 5
@@ -726,7 +766,7 @@ class AudioEngine {
       buffer,
       noteId: voiceId,
       volume: gain,
-      attackTime: sanitized.useADSR ? sanitized.attack : 0.002,
+      attackTime: sanitized.useADSR ? sanitized.attack : MICRO_FADE_TIME,
       startTime: ctx.currentTime
     });
 
