@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "buildCommand": "cd sound-engine/audio-engine && wasm-pack build --target web --out-dir ../frontend/public/pkg && cd ../frontend && npm ci && npm run build",
+  "outputDirectory": "sound-engine/frontend/dist",
+  "functions": {
+    "sound-engine/frontend/api/**/*.ts": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/status",
+      "dest": "sound-engine/frontend/api/status.ts"
+    },
+    {
+      "src": "/pkg/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/pkg/$1"
+    },
+    { "handle": "filesystem" },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

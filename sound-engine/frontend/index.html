@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Futuristic Synthwave-inspired Interactive Synthesizer" />
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="modulepreload" href="/pkg/sound_engine.js" />
+    <link
+      rel="preload"
+      href="/pkg/sound_engine_bg.wasm"
+      as="fetch"
+      type="application/wasm"
+      crossorigin
+    />
     <title>Synthesizer</title>
   </head>
   <body>
