@@ -44,7 +44,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd sound-engine/frontend
-          npm ci
+          npm ci --legacy-peer-deps
 
       - name: Build frontend
         run: |
