@@ -1,11 +1,10 @@
 import React, { useState, useEffect, Suspense } from 'react';
-import Scene from './components/Scene';
 import SynthKeyboard from './components/SynthKeyboard';
 import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
 
 // WASM initialization - Fixed import path
-import init from './wasm/sound_engine.js';
+import init from '../public/pkg/sound_engine.js';
 
 const App = () => {
   const [wasmLoaded, setWasmLoaded] = useState(false);
@@ -17,7 +16,6 @@ const App = () => {
     distortion: 0,
     volume: 0.7,
     
-    // New features
     // ADSR
     useADSR: false,
     attack: 0.05,
@@ -32,10 +30,7 @@ const App = () => {
     
     // Stereo & Phase
     pan: 0.5, // center
-    phaseOffset: 0, // no phase offset
-    
-    // Performance
-    useParallel: false
+    phaseOffset: 0 // no phase offset
   });
   const [isMobile, setIsMobile] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -76,21 +71,6 @@ const App = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col relative">
-      {/* 3D Scene Background */}
-      <Suspense fallback={
-        <div className="absolute inset-0 flex items-center justify-center bg-deep-purple">
-          <div className="loading-wave flex space-x-2">
-            <div className="w-4 h-4 bg-orange-red rounded-full"></div>
-            <div className="w-4 h-4 bg-coral rounded-full"></div>
-            <div className="w-4 h-4 bg-tomato rounded-full"></div>
-          </div>
-        </div>
-      }>
-        <div className="absolute inset-0 z-0">
-          <Scene audioParams={audioParams} />
-        </div>
-      </Suspense>
-      
       {/* Mobile Toggle Button */}
       {isMobile && (
         <button 
@@ -121,7 +101,7 @@ const App = () => {
       {(!isMobile || showControls) && (
         <div className={`
           absolute z-20 transition-all duration-500 
-          ${isMobile ? 'inset-0 bg-deep-purple bg-opacity-80 backdrop-blur-md p-4 flex flex-col items-center justify-center gap-8' : 'top-0 left-0 right-0 flex justify-between p-4'}
+          ${isMobile ? 'inset-0 bg-black/60 backdrop-blur-md p-4 flex flex-col items-center justify-center gap-8' : 'top-0 left-0 right-0 flex justify-between p-4'}
         `}>
           {/* Waveform Controls */}
           <div className={`${isMobile ? 'w-full max-w-xs' : ''}`}>
@@ -151,15 +131,8 @@ const App = () => {
         </div>
       )}
       
-      {/* Title Overlay */}
-      <div className="absolute top-0 left-0 right-0 flex justify-center p-4 z-10 pointer-events-none">
-        <h1 className="text-2xl md:text-4xl font-syncopate title-glow tracking-widest uppercase">
-          Vangelis
-        </h1>
-      </div>
-      
-      {/* Keyboard at the bottom */}
-      <div className="mt-auto mb-4 md:mb-8 z-10 w-full flex justify-center items-center">
+      {/* Centered Keyboard */}
+      <div className="flex-1 z-10 w-full flex justify-center items-center">
         <SynthKeyboard 
           waveformType={waveformType} 
           audioParams={audioParams}
