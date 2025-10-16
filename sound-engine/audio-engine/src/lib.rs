@@ -4,11 +4,15 @@ mod waveforms;
 mod utils;
 mod envelope;
 mod dsp;
+mod lfo;
+mod filter;
 
 use waveforms::{Waveform, generate_waveform, generate_waveform_with_phase, fm_waveform, fm_waveform_parallel, parallel_generate_waveform, pan_stereo};
 use utils::set_panic_hook;
 use envelope::{ADSR, apply_adsr};
 pub use dsp::{DSPChain, AudioProcessor, GainProcessor, LowPassFilter};
+pub use lfo::{LFO, LFOTarget, apply_lfo_amplitude, wasm_apply_lfo_amplitude};
+pub use filter::{StateVariableFilter, FilterMode, OnePoleFilter, wasm_apply_filter};
 
 #[wasm_bindgen]
 pub enum WasmWaveform {

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import SynthKeyboard from './components/SynthKeyboard';
 import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
+import ErrorBoundary from './components/ErrorBoundary';
+import PresetManager from './components/PresetManager';
+import Scene from './components/Scene';
 import { audioEngine } from './utils/audioEngine.js';
 
 const App = () => {
@@ -93,15 +96,12 @@ const App = () => {
   };
 
   return (
-    <div className="app-stage">
-      <div className="parallax-stage" aria-hidden="true">
-        <div className="parallax-layer parallax-layer--far" />
-        <div className="parallax-layer parallax-layer--mid" />
-        <div className="parallax-layer parallax-layer--near" />
-      </div>
-
-      <div className="app-shell">
-        <header className="zone-top tier-subtle drift-slow content-tertiary" aria-label="Branding and quick actions">
+    <ErrorBoundary>
+      <div className="app-stage">
+        <Scene />
+        
+        <div className="app-shell">
+        <header className="zone-top tier-subtle content-tertiary" aria-label="Branding and quick actions">
           <div className="brand-title">Vangelis</div>
           <button
             type="button"
@@ -114,7 +114,7 @@ const App = () => {
         </header>
 
         <main className="zone-center content-primary" aria-label="Keyboard area">
-          <div className="keyboard-surface tier-focus drift-medium" role="region" aria-label="Virtual keyboard">
+          <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
             <div className="keyboard-header">
               <span>Keyboard</span>
               <span className="keyboard-legend">Waveform · {waveformType}</span>
@@ -136,12 +136,20 @@ const App = () => {
         </main>
 
         <section className="zone-bottom content-secondary" aria-label="Control surface">
-          <div className="controls-surface tier-support drift-fast">
+          <div className="controls-surface tier-support">
             <div className="controls-panel" aria-label="Waveform selection">
               <UIOverlay
                 currentWaveform={waveformType}
                 onWaveformChange={setWaveformType}
               />
+              <div style={{ marginTop: '16px' }}>
+                <PresetManager
+                  audioParams={audioParams}
+                  waveformType={waveformType}
+                  onParamChange={handleAudioParamChange}
+                  onWaveformChange={setWaveformType}
+                />
+              </div>
             </div>
             <div className="controls-panel wide" aria-label="Audio controls">
               <AudioControls
@@ -195,8 +203,9 @@ const App = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 };
 

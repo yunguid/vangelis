@@ -1,6 +1,19 @@
+/// Waveform generation and manipulation module
+///
+/// This module provides high-quality waveform generation with PolyBLEP anti-aliasing
+/// for non-bandlimited waveforms (square, sawtooth). The implementation includes
+/// both serial and parallel generation modes, phase offset support, and stereo panning.
+
 use std::f32::consts::PI;
 use rayon::prelude::*;
 
+/// Waveform types supported by the synthesizer
+///
+/// Each waveform has unique harmonic characteristics:
+/// - Sine: Pure fundamental frequency, no harmonics
+/// - Sawtooth: All harmonics with 1/n amplitude falloff
+/// - Square: Odd harmonics only with 1/n amplitude falloff
+/// - Triangle: Odd harmonics with 1/n² amplitude falloff
 #[derive(Debug, Clone, Copy)]
 pub enum Waveform {
     Sine,
@@ -9,11 +22,38 @@ pub enum Waveform {
     Triangle,
 }
 
+/// Generate a single sine wave sample
+///
+/// # Arguments
+/// * `freq` - Frequency in Hz
+/// * `phase` - Phase offset in radians (0 to 2π)
+/// * `t` - Time in seconds
+///
+/// # Returns
+/// Sample value in range [-1.0, 1.0]
 #[inline(always)]
 fn sine_wave_sample(freq: f32, phase: f32, t: f32) -> f32 {
     (2.0 * PI * freq * t + phase).sin()
 }
 
+/// PolyBLEP (Polynomial Band-Limited Step) algorithm
+///
+/// Reduces aliasing artifacts in non-bandlimited waveforms by smoothing
+/// discontinuities. This is a computationally efficient approximation of
+/// the ideal sinc function reconstruction filter.
+///
+/// # Algorithm
+/// The function applies a polynomial correction near waveform discontinuities:
+/// - For t < dt: Corrects the rising edge
+/// - For t > 1-dt: Corrects the falling edge
+/// - Otherwise: No correction needed
+///
+/// # Arguments
+/// * `t` - Normalized phase (0.0 to 1.0)
+/// * `dt` - Frequency/sample_rate ratio
+///
+/// # Returns
+/// Correction value to subtract from the naive waveform
 #[inline(always)]
 fn poly_blep(t: f32, dt: f32) -> f32 {
     if t < dt {
@@ -27,6 +67,22 @@ fn poly_blep(t: f32, dt: f32) -> f32 {
     }
 }
 
+/// Generate a waveform with default phase offset (0.0)
+///
+/// # Arguments
+/// * `waveform` - Type of waveform to generate
+/// * `freq` - Frequency in Hz (20-20000 Hz recommended)
+/// * `duration_secs` - Duration in seconds
+/// * `sample_rate` - Sample rate in Hz (typically 44100 or 48000)
+///
+/// # Returns
+/// Vector of audio samples in range [-1.0, 1.0]
+///
+/// # Example
+/// ```
+/// let samples = generate_waveform(Waveform::Sine, 440.0, 1.0, 44100.0);
+/// assert_eq!(samples.len(), 44100);
+/// ```
 pub fn generate_waveform(waveform: Waveform, freq: f32, duration_secs: f32, sample_rate: f32) -> Vec<f32> {
     generate_waveform_with_phase(waveform, freq, 0.0, duration_secs, sample_rate)
 }

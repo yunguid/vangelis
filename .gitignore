@@ -1,12 +1,38 @@
-# Node build outputs
-sound-engine/frontend/node_modules/
-sound-engine/frontend/dist/
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Rust build outputs
-sound-engine/audio-engine/target/
+node_modules
+dist
+dist-ssr
+*.local
 
-# wasm-pack artifacts outside canonical public/pkg
-sound-engine/audio-engine/pkg/
-sound-engine/frontend/public/sound_engine*.wasm
-sound-engine/frontend/public/sound_engine*.js
-sound-engine/frontend/public/sound_engine*.d.ts
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Rust
+target/
+Cargo.lock
+
+# Documentation (optional)
+ARCHITECTURE.md
+IMPROVEMENTS_COMPLETED.md
+backend_guide.md
+guide.md
+
+# Build artifacts
+*.wasm
+pkg/

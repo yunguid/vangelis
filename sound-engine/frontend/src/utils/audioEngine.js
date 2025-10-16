@@ -244,6 +244,37 @@ class NoteVoice {
   }
 }
 
+class LRUCache {
+  constructor(maxSize = 500) {
+    this.maxSize = maxSize;
+    this.cache = new Map();
+  }
+
+  get(key) {
+    if (!this.cache.has(key)) return undefined;
+    const value = this.cache.get(key);
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
+
+  set(key, value) {
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+    this.cache.set(key, value);
+  }
+
+  has(key) {
+    return this.cache.has(key);
+  }
+
+  clear() {
+    this.cache.clear();
+  }
+}
+
 class AudioEngine {
   constructor() {
     this.wasmReady = false;
@@ -261,7 +292,8 @@ class AudioEngine {
     this.status = {
       wasmReady: false,
       contextReady: false,
-      graphWarmed: false
+      graphWarmed: false,
+      error: null
     };
 
     this.silentBuffer = null;
@@ -278,7 +310,7 @@ class AudioEngine {
 
     this.floatPool = new Float32Pool();
     this.distortionCache = new DistortionCurveCache();
-    this.waveformCache = new Map();
+    this.waveformCache = new LRUCache(500);
     this.frequencyTable = this.buildFrequencyTable();
     this.commonWaveformsPrecomputed = false;
   }
@@ -310,13 +342,32 @@ class AudioEngine {
 
   async ensureWasm() {
     if (!this.wasmInitPromise) {
-      this.wasmInitPromise = initWasm().then((module) => {
-        this.wasmReady = true;
-        this.status.wasmReady = true;
-        this.notify();
-        this.precomputeCommonWaveforms();
-        return module;
-      });
+      this.wasmInitPromise = initWasm()
+        .then((module) => {
+          this.wasmReady = true;
+          this.status.wasmReady = true;
+          this.status.error = null;
+          this.notify();
+          this.precomputeCommonWaveforms();
+          return module;
+        })
+        .catch((err) => {
+          this.status.error = {
+            type: 'WASM_INIT_FAILED',
+            message: 'Failed to load audio engine',
+            detail: err.message,
+            timestamp: Date.now()
+          };
+          this.notify();
+          
+          console.error('[AudioEngine] WASM initialization failed:', err);
+          
+          if (typeof window !== 'undefined' && window.Sentry) {
+            window.Sentry.captureException(err);
+          }
+          
+          throw err;
+        });
     }
     return this.wasmInitPromise;
   }
@@ -326,28 +377,51 @@ class AudioEngine {
       return this.contextPromise;
     }
 
-    this.contextPromise = Promise.resolve().then(() => {
-      let ctx;
-      try {
-        ctx = new (window.AudioContext || window.webkitAudioContext)({
-          latencyHint: 'interactive',
-          sampleRate: DEFAULT_SAMPLE_RATE
-        });
-      } catch (_) {
-        ctx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      this.context = ctx;
-      this.status.contextReady = true;
-      this.notify();
+    this.contextPromise = Promise.resolve()
+      .then(() => {
+        let ctx;
+        try {
+          ctx = new (window.AudioContext || window.webkitAudioContext)({
+            latencyHint: 'interactive',
+            sampleRate: DEFAULT_SAMPLE_RATE
+          });
+        } catch (err) {
+          try {
+            ctx = new (window.AudioContext || window.webkitAudioContext)();
+          } catch (fallbackErr) {
+            throw new Error('Web Audio API not supported in this browser');
+          }
+        }
+        this.context = ctx;
+        this.status.contextReady = true;
+        this.status.error = null;
+        this.notify();
 
-      this.installUnlockHandlers();
-      this.setupGraph(ctx);
-      this.ensureVoicePool(ctx);
-      if (ctx.state === 'running') {
-        this.markGraphReady();
-      }
-      return ctx;
-    });
+        this.installUnlockHandlers();
+        this.setupGraph(ctx);
+        this.ensureVoicePool(ctx);
+        if (ctx.state === 'running') {
+          this.markGraphReady();
+        }
+        return ctx;
+      })
+      .catch((err) => {
+        this.status.error = {
+          type: 'AUDIO_CONTEXT_FAILED',
+          message: 'Failed to initialize audio system',
+          detail: err.message,
+          timestamp: Date.now()
+        };
+        this.notify();
+        
+        console.error('[AudioEngine] Audio context initialization failed:', err);
+        
+        if (typeof window !== 'undefined' && window.Sentry) {
+          window.Sentry.captureException(err);
+        }
+        
+        throw err;
+      });
 
     return this.contextPromise;
   }
