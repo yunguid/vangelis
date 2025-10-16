@@ -9,20 +9,20 @@ import { audioEngine } from './utils/audioEngine.js';
 
 const App = () => {
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
-  const [waveformType, setWaveformType] = useState('Sine');
+  const [waveformType, setWaveformType] = useState('Triangle');
   const [audioParams, setAudioParams] = useState({
-    reverb: 0,
-    delay: 0,
+    reverb: 0.6,
+    delay: 180,
     distortion: 0,
-    volume: 0.7,
-    useADSR: false,
-    attack: 0.05,
-    decay: 0.1,
+    volume: 0.55,
+    useADSR: true,
+    attack: 0.6,
+    decay: 0.25,
     sustain: 0.7,
-    release: 0.3,
+    release: 1.5,
     useFM: false,
-    fmRatio: 2.5,
-    fmIndex: 5,
+    fmRatio: 2,
+    fmIndex: 2,
     pan: 0.5,
     phaseOffset: 0
   });
@@ -44,6 +44,42 @@ const App = () => {
     });
 
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const API_BASE = window.location.hostname === 'localhost'
+      ? 'http://localhost:8000/api'
+      : '/api';
+    let cancelled = false;
+
+    const tryLoadWarmPad = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/presets/warm_pad`);
+        const data = await response.json();
+        if (!cancelled && data.success && data.data) {
+          const preset = data.data;
+          setWaveformType(preset.waveform);
+          setAudioParams(prev => ({
+            ...prev,
+            volume: preset.effects.volume,
+            reverb: preset.effects.reverb,
+            delay: preset.effects.delay,
+            distortion: preset.effects.distortion,
+            attack: preset.adsr.attack,
+            decay: preset.adsr.decay,
+            sustain: preset.adsr.sustain,
+            release: preset.adsr.release,
+            useADSR: true
+          }));
+        }
+      } catch (_) {
+      }
+    };
+
+    tryLoadWarmPad();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
