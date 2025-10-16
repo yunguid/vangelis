@@ -24,11 +24,18 @@ pub struct LFO {
 #[wasm_bindgen]
 impl LFO {
     #[wasm_bindgen(constructor)]
-    pub fn new(rate: f32, depth: f32, waveform: Waveform, target: LFOTarget) -> Self {
+    pub fn new(rate: f32, depth: f32, waveform: u32, target: LFOTarget) -> Self {
+        let wf = match waveform {
+            0 => Waveform::Sine,
+            1 => Waveform::Sawtooth,
+            2 => Waveform::Square,
+            3 => Waveform::Triangle,
+            _ => Waveform::Sine,
+        };
         LFO {
             rate: rate.max(0.01).min(50.0),
             depth: depth.max(0.0).min(1.0),
-            waveform,
+            waveform: wf,
             target,
         }
     }

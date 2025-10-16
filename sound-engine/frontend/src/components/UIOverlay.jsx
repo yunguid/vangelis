@@ -29,10 +29,6 @@ const UIOverlay = ({ currentWaveform, onWaveformChange }) => {
           );
         })}
       </div>
-      <div className="panel-footer">
-        <span className="control-chip">Shift + / opens shortcuts</span>
-        <span className="control-chip">Z / X for octave</span>
-      </div>
     </div>
   );
 };
