@@ -3,7 +3,6 @@ import SynthKeyboard from './components/SynthKeyboard';
 import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
-import PresetManager from './components/PresetManager';
 import Scene from './components/Scene';
 import { audioEngine } from './utils/audioEngine.js';
 
@@ -44,42 +43,6 @@ const App = () => {
     });
 
     return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    const API_BASE = window.location.hostname === 'localhost'
-      ? 'http://localhost:8000/api'
-      : '/api';
-    let cancelled = false;
-
-    const tryLoadWarmPad = async () => {
-      try {
-        const response = await fetch(`${API_BASE}/presets/warm_pad`);
-        const data = await response.json();
-        if (!cancelled && data.success && data.data) {
-          const preset = data.data;
-          setWaveformType(preset.waveform);
-          setAudioParams(prev => ({
-            ...prev,
-            volume: preset.effects.volume,
-            reverb: preset.effects.reverb,
-            delay: preset.effects.delay,
-            distortion: preset.effects.distortion,
-            attack: preset.adsr.attack,
-            decay: preset.adsr.decay,
-            sustain: preset.adsr.sustain,
-            release: preset.adsr.release,
-            useADSR: true
-          }));
-        }
-      } catch (_) {
-      }
-    };
-
-    tryLoadWarmPad();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
@@ -178,14 +141,6 @@ const App = () => {
                 currentWaveform={waveformType}
                 onWaveformChange={setWaveformType}
               />
-              <div style={{ marginTop: '16px' }}>
-                <PresetManager
-                  audioParams={audioParams}
-                  waveformType={waveformType}
-                  onParamChange={handleAudioParamChange}
-                  onWaveformChange={setWaveformType}
-                />
-              </div>
             </div>
             <div className="controls-panel wide" aria-label="Audio controls">
               <AudioControls

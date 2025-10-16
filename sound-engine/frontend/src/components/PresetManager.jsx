@@ -1,268 +1,186 @@
 import React, { useState, useEffect } from 'react';
 
-const PresetManager = ({ audioParams, waveformType, onLoadPreset, onParamChange, onWaveformChange }) => {
+const API_BASE = window.location.hostname === 'localhost' 
+  ? 'http://localhost:8000/api'
+  : '/api';
+
+const SYSTEM_PRESETS = ['default', 'pad', 'pluck', 'warm_pad', 'glass_keys', 'soft_ep', 'lofi_tape', 'analog_bass'];
+
+const PresetManager = ({ audioParams, waveformType, onParamChange, onWaveformChange }) => {
   const [presets, setPresets] = useState([]);
-  const [selectedPreset, setSelectedPreset] = useState(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [newPresetName, setNewPresetName] = useState('');
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = useState(null);
+  const [active, setActive] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [message, setMessage] = useState(null);
 
-  // API base URL - works for both local dev and production
-  const API_BASE = window.location.hostname === 'localhost' 
-    ? 'http://localhost:8000/api'
-    : '/api';
-
-  // Fetch presets on mount
   useEffect(() => {
     loadPresets();
   }, []);
 
   const loadPresets = async () => {
     try {
-      const response = await fetch(`${API_BASE}/presets`);
-      const data = await response.json();
-      
+      const res = await fetch(`${API_BASE}/presets`);
+      const data = await res.json();
       if (data.success && data.data) {
         setPresets(data.data);
-        setError(null);
+        setMessage(null);
       }
-    } catch (err) {
-      setError('Failed to load presets. Is the backend running?');
-      console.error('Preset load error:', err);
+    } catch {
+      setMessage({ type: 'error', text: 'Backend offline' });
     }
   };
 
-  const loadPreset = async (presetName) => {
+  const loadPreset = async (key) => {
     try {
-      const response = await fetch(`${API_BASE}/presets/${presetName}`);
-      const data = await response.json();
-      
+      const res = await fetch(`${API_BASE}/presets/${key}`);
+      const data = await res.json();
       if (data.success && data.data) {
-        const preset = data.data;
-        setSelectedPreset(preset);
-        
-        // Update app state
-        onWaveformChange(preset.waveform);
-        
-        // Update all audio parameters
-        onParamChange('volume', preset.effects.volume);
-        onParamChange('reverb', preset.effects.reverb);
-        onParamChange('delay', preset.effects.delay);
-        onParamChange('distortion', preset.effects.distortion);
-        
-        onParamChange('attack', preset.adsr.attack);
-        onParamChange('decay', preset.adsr.decay);
-        onParamChange('sustain', preset.adsr.sustain);
-        onParamChange('release', preset.adsr.release);
+        const p = data.data;
+        setActive(p.name);
+        onWaveformChange(p.waveform);
+        onParamChange('volume', p.effects.volume);
+        onParamChange('reverb', p.effects.reverb);
+        onParamChange('delay', p.effects.delay);
+        onParamChange('distortion', p.effects.distortion);
+        onParamChange('attack', p.adsr.attack);
+        onParamChange('decay', p.adsr.decay);
+        onParamChange('sustain', p.adsr.sustain);
+        onParamChange('release', p.adsr.release);
         onParamChange('useADSR', true);
-        
-        showSuccess(`Loaded preset: ${preset.name}`);
+        showMessage('success', `Loaded: ${p.name}`);
       }
-    } catch (err) {
-      setError(`Failed to load preset: ${presetName}`);
-      console.error('Preset load error:', err);
+    } catch {
+      showMessage('error', 'Load failed');
     }
   };
 
-  const savePreset = async () => {
-    if (!newPresetName.trim()) {
-      setError('Please enter a preset name');
-      return;
-    }
-
-    setIsSaving(true);
-    setError(null);
-
-    const presetData = {
-      name: newPresetName,
-      waveform: waveformType,
-      adsr: {
-        attack: audioParams.attack || 0.05,
-        decay: audioParams.decay || 0.1,
-        sustain: audioParams.sustain || 0.7,
-        release: audioParams.release || 0.3,
-      },
-      effects: {
-        reverb: audioParams.reverb || 0,
-        delay: audioParams.delay || 0,
-        distortion: audioParams.distortion || 0,
-        volume: audioParams.volume || 0.7,
-      },
-      author: 'User',
-      description: 'Custom preset saved from UI',
-    };
-
+  const savePreset = async (name) => {
+    if (!name.trim()) return;
     try {
-      const response = await fetch(`${API_BASE}/presets`, {
+      const res = await fetch(`${API_BASE}/presets`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(presetData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          waveform: waveformType,
+          adsr: {
+            attack: audioParams.attack || 0.05,
+            decay: audioParams.decay || 0.1,
+            sustain: audioParams.sustain || 0.7,
+            release: audioParams.release || 0.3,
+          },
+          effects: {
+            reverb: audioParams.reverb || 0,
+            delay: audioParams.delay || 0,
+            distortion: audioParams.distortion || 0,
+            volume: audioParams.volume || 0.7,
+          },
+          author: 'User',
+          description: 'Custom',
+        }),
       });
-
-      const data = await response.json();
-
+      const data = await res.json();
       if (data.success) {
-        showSuccess(`Preset "${newPresetName}" saved successfully!`);
-        setNewPresetName('');
-        await loadPresets(); // Reload preset list
-      } else {
-        setError(data.error || 'Failed to save preset');
+        showMessage('success', 'Saved');
+        loadPresets();
       }
-    } catch (err) {
-      setError('Failed to save preset. Is the backend running?');
-      console.error('Preset save error:', err);
-    } finally {
-      setIsSaving(false);
+    } catch {
+      showMessage('error', 'Save failed');
     }
   };
 
-  const deletePreset = async (presetName) => {
-    if (!confirm(`Delete preset "${presetName}"?`)) {
-      return;
-    }
-
+  const deletePreset = async (key) => {
+    if (!window.confirm('Delete?')) return;
     try {
-      const response = await fetch(`${API_BASE}/presets/${presetName}`, {
-        method: 'DELETE',
-      });
-
-      const data = await response.json();
-
+      const res = await fetch(`${API_BASE}/presets/${key}`, { method: 'DELETE' });
+      const data = await res.json();
       if (data.success) {
-        showSuccess(`Preset "${presetName}" deleted`);
-        await loadPresets();
-      } else {
-        setError(data.error || 'Failed to delete preset');
+        showMessage('success', 'Deleted');
+        loadPresets();
       }
-    } catch (err) {
-      setError('Failed to delete preset');
-      console.error('Preset delete error:', err);
+    } catch {
+      showMessage('error', 'Delete failed');
     }
   };
 
-  const showSuccess = (message) => {
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(null), 3000);
+  const showMessage = (type, text) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 2500);
   };
+
+  const toKey = (name) => name.toLowerCase().replace(/\s+/g, '_');
 
   return (
     <div className="preset-manager panel elevated">
       <div className="preset-header">
-        <h2 className="controls-heading">Preset Manager</h2>
-        <button
-          type="button"
-          className="button-link"
-          onClick={() => setIsExpanded(!isExpanded)}
-        >
-          {isExpanded ? 'Collapse' : 'Expand'}
+        <h2 className="controls-heading">Presets</h2>
+        <button type="button" className="button-link" onClick={() => setExpanded(!expanded)}>
+          {expanded ? 'Hide' : 'Show'}
         </button>
       </div>
 
-      {isExpanded && (
+      {expanded && (
         <div className="preset-content">
-          {/* Error/Success Messages */}
-          {error && (
-            <div className="preset-message preset-error">
-              ⚠️ {error}
-            </div>
-          )}
-          
-          {successMessage && (
-            <div className="preset-message preset-success">
-              ✓ {successMessage}
+          {message && (
+            <div className={`preset-message preset-${message.type}`}>
+              {message.type === 'error' ? '⚠' : '✓'} {message.text}
             </div>
           )}
 
-          {/* Save Current Settings */}
           <div className="preset-section">
-            <h3 className="preset-section-title">Save Current Settings</h3>
+            <h3 className="preset-section-title">Save</h3>
             <div className="preset-save-form">
               <input
                 type="text"
                 className="preset-input"
-                placeholder="Enter preset name..."
-                value={newPresetName}
-                onChange={(e) => setNewPresetName(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && savePreset()}
+                placeholder="Name..."
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    savePreset(e.target.value);
+                    e.target.value = '';
+                  }
+                }}
               />
-              <button
-                type="button"
-                className="button-primary"
-                onClick={savePreset}
-                disabled={isSaving || !newPresetName.trim()}
-              >
-                {isSaving ? 'Saving...' : 'Save Preset'}
-              </button>
             </div>
-            <p className="preset-hint">
-              Current: {waveformType} | Volume: {Math.round((audioParams.volume || 0.7) * 100)}%
-            </p>
           </div>
 
-          {/* Load Presets */}
           <div className="preset-section">
-            <h3 className="preset-section-title">
-              Saved Presets ({presets.length})
-              <button
-                type="button"
-                className="button-link"
-                onClick={loadPresets}
-                style={{ fontSize: '0.8rem', marginLeft: '8px' }}
-              >
-                Refresh
-              </button>
-            </h3>
-            
+            <h3 className="preset-section-title">Load ({presets.length})</h3>
             {presets.length === 0 ? (
-              <p className="preset-empty">No presets available. Save one to get started!</p>
+              <p className="preset-empty">No presets</p>
             ) : (
               <div className="preset-list">
-                {presets.map((preset) => (
-                  <div 
-                    key={preset.name} 
-                    className={`preset-item ${selectedPreset?.name === preset.name ? 'preset-item-active' : ''}`}
-                  >
-                    <div className="preset-item-info">
-                      <div className="preset-item-name">{preset.name}</div>
-                      <div className="preset-item-meta">
-                        {preset.waveform} • {preset.description || 'No description'}
+                {presets.map((p) => {
+                  const key = toKey(p.name);
+                  const isSystem = SYSTEM_PRESETS.includes(key);
+                  return (
+                    <div key={p.name} className={`preset-item ${active === p.name ? 'preset-item-active' : ''}`}>
+                      <div className="preset-item-info">
+                        <div className="preset-item-name">{p.name}</div>
+                        <div className="preset-item-meta">{p.waveform}</div>
                       </div>
-                    </div>
-                    <div className="preset-item-actions">
-                      <button
-                        type="button"
-                        className="preset-action-btn preset-load-btn"
-                        onClick={() => loadPreset(preset.name.toLowerCase().replace(/\s+/g, '_'))}
-                        title="Load this preset"
-                      >
-                        Load
-                      </button>
-                      {!['default', 'pad', 'pluck'].includes(preset.name.toLowerCase().replace(/\s+/g, '_')) && (
+                      <div className="preset-item-actions">
                         <button
                           type="button"
-                          className="preset-action-btn preset-delete-btn"
-                          onClick={() => deletePreset(preset.name.toLowerCase().replace(/\s+/g, '_'))}
-                          title="Delete this preset"
+                          className="preset-action-btn preset-load-btn"
+                          onClick={() => loadPreset(key)}
                         >
-                          Delete
+                          Load
                         </button>
-                      )}
+                        {!isSystem && (
+                          <button
+                            type="button"
+                            className="preset-action-btn preset-delete-btn"
+                            onClick={() => deletePreset(key)}
+                          >
+                            Del
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
-          </div>
-
-          {/* Backend Status */}
-          <div className="preset-footer">
-            <small className="preset-status">
-              Backend: {error ? '❌ Not Connected' : '✅ Connected'}
-            </small>
           </div>
         </div>
       )}
@@ -271,5 +189,4 @@ const PresetManager = ({ audioParams, waveformType, onLoadPreset, onParamChange,
 };
 
 export default PresetManager;
-
 
