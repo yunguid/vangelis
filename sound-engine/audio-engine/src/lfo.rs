@@ -102,15 +102,7 @@ pub fn wasm_apply_lfo_amplitude(
     waveform: u32,
     sample_rate: f32
 ) {
-    let wf = match waveform {
-        0 => Waveform::Sine,
-        1 => Waveform::Sawtooth,
-        2 => Waveform::Square,
-        3 => Waveform::Triangle,
-        _ => Waveform::Sine,
-    };
-    
-    let lfo = LFO::new(rate, depth, wf, LFOTarget::Amplitude);
+    let lfo = LFO::new(rate, depth, waveform, LFOTarget::Amplitude);
     apply_lfo_amplitude(samples, &lfo, sample_rate);
 }
 
