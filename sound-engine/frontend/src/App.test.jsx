@@ -7,6 +7,7 @@ vi.mock('./utils/audioEngine.js', () => ({
   audioEngine: {
     getStatus: () => ({ wasmReady: false, graphWarmed: false }),
     subscribe: vi.fn(() => () => {}),
+    subscribeRecording: vi.fn(() => () => {}),
     setGlobalParams: vi.fn(),
     ensureWasm: vi.fn(() => Promise.resolve()),
     ensureAudioContext: vi.fn(() => Promise.resolve()),
@@ -41,7 +42,7 @@ describe('App', () => {
 
   it('shows waveform type', () => {
     render(<App />);
-    expect(screen.getByText(/Waveform ·/)).toBeInTheDocument();
+    expect(screen.getByText(/Waveform:/)).toBeInTheDocument();
   });
 
   it('has keyboard shortcuts button', () => {
