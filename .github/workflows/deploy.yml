@@ -46,10 +46,17 @@ jobs:
           cd sound-engine/frontend
           npm ci --legacy-peer-deps
 
+      - name: Run frontend tests
+        run: |
+          cd sound-engine/frontend
+          npm test
+
       - name: Build frontend
         run: |
           cd sound-engine/frontend
           npm run build
+        env:
+          GITHUB_PAGES: true
 
       - name: Copy built files to root and add .nojekyll
         run: |

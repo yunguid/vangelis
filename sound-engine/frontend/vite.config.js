@@ -9,7 +9,7 @@ export default defineConfig({
     wasm(),
     topLevelAwait()
   ],
-  base: './',
+  base: process.env.GITHUB_PAGES ? '/vangelis/' : './',
   build: {
     outDir: 'dist',
     target: 'esnext',
