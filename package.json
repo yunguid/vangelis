@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "cd sound-engine/frontend && npm run dev",
     "build": "cd sound-engine/frontend && npm run build",
-    "preview": "cd sound-engine/frontend && npm run preview"
+    "preview": "cd sound-engine/frontend && npm run preview",
+    "test": "cd sound-engine/frontend && npm test",
+    "test:watch": "cd sound-engine/frontend && npm run test:watch"
   },
   "repository": {
     "type": "git",
