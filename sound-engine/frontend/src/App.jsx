@@ -11,15 +11,15 @@ const App = () => {
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = useState('Triangle');
   const [audioParams, setAudioParams] = useState({
-    reverb: 0.6,
-    delay: 180,
+    reverb: 0.3,
+    delay: 0,
     distortion: 0,
-    volume: 0.55,
+    volume: 0.7,
     useADSR: true,
-    attack: 0.6,
-    decay: 0.25,
-    sustain: 0.7,
-    release: 1.5,
+    attack: 0.01,
+    decay: 0.1,
+    sustain: 0.8,
+    release: 0.3,
     useFM: false,
     fmRatio: 2,
     fmIndex: 2,

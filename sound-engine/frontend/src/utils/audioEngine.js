@@ -473,13 +473,13 @@ class AudioEngine {
     const inputBus = ctx.createGain();
     inputBus.gain.value = 1;
 
-    // Compressor for dynamics control
+    // Compressor for dynamics control (gentle settings to avoid killing quiet sounds)
     const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -18;
-    compressor.knee.value = 24;
-    compressor.ratio.value = 4;
+    compressor.threshold.value = -6;
+    compressor.knee.value = 30;
+    compressor.ratio.value = 2;
     compressor.attack.value = 0.003;
-    compressor.release.value = 0.1;
+    compressor.release.value = 0.25;
 
     // Distortion
     const distortion = ctx.createWaveShaper();
@@ -609,9 +609,11 @@ class AudioEngine {
   }
 
   recycleVoice(voice) {
+    // Clean up any stale references (voice might already be removed from activeVoices)
     if (voice.noteId && this.activeVoices.get(voice.noteId) === voice) {
       this.activeVoices.delete(voice.noteId);
     }
+    voice.noteId = null;
 
     if (!this.freeVoices.includes(voice)) {
       this.freeVoices.push(voice);
@@ -778,6 +780,8 @@ class AudioEngine {
   stopNote(noteId) {
     const voice = this.activeVoices.get(noteId);
     if (voice) {
+      // Remove from activeVoices immediately so the note can be replayed
+      this.activeVoices.delete(noteId);
       const releaseTime = this.currentParams?.release ?? 0.3;
       voice.release(releaseTime);
     }
