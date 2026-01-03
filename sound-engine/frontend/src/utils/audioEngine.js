@@ -1,91 +1,269 @@
-import initWasm, {
-  wasm_generate_waveform_with_phase,
-  wasm_fm_waveform,
-  wasm_apply_adsr,
-  WasmWaveform
-} from '../../public/pkg/sound_engine.js';
+/**
+ * Vangelis Audio Engine
+ * Real-time synthesis with oscillators, custom samples, and recording
+ */
 
 const DEFAULT_SAMPLE_RATE = 44100;
-const DEFAULT_DURATION = 1.0;
-const BUFFER_SIZE = 512;
-const SILENT_BUFFER_LENGTH = BUFFER_SIZE;
 const POOL_SIZE = 32;
-const MAX_BUFFER_POOL = 96;
-const MICRO_FADE_TIME = 0.01; // short envelope to avoid clicks
+const MICRO_FADE_TIME = 0.005;
 const MINIMUM_GAIN = 0.0001;
-const RELEASE_FALLOFF_TIME = 0.018;
 
 const VOICE_STATE = Object.freeze({
   IDLE: 'idle',
-  STARTING: 'starting',
-  PLAYING: 'playing',
-  STOPPING: 'stopping'
+  ATTACK: 'attack',
+  DECAY: 'decay',
+  SUSTAIN: 'sustain',
+  RELEASE: 'release'
 });
-const COMMON_PRELOAD_NOTES = ['C3', 'C4', 'C5', 'C6'];
-const WAVEFORMS = ['Sine', 'Square', 'Sawtooth', 'Triangle'];
-const LISTENER_EVENTS = ['pointerdown', 'touchstart', 'mousedown', 'keydown'];
+
+const WAVEFORM_TYPES = ['sine', 'square', 'sawtooth', 'triangle'];
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const MIN_OCTAVE = -1;
 const MAX_OCTAVE = 7;
 
 const NOTE_OFFSET_FROM_A = {
-  'C': -9,
-  'C#': -8,
-  'D': -7,
-  'D#': -6,
-  'E': -5,
-  'F': -4,
-  'F#': -3,
-  'G': -2,
-  'G#': -1,
-  'A': 0,
-  'A#': 1,
-  'B': 2
+  'C': -9, 'C#': -8, 'D': -7, 'D#': -6, 'E': -5, 'F': -4,
+  'F#': -3, 'G': -2, 'G#': -1, 'A': 0, 'A#': 1, 'B': 2
 };
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function getWaveformEnum(type) {
-  switch (type) {
-    case 'Square':
-      return WasmWaveform.Square;
-    case 'Sawtooth':
-      return WasmWaveform.Sawtooth;
-    case 'Triangle':
-      return WasmWaveform.Triangle;
-    case 'Sine':
-    default:
-      return WasmWaveform.Sine;
+/**
+ * Attempt an exponential ramp safely, falling back to linear if needed
+ */
+function safeExponentialRamp(param, value, time) {
+  const safeValue = Math.max(value, MINIMUM_GAIN);
+  try {
+    param.exponentialRampToValueAtTime(safeValue, time);
+  } catch (e) {
+    param.linearRampToValueAtTime(safeValue, time);
   }
 }
 
-class Float32Pool {
-  constructor(blockSize = DEFAULT_SAMPLE_RATE, maxBlocks = MAX_BUFFER_POOL) {
-    this.blockSize = blockSize;
-    this.maxBlocks = maxBlocks;
-    this.pool = [];
+/**
+ * Individual voice for polyphonic playback using OscillatorNode
+ */
+class SynthVoice {
+  constructor(engine, ctx, target) {
+    this.engine = engine;
+    this.ctx = ctx;
+    this.target = target;
+
+    // Per-voice gain for envelope
+    this.gainNode = ctx.createGain();
+    this.gainNode.gain.value = 0;
+    this.gainNode.connect(target);
+
+    this.oscillator = null;
+    this.bufferSource = null; // For custom samples
+    this.noteId = null;
+    this.frequency = 0;
+    this.state = VOICE_STATE.IDLE;
+    this.startTime = 0;
+    this.velocity = 1;
+    this.isCustomSample = false;
   }
 
-  acquire(minLength) {
-    const required = Math.max(minLength, this.blockSize);
-    for (let i = 0; i < this.pool.length; i += 1) {
-      const candidate = this.pool[i];
-      if (candidate.length >= required) {
-        this.pool.splice(i, 1);
-        return candidate;
+  /**
+   * Start a note with real-time oscillator
+   */
+  startOscillator({ noteId, frequency, waveformType, velocity, params }) {
+    this.cleanup();
+
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    // Create oscillator
+    this.oscillator = ctx.createOscillator();
+    this.oscillator.type = waveformType.toLowerCase();
+    this.oscillator.frequency.setValueAtTime(frequency, now);
+    this.oscillator.connect(this.gainNode);
+
+    this.noteId = noteId;
+    this.frequency = frequency;
+    this.velocity = clamp(velocity, 0, 1);
+    this.isCustomSample = false;
+    this.startTime = now;
+
+    // Apply ADSR envelope - Attack phase
+    const attack = clamp(params.attack ?? 0.05, MICRO_FADE_TIME, 5);
+    const decay = clamp(params.decay ?? 0.1, 0, 5);
+    const sustain = clamp(params.sustain ?? 0.7, 0, 1);
+    const targetGain = clamp(params.volume ?? 0.7, 0, 1) * this.velocity;
+
+    const gainParam = this.gainNode.gain;
+    gainParam.cancelScheduledValues(now);
+    gainParam.setValueAtTime(MINIMUM_GAIN, now);
+
+    // Attack: ramp to full level
+    safeExponentialRamp(gainParam, targetGain, now + attack);
+
+    // Decay: ramp down to sustain level
+    if (decay > 0 && sustain < 1) {
+      const sustainGain = Math.max(targetGain * sustain, MINIMUM_GAIN);
+      safeExponentialRamp(gainParam, sustainGain, now + attack + decay);
+    }
+
+    this.state = VOICE_STATE.ATTACK;
+    this.oscillator.start(now);
+
+    // Transition to sustain state after attack+decay
+    setTimeout(() => {
+      if (this.state === VOICE_STATE.ATTACK || this.state === VOICE_STATE.DECAY) {
+        this.state = VOICE_STATE.SUSTAIN;
+      }
+    }, (attack + decay) * 1000);
+  }
+
+  /**
+   * Start a custom sample
+   */
+  startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop }) {
+    this.cleanup();
+
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    this.bufferSource = ctx.createBufferSource();
+    this.bufferSource.buffer = buffer;
+    this.bufferSource.loop = loop || false;
+
+    // Pitch shift based on frequency ratio
+    if (baseFrequency && frequency) {
+      this.bufferSource.playbackRate.value = frequency / baseFrequency;
+    }
+
+    this.bufferSource.connect(this.gainNode);
+
+    this.noteId = noteId;
+    this.frequency = frequency;
+    this.velocity = clamp(velocity, 0, 1);
+    this.isCustomSample = true;
+    this.startTime = now;
+
+    // Apply envelope
+    const attack = clamp(params.attack ?? 0.01, MICRO_FADE_TIME, 5);
+    const targetGain = clamp(params.volume ?? 0.7, 0, 1) * this.velocity;
+
+    const gainParam = this.gainNode.gain;
+    gainParam.cancelScheduledValues(now);
+    gainParam.setValueAtTime(MINIMUM_GAIN, now);
+    safeExponentialRamp(gainParam, targetGain, now + attack);
+
+    this.state = VOICE_STATE.ATTACK;
+    this.bufferSource.start(now);
+
+    // Handle sample end
+    this.bufferSource.onended = () => {
+      if (!loop) {
+        this.cleanup();
+        this.engine.recycleVoice(this);
+      }
+    };
+
+    setTimeout(() => {
+      if (this.state === VOICE_STATE.ATTACK) {
+        this.state = VOICE_STATE.SUSTAIN;
+      }
+    }, attack * 1000);
+  }
+
+  /**
+   * Release the note - trigger release phase of envelope
+   */
+  release(releaseTime = 0.3) {
+    if (this.state === VOICE_STATE.IDLE || this.state === VOICE_STATE.RELEASE) {
+      return;
+    }
+
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const release = clamp(releaseTime, MICRO_FADE_TIME, 5);
+
+    const gainParam = this.gainNode.gain;
+    const currentGain = gainParam.value;
+
+    gainParam.cancelScheduledValues(now);
+    gainParam.setValueAtTime(Math.max(currentGain, MINIMUM_GAIN), now);
+    safeExponentialRamp(gainParam, MINIMUM_GAIN, now + release);
+
+    this.state = VOICE_STATE.RELEASE;
+
+    // Schedule cleanup after release
+    const stopTime = now + release + 0.05;
+
+    if (this.oscillator) {
+      try {
+        this.oscillator.stop(stopTime);
+      } catch (e) {
+        // Already stopped
       }
     }
-    return new Float32Array(required);
+
+    if (this.bufferSource) {
+      try {
+        this.bufferSource.stop(stopTime);
+      } catch (e) {
+        // Already stopped
+      }
+    }
+
+    setTimeout(() => {
+      this.cleanup();
+      this.engine.recycleVoice(this);
+    }, (release + 0.1) * 1000);
   }
 
-  release(buffer) {
-    if (!buffer || this.pool.length >= this.maxBlocks) return;
-    this.pool.push(buffer);
+  /**
+   * Immediately stop the voice
+   */
+  stop() {
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    // Quick fade to avoid clicks
+    const gainParam = this.gainNode.gain;
+    gainParam.cancelScheduledValues(now);
+    gainParam.setValueAtTime(Math.max(gainParam.value, MINIMUM_GAIN), now);
+    safeExponentialRamp(gainParam, MINIMUM_GAIN, now + MICRO_FADE_TIME);
+
+    setTimeout(() => {
+      this.cleanup();
+      this.engine.recycleVoice(this);
+    }, MICRO_FADE_TIME * 1000 + 50);
+  }
+
+  cleanup() {
+    if (this.oscillator) {
+      try {
+        this.oscillator.stop();
+        this.oscillator.disconnect();
+      } catch (e) {
+        // Ignore
+      }
+      this.oscillator = null;
+    }
+
+    if (this.bufferSource) {
+      try {
+        this.bufferSource.stop();
+        this.bufferSource.disconnect();
+      } catch (e) {
+        // Ignore
+      }
+      this.bufferSource = null;
+    }
+
+    this.noteId = null;
+    this.state = VOICE_STATE.IDLE;
   }
 }
 
+/**
+ * Distortion curve cache for wave shaper
+ */
 class DistortionCurveCache {
   constructor(resolution = 44100) {
     this.resolution = resolution;
@@ -95,24 +273,23 @@ class DistortionCurveCache {
   get(amount) {
     const normalized = clamp(amount ?? 0, 0, 1);
     const key = Math.round(normalized * 1000) / 1000;
+
     if (this.cache.has(key)) {
       return this.cache.get(key);
     }
 
     const curve = new Float32Array(this.resolution);
     if (key === 0) {
-      for (let i = 0; i < this.resolution; i += 1) {
+      for (let i = 0; i < this.resolution; i++) {
         curve[i] = (i * 2) / this.resolution - 1;
       }
-      this.cache.set(key, curve);
-      return curve;
-    }
-
-    const k = key * 150;
-    const deg = Math.PI / 180;
-    for (let i = 0; i < this.resolution; i += 1) {
-      const x = (i * 2) / this.resolution - 1;
-      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    } else {
+      const k = key * 150;
+      const deg = Math.PI / 180;
+      for (let i = 0; i < this.resolution; i++) {
+        const x = (i * 2) / this.resolution - 1;
+        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+      }
     }
 
     this.cache.set(key, curve);
@@ -120,200 +297,51 @@ class DistortionCurveCache {
   }
 }
 
-class NoteVoice {
-  constructor(engine, ctx, target) {
-    this.engine = engine;
-    this.ctx = ctx;
-    this.target = target;
-
-    this.gain = ctx.createGain();
-    this.gain.gain.value = 0;
-    this.gain.connect(target);
-
-    this.bufferSource = null;
-    this.playingSource = null;
-    this.stopSource = null;
-
-    this.noteId = null;
-    this.active = false;
-    this.startTime = 0;
-    this.state = VOICE_STATE.IDLE;
-    this.lastStopTime = 0;
-
-    this.prepareNextSource();
-  }
-
-  prepareNextSource() {
-    this.bufferSource = this.ctx.createBufferSource();
-    this.bufferSource.connect(this.gain);
-  }
-
-  trigger({ buffer, noteId, volume, attackTime, startTime }) {
-    const source = this.bufferSource;
-    source.buffer = buffer;
-    source.loop = false;
-
-    this.stopSource = source.stop.bind(source);
-    source.stop = (when) => {
-      this.stop(when);
-    };
-
-    source.onended = () => {
-      if (this.playingSource === source) {
-        this.cleanup();
-      }
-    };
-
-    const ctx = this.ctx;
-    const startAt = Math.max(startTime, this.lastStopTime, ctx.currentTime);
-
-    this.playingSource = source;
-    this.noteId = noteId;
-    this.active = true;
-    this.startTime = startAt;
-    this.state = VOICE_STATE.STARTING;
-
-    const gainParam = this.gain.gain;
-    const attack = Math.max(attackTime, MICRO_FADE_TIME);
-    const targetVolume = Math.max(volume, MINIMUM_GAIN);
-    const gainStart = Math.max(MINIMUM_GAIN, gainParam.value || MINIMUM_GAIN);
-
-    gainParam.cancelScheduledValues(startAt);
-    gainParam.setValueAtTime(gainStart, startAt);
-    if (attack > 0) {
-      gainParam.exponentialRampToValueAtTime(targetVolume, startAt + attack);
-    } else {
-      gainParam.setValueAtTime(targetVolume, startAt);
-    }
-    gainParam.setTargetAtTime(targetVolume, startAt + attack, 0.001);
-
-    try {
-      source.start(startAt);
-      this.state = VOICE_STATE.PLAYING;
-    } catch (_) {
-      this.cleanup();
-    }
-
-    this.prepareNextSource();
-    return source;
-  }
-
-  stop(when = this.ctx.currentTime) {
-    if (!this.active || !this.playingSource) return;
-    if (this.state === VOICE_STATE.STOPPING) return;
-
-    const ctx = this.ctx;
-    const stopAt = Math.max(when, ctx.currentTime);
-    const gainParam = this.gain.gain;
-    const currentValue = Math.max(gainParam.value || MINIMUM_GAIN, MINIMUM_GAIN);
-
-    this.state = VOICE_STATE.STOPPING;
-    gainParam.cancelScheduledValues(stopAt);
-    gainParam.setValueAtTime(currentValue, stopAt);
-    gainParam.exponentialRampToValueAtTime(MINIMUM_GAIN, stopAt + MICRO_FADE_TIME);
-    gainParam.setValueAtTime(0, stopAt + MICRO_FADE_TIME + RELEASE_FALLOFF_TIME);
-
-    if (this.stopSource) {
-      try {
-        const scheduledStop = stopAt + MICRO_FADE_TIME + RELEASE_FALLOFF_TIME;
-        this.stopSource(scheduledStop);
-        this.lastStopTime = scheduledStop;
-      } catch (_) {
-        /* already stopped */
-      }
-    } else {
-      this.lastStopTime = Math.max(this.lastStopTime, stopAt);
-    }
-  }
-
-  cleanup() {
-    if (!this.active) return;
-
-    this.active = false;
-    this.noteId = null;
-    this.playingSource = null;
-    this.stopSource = null;
-    this.state = VOICE_STATE.IDLE;
-
-    const now = this.ctx.currentTime;
-    this.gain.gain.cancelScheduledValues(now);
-    this.gain.gain.setValueAtTime(0, now);
-    this.lastStopTime = Math.max(this.lastStopTime, now);
-
-    this.engine.recycleVoice(this);
-  }
-}
-
-class LRUCache {
-  constructor(maxSize = 500) {
-    this.maxSize = maxSize;
-    this.cache = new Map();
-  }
-
-  get(key) {
-    if (!this.cache.has(key)) return undefined;
-    const value = this.cache.get(key);
-    this.cache.delete(key);
-    this.cache.set(key, value);
-    return value;
-  }
-
-  set(key, value) {
-    if (this.cache.size >= this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
-    }
-    this.cache.set(key, value);
-  }
-
-  has(key) {
-    return this.cache.has(key);
-  }
-
-  clear() {
-    this.cache.clear();
-  }
-}
-
+/**
+ * Main Audio Engine
+ */
 class AudioEngine {
   constructor() {
-    this.wasmReady = false;
-    this.wasmInitPromise = null;
-
     this.context = null;
     this.contextPromise = null;
-
     this.graphReady = false;
-    this.graphWarmPromise = null;
-
-    this.unlockHandlerInstalled = false;
 
     this.statusListeners = new Set();
     this.status = {
-      wasmReady: false,
+      wasmReady: true, // Not using WASM for oscillators anymore
       contextReady: false,
       graphWarmed: false,
       error: null
     };
 
-    this.silentBuffer = null;
-    this.cachedImpulse = null;
-
+    // Audio nodes
     this.globalNodes = null;
     this.currentParams = null;
     this.lastParamSignature = '';
 
+    // Voice management
     this.voices = [];
     this.freeVoices = [];
     this.activeVoices = new Map();
     this.voiceSerial = 0;
 
-    this.floatPool = new Float32Pool();
+    // Custom samples
+    this.customSample = null;
+    this.customSampleBaseFrequency = 261.63; // C4
+    this.customSampleLoop = false;
+
+    // Recording
+    this.mediaRecorder = null;
+    this.recordedChunks = [];
+    this.isRecording = false;
+    this.recordingListeners = new Set();
+
+    // Utilities
     this.distortionCache = new DistortionCurveCache();
-    this.waveformCache = new LRUCache(500);
     this.frequencyTable = this.buildFrequencyTable();
-    this.commonWaveformsPrecomputed = false;
   }
+
+  // ============ Status Management ============
 
   subscribe(listener) {
     this.statusListeners.add(listener);
@@ -327,49 +355,31 @@ class AudioEngine {
     }
   }
 
-  markGraphReady() {
-    if (this.graphReady) {
-      return;
-    }
-    this.graphReady = true;
-    this.status.graphWarmed = true;
-    this.notify();
+  getStatus() {
+    return {
+      ...this.status,
+      isRecording: this.isRecording,
+      hasCustomSample: !!this.customSample
+    };
   }
 
-  getStatus() {
-    return { ...this.status };
+  subscribeRecording(listener) {
+    this.recordingListeners.add(listener);
+    return () => this.recordingListeners.delete(listener);
   }
+
+  notifyRecording() {
+    for (const listener of this.recordingListeners) {
+      listener(this.isRecording);
+    }
+  }
+
+  // ============ Audio Context Setup ============
 
   async ensureWasm() {
-    if (!this.wasmInitPromise) {
-      this.wasmInitPromise = initWasm()
-        .then((module) => {
-          this.wasmReady = true;
-          this.status.wasmReady = true;
-          this.status.error = null;
-          this.notify();
-          this.precomputeCommonWaveforms();
-          return module;
-        })
-        .catch((err) => {
-          this.status.error = {
-            type: 'WASM_INIT_FAILED',
-            message: 'Failed to load audio engine',
-            detail: err.message,
-            timestamp: Date.now()
-          };
-          this.notify();
-          
-          console.error('[AudioEngine] WASM initialization failed:', err);
-          
-          if (typeof window !== 'undefined' && window.Sentry) {
-            window.Sentry.captureException(err);
-          }
-          
-          throw err;
-        });
-    }
-    return this.wasmInitPromise;
+    // No WASM needed for oscillator-based synthesis
+    this.status.wasmReady = true;
+    return Promise.resolve();
   }
 
   async ensureAudioContext() {
@@ -377,122 +387,93 @@ class AudioEngine {
       return this.contextPromise;
     }
 
-    this.contextPromise = Promise.resolve()
-      .then(() => {
-        let ctx;
+    this.contextPromise = Promise.resolve().then(() => {
+      let ctx;
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)({
+          latencyHint: 'interactive',
+          sampleRate: DEFAULT_SAMPLE_RATE
+        });
+      } catch (err) {
         try {
-          ctx = new (window.AudioContext || window.webkitAudioContext)({
-            latencyHint: 'interactive',
-            sampleRate: DEFAULT_SAMPLE_RATE
-          });
-        } catch (err) {
-          try {
-            ctx = new (window.AudioContext || window.webkitAudioContext)();
-          } catch (fallbackErr) {
-            throw new Error('Web Audio API not supported in this browser');
-          }
+          ctx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (fallbackErr) {
+          throw new Error('Web Audio API not supported');
         }
-        this.context = ctx;
-        this.status.contextReady = true;
-        this.status.error = null;
-        this.notify();
+      }
 
-        this.installUnlockHandlers();
-        this.setupGraph(ctx);
-        this.ensureVoicePool(ctx);
-        if (ctx.state === 'running') {
-          this.markGraphReady();
-        }
-        return ctx;
-      })
-      .catch((err) => {
-        this.status.error = {
-          type: 'AUDIO_CONTEXT_FAILED',
-          message: 'Failed to initialize audio system',
-          detail: err.message,
-          timestamp: Date.now()
-        };
-        this.notify();
-        
-        console.error('[AudioEngine] Audio context initialization failed:', err);
-        
-        if (typeof window !== 'undefined' && window.Sentry) {
-          window.Sentry.captureException(err);
-        }
-        
-        throw err;
-      });
+      this.context = ctx;
+      this.status.contextReady = true;
+      this.notify();
+
+      this.installUnlockHandlers();
+      this.setupGraph(ctx);
+      this.ensureVoicePool(ctx);
+
+      if (ctx.state === 'running') {
+        this.markGraphReady();
+      }
+
+      return ctx;
+    }).catch((err) => {
+      this.status.error = {
+        type: 'AUDIO_CONTEXT_FAILED',
+        message: 'Failed to initialize audio',
+        detail: err.message,
+        timestamp: Date.now()
+      };
+      this.notify();
+      throw err;
+    });
 
     return this.contextPromise;
   }
 
   installUnlockHandlers() {
-    if (this.unlockHandlerInstalled || typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return;
 
     const resume = async () => {
-      if (!this.context) return;
-      if (this.context.state === 'suspended') {
+      if (this.context?.state === 'suspended') {
         try {
           await this.context.resume();
-        } catch (_) {
-          /* browsers may keep the context suspended until a trusted gesture */
+        } catch (e) {
+          // Ignore
         }
       }
-      if (this.context.state === 'running') {
+      if (this.context?.state === 'running') {
         this.markGraphReady();
       }
     };
 
-    LISTENER_EVENTS.forEach((eventName) => {
-      window.addEventListener(eventName, resume, { passive: true });
+    ['pointerdown', 'touchstart', 'mousedown', 'keydown'].forEach((event) => {
+      window.addEventListener(event, resume, { passive: true, once: true });
     });
-    this.unlockHandlerInstalled = true;
+  }
+
+  markGraphReady() {
+    if (this.graphReady) return;
+    this.graphReady = true;
+    this.status.graphWarmed = true;
+    this.notify();
   }
 
   async warmGraph() {
-    if (this.graphWarmPromise) {
-      return this.graphWarmPromise;
-    }
-
-    this.graphWarmPromise = (async () => {
-      await this.ensureWasm();
-      const ctx = await this.ensureAudioContext();
-      const nodes = this.setupGraph(ctx);
-      this.ensureSilentBuffer(ctx);
-
-      try {
-        const tempSource = ctx.createBufferSource();
-        tempSource.buffer = this.silentBuffer;
-        tempSource.connect(nodes.inputBus);
-        tempSource.start();
-        tempSource.stop(ctx.currentTime + 0.05);
-      } catch (_) {
-        /* ignore warm-up issues */
-      }
-      this.markGraphReady();
-    })().catch(() => {
-      this.graphWarmPromise = null;
-    });
-
-    return this.graphWarmPromise;
+    await this.ensureAudioContext();
+    this.markGraphReady();
   }
 
-  ensureSilentBuffer(ctx) {
-    if (this.silentBuffer) return;
-    this.silentBuffer = ctx.createBuffer(1, SILENT_BUFFER_LENGTH, ctx.sampleRate);
-    const channel = this.silentBuffer.getChannelData(0);
-    channel.fill(0);
-  }
+  // ============ Audio Graph ============
 
   setupGraph(ctx) {
     if (this.globalNodes) {
       return this.globalNodes;
     }
 
+    // Input bus for all voices
     const inputBus = ctx.createGain();
     inputBus.gain.value = 1;
 
-    const dryGain = ctx.createGain();
+    // Compressor for dynamics control
     const compressor = ctx.createDynamicsCompressor();
     compressor.threshold.value = -18;
     compressor.knee.value = 24;
@@ -500,109 +481,130 @@ class AudioEngine {
     compressor.attack.value = 0.003;
     compressor.release.value = 0.1;
 
+    // Distortion
     const distortion = ctx.createWaveShaper();
     distortion.curve = this.distortionCache.get(0);
     distortion.oversample = '4x';
 
+    // Delay
     const delayNode = ctx.createDelay(5);
     delayNode.delayTime.value = 0;
-
     const delayFeedback = ctx.createGain();
     delayFeedback.gain.value = 0;
+    const delayWet = ctx.createGain();
+    delayWet.gain.value = 0;
 
-    const masterGain = ctx.createGain();
-    masterGain.gain.value = 0.7;
-
+    // Reverb (simple convolver)
     const reverbNode = ctx.createConvolver();
     const reverbGain = ctx.createGain();
     reverbGain.gain.value = 0;
+    this.ensureImpulse(ctx, reverbNode);
 
+    // Master gain
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 0.7;
+
+    // Stereo panner
     const stereoPanner = ctx.createStereoPanner();
+
+    // Analyser for visualization
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 1024;
     analyser.smoothingTimeConstant = 0.8;
 
-    this.ensureImpulse(ctx, reverbNode);
+    // Recording destination
+    const recordingDest = ctx.createMediaStreamDestination();
 
-    inputBus.connect(dryGain);
-    dryGain.connect(compressor);
+    // Connect the graph
+    // Main path: input -> compressor -> distortion -> master
+    inputBus.connect(compressor);
     compressor.connect(distortion);
-    distortion.connect(delayNode);
     distortion.connect(masterGain);
+
+    // Delay path: distortion -> delay -> delayFeedback -> delay (loop)
+    //                               -> delayWet -> master
+    distortion.connect(delayNode);
     delayNode.connect(delayFeedback);
     delayFeedback.connect(delayNode);
-    delayNode.connect(masterGain);
+    delayNode.connect(delayWet);
+    delayWet.connect(masterGain);
 
+    // Reverb path: input -> reverb -> reverbGain -> master
     inputBus.connect(reverbNode);
     reverbNode.connect(reverbGain);
     reverbGain.connect(masterGain);
 
+    // Output path: master -> panner -> analyser -> destination
     masterGain.connect(stereoPanner);
     stereoPanner.connect(analyser);
     analyser.connect(ctx.destination);
 
+    // Also connect to recording destination
+    analyser.connect(recordingDest);
+
     this.globalNodes = {
       inputBus,
-      dryGain,
       compressor,
       distortion,
       delayNode,
       delayFeedback,
+      delayWet,
       reverbNode,
       reverbGain,
       masterGain,
       stereoPanner,
-      analyser
+      analyser,
+      recordingDest
     };
 
     return this.globalNodes;
   }
 
   ensureImpulse(ctx, reverbNode) {
-    if (this.cachedImpulse) {
-      reverbNode.buffer = this.cachedImpulse;
-      return;
-    }
-
     const seconds = 1.4;
     const channels = 2;
     const length = ctx.sampleRate * seconds;
     const impulse = ctx.createBuffer(channels, length, ctx.sampleRate);
 
-    for (let channel = 0; channel < channels; channel += 1) {
-      const impulseData = impulse.getChannelData(channel);
-      for (let i = 0; i < length; i += 1) {
-        impulseData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+    for (let channel = 0; channel < channels; channel++) {
+      const data = impulse.getChannelData(channel);
+      for (let i = 0; i < length; i++) {
+        // Exponential decay with random noise
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
       }
     }
 
-    this.cachedImpulse = impulse;
     reverbNode.buffer = impulse;
   }
+
+  // ============ Voice Pool ============
 
   ensureVoicePool(ctx) {
     if (this.voices.length) return;
 
     const nodes = this.setupGraph(ctx);
-    for (let i = 0; i < POOL_SIZE; i += 1) {
-      const voice = new NoteVoice(this, ctx, nodes.inputBus);
+    for (let i = 0; i < POOL_SIZE; i++) {
+      const voice = new SynthVoice(this, ctx, nodes.inputBus);
       this.voices.push(voice);
       this.freeVoices.push(voice);
     }
   }
 
   acquireVoice(noteId) {
+    // Check if we already have a voice for this note
+    if (this.activeVoices.has(noteId)) {
+      return null; // Don't double-trigger
+    }
+
     if (!this.freeVoices.length) {
       const stolen = this.stealVoice();
       if (!stolen) return null;
       this.activeVoices.set(noteId, stolen);
-      stolen.noteId = noteId;
       return stolen;
     }
 
     const voice = this.freeVoices.pop();
     this.activeVoices.set(noteId, voice);
-    voice.noteId = noteId;
     return voice;
   }
 
@@ -617,11 +619,12 @@ class AudioEngine {
   }
 
   stealVoice() {
-    if (!this.voices.length || !this.context) return null;
-    let candidate = null;
+    if (!this.voices.length) return null;
 
+    // Find oldest voice or idle voice
+    let candidate = null;
     for (const voice of this.voices) {
-      if (!voice.active || voice.state === VOICE_STATE.IDLE) {
+      if (voice.state === VOICE_STATE.IDLE) {
         candidate = voice;
         break;
       }
@@ -631,7 +634,7 @@ class AudioEngine {
     }
 
     if (candidate) {
-      candidate.stop(this.context.currentTime);
+      candidate.stop();
       if (candidate.noteId) {
         this.activeVoices.delete(candidate.noteId);
       }
@@ -640,9 +643,11 @@ class AudioEngine {
     return candidate;
   }
 
+  // ============ Frequency Table ============
+
   buildFrequencyTable() {
     const table = new Map();
-    for (let octave = MIN_OCTAVE; octave <= MAX_OCTAVE; octave += 1) {
+    for (let octave = MIN_OCTAVE; octave <= MAX_OCTAVE; octave++) {
       for (const name of NOTE_NAMES) {
         const semitoneOffset = (octave - 4) * 12 + NOTE_OFFSET_FROM_A[name];
         const frequency = 440 * Math.pow(2, semitoneOffset / 12);
@@ -656,69 +661,7 @@ class AudioEngine {
     return this.frequencyTable.get(`${noteName}${octave}`) || null;
   }
 
-  buildWaveformKey({ waveformType, frequency, duration, phaseOffset, useFM, fmRatio, fmIndex, sampleRate }) {
-    return [
-      waveformType,
-      sampleRate,
-      duration.toFixed(3),
-      frequency.toFixed(3),
-      phaseOffset.toFixed(3),
-      useFM ? 1 : 0,
-      fmRatio.toFixed(3),
-      fmIndex.toFixed(3)
-    ].join(':');
-  }
-
-  fetchWaveformSamples(options) {
-    const key = this.buildWaveformKey(options);
-    if (this.waveformCache.has(key)) {
-      return this.waveformCache.get(key);
-    }
-
-    const {
-      waveformType,
-      frequency,
-      duration,
-      phaseOffset,
-      useFM,
-      fmRatio,
-      fmIndex,
-      sampleRate
-    } = options;
-
-    let samples;
-    if (useFM) {
-      const carrierFreq = Math.max(frequency, 0);
-      const ratio = clamp(fmRatio ?? 2.5, 0.1, 10);
-      const modFreq = carrierFreq * ratio;
-      const modIndex = clamp(fmIndex ?? 5, 0, 100);
-      samples = wasm_fm_waveform(carrierFreq, modFreq, modIndex, duration, sampleRate);
-    } else {
-      const wasmWaveform = getWaveformEnum(waveformType);
-      const phase = clamp(phaseOffset ?? 0, 0, Math.PI * 2);
-      samples = wasm_generate_waveform_with_phase(wasmWaveform, frequency, phase, duration, sampleRate);
-    }
-
-    this.waveformCache.set(key, samples);
-    return samples;
-  }
-
-  applyEnvelopeIfNeeded(samples, params, sampleRate) {
-    if (!params.useADSR) {
-      return { data: samples, releaseAfterUse: false };
-    }
-
-    const attack = clamp(params.attack ?? 0.05, MICRO_FADE_TIME, 5);
-    const decay = clamp(params.decay ?? 0.1, 0, 5);
-    const sustain = clamp(params.sustain ?? 0.7, 0, 1);
-    const release = clamp(params.release ?? 0.3, MICRO_FADE_TIME, 5);
-
-    const working = this.floatPool.acquire(samples.length);
-    working.set(samples);
-    wasm_apply_adsr(working, attack, decay, sustain, release, sampleRate);
-
-    return { data: working, releaseAfterUse: true };
-  }
+  // ============ Parameter Management ============
 
   sanitizeParams(params) {
     return {
@@ -727,35 +670,18 @@ class AudioEngine {
       reverb: clamp(params.reverb ?? 0, 0, 1),
       distortion: clamp(params.distortion ?? 0, 0, 1),
       pan: clamp(params.pan ?? 0.5, 0, 1),
-      phaseOffset: clamp(params.phaseOffset ?? 0, 0, Math.PI * 2),
-      useADSR: !!params.useADSR,
       attack: clamp(params.attack ?? 0.05, MICRO_FADE_TIME, 5),
-      decay: params.decay ?? 0.1,
-      sustain: params.sustain ?? 0.7,
+      decay: clamp(params.decay ?? 0.1, 0, 5),
+      sustain: clamp(params.sustain ?? 0.7, 0, 1),
       release: clamp(params.release ?? 0.3, MICRO_FADE_TIME, 5),
-      useFM: !!params.useFM,
-      fmRatio: params.fmRatio ?? 2.5,
-      fmIndex: params.fmIndex ?? 5
+      useADSR: params.useADSR !== false
     };
   }
 
   paramsSignature(params) {
-    return [
-      params.volume.toFixed(4),
-      params.delay.toFixed(2),
-      params.reverb.toFixed(3),
-      params.distortion.toFixed(3),
-      params.pan.toFixed(3),
-      params.phaseOffset.toFixed(3),
-      params.useADSR ? 1 : 0,
-      params.attack.toFixed(3),
-      params.decay.toFixed(3),
-      params.sustain.toFixed(3),
-      params.release.toFixed(3),
-      params.useFM ? 1 : 0,
-      params.fmRatio.toFixed(3),
-      params.fmIndex.toFixed(3)
-    ].join('|');
+    return Object.values(params).map(v =>
+      typeof v === 'number' ? v.toFixed(4) : String(v)
+    ).join('|');
   }
 
   updateGlobalParams(params) {
@@ -772,21 +698,31 @@ class AudioEngine {
     const nodes = this.globalNodes;
     const now = ctx.currentTime;
 
+    // Master volume
     nodes.masterGain.gain.cancelScheduledValues(now);
     nodes.masterGain.gain.setTargetAtTime(sanitized.volume, now, 0.01);
 
+    // Delay
+    const delayTime = sanitized.delay / 1000;
     nodes.delayNode.delayTime.cancelScheduledValues(now);
-    nodes.delayNode.delayTime.setTargetAtTime(sanitized.delay / 1000, now, 0.05);
+    nodes.delayNode.delayTime.setTargetAtTime(delayTime, now, 0.05);
 
-    const feedback = clamp(sanitized.delay / 400, 0, 0.85);
+    const feedback = clamp(sanitized.delay / 400, 0, 0.7);
     nodes.delayFeedback.gain.cancelScheduledValues(now);
     nodes.delayFeedback.gain.setTargetAtTime(feedback, now, 0.1);
 
+    const delayWetLevel = delayTime > 0.01 ? 0.5 : 0;
+    nodes.delayWet.gain.cancelScheduledValues(now);
+    nodes.delayWet.gain.setTargetAtTime(delayWetLevel, now, 0.05);
+
+    // Reverb
     nodes.reverbGain.gain.cancelScheduledValues(now);
     nodes.reverbGain.gain.setTargetAtTime(sanitized.reverb, now, 0.1);
 
+    // Distortion
     nodes.distortion.curve = this.distortionCache.get(sanitized.distortion);
 
+    // Pan
     const panValue = (sanitized.pan - 0.5) * 2;
     nodes.stereoPanner.pan.cancelScheduledValues(now);
     nodes.stereoPanner.pan.setTargetAtTime(panValue, now, 0.05);
@@ -795,126 +731,179 @@ class AudioEngine {
     this.lastParamSignature = signature;
   }
 
-  async playFrequency({ noteId, frequency, waveformType, duration = DEFAULT_DURATION, params = {}, velocity = 1 }) {
-    await this.ensureWasm();
-    const ctx = await this.ensureAudioContext();
-    const nodes = this.setupGraph(ctx);
-    this.ensureVoicePool(ctx);
+  setGlobalParams(params) {
+    this.updateGlobalParams(params);
+  }
+
+  // ============ Note Playback ============
+
+  async playFrequency({ noteId, frequency, waveformType, params = {}, velocity = 1 }) {
+    await this.ensureAudioContext();
+    this.ensureVoicePool(this.context);
 
     const sanitized = this.sanitizeParams(params);
     this.updateGlobalParams(sanitized);
 
-    const sampleRate = ctx.sampleRate;
-    const waveformSamples = this.fetchWaveformSamples({
-      waveformType,
-      frequency,
-      duration,
-      phaseOffset: sanitized.phaseOffset,
-      useFM: sanitized.useFM,
-      fmRatio: sanitized.fmRatio,
-      fmIndex: sanitized.fmIndex,
-      sampleRate
-    });
-
-    const { data: playbackSamples, releaseAfterUse } = this.applyEnvelopeIfNeeded(
-      waveformSamples,
-      sanitized,
-      sampleRate
-    );
-
-    const buffer = ctx.createBuffer(1, playbackSamples.length, sampleRate);
-    buffer.copyToChannel(playbackSamples, 0);
-
-    if (releaseAfterUse) {
-      this.floatPool.release(playbackSamples);
-    }
-
-    const voiceId = noteId || `voice-${this.voiceSerial += 1}`;
+    const voiceId = noteId || `voice-${++this.voiceSerial}`;
     const voice = this.acquireVoice(voiceId);
-    if (!voice) {
-      return null;
-    }
+    if (!voice) return null;
 
-    const gain = clamp(sanitized.volume * velocity, 0, 1);
-    const source = voice.trigger({
-      buffer,
-      noteId: voiceId,
-      volume: gain,
-      attackTime: sanitized.useADSR ? sanitized.attack : MICRO_FADE_TIME,
-      startTime: ctx.currentTime
-    });
+    // Use custom sample if loaded, otherwise use oscillator
+    if (this.customSample) {
+      voice.startSample({
+        noteId: voiceId,
+        buffer: this.customSample,
+        frequency,
+        baseFrequency: this.customSampleBaseFrequency,
+        velocity,
+        params: sanitized,
+        loop: this.customSampleLoop
+      });
+    } else {
+      voice.startOscillator({
+        noteId: voiceId,
+        frequency,
+        waveformType: waveformType || 'sine',
+        velocity,
+        params: sanitized
+      });
+    }
 
     return {
-      source,
-      analyser: nodes.analyser,
-      voiceId
+      voiceId,
+      analyser: this.globalNodes?.analyser
     };
-  }
-
-  async preloadNote({ frequency, waveformType, duration = DEFAULT_DURATION, params = {} }) {
-    await this.ensureWasm();
-    const ctx = await this.ensureAudioContext();
-    const sanitized = this.sanitizeParams(params);
-    this.fetchWaveformSamples({
-      waveformType,
-      frequency,
-      duration,
-      phaseOffset: sanitized.phaseOffset,
-      useFM: sanitized.useFM,
-      fmRatio: sanitized.fmRatio,
-      fmIndex: sanitized.fmIndex,
-      sampleRate: ctx.sampleRate
-    });
   }
 
   stopNote(noteId) {
     const voice = this.activeVoices.get(noteId);
     if (voice) {
-      voice.stop();
+      const releaseTime = this.currentParams?.release ?? 0.3;
+      voice.release(releaseTime);
     }
-  }
-
-  setGlobalParams(params) {
-    this.updateGlobalParams(params);
   }
 
   getAnalyser() {
     return this.globalNodes?.analyser || null;
   }
 
-  async precomputeCommonWaveforms() {
-    if (this.commonWaveformsPrecomputed) return;
-    await this.ensureWasm();
+  // ============ Custom Sample Support ============
 
-    const sampleRate = this.context?.sampleRate || DEFAULT_SAMPLE_RATE;
-    for (const waveformType of WAVEFORMS) {
-      for (const noteId of COMMON_PRELOAD_NOTES) {
-        const frequency = this.frequencyTable.get(noteId);
-        if (!frequency) continue;
-        const key = this.buildWaveformKey({
-          waveformType,
-          frequency,
-          duration: DEFAULT_DURATION,
-          phaseOffset: 0,
-          useFM: false,
-          fmRatio: 0,
-          fmIndex: 0,
-          sampleRate
-        });
-        if (!this.waveformCache.has(key)) {
-          const samples = wasm_generate_waveform_with_phase(
-            getWaveformEnum(waveformType),
-            frequency,
-            0,
-            DEFAULT_DURATION,
-            sampleRate
-          );
-          this.waveformCache.set(key, samples);
+  async loadCustomSample(file) {
+    const ctx = await this.ensureAudioContext();
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        try {
+          const arrayBuffer = e.target.result;
+          const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+          this.customSample = audioBuffer;
+          this.status.hasCustomSample = true;
+          this.notify();
+
+          resolve({
+            duration: audioBuffer.duration,
+            sampleRate: audioBuffer.sampleRate,
+            channels: audioBuffer.numberOfChannels
+          });
+        } catch (err) {
+          reject(new Error('Failed to decode audio file: ' + err.message));
         }
-      }
-    }
+      };
 
-    this.commonWaveformsPrecomputed = true;
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  setCustomSampleBaseNote(noteName, octave) {
+    const freq = this.getFrequency(noteName, octave);
+    if (freq) {
+      this.customSampleBaseFrequency = freq;
+    }
+  }
+
+  setCustomSampleLoop(loop) {
+    this.customSampleLoop = !!loop;
+  }
+
+  clearCustomSample() {
+    this.customSample = null;
+    this.status.hasCustomSample = false;
+    this.notify();
+  }
+
+  // ============ Recording ============
+
+  async startRecording() {
+    if (this.isRecording) return;
+
+    await this.ensureAudioContext();
+    const nodes = this.globalNodes;
+    if (!nodes) return;
+
+    this.recordedChunks = [];
+
+    const stream = nodes.recordingDest.stream;
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm';
+
+    this.mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+    this.mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        this.recordedChunks.push(e.data);
+      }
+    };
+
+    this.mediaRecorder.onstop = () => {
+      this.exportRecording();
+    };
+
+    this.mediaRecorder.start(100); // Collect data every 100ms
+    this.isRecording = true;
+    this.notifyRecording();
+    this.notify();
+  }
+
+  stopRecording() {
+    if (!this.isRecording || !this.mediaRecorder) return;
+
+    this.mediaRecorder.stop();
+    this.isRecording = false;
+    this.notifyRecording();
+    this.notify();
+  }
+
+  toggleRecording() {
+    if (this.isRecording) {
+      this.stopRecording();
+    } else {
+      this.startRecording();
+    }
+  }
+
+  exportRecording() {
+    if (this.recordedChunks.length === 0) return;
+
+    const blob = new Blob(this.recordedChunks, { type: 'audio/webm' });
+    const url = URL.createObjectURL(blob);
+
+    // Create download link and trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vangelis-recording-${Date.now()}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Cleanup
+    URL.revokeObjectURL(url);
+    this.recordedChunks = [];
   }
 }
 
