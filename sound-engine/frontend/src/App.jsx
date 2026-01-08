@@ -130,7 +130,7 @@ const App = () => {
                   <span>Warming up audio engine…</span>
                 </div>
               )}
-              <div className="keyboard-hints">
+              <div className="keyboard-hints"> .    
                 <span className="keyboard-hint">Shift + / opens shortcuts </span>
                 <span className="keyboard-hint">Z / X for octave</span>
               </div>

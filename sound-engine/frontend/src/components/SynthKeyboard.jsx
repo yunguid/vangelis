@@ -478,7 +478,7 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
         order: index
       };
     });
-  }, [getNoteMeta]);
+  }, [getNoteMeta, octaveOffset]);
 
   const blackKeyMetas = useMemo(() => {
     return BLACK_KEYS.map((definition) => {
@@ -495,7 +495,7 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
         leftOffset
       };
     });
-  }, [getNoteMeta]);
+  }, [getNoteMeta, octaveOffset]);
 
   return (
     <div className="keyboard-wrapper" ref={keyboardRef}>
