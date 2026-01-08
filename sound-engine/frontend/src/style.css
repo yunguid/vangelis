@@ -1407,3 +1407,78 @@ input[type="range"]::-moz-range-thumb:active {
   font-size: 0.85rem;
   opacity: 0.5;
 }
+
+/* Header Controls */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-controls .button-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 0.9rem;
+}
+
+.header-controls label.button-icon {
+  cursor: pointer;
+}
+
+.header-controls .button-icon.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Recording Button */
+.record-button {
+  position: relative;
+}
+
+.record-button.recording {
+  background: rgba(255, 50, 50, 0.3);
+  border-color: rgba(255, 50, 50, 0.5);
+  animation: recordPulse 1s ease-in-out infinite;
+}
+
+.record-button.recording span {
+  color: rgba(255, 100, 100, 1);
+}
+
+@keyframes recordPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 50, 50, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 50, 50, 0);
+  }
+}
+
+/* Recording Indicator in keyboard header */
+.recording-indicator {
+  color: rgba(255, 80, 80, 1);
+  font-weight: 500;
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Keyboard hints */
+.keyboard-hints {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-lg);
+  font-size: clamp(0.65rem, 0.8vw, 0.75rem);
+  color: var(--color-text-tertiary);
+  opacity: 0.7;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.keyboard-hint {
+  display: inline-flex;
+  gap: 4px;
+}

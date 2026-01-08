@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { initAudioContext, playNote, preloadNote } from '../utils/audio.js';
+import { initAudioContext, playNote, stopNote as audioStopNote } from '../utils/audio.js';
 import { audioEngine } from '../utils/audioEngine.js';
 
 const BASE_OCTAVE = 4;
@@ -235,9 +235,9 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
       }
     );
 
-    if (result && result.source) {
+    if (result) {
       activeNotesRef.current.set(noteMeta.noteId, {
-        source: result.source,
+        voiceId: result.voiceId,
         pointerId
       });
       if (pointerId !== null) {
@@ -264,11 +264,8 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
     const entry = activeNotesRef.current.get(noteId);
     if (!entry) return;
 
-    try {
-      entry.source.stop();
-    } catch (_) {
-      /* source already stopped */
-    }
+    // Use the audio engine's stopNote for proper ADSR release
+    audioStopNote(noteId);
 
     activeNotesRef.current.delete(noteId);
     if (pointerId !== null) {
@@ -294,18 +291,7 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
   }, [startNote, stopNote]);
 
   const preloadNoteMeta = useCallback((noteMeta) => {
-    if (!noteMeta || !noteMeta.frequency) return;
-    const cacheKey = `${waveformRef.current}:${noteMeta.noteId}`;
-    if (preloadedNoteCacheRef.current.has(cacheKey)) return;
-    preloadedNoteCacheRef.current.add(cacheKey);
-    preloadNote({
-      frequency: noteMeta.frequency,
-      waveformType: waveformRef.current,
-      audioParams: audioParamsRef.current,
-      duration: NOTE_DURATION
-    }).catch(() => {
-      preloadedNoteCacheRef.current.delete(cacheKey);
-    });
+    // No preloading needed for oscillator-based synthesis
   }, []);
 
   const velocityFromKeyboard = useCallback((key) => {
