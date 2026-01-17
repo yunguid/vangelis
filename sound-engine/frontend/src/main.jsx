@@ -4,7 +4,11 @@ import App from './App.jsx';
 import './style.css';
 import { audioEngine } from './utils/audioEngine.js';
 
-await audioEngine.ensureWasm();
+try {
+  await audioEngine.ensureWasm();
+} catch (e) {
+  // Allow UI to render even if AudioWorklet isn't available yet.
+}
 // Warm the audio graph in the background, but don't block rendering on it.
 audioEngine.warmGraph();
 

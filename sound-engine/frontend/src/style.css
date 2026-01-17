@@ -202,7 +202,7 @@ h1, h2, h3, h4 {
 }
 
 .zone-center {
-  width: min(1500px, 98vw);
+  width: min(1200px, 95vw);
   flex: 1;
 }
 
@@ -214,7 +214,9 @@ h1, h2, h3, h4 {
 
 .zone-center {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
   padding: var(--space-lg) 0;
 }
 
@@ -757,6 +759,57 @@ input[type="range"]::-moz-range-thumb:active {
   background: linear-gradient(200deg, var(--color-surface) 0%, rgba(184, 198, 219, 0.18) 100%);
 }
 
+.wave-candy,
+.keyboard-surface,
+.controls-surface {
+  width: min(1200px, 95vw);
+}
+
+.wave-candy {
+  gap: var(--space-sm);
+  padding: var(--space-md);
+}
+
+
+.wave-candy-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.1fr) minmax(200px, 1.5fr) minmax(80px, 0.55fr) minmax(160px, 1fr) minmax(180px, 1.1fr);
+  grid-auto-rows: 150px;
+  gap: var(--space-sm);
+  align-items: stretch;
+}
+
+.candy-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  min-height: 140px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 11, 18, 0.65);
+  box-shadow: inset 0 0 18px rgba(4, 8, 14, 0.55);
+}
+
+.candy-meter {
+  min-width: 90px;
+}
+
+.candy-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.candy-canvas {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  border-radius: 10px;
+  background: rgba(6, 9, 14, 0.9);
+}
+
 .control-groups {
   display: flex;
   flex-direction: column;
@@ -1009,9 +1062,14 @@ input[type="range"]::-moz-range-thumb:active {
     width: min(1000px, 92vw);
   }
 
+  .wave-candy,
   .controls-surface,
   .keyboard-surface {
     width: min(1000px, 92vw);
+  }
+
+  .wave-candy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1025,17 +1083,25 @@ input[type="range"]::-moz-range-thumb:active {
     padding: var(--space-sm) var(--space-md);
   }
 
-  .keyboard-surface {
+  .wave-candy,
+  .keyboard-surface,
+  .controls-surface {
     width: min(95vw, 100%);
+  }
+
+  .keyboard-surface {
     aspect-ratio: auto;
     padding: var(--space-md);
   }
 
   .controls-surface {
-    width: min(95vw, 100%);
     padding: var(--space-md);
     grid-template-columns: 1fr;
     gap: var(--space-md);
+  }
+
+  .wave-candy-grid {
+    grid-template-columns: 1fr;
   }
 
   .panel-footer {

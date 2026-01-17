@@ -18,8 +18,8 @@ Vangelis is an expressive, playable web synthesizer that feels responsive and mu
 
 ### Audio Pipeline
 ```
-OscillatorNode/AudioBufferSource
-    -> GainNode (per-voice envelope)
+AudioWorklet synth (polyBLEP + FM + ADSR + filter + LFO + unison)
+    -> Input bus
     -> Compressor
     -> Distortion
     -> Delay
@@ -27,14 +27,18 @@ OscillatorNode/AudioBufferSource
     -> Master Gain
     -> Panner
     -> Destination/MediaRecorder
+
+AudioBufferSource (custom sample playback)
+    -> GainNode (per-voice envelope)
+    -> Input bus (shared FX chain)
 ```
 
 ## Key Features
 
 ### Real-time Synthesis
-- Uses native Web Audio OscillatorNode for basic waveforms (sine, square, sawtooth, triangle)
-- True ADSR envelope: attack/decay on key down, release on key up
-- Notes sustain for as long as keys are held
+- AudioWorklet-based polyphonic synth with PolyBLEP anti-aliasing for saw/square
+- FM synthesis, ADSR envelopes, state-variable filter, LFO modulation, and unison detune
+- Notes sustain for as long as keys are held with accurate release handling
 
 ### Custom Sample Mode
 - Upload WAV/MP3/OGG files as custom instruments

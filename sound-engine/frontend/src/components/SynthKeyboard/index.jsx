@@ -1,9 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { audioEngine } from '../../utils/audioEngine.js';
 import {
-  BASE_OCTAVE,
-  MIN_OFFSET,
-  MAX_OFFSET,
   WHITE_KEYS,
   BLACK_KEYS,
   BLACK_PLACEMENT,
@@ -14,9 +10,9 @@ import { useVisualFeedback } from './hooks/useVisualFeedback';
 import { useNotePlayback } from './hooks/useNotePlayback';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
 import { usePointerInput } from './hooks/usePointerInput';
-import WhiteKey from './components/WhiteKey';
-import BlackKey from './components/BlackKey';
+import Key from './components/Key';
 import KeyboardMeta from './components/KeyboardMeta';
+import { getNoteMeta } from './utils/noteMeta';
 
 const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false }) => {
   const keyboardRef = useRef(null);
@@ -88,13 +84,11 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
   // Compute key metadata based on current octave
   const whiteKeyMetas = useMemo(() => {
     return WHITE_KEYS.map((definition, index) => {
-      const octave = clamp(
-        BASE_OCTAVE + octaveOffset + definition.rel,
-        MIN_OFFSET + BASE_OCTAVE,
-        MAX_OFFSET + BASE_OCTAVE + 1
+      const { octave, noteId, frequency } = getNoteMeta(
+        definition.name,
+        definition.rel,
+        octaveOffset
       );
-      const noteId = `${definition.name}${octave}`;
-      const frequency = audioEngine.getFrequency(definition.name, octave);
       return {
         noteName: definition.name,
         octave,
@@ -107,13 +101,11 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
 
   const blackKeyMetas = useMemo(() => {
     return BLACK_KEYS.map((definition) => {
-      const octave = clamp(
-        BASE_OCTAVE + octaveOffset + definition.rel,
-        MIN_OFFSET + BASE_OCTAVE,
-        MAX_OFFSET + BASE_OCTAVE + 1
+      const { octave, noteId, frequency } = getNoteMeta(
+        definition.name,
+        definition.rel,
+        octaveOffset
       );
-      const noteId = `${definition.name}${octave}`;
-      const frequency = audioEngine.getFrequency(definition.name, octave);
       const placementIndex = BLACK_PLACEMENT[definition.name] + (definition.rel === 1 ? 7 : 0);
       const positionRatio = clamp(
         (placementIndex + BLACK_KEY_OFFSET_RATIO) / WHITE_KEYS.length,
@@ -138,13 +130,13 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
         style={{ gridTemplateColumns: `repeat(${whiteKeyMetas.length}, minmax(0, 1fr))` }}
       >
         {whiteKeyMetas.map((meta) => (
-          <WhiteKey key={meta.noteId} meta={meta} registerKey={registerKey} />
+          <Key key={meta.noteId} meta={meta} registerKey={registerKey} variant="white" />
         ))}
       </div>
 
       <div className="black-keys-layer">
         {blackKeyMetas.map((meta) => (
-          <BlackKey key={meta.noteId} meta={meta} registerKey={registerKey} />
+          <Key key={meta.noteId} meta={meta} registerKey={registerKey} variant="black" />
         ))}
       </div>
 

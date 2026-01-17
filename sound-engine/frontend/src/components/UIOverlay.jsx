@@ -1,6 +1,5 @@
 import React from 'react';
-
-const waveforms = ['Sine', 'Sawtooth', 'Square', 'Triangle'];
+import { WAVEFORM_OPTIONS } from '../utils/audioParams.js';
 
 const UIOverlay = ({ currentWaveform, onWaveformChange }) => {
   return (
@@ -13,7 +12,7 @@ const UIOverlay = ({ currentWaveform, onWaveformChange }) => {
         Choose the harmonic profile for the instrument. Changes update instantly.
       </p>
       <div className="waveform-grid" role="radiogroup" aria-label="Waveform selection">
-        {waveforms.map(wave => {
+        {WAVEFORM_OPTIONS.map((wave) => {
           const isActive = currentWaveform === wave;
           return (
             <button

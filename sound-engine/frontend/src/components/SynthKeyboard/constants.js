@@ -1,7 +1,6 @@
 export const BASE_OCTAVE = 4;
 export const MIN_OFFSET = -5;
 export const MAX_OFFSET = 2;
-export const NOTE_DURATION = 1.0;
 
 export const WHITE_KEY_HEIGHT = 'clamp(72px, 18vh, 120px)';
 export const BLACK_KEY_WIDTH = 'clamp(24px, 4.2vw, 48px)';

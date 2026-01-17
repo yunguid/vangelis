@@ -275,7 +275,7 @@ fn status() -> Json<StatusResponse> {
         status: "OK",
         version: "1.0.0",
         features: vec![
-            "WASM Audio Engine",
+            "AudioWorklet Synth Engine",
             "Preset Management",
             "Real-time Synthesis",
             "Multi-mode Filters",

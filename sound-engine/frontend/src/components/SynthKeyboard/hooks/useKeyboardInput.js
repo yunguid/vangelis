@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { audioEngine } from '../../../utils/audioEngine.js';
-import { BASE_OCTAVE, MIN_OFFSET, MAX_OFFSET, KEYBOARD_MAP, clamp } from '../constants';
+import { KEYBOARD_MAP, MIN_OFFSET, MAX_OFFSET, clamp } from '../constants';
+import { getNoteMeta } from '../utils/noteMeta';
 
 export function useKeyboardInput({
   octaveOffsetRef,
@@ -20,20 +20,8 @@ export function useKeyboardInput({
     return clamp(1 - delta / 250, 0.3, 1);
   }, []);
 
-  const getNoteMeta = useCallback((noteName, relativeOctave) => {
-    const octave = clamp(
-      BASE_OCTAVE + octaveOffsetRef.current + relativeOctave,
-      MIN_OFFSET + BASE_OCTAVE,
-      MAX_OFFSET + BASE_OCTAVE + 1
-    );
-    const noteId = `${noteName}${octave}`;
-    const frequency = audioEngine.getFrequency(noteName, octave);
-    return {
-      noteName,
-      octave,
-      noteId,
-      frequency
-    };
+  const getNote = useCallback((noteName, relativeOctave) => {
+    return getNoteMeta(noteName, relativeOctave, octaveOffsetRef.current);
   }, [octaveOffsetRef]);
 
   const handleKeyboardDown = useCallback((event) => {
@@ -60,7 +48,7 @@ export function useKeyboardInput({
       return;
     }
 
-    const meta = getNoteMeta(mapping.name, mapping.delta);
+    const meta = getNote(mapping.name, mapping.delta);
     if (!meta.frequency) {
       return;
     }

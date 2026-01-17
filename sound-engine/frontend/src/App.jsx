@@ -4,28 +4,14 @@ import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
+import WaveCandy from './components/WaveCandy';
 import { audioEngine } from './utils/audioEngine.js';
-import { loadCustomSample, clearCustomSample, toggleRecording } from './utils/audio.js';
+import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM } from './utils/audioParams.js';
 
 const App = () => {
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
-  const [waveformType, setWaveformType] = useState('Triangle');
-  const [audioParams, setAudioParams] = useState({
-    reverb: 0.3,
-    delay: 0,
-    distortion: 0,
-    volume: 0.7,
-    useADSR: true,
-    attack: 0.01,
-    decay: 0.1,
-    sustain: 0.8,
-    release: 0.3,
-    useFM: false,
-    fmRatio: 2,
-    fmIndex: 2,
-    pan: 0.5,
-    phaseOffset: 0
-  });
+  const [waveformType, setWaveformType] = useState(DEFAULT_WAVEFORM);
+  const [audioParams, setAudioParams] = useState(() => ({ ...AUDIO_PARAM_DEFAULTS }));
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
@@ -61,7 +47,7 @@ const App = () => {
 
     setSampleLoading(true);
     try {
-      const info = await loadCustomSample(file);
+      const info = await audioEngine.loadCustomSample(file);
       setSampleInfo({
         name: file.name,
         duration: info.duration.toFixed(2),
@@ -76,7 +62,7 @@ const App = () => {
   }, []);
 
   const handleClearSample = useCallback(() => {
-    clearCustomSample();
+    audioEngine.clearCustomSample();
     setSampleInfo(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -84,7 +70,7 @@ const App = () => {
   }, []);
 
   const handleRecordToggle = useCallback(() => {
-    toggleRecording();
+    audioEngine.toggleRecording();
   }, []);
 
   useEffect(() => {
@@ -101,7 +87,7 @@ const App = () => {
       // Space bar toggles recording (only if not focused on input)
       if (event.key === ' ' && event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') {
         event.preventDefault();
-        toggleRecording();
+        audioEngine.toggleRecording();
       }
     };
 
@@ -202,6 +188,7 @@ const App = () => {
         </header>
 
         <main className="zone-center content-primary" aria-label="Keyboard area">
+          <WaveCandy />
           <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
             <div className="keyboard-header">
               <span>Keyboard</span>

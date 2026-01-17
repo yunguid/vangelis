@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { initAudioContext, playNote, stopNote as audioStopNote } from '../../../utils/audio.js';
 import { audioEngine } from '../../../utils/audioEngine.js';
-import { clamp, NOTE_DURATION } from '../constants';
+import { clamp } from '../constants';
 
 export function useNotePlayback({
   waveformRef,
@@ -50,20 +49,17 @@ export function useNotePlayback({
       return;
     }
 
-    initAudioContext();
+    audioEngine.ensureAudioContext().catch(() => {});
     const velocityNormalized = clamp(velocity, 0.05, 1);
     const perfStart = typeof performance !== 'undefined' ? performance.now() : null;
 
-    const result = playNote(
-      noteMeta.frequency,
-      NOTE_DURATION,
-      waveformRef.current,
-      audioParamsRef.current,
-      {
-        noteId: noteMeta.noteId,
-        velocity: velocityNormalized
-      }
-    );
+    const result = audioEngine.playFrequency({
+      noteId: noteMeta.noteId,
+      frequency: noteMeta.frequency,
+      waveformType: waveformRef.current,
+      params: audioParamsRef.current,
+      velocity: velocityNormalized
+    });
 
     if (result) {
       activeNotesRef.current.set(noteMeta.noteId, {
@@ -94,7 +90,7 @@ export function useNotePlayback({
     const entry = activeNotesRef.current.get(noteId);
     if (!entry) return;
 
-    audioStopNote(noteId);
+    audioEngine.stopNote(noteId);
 
     activeNotesRef.current.delete(noteId);
     if (pointerId !== null) {
@@ -107,6 +103,31 @@ export function useNotePlayback({
       }
     }
     scheduleVisualUpdate(noteId, false);
+  }, [scheduleVisualUpdate]);
+
+  useEffect(() => {
+    const releaseAll = () => {
+      for (const [noteId] of activeNotesRef.current) {
+        audioEngine.stopNote(noteId);
+        scheduleVisualUpdate(noteId, false);
+      }
+      activeNotesRef.current.clear();
+      pointerToNoteRef.current.clear();
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') {
+        releaseAll();
+      }
+    };
+
+    window.addEventListener('blur', releaseAll);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('blur', releaseAll);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [scheduleVisualUpdate]);
 
   const switchPointerNote = useCallback((pointerId, nextMeta, velocityHint) => {

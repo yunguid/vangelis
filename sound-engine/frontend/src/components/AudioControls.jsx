@@ -1,4 +1,115 @@
 import React, { useState } from 'react';
+import { AUDIO_PARAM_DEFAULTS, AUDIO_PARAM_RANGES } from '../utils/audioParams.js';
+
+const percentValue = (value) => Math.round(value * 100);
+const percentRange = (range) => ({
+  min: Math.round(range.min * 100),
+  max: Math.round(range.max * 100),
+  step: Math.max(1, Math.round(range.step * 100))
+});
+
+const makeSlider = (param, { id, label, display, helpText }) => {
+  const range = AUDIO_PARAM_RANGES[param];
+  return {
+    id,
+    label,
+    param,
+    min: range.min,
+    max: range.max,
+    step: range.step,
+    toSlider: (value) => value,
+    fromSlider: (value) => value,
+    display: display || ((value) => `${value}`),
+    helpText
+  };
+};
+
+const makePercentSlider = (param, { id, label, display, helpText }) => {
+  const range = AUDIO_PARAM_RANGES[param];
+  const uiRange = percentRange(range);
+  return {
+    id,
+    label,
+    param,
+    min: uiRange.min,
+    max: uiRange.max,
+    step: uiRange.step,
+    toSlider: (value) => percentValue(value),
+    fromSlider: (value) => value / 100,
+    display: display || ((value) => `${percentValue(value)}%`),
+    helpText
+  };
+};
+
+const ESSENTIAL_SLIDERS = [
+  makePercentSlider('volume', {
+    id: 'volume',
+    label: 'Volume',
+    helpText: 'Set the output level. Designed for quick sweeps and precise control.'
+  }),
+  makePercentSlider('pan', {
+    id: 'pan',
+    label: 'Stereo pan',
+    display: (value) => `L${Math.round((value - 0.5) * 200)} R`
+  })
+];
+
+const EFFECT_SLIDERS = [
+  makeSlider('delay', {
+    id: 'delay',
+    label: 'Delay',
+    display: (value) => `${Math.round(value)} ms`
+  }),
+  makePercentSlider('reverb', {
+    id: 'reverb',
+    label: 'Reverb'
+  }),
+  makePercentSlider('distortion', {
+    id: 'distortion',
+    label: 'Distortion'
+  })
+];
+
+const ADSR_SLIDERS = [
+  makeSlider('attack', {
+    id: 'attack',
+    label: 'Attack',
+    display: (value) => `${value.toFixed(2)} s`
+  }),
+  makeSlider('decay', {
+    id: 'decay',
+    label: 'Decay',
+    display: (value) => `${value.toFixed(2)} s`
+  }),
+  makePercentSlider('sustain', {
+    id: 'sustain',
+    label: 'Sustain'
+  }),
+  makeSlider('release', {
+    id: 'release',
+    label: 'Release',
+    display: (value) => `${value.toFixed(2)} s`
+  })
+];
+
+const FM_SLIDERS = [
+  makeSlider('fmRatio', {
+    id: 'fm-ratio',
+    label: 'FM ratio',
+    display: (value) => `${value.toFixed(2)} : 1`
+  }),
+  makeSlider('fmIndex', {
+    id: 'fm-index',
+    label: 'FM index',
+    display: (value) => `${value.toFixed(1)}`
+  })
+];
+
+const PHASE_SLIDER = makeSlider('phaseOffset', {
+  id: 'phase-offset',
+  label: 'Phase offset',
+  display: (value) => `${Math.round(value)}°`
+});
 
 const SliderControl = ({
   id,
@@ -44,6 +155,39 @@ const SliderControl = ({
 const AudioControls = ({ audioParams, onParamChange }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  const getParam = (key) => {
+    const value = audioParams?.[key];
+    if (typeof value === 'number') return value;
+    return AUDIO_PARAM_DEFAULTS[key];
+  };
+
+  const getToggle = (key) => {
+    const value = audioParams?.[key];
+    if (typeof value === 'boolean') return value;
+    return !!AUDIO_PARAM_DEFAULTS[key];
+  };
+
+  const renderSlider = (slider) => {
+    const paramValue = getParam(slider.param);
+    return (
+      <SliderControl
+        key={slider.id}
+        id={slider.id}
+        label={slider.label}
+        value={slider.toSlider(paramValue)}
+        displayValue={slider.display(paramValue)}
+        min={slider.min}
+        max={slider.max}
+        step={slider.step}
+        onChange={(value) => onParamChange(slider.param, slider.fromSlider(value))}
+        helpText={slider.helpText}
+      />
+    );
+  };
+
+  const useADSR = getToggle('useADSR');
+  const useFM = getToggle('useFM');
+
   return (
     <div className="panel elevated control-groups">
       <div className="control-section">
@@ -52,66 +196,17 @@ const AudioControls = ({ audioParams, onParamChange }) => {
           <button
             type="button"
             className="button-link"
-            onClick={() => setShowAdvanced(prev => !prev)}
+            onClick={() => setShowAdvanced((prev) => !prev)}
           >
             {showAdvanced ? 'Hide advanced' : 'Show advanced'}
           </button>
         </div>
-        <SliderControl
-          id="volume"
-          label="Volume"
-          value={Math.round((audioParams.volume ?? 0.7) * 100)}
-          displayValue={`${Math.round((audioParams.volume ?? 0.7) * 100)}%`}
-          min={0}
-          max={100}
-          step={1}
-          onChange={(v) => onParamChange('volume', v / 100)}
-          helpText="Set the output level. Designed for quick sweeps and precise control."
-        />
-        <SliderControl
-          id="pan"
-          label="Stereo pan"
-          value={Math.round((audioParams.pan ?? 0.5) * 100)}
-          displayValue={`L${Math.round(((audioParams.pan ?? 0.5) - 0.5) * 200)} R`}
-          min={0}
-          max={100}
-          step={1}
-          onChange={(v) => onParamChange('pan', v / 100)}
-        />
+        {ESSENTIAL_SLIDERS.map(renderSlider)}
       </div>
 
       <div className="control-section">
         <h2 className="controls-heading">Effects</h2>
-        <SliderControl
-          id="delay"
-          label="Delay"
-          value={audioParams.delay ?? 0}
-          displayValue={`${Math.round(audioParams.delay ?? 0)} ms`}
-          min={0}
-          max={500}
-          step={10}
-          onChange={(v) => onParamChange('delay', v)}
-        />
-        <SliderControl
-          id="reverb"
-          label="Reverb"
-          value={Math.round((audioParams.reverb ?? 0) * 100)}
-          displayValue={`${Math.round((audioParams.reverb ?? 0) * 100)}%`}
-          min={0}
-          max={100}
-          step={1}
-          onChange={(v) => onParamChange('reverb', v / 100)}
-        />
-        <SliderControl
-          id="distortion"
-          label="Distortion"
-          value={Math.round((audioParams.distortion ?? 0) * 100)}
-          displayValue={`${Math.round((audioParams.distortion ?? 0) * 100)}%`}
-          min={0}
-          max={100}
-          step={1}
-          onChange={(v) => onParamChange('distortion', v / 100)}
-        />
+        {EFFECT_SLIDERS.map(renderSlider)}
       </div>
 
       {showAdvanced && (
@@ -122,52 +217,13 @@ const AudioControls = ({ audioParams, onParamChange }) => {
             <input
               id="use-adsr"
               type="checkbox"
-              checked={audioParams.useADSR ?? false}
+              checked={useADSR}
               onChange={(e) => onParamChange('useADSR', e.target.checked)}
             />
           </label>
-          {audioParams.useADSR && (
+          {useADSR && (
             <div className="slider-grid">
-              <SliderControl
-                id="attack"
-                label="Attack"
-                value={audioParams.attack ?? 0.05}
-                displayValue={`${(audioParams.attack ?? 0.05).toFixed(2)} s`}
-                min={0}
-                max={2}
-                step={0.01}
-                onChange={(v) => onParamChange('attack', v)}
-              />
-              <SliderControl
-                id="decay"
-                label="Decay"
-                value={audioParams.decay ?? 0.1}
-                displayValue={`${(audioParams.decay ?? 0.1).toFixed(2)} s`}
-                min={0}
-                max={2}
-                step={0.01}
-                onChange={(v) => onParamChange('decay', v)}
-              />
-              <SliderControl
-                id="sustain"
-                label="Sustain"
-                value={Math.round((audioParams.sustain ?? 0.7) * 100)}
-                displayValue={`${Math.round((audioParams.sustain ?? 0.7) * 100)}%`}
-                min={0}
-                max={100}
-                step={1}
-                onChange={(v) => onParamChange('sustain', v / 100)}
-              />
-              <SliderControl
-                id="release"
-                label="Release"
-                value={audioParams.release ?? 0.3}
-                displayValue={`${(audioParams.release ?? 0.3).toFixed(2)} s`}
-                min={0}
-                max={3}
-                step={0.01}
-                onChange={(v) => onParamChange('release', v)}
-              />
+              {ADSR_SLIDERS.map(renderSlider)}
             </div>
           )}
 
@@ -176,45 +232,17 @@ const AudioControls = ({ audioParams, onParamChange }) => {
             <input
               id="use-fm"
               type="checkbox"
-              checked={audioParams.useFM ?? false}
+              checked={useFM}
               onChange={(e) => onParamChange('useFM', e.target.checked)}
             />
           </label>
-          {audioParams.useFM && (
+          {useFM && (
             <div className="slider-grid">
-              <SliderControl
-                id="fm-ratio"
-                label="FM ratio"
-                value={audioParams.fmRatio ?? 2.5}
-                displayValue={`${(audioParams.fmRatio ?? 2.5).toFixed(2)} : 1`}
-                min={0.5}
-                max={6}
-                step={0.1}
-                onChange={(v) => onParamChange('fmRatio', v)}
-              />
-              <SliderControl
-                id="fm-index"
-                label="FM index"
-                value={audioParams.fmIndex ?? 5}
-                displayValue={`${(audioParams.fmIndex ?? 5).toFixed(1)}`}
-                min={0}
-                max={20}
-                step={0.5}
-                onChange={(v) => onParamChange('fmIndex', v)}
-              />
+              {FM_SLIDERS.map(renderSlider)}
             </div>
           )}
 
-          <SliderControl
-            id="phase-offset"
-            label="Phase offset"
-            value={audioParams.phaseOffset ?? 0}
-            displayValue={`${Math.round(audioParams.phaseOffset ?? 0)}°`}
-            min={0}
-            max={360}
-            step={1}
-            onChange={(v) => onParamChange('phaseOffset', v)}
-          />
+          {renderSlider(PHASE_SLIDER)}
         </div>
       )}
     </div>
