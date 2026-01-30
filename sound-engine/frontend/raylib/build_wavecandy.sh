@@ -23,14 +23,22 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 mkdir -p "${EM_CACHE_DIR}"
 
+RAYLIB_SOURCES=(
+  "${SCRIPT_DIR}/wavecandy.c"
+  "${RAYLIB_SRC}/rcore.c"
+  "${RAYLIB_SRC}/rshapes.c"
+  "${RAYLIB_SRC}/rtextures.c"
+  "${RAYLIB_SRC}/rtext.c"
+  "${RAYLIB_SRC}/rmodels.c"
+  "${RAYLIB_SRC}/raudio.c"
+)
+
+if [ -f "${RAYLIB_SRC}/utils.c" ]; then
+  RAYLIB_SOURCES+=("${RAYLIB_SRC}/utils.c")
+fi
+
 EM_CACHE="${EM_CACHE_DIR}" emcc \
-  "${SCRIPT_DIR}/wavecandy.c" \
-  "${RAYLIB_SRC}/rcore.c" \
-  "${RAYLIB_SRC}/rshapes.c" \
-  "${RAYLIB_SRC}/rtextures.c" \
-  "${RAYLIB_SRC}/rtext.c" \
-  "${RAYLIB_SRC}/rmodels.c" \
-  "${RAYLIB_SRC}/raudio.c" \
+  "${RAYLIB_SOURCES[@]}" \
   -I"${RAYLIB_SRC}" \
   -I"${RAYLIB_EXTERNAL}/glfw/include" \
   -DPLATFORM_WEB -DGRAPHICS_API_OPENGL_ES2 \
