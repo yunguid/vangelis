@@ -118,10 +118,10 @@ const RaylibWaveCandy = ({ fallback = null }) => {
     if (container) {
       const rect = container.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      const width = Math.max(1, Math.floor(rect.width * dpr)) || 1200;
-      const height = Math.max(1, Math.floor(rect.height * dpr)) || 220;
-      canvas.width = width;
-      canvas.height = height;
+      const cssWidth = Math.max(1, Math.floor(rect.width)) || 1200;
+      const cssHeight = Math.max(1, Math.floor(rect.height)) || 220;
+      canvas.width = Math.max(1, Math.floor(cssWidth * dpr));
+      canvas.height = Math.max(1, Math.floor(cssHeight * dpr));
     }
 
     loadRaylibFactory()
@@ -224,14 +224,18 @@ const RaylibWaveCandy = ({ fallback = null }) => {
     const resize = () => {
       const rect = container.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      const width = Math.max(1, Math.floor(rect.width * dpr));
-      const height = Math.max(1, Math.floor(rect.height * dpr));
-      if (sizeRef.current.width !== width || sizeRef.current.height !== height || sizeRef.current.dpr !== dpr) {
-        sizeRef.current = { width, height, dpr };
-        canvas.width = width;
-        canvas.height = height;
+      const cssWidth = Math.max(1, Math.floor(rect.width));
+      const cssHeight = Math.max(1, Math.floor(rect.height));
+      if (
+        sizeRef.current.width !== cssWidth ||
+        sizeRef.current.height !== cssHeight ||
+        sizeRef.current.dpr !== dpr
+      ) {
+        sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
+        canvas.width = Math.max(1, Math.floor(cssWidth * dpr));
+        canvas.height = Math.max(1, Math.floor(cssHeight * dpr));
         if (module._wc_set_size) {
-          module._wc_set_size(width, height);
+          module._wc_set_size(cssWidth, cssHeight);
         }
       }
     };
