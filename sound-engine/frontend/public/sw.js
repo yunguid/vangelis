@@ -1,8 +1,12 @@
 const CACHE_VERSION = 'vangelis-audio-cache-v1';
+const SCOPE_URL = self.registration?.scope || '/';
+const BASE_URL = new URL(SCOPE_URL);
+const withBase = (path) => new URL(path, BASE_URL).toString();
 const PRECACHE_URLS = [
-  '/pkg/sound_engine.js',
-  '/pkg/sound_engine_bg.wasm'
+  withBase('pkg/sound_engine.js'),
+  withBase('pkg/sound_engine_bg.wasm')
 ];
+const PKG_PREFIX = withBase('pkg/');
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -32,12 +36,12 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  if (PRECACHE_URLS.includes(url.pathname)) {
+  if (PRECACHE_URLS.includes(url.href)) {
     event.respondWith(cacheFirst(request));
     return;
   }
 
-  if (url.pathname.startsWith('/pkg/')) {
+  if (url.href.startsWith(PKG_PREFIX)) {
     event.respondWith(cacheFirst(request));
   }
 });

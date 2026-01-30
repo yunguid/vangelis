@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './style.css';
 import { audioEngine } from './utils/audioEngine.js';
+import { withBase } from './utils/baseUrl.js';
 
 try {
   await audioEngine.ensureWasm();
@@ -20,7 +21,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register(withBase('sw.js')).catch(() => {
       /* silent */
     });
   });

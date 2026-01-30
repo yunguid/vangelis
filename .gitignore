@@ -36,3 +36,8 @@ guide.md
 # Build artifacts
 *.wasm
 pkg/
+
+# raylib WaveCandy build output
+sound-engine/frontend/raylib/.emcache/
+!sound-engine/frontend/public/raylib/wavecandy.js
+!sound-engine/frontend/public/raylib/wavecandy.wasm
