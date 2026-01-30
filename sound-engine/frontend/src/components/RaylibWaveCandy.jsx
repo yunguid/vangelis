@@ -226,16 +226,18 @@ const RaylibWaveCandy = ({ fallback = null }) => {
       const dpr = window.devicePixelRatio || 1;
       const cssWidth = Math.max(1, Math.floor(rect.width));
       const cssHeight = Math.max(1, Math.floor(rect.height));
+      const deviceWidth = Math.max(1, Math.floor(cssWidth * dpr));
+      const deviceHeight = Math.max(1, Math.floor(cssHeight * dpr));
       if (
         sizeRef.current.width !== cssWidth ||
         sizeRef.current.height !== cssHeight ||
         sizeRef.current.dpr !== dpr
       ) {
         sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
-        canvas.width = Math.max(1, Math.floor(cssWidth * dpr));
-        canvas.height = Math.max(1, Math.floor(cssHeight * dpr));
+        canvas.width = deviceWidth;
+        canvas.height = deviceHeight;
         if (module._wc_set_size) {
-          module._wc_set_size(cssWidth, cssHeight);
+          module._wc_set_size(deviceWidth, deviceHeight);
         }
       }
     };
