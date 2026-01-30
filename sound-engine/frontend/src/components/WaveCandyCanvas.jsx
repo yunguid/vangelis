@@ -167,7 +167,7 @@ const drawMeter = (ctx, left, right, width, height) => {
   ctx.fillText(`${rmsDb.toFixed(1)} dB`, 4, 12);
 };
 
-const WaveCandy = () => {
+const WaveCandyCanvas = () => {
   const spectrogramRef = useRef(null);
   const scopeRef = useRef(null);
   const spectrumRef = useRef(null);
@@ -295,4 +295,4 @@ const WaveCandy = () => {
   );
 };
 
-export default WaveCandy;
+export default WaveCandyCanvas;

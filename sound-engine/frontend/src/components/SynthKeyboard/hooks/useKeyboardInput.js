@@ -56,7 +56,7 @@ export function useKeyboardInput({
     const velocity = velocityFromKeyboard(key);
     keyToNoteRef.current.set(key, meta.noteId);
     startNote(meta, { velocity });
-  }, [getNoteMeta, setOctaveOffset, startNote, velocityFromKeyboard]);
+  }, [getNote, setOctaveOffset, startNote, velocityFromKeyboard]);
 
   const handleKeyboardUp = useCallback((event) => {
     const key = event.key.toLowerCase();

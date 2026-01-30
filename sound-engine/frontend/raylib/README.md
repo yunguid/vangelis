@@ -9,7 +9,7 @@ This folder contains the raylib-based WaveCandy renderer (WASM) for the frontend
 ## Build
 ```bash
 cd sound-engine/frontend/raylib
-./build_wavecandy.sh
+bash build_wavecandy.sh
 ```
 
 If raylib lives elsewhere:
