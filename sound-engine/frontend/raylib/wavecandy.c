@@ -185,7 +185,7 @@ static void DrawTileShell(Rectangle tile, Rectangle content, const char *label) 
 
   DrawRectangleRounded(tile, 0.12f, 8, tile_bg);
   DrawRectangleRoundedLinesEx(tile, 0.12f, 8, 1.0f, tile_border);
-  DrawText(label, (int)(tile.x + 10.0f), (int)(tile.y + 6.0f), 10, label_color);
+  DrawText(label, (int)(tile.x + 10.0f), (int)(tile.y + 6.0f), 11, label_color);
   DrawRectangleRounded(content, 0.08f, 6, content_bg);
 }
 
@@ -440,7 +440,7 @@ static void DrawMeter(Rectangle rect) {
 
   char text[32];
   snprintf(text, sizeof(text), "%.1f dB", rms_db);
-  DrawText(text, (int)(rect.x + 6.0f), (int)(rect.y + 6.0f), 10, (Color){230, 230, 230, 170});
+  DrawText(text, (int)(rect.x + 6.0f), (int)(rect.y + 6.0f), 11, (Color){230, 230, 230, 170});
 }
 
 static void UpdateDrawFrame(void) {
@@ -455,7 +455,8 @@ static void UpdateDrawFrame(void) {
   const char **labels = g_show_vector ? kLabelsFull : kLabelsCompact;
   int count = g_show_vector ? 5 : 4;
 
-  Layout layout = ComputeLayout(GetScreenWidth(), GetScreenHeight(), weights, count);
+  /* Use stored dimensions instead of GetScreenWidth/Height for web builds */
+  Layout layout = ComputeLayout(g_screen_w, g_screen_h, weights, count);
 
   for (int i = 0; i < layout.count; i++) {
     DrawTileShell(layout.tiles[i], layout.content[i], labels[i]);
