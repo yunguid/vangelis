@@ -455,8 +455,7 @@ static void UpdateDrawFrame(void) {
   const char **labels = g_show_vector ? kLabelsFull : kLabelsCompact;
   int count = g_show_vector ? 5 : 4;
 
-  /* Use stored dimensions instead of GetScreenWidth/Height for web builds */
-  Layout layout = ComputeLayout(g_screen_w, g_screen_h, weights, count);
+  Layout layout = ComputeLayout(GetScreenWidth(), GetScreenHeight(), weights, count);
 
   for (int i = 0; i < layout.count; i++) {
     DrawTileShell(layout.tiles[i], layout.content[i], labels[i]);
