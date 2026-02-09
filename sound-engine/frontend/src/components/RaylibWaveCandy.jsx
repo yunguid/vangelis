@@ -8,6 +8,7 @@ const TARGET_FPS_INTERVAL = 33;
 const FALLBACK_WIDTH = 1200;
 const FALLBACK_HEIGHT = 220;
 const RESIZE_POLL_INTERVAL_MS = 350;
+const RAYLIB_DPR = 1;
 
 let raylibFactoryPromise = null;
 
@@ -127,7 +128,9 @@ const RaylibWaveCandy = ({ fallback = null }) => {
 
     if (container) {
       const { cssWidth, cssHeight } = measureViewport(container);
-      const dpr = window.devicePixelRatio || 1;
+      // Keep a 1:1 canvas size path. Raylib + Emscripten handle high-DPI internally,
+      // and external DPR scaling here can desynchronize the internal viewport.
+      const dpr = RAYLIB_DPR;
       canvas.width = Math.max(1, Math.round(cssWidth * dpr));
       canvas.height = Math.max(1, Math.round(cssHeight * dpr));
       sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
@@ -232,13 +235,15 @@ const RaylibWaveCandy = ({ fallback = null }) => {
 
     const resize = () => {
       const { cssWidth, cssHeight } = measureViewport(container);
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = RAYLIB_DPR;
       const deviceWidth = Math.max(1, Math.round(cssWidth * dpr));
       const deviceHeight = Math.max(1, Math.round(cssHeight * dpr));
       if (
         sizeRef.current.width !== cssWidth ||
         sizeRef.current.height !== cssHeight ||
-        sizeRef.current.dpr !== dpr
+        sizeRef.current.dpr !== dpr ||
+        canvas.width !== deviceWidth ||
+        canvas.height !== deviceHeight
       ) {
         sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
         canvas.width = deviceWidth;
@@ -260,7 +265,7 @@ const RaylibWaveCandy = ({ fallback = null }) => {
     };
 
     const ensureCanvasSizeSync = () => {
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = RAYLIB_DPR;
       const cssWidth = Math.max(1, Math.round(container.clientWidth || sizeRef.current.width || FALLBACK_WIDTH));
       const cssHeight = Math.max(1, Math.round(container.clientHeight || sizeRef.current.height || FALLBACK_HEIGHT));
       const expectedWidth = Math.max(1, Math.round(cssWidth * dpr));
