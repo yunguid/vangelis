@@ -1,0 +1,298 @@
+/**
+ * Component Styles
+ * Buttons, inputs, toggles, and form elements
+ */
+
+/* Button Base */
+.button-icon,
+.button-primary,
+.waveform-button {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-small);
+  background: linear-gradient(180deg, rgba(232, 240, 245, 0.24) 0%, rgba(184, 198, 219, 0.16) 100%);
+  border: var(--border-glass-subtle);
+  color: var(--color-text-primary);
+  backdrop-filter: blur(14px) brightness(1.1);
+  transition: transform var(--transition-hover), filter var(--transition-hover), box-shadow var(--transition-hover);
+  box-shadow: var(--shadow-touch);
+}
+
+.button-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  color: var(--color-text-primary);
+}
+
+.button-primary {
+  padding: 14px 22px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, rgba(232, 240, 245, 0.3) 0%, rgba(184, 198, 219, 0.18) 100%);
+}
+
+.button-link {
+  font-size: 0.85rem;
+  font-weight: 300;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  background: none;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-small);
+  transition: color 360ms ease;
+}
+
+.button-link:hover {
+  color: var(--color-text-primary);
+}
+
+.button-icon:hover,
+.button-primary:hover,
+.waveform-button:hover {
+  opacity: 0.8;
+}
+
+/* Control Chip */
+.control-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--color-chip);
+  color: var(--color-text-secondary);
+  font-size: clamp(0.72rem, 0.9vw, 0.85rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 8px 20px rgba(16, 28, 40, 0.28);
+  backdrop-filter: blur(12px) brightness(1.08);
+}
+
+/* Slider Components */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.label-stack {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.slider-value {
+  font-size: clamp(0.75rem, 0.9vw, 0.85rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.slider-description {
+  font-size: clamp(0.72rem, 0.95vw, 0.85rem);
+  color: var(--color-text-secondary);
+  opacity: 0.9;
+  letter-spacing: 0.05em;
+}
+
+.slider-input-wrapper {
+  position: relative;
+  width: 100%;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  --slider-progress: 50%;
+}
+
+.slider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+
+/* Range Input */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 107, 53, 0.3) 0%,
+    rgba(255, 107, 53, 0.5) var(--slider-progress, 50%),
+    rgba(255, 255, 255, 0.06) calc(var(--slider-progress, 50%) + 0.1%),
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  transition: all 0.15s ease;
+  border: none;
+  box-shadow: none;
+}
+
+input[type="range"]:hover {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 107, 53, 0.4) 0%,
+    rgba(255, 107, 53, 0.6) var(--slider-progress, 50%),
+    rgba(255, 255, 255, 0.08) calc(var(--slider-progress, 50%) + 0.1%),
+    rgba(255, 255, 255, 0.08) 100%
+  );
+}
+
+input[type="range"]:focus-visible {
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: rgba(255, 107, 53, 0.9);
+  border: 1px solid rgba(255, 107, 53, 1);
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: rgba(255, 107, 53, 1);
+  width: 14px;
+  height: 14px;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(0.9);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: rgba(255, 107, 53, 0.9);
+  border: 1px solid rgba(255, 107, 53, 1);
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: rgba(255, 107, 53, 1);
+  width: 14px;
+  height: 14px;
+}
+
+input[type="range"]::-moz-range-thumb:active {
+  transform: scale(0.9);
+}
+
+/* Toggle Checkbox */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: clamp(0.78rem, 0.95vw, 0.88rem);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toggle-row input[type="checkbox"] {
+  width: 52px;
+  height: 28px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 12px rgba(12, 24, 36, 0.25);
+  transition: background 320ms ease;
+}
+
+.toggle-row input[type="checkbox"]::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50% 50% 45% 45%;
+  background: linear-gradient(180deg, rgba(248, 250, 251, 0.9) 0%, rgba(209, 220, 229, 0.7) 100%);
+  box-shadow: 0 8px 16px rgba(12, 24, 36, 0.32);
+  transition: transform 320ms ease;
+}
+
+.toggle-row input[type="checkbox"]:checked {
+  background: rgba(232, 240, 245, 0.34);
+}
+
+.toggle-row input[type="checkbox"]:checked::after {
+  transform: translateX(22px);
+}
+
+/* Fieldset */
+.fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldset + .fieldset {
+  margin-top: 20px;
+}
+
+/* Recording Button */
+.record-button {
+  position: relative;
+}
+
+.record-button.recording {
+  background: rgba(255, 50, 50, 0.3);
+  border-color: rgba(255, 50, 50, 0.5);
+  animation: recordPulse 1s ease-in-out infinite;
+}
+
+.record-button.recording span {
+  color: rgba(255, 100, 100, 1);
+}
+
+@keyframes recordPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 50, 50, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 50, 50, 0);
+  }
+}
+
+.recording-indicator {
+  color: rgba(255, 80, 80, 1);
+  font-weight: 500;
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

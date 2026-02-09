@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
-
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+import { clamp } from '../utils/math.js';
 
 const createFloatBuffer = (length) => new Float32Array(length);
 const createByteBuffer = (length) => new Uint8Array(length);

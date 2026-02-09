@@ -22,8 +22,7 @@ import {
 import { createAudioGraph } from './audioEngine/graph.js';
 import { createSampleVoicePool } from './audioEngine/samplePool.js';
 import { RecorderController } from './audioEngine/recorder.js';
-
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+import { clamp } from './math.js';
 
 class SynthWorklet {
   constructor(paramDefaults) {

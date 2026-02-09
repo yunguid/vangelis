@@ -1,0 +1,175 @@
+/**
+ * Layout Styles
+ * App shell, zones, and structural layout
+ */
+
+/* Background */
+.simple-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--color-bg-deep);
+}
+
+.gradient-layer {
+  display: none;
+}
+
+/* App Stage - Root container */
+.app-stage {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* App Shell - Main content wrapper */
+.app-shell {
+  position: relative;
+  width: var(--max-shell-width);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+  min-height: 100vh;
+}
+
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Visual hierarchy tiers */
+.tier-focus {
+  box-shadow: var(--shadow-radiant);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+}
+
+.tier-support {
+  box-shadow: var(--shadow-floating);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.tier-subtle {
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  opacity: 0.92;
+}
+
+/* Content ordering */
+.content-tertiary {
+  order: 0;
+  flex: 0 0 auto;
+}
+
+.content-primary {
+  order: 1;
+  flex: 1 1 auto;
+}
+
+.content-secondary {
+  order: 2;
+  flex: 0 1 auto;
+}
+
+/* Zone - Top (Header) */
+.zone-top {
+  width: min(520px, 100%);
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-medium);
+  background: linear-gradient(180deg, var(--color-surface-soft) 0%, rgba(255, 255, 255, 0.08) 100%);
+  backdrop-filter: blur(var(--blur-surface)) brightness(1.08);
+  border: var(--border-glass-subtle);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+/* Zone - Center (Main content) */
+.zone-center {
+  width: min(1200px, 95vw);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-lg) 0;
+}
+
+/* Zone - Bottom (Controls) */
+.zone-bottom {
+  width: min(1200px, 95vw);
+  display: flex;
+  justify-content: center;
+  padding-bottom: var(--space-lg);
+}
+
+/* Branding */
+.brand-title {
+  font-weight: 400;
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-glimmer-one);
+  text-shadow: none;
+  margin: 0;
+}
+
+.brand-subtitle {
+  font-weight: 300;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+  letter-spacing: 0.18em;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  opacity: 0.92;
+}
+
+/* Header Controls */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-controls .button-icon {
+  width: 36px;
+  height: 36px;
+  font-size: 0.9rem;
+}
+
+.header-controls label.button-icon {
+  cursor: pointer;
+}
+
+.header-controls .button-icon.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Panel base */
+.panel {
+  position: relative;
+  background: var(--color-surface);
+  border: var(--border-glass);
+  border-radius: var(--radius-medium);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  backdrop-filter: blur(var(--blur-surface)) brightness(1.08);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.panel.elevated {
+  box-shadow: var(--shadow-floating);
+  background: linear-gradient(200deg, var(--color-surface) 0%, rgba(184, 198, 219, 0.18) 100%);
+}

@@ -99,38 +99,44 @@ class Envelope {
     this.sampleRate = sampleRate;
     this.stage = ENV_STAGE.IDLE;
     this.value = 0.0;
-    this.attackSamples = 1;
-    this.decaySamples = 1;
-    this.releaseSamples = 1;
+    this.target = 0.0;
     this.sustain = 1.0;
-    this.attackInc = 1.0;
-    this.decayInc = 0.0;
-    this.releaseInc = 0.0;
+    // Exponential coefficients (pre-calculated for performance)
+    this.attackCoeff = 0.0;
+    this.decayCoeff = 0.0;
+    this.releaseCoeff = 0.0;
+    // Time constant multiplier (higher = faster approach)
+    this.timeConstant = 4.0;
   }
 
   setADSR(attack, decay, sustain, release) {
-    const attackSamples = Math.max(1, Math.floor(attack * this.sampleRate));
-    const decaySamples = Math.max(1, Math.floor(decay * this.sampleRate));
-    const releaseSamples = Math.max(1, Math.floor(release * this.sampleRate));
-
-    this.attackSamples = attackSamples;
-    this.decaySamples = decaySamples;
-    this.releaseSamples = releaseSamples;
     this.sustain = clamp(sustain, 0, 1);
 
-    this.attackInc = 1.0 / attackSamples;
-    this.decayInc = (this.sustain - 1.0) / decaySamples;
-    this.releaseInc = 0.0;
+    // Calculate exponential coefficients
+    // coeff = exp(-1 / (time * sampleRate * timeConstant))
+    // Smaller coeff = faster approach to target
+    const attackTime = Math.max(0.001, attack);
+    const decayTime = Math.max(0.001, decay);
+    const releaseTime = Math.max(0.001, release);
+
+    this.attackCoeff = Math.exp(-1.0 / (attackTime * this.sampleRate / this.timeConstant));
+    this.decayCoeff = Math.exp(-1.0 / (decayTime * this.sampleRate / this.timeConstant));
+    this.releaseCoeff = Math.exp(-1.0 / (releaseTime * this.sampleRate / this.timeConstant));
   }
 
   noteOn() {
     this.stage = ENV_STAGE.ATTACK;
-    this.value = 0.0;
+    this.target = 1.0;
+    // Start from small positive value for smooth attack
+    if (this.value < 0.001) {
+      this.value = 0.001;
+    }
   }
 
   setImmediate() {
     this.stage = ENV_STAGE.SUSTAIN;
     this.value = 1.0;
+    this.target = 1.0;
   }
 
   noteOff() {
@@ -138,7 +144,7 @@ class Envelope {
       return;
     }
     this.stage = ENV_STAGE.RELEASE;
-    this.releaseInc = -this.value / this.releaseSamples;
+    this.target = 0.0;
   }
 
   next(useAdsr) {
@@ -148,15 +154,18 @@ class Envelope {
 
     switch (this.stage) {
       case ENV_STAGE.ATTACK:
-        this.value += this.attackInc;
-        if (this.value >= 1.0) {
+        // Exponential approach to 1.0
+        this.value = this.target + (this.value - this.target) * this.attackCoeff;
+        if (this.value >= 0.999) {
           this.value = 1.0;
           this.stage = ENV_STAGE.DECAY;
+          this.target = this.sustain;
         }
         break;
       case ENV_STAGE.DECAY:
-        this.value += this.decayInc;
-        if (this.value <= this.sustain) {
+        // Exponential approach to sustain level
+        this.value = this.target + (this.value - this.target) * this.decayCoeff;
+        if (Math.abs(this.value - this.sustain) < 0.001) {
           this.value = this.sustain;
           this.stage = ENV_STAGE.SUSTAIN;
         }
@@ -165,7 +174,8 @@ class Envelope {
         this.value = this.sustain;
         break;
       case ENV_STAGE.RELEASE:
-        this.value += this.releaseInc;
+        // Exponential approach to 0
+        this.value = this.value * this.releaseCoeff;
         if (this.value <= MIN_GAIN) {
           this.value = 0.0;
           this.stage = ENV_STAGE.IDLE;
@@ -188,15 +198,19 @@ class StateVariableFilter {
   constructor(sampleRate) {
     this.sampleRate = sampleRate;
     this.cutoff = 18000;
+    this.targetCutoff = 18000;
     this.resonance = 0.7;
     this.lp = 0.0;
     this.bp = 0.0;
     this.mode = 0; // 0=lowpass
+    // Smoothing coefficient (higher = slower smoothing)
+    // ~10ms smoothing at 44100 Hz
+    this.smoothCoeff = Math.exp(-1.0 / (0.01 * sampleRate));
   }
 
   setParams({ cutoff, resonance, mode }) {
     if (typeof cutoff === 'number') {
-      this.cutoff = clamp(cutoff, 20, this.sampleRate * 0.45);
+      this.targetCutoff = clamp(cutoff, 20, this.sampleRate * 0.45);
     }
     if (typeof resonance === 'number') {
       this.resonance = clamp(resonance, 0.1, 10.0);
@@ -209,13 +223,19 @@ class StateVariableFilter {
   reset() {
     this.lp = 0.0;
     this.bp = 0.0;
+    this.cutoff = this.targetCutoff;
   }
 
   process(input, cutoffOverride) {
-    const cutoff = typeof cutoffOverride === 'number'
+    // Apply one-pole smoothing to cutoff to prevent zipper noise
+    const targetCutoff = typeof cutoffOverride === 'number'
       ? clamp(cutoffOverride, 20, this.sampleRate * 0.45)
-      : this.cutoff;
-    const f = 2.0 * Math.sin(Math.PI * cutoff / this.sampleRate);
+      : this.targetCutoff;
+
+    // Smooth the cutoff frequency
+    this.cutoff = targetCutoff + (this.cutoff - targetCutoff) * this.smoothCoeff;
+
+    const f = 2.0 * Math.sin(Math.PI * this.cutoff / this.sampleRate);
     const q = 1.0 / this.resonance;
 
     this.lp = this.lp + f * this.bp;
@@ -255,11 +275,19 @@ class Voice {
     this.startFrame = 0;
     this.lfoRate = 0.0;
     this.lfoDepth = 0.0;
+    this.lfoDepthSmoothed = 0.0;
     this.lfoPhase = 0.0;
     this.lfoTarget = 0; // 0 none, 1 pitch, 2 amp, 3 filter
     this.unisonVoices = 1;
     this.unisonDetune = 0.0;
     this.unisonPhases = new Float32Array(4);
+    // Smoothing coefficient for LFO depth (~20ms at 44100 Hz)
+    this.lfoSmoothCoeff = Math.exp(-1.0 / (0.02 * sampleRate));
+    // Voice stealing fade-out
+    this.isBeingStolen = false;
+    this.stealFadeGain = 1.0;
+    // Fade-out rate: complete in ~10ms at 44100 Hz
+    this.stealFadeRate = 1.0 / (0.01 * sampleRate);
   }
 
   start({ noteId, frequency, waveform, velocity, params, frame }) {
@@ -271,6 +299,9 @@ class Voice {
     this.modPhase = 0.0;
     this.active = true;
     this.startFrame = frame;
+    // Reset steal fade state
+    this.isBeingStolen = false;
+    this.stealFadeGain = 1.0;
 
     const phaseOffset = (params.phaseOffsetDeg ?? 0) / 360.0;
     this.phase = phaseOffset % 1.0;
@@ -353,15 +384,18 @@ class Voice {
   nextSample() {
     if (!this.active) return 0.0;
 
+    // Smooth LFO depth changes to prevent clicks
+    this.lfoDepthSmoothed = this.lfoDepth + (this.lfoDepthSmoothed - this.lfoDepth) * this.lfoSmoothCoeff;
+
     let lfoValue = 0.0;
-    if (this.lfoDepth > 0.0 && this.lfoRate > 0.0) {
+    if (this.lfoDepthSmoothed > 0.001 && this.lfoRate > 0.0) {
       const lfoPhase = (this.lfoPhase + this.lfoRate / this.sampleRate) % 1.0;
       this.lfoPhase = lfoPhase;
-      lfoValue = Math.sin(TWO_PI * lfoPhase) * this.lfoDepth;
+      lfoValue = Math.sin(TWO_PI * lfoPhase) * this.lfoDepthSmoothed;
     }
 
     let pitchMultiplier = 1.0;
-    if (this.lfoTarget === 1 && this.lfoDepth > 0.0) {
+    if (this.lfoTarget === 1 && this.lfoDepthSmoothed > 0.001) {
       const semitones = lfoValue * 2.0;
       pitchMultiplier = Math.pow(2, semitones / 12.0);
     }
@@ -391,17 +425,30 @@ class Voice {
     const envValue = this.envelope.next(this.useADSR);
     sample *= envValue * this.velocity;
 
-    if (this.lfoTarget === 2 && this.lfoDepth > 0.0) {
+    if (this.lfoTarget === 2 && this.lfoDepthSmoothed > 0.001) {
       sample *= Math.max(0.0, 1.0 + lfoValue);
     }
 
     if (this.useFilter) {
-      if (this.lfoTarget === 3 && this.lfoDepth > 0.0) {
+      if (this.lfoTarget === 3 && this.lfoDepthSmoothed > 0.001) {
         const modCutoff = this.filter.cutoff * Math.pow(2, lfoValue * 4.0 / 12.0);
         sample = this.filter.process(sample, modCutoff);
       } else {
         sample = this.filter.process(sample);
       }
+    }
+
+    // Apply steal fade-out if being stolen
+    if (this.isBeingStolen) {
+      this.stealFadeGain -= this.stealFadeRate;
+      if (this.stealFadeGain <= 0.0) {
+        this.stealFadeGain = 0.0;
+        this.active = false;
+        this.noteId = null;
+        this.isBeingStolen = false;
+        return 0.0;
+      }
+      sample *= this.stealFadeGain;
     }
 
     if (this.envelope.isIdle() && envValue <= MIN_GAIN) {
@@ -502,11 +549,36 @@ class SynthProcessor extends AudioWorkletProcessor {
 
   stealVoice() {
     let candidate = null;
+    let candidateScore = Infinity;
+
     for (const voice of this.voices) {
-      if (!candidate || voice.startFrame < candidate.startFrame) {
+      // Score voices: lower is better to steal
+      // Prefer: releasing > oldest > loudest
+      let score = 0;
+
+      // Voices in release phase are best candidates
+      if (voice.envelope.stage === ENV_STAGE.RELEASE) {
+        score -= 100000;
+      }
+
+      // Older voices are better candidates
+      score -= (this.frameCounter - voice.startFrame);
+
+      // Quieter voices are better candidates
+      score -= (1.0 - voice.envelope.value) * 10000;
+
+      if (score < candidateScore) {
+        candidateScore = score;
         candidate = voice;
       }
     }
+
+    // Apply quick fade-out to stolen voice (~10ms)
+    if (candidate && candidate.active) {
+      candidate.stealFadeGain = 1.0;
+      candidate.isBeingStolen = true;
+    }
+
     return candidate;
   }
 

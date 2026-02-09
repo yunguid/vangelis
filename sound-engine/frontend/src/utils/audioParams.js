@@ -1,4 +1,4 @@
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+import { clamp } from './math.js';
 
 export const MICRO_FADE_TIME = 0.005;
 

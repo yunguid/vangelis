@@ -81,4 +81,4 @@ export const KEY_LABELS = {
   'D#5': 'P'
 };
 
-export const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+export { clamp } from '../../utils/math.js';

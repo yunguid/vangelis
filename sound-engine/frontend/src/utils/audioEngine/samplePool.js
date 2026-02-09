@@ -1,7 +1,6 @@
 import { AUDIO_PARAM_RANGES, MICRO_FADE_TIME } from '../audioParams.js';
 import { MINIMUM_GAIN, VOICE_STATE } from './constants.js';
-
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+import { clamp } from '../math.js';
 
 function safeExponentialRamp(param, value, time) {
   const safeValue = Math.max(value, MINIMUM_GAIN);

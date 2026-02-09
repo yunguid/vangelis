@@ -5,8 +5,10 @@ import UIOverlay from './components/UIOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
+import Sidebar from './components/Sidebar';
 import { audioEngine } from './utils/audioEngine.js';
 import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM } from './utils/audioParams.js';
+import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 
 const App = () => {
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
@@ -16,10 +18,16 @@ const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
   const [sampleLoading, setSampleLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState('midi');
+  const [activeSampleId, setActiveSampleId] = useState(null);
   const fileInputRef = useRef(null);
   const scrollRaf = useRef(null);
   const wasmLoaded = engineStatus.wasmReady;
   const isGraphWarm = engineStatus.graphWarmed;
+
+  // MIDI playback hook
+  const midiPlayback = useMidiPlayback({ waveformType, audioParams });
 
   useEffect(() => {
     audioEngine.setGlobalParams(audioParams);
@@ -64,8 +72,33 @@ const App = () => {
   const handleClearSample = useCallback(() => {
     audioEngine.clearCustomSample();
     setSampleInfo(null);
+    setActiveSampleId(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  }, []);
+
+  // Handle sample selection from sidebar
+  const handleSampleSelect = useCallback(async (sample) => {
+    if (!sample || !sample.audioData) return;
+
+    setSampleLoading(true);
+    try {
+      // Create a File-like object from the stored audio data
+      const blob = new Blob([sample.audioData], { type: sample.mimeType || 'audio/wav' });
+      const file = new File([blob], sample.name + '.wav', { type: sample.mimeType || 'audio/wav' });
+
+      const info = await audioEngine.loadCustomSample(file);
+      setSampleInfo({
+        name: sample.name,
+        duration: info.duration.toFixed(2),
+        channels: info.channels
+      });
+      setActiveSampleId(sample.id);
+    } catch (err) {
+      console.error('Failed to load sample:', err);
+    } finally {
+      setSampleLoading(false);
     }
   }, []);
 
@@ -202,6 +235,7 @@ const App = () => {
                 waveformType={waveformType}
                 audioParams={audioParams}
                 wasmLoaded={wasmLoaded}
+                externalActiveNotes={midiPlayback.activeNotes}
               />
               {!isGraphWarm && (
                 <div className="warmup-indicator" aria-live="polite">
@@ -277,7 +311,28 @@ const App = () => {
             </div>
           </div>
         )}
+
         </div>
+
+        <Sidebar
+          isOpen={sidebarOpen}
+          onOpen={() => setSidebarOpen(true)}
+          onClose={() => setSidebarOpen(false)}
+          activeTab={sidebarTab}
+          onTabChange={setSidebarTab}
+          isPlaying={midiPlayback.isPlaying}
+          isPaused={midiPlayback.isPaused}
+          progress={midiPlayback.progress}
+          currentMidi={midiPlayback.currentMidi}
+          tempoFactor={midiPlayback.tempoFactor}
+          onPlay={midiPlayback.play}
+          onPause={midiPlayback.pause}
+          onResume={midiPlayback.resume}
+          onStop={midiPlayback.stop}
+          onTempoChange={midiPlayback.setTempo}
+          onSampleSelect={handleSampleSelect}
+          activeSampleId={activeSampleId}
+        />
       </div>
     </ErrorBoundary>
   );

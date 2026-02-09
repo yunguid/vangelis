@@ -1,0 +1,354 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  getAllSamples,
+  getSamplesByCategory,
+  getSample,
+  storeSample,
+  deleteSample,
+  deleteCategory,
+  getStorageStats
+} from '../../utils/sampleStorage.js';
+
+/**
+ * Samples browser tab - import and browse local samples
+ */
+const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
+  const [samples, setSamples] = useState({});
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
+  const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [stats, setStats] = useState(null);
+  const [error, setError] = useState(null);
+  const folderInputRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Load samples on mount
+  useEffect(() => {
+    loadSamples();
+  }, []);
+
+  const loadSamples = async () => {
+    try {
+      setLoading(true);
+      const grouped = await getSamplesByCategory();
+      setSamples(grouped);
+
+      const storageStats = await getStorageStats();
+      setStats(storageStats);
+    } catch (err) {
+      console.error('Failed to load samples:', err);
+      setError('Failed to load samples');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleCategory = (category) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
+  // Handle folder import via file input with webkitdirectory
+  const handleFolderImport = useCallback(async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    setImporting(true);
+    setError(null);
+
+    try {
+      // Filter for audio files
+      const audioFiles = files.filter(f =>
+        f.type.startsWith('audio/') ||
+        /\.(wav|mp3|ogg|flac|aiff|m4a)$/i.test(f.name)
+      );
+
+      if (audioFiles.length === 0) {
+        setError('No audio files found in selection');
+        return;
+      }
+
+      // Extract category from folder path
+      const getCategoryFromPath = (file) => {
+        const path = file.webkitRelativePath || file.name;
+        const parts = path.split('/');
+        // Use parent folder as category, or root folder
+        if (parts.length >= 2) {
+          return parts[parts.length - 2];
+        }
+        return 'Imported';
+      };
+
+      // Process files in batches to avoid memory issues
+      const batchSize = 5;
+      let processed = 0;
+
+      for (let i = 0; i < audioFiles.length; i += batchSize) {
+        const batch = audioFiles.slice(i, i + batchSize);
+
+        await Promise.all(batch.map(async (file) => {
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+
+            // Create audio context to decode and get metadata
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+            audioCtx.close();
+
+            await storeSample({
+              name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+              category: getCategoryFromPath(file),
+              audioData: arrayBuffer,
+              mimeType: file.type || 'audio/wav',
+              duration: audioBuffer.duration,
+              sampleRate: audioBuffer.sampleRate,
+              channels: audioBuffer.numberOfChannels,
+              sourcePath: file.webkitRelativePath || file.name
+            });
+
+            processed++;
+          } catch (err) {
+            console.warn(`Failed to import ${file.name}:`, err);
+          }
+        }));
+      }
+
+      // Reload samples list
+      await loadSamples();
+
+      // Expand newly imported categories
+      const newCategories = [...new Set(audioFiles.map(getCategoryFromPath))];
+      setExpandedCategories(prev => new Set([...prev, ...newCategories]));
+
+    } catch (err) {
+      console.error('Import failed:', err);
+      setError('Failed to import samples');
+    } finally {
+      setImporting(false);
+      if (folderInputRef.current) {
+        folderInputRef.current.value = '';
+      }
+    }
+  }, []);
+
+  // Handle single file import
+  const handleFileImport = useCallback(async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setError(null);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      audioCtx.close();
+
+      await storeSample({
+        name: file.name.replace(/\.[^/.]+$/, ''),
+        category: 'Imported',
+        audioData: arrayBuffer,
+        mimeType: file.type || 'audio/wav',
+        duration: audioBuffer.duration,
+        sampleRate: audioBuffer.sampleRate,
+        channels: audioBuffer.numberOfChannels
+      });
+
+      await loadSamples();
+      setExpandedCategories(prev => new Set([...prev, 'Imported']));
+
+    } catch (err) {
+      console.error('Import failed:', err);
+      setError('Failed to import sample');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  }, []);
+
+  // Handle sample selection
+  const handleSelectSample = useCallback(async (sample) => {
+    try {
+      const fullSample = await getSample(sample.id);
+      if (fullSample && onSampleSelect) {
+        onSampleSelect(fullSample);
+      }
+    } catch (err) {
+      console.error('Failed to load sample:', err);
+      setError('Failed to load sample');
+    }
+  }, [onSampleSelect]);
+
+  // Handle sample deletion
+  const handleDeleteSample = useCallback(async (e, sampleId) => {
+    e.stopPropagation();
+    try {
+      await deleteSample(sampleId);
+      await loadSamples();
+    } catch (err) {
+      console.error('Failed to delete sample:', err);
+    }
+  }, []);
+
+  // Handle category deletion
+  const handleDeleteCategory = useCallback(async (e, category) => {
+    e.stopPropagation();
+    if (!confirm(`Delete all samples in "${category}"?`)) return;
+
+    try {
+      await deleteCategory(category);
+      await loadSamples();
+    } catch (err) {
+      console.error('Failed to delete category:', err);
+    }
+  }, []);
+
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const categories = Object.keys(samples).sort();
+
+  return (
+    <div className="samples-tab">
+      {/* Import Section */}
+      <div className="samples-tab__section">
+        <h3 className="samples-tab__heading">Import</h3>
+
+        <input
+          ref={folderInputRef}
+          type="file"
+          webkitdirectory=""
+          directory=""
+          multiple
+          onChange={handleFolderImport}
+          style={{ display: 'none' }}
+          id="folder-import"
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*"
+          onChange={handleFileImport}
+          style={{ display: 'none' }}
+          id="file-import"
+        />
+
+        <div className="samples-tab__import-btns">
+          <label
+            htmlFor="folder-import"
+            className={`samples-tab__import-btn ${importing ? 'samples-tab__import-btn--loading' : ''}`}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+            </svg>
+            {importing ? 'Importing...' : 'Import Folder'}
+          </label>
+
+          <label
+            htmlFor="file-import"
+            className={`samples-tab__import-btn samples-tab__import-btn--secondary ${importing ? 'samples-tab__import-btn--loading' : ''}`}
+          >
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+              <path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/>
+            </svg>
+            File
+          </label>
+        </div>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="samples-tab__error">{error}</div>
+      )}
+
+      {/* Storage Stats */}
+      {stats && stats.count > 0 && (
+        <div className="samples-tab__stats">
+          {stats.count} samples ({stats.totalSizeMB} MB)
+        </div>
+      )}
+
+      {/* Samples List */}
+      <div className="samples-tab__section">
+        <h3 className="samples-tab__heading">Library</h3>
+
+        {loading ? (
+          <div className="samples-tab__loading">Loading...</div>
+        ) : categories.length === 0 ? (
+          <div className="samples-tab__empty">
+            No samples yet. Import a folder to get started.
+          </div>
+        ) : (
+          <div className="samples-tab__categories">
+            {categories.map(category => (
+              <div key={category} className="samples-tab__category">
+                <button
+                  type="button"
+                  className={`samples-tab__category-header ${expandedCategories.has(category) ? 'samples-tab__category-header--expanded' : ''}`}
+                  onClick={() => toggleCategory(category)}
+                >
+                  <svg
+                    className="samples-tab__category-chevron"
+                    viewBox="0 0 24 24"
+                    width="12"
+                    height="12"
+                    fill="currentColor"
+                  >
+                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                  </svg>
+                  <span className="samples-tab__category-name">{category}</span>
+                  <span className="samples-tab__category-count">{samples[category].length}</span>
+                  <button
+                    type="button"
+                    className="samples-tab__category-delete"
+                    onClick={(e) => handleDeleteCategory(e, category)}
+                    title="Delete category"
+                  >
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    </svg>
+                  </button>
+                </button>
+
+                {expandedCategories.has(category) && (
+                  <ul className="samples-tab__list">
+                    {samples[category].map(sample => (
+                      <li key={sample.id} className="samples-tab__item">
+                        <button
+                          type="button"
+                          className={`samples-tab__sample-btn ${activeSampleId === sample.id ? 'samples-tab__sample-btn--active' : ''}`}
+                          onClick={() => handleSelectSample(sample)}
+                        >
+                          <span className="samples-tab__sample-name">{sample.name}</span>
+                          <span className="samples-tab__sample-meta">
+                            {formatDuration(sample.duration)}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default SamplesTab;

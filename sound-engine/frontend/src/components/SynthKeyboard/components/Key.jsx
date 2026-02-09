@@ -1,9 +1,10 @@
 import React from 'react';
 import { BLACK_KEY_HEIGHT, BLACK_KEY_WIDTH, KEY_LABELS, WHITE_KEY_HEIGHT } from '../constants';
 
-const Key = React.memo(function Key({ meta, registerKey, variant }) {
+const Key = React.memo(function Key({ meta, registerKey, variant, isExternalActive }) {
   const isBlack = variant === 'black';
-  const className = isBlack ? 'key-black' : 'key-white';
+  const baseClassName = isBlack ? 'key-black' : 'key-white';
+  const className = isExternalActive ? `${baseClassName} active` : baseClassName;
   const style = isBlack
     ? {
         left: meta.leftOffset,
@@ -20,6 +21,7 @@ const Key = React.memo(function Key({ meta, registerKey, variant }) {
       data-name={meta.noteName}
       data-octave={meta.octave}
       data-frequency={meta.frequency}
+      data-external-active={isExternalActive ? 'true' : undefined}
       tabIndex={0}
       style={style}
     >

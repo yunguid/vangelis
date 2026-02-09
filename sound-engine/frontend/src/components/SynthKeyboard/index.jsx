@@ -14,7 +14,7 @@ import Key from './components/Key';
 import KeyboardMeta from './components/KeyboardMeta';
 import { getNoteMeta } from './utils/noteMeta';
 
-const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false }) => {
+const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = new Set() }) => {
   const keyboardRef = useRef(null);
   const keyElementsRef = useRef(new Map());
 
@@ -130,13 +130,25 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
         style={{ gridTemplateColumns: `repeat(${whiteKeyMetas.length}, minmax(0, 1fr))` }}
       >
         {whiteKeyMetas.map((meta) => (
-          <Key key={meta.noteId} meta={meta} registerKey={registerKey} variant="white" />
+          <Key
+            key={meta.noteId}
+            meta={meta}
+            registerKey={registerKey}
+            variant="white"
+            isExternalActive={externalActiveNotes.has(meta.noteId)}
+          />
         ))}
       </div>
 
       <div className="black-keys-layer">
         {blackKeyMetas.map((meta) => (
-          <Key key={meta.noteId} meta={meta} registerKey={registerKey} variant="black" />
+          <Key
+            key={meta.noteId}
+            meta={meta}
+            registerKey={registerKey}
+            variant="black"
+            isExternalActive={externalActiveNotes.has(meta.noteId)}
+          />
         ))}
       </div>
 
