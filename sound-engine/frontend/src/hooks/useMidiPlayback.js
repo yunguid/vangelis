@@ -89,10 +89,17 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const waveformRef = useRef(waveformType);
   const audioParamsRef = useRef(audioParams);
   const tempoFactorRef = useRef(1.0);
+  const isPlayingRef = useRef(false);
+  const isPausedRef = useRef(false);
   const activeNotesRef = useRef(new Set());
   const timeoutsRef = useRef([]);
   const rafRef = useRef(null);
-  const playbackRef = useRef({ startTime: 0, pauseTime: 0, midiData: null });
+  const playbackRef = useRef({
+    startTime: 0,
+    pauseOriginalTime: 0,
+    elapsedOriginalAtStart: 0,
+    midiData: null
+  });
 
   // Keep refs in sync with props
   useEffect(() => {
@@ -103,12 +110,13 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     audioParamsRef.current = audioParams;
   }, [audioParams]);
 
-  // Tempo factor setter with clamping
-  const setTempo = useCallback((factor) => {
-    const clamped = Math.max(0.25, Math.min(2.0, factor));
-    tempoFactorRef.current = clamped;
-    setTempoFactorState(clamped);
-  }, []);
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -200,12 +208,25 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     }
 
     playbackRef.current.startTime = 0;
-    playbackRef.current.pauseTime = 0;
+    playbackRef.current.pauseOriginalTime = 0;
+    playbackRef.current.elapsedOriginalAtStart = 0;
 
     setIsPlaying(false);
     setIsPaused(false);
     setProgress(0);
   }, [clearAllTimeouts, stopAllNotes]);
+
+  /**
+   * Compute elapsed time in original MIDI seconds.
+   * @param {number} contextTime - Current AudioContext time
+   * @returns {number}
+   * @private
+   */
+  const getElapsedOriginalTime = useCallback((contextTime) => {
+    const pb = playbackRef.current;
+    const elapsedScaled = Math.max(0, contextTime - pb.startTime);
+    return pb.elapsedOriginalAtStart + elapsedScaled * tempoFactorRef.current;
+  }, []);
 
   /**
    * Schedule notes for playback using setTimeout
@@ -249,21 +270,53 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     });
   }, [triggerNoteOn, triggerNoteOff]);
 
+  // Tempo factor setter with clamping. Re-schedules remaining notes if tempo changes mid-playback.
+  const setTempo = useCallback((factor) => {
+    const clamped = Math.max(0.25, Math.min(2.0, factor));
+    const previousTempo = tempoFactorRef.current;
+
+    if (Math.abs(clamped - previousTempo) < 0.001) {
+      return;
+    }
+
+    const pb = playbackRef.current;
+    const isActivePlayback = isPlayingRef.current && !isPausedRef.current && pb.midiData;
+    const ctx = audioEngine.context;
+    const currentTime = ctx?.currentTime || pb.startTime;
+    const elapsedOriginal = getElapsedOriginalTime(currentTime);
+
+    tempoFactorRef.current = clamped;
+    setTempoFactorState(clamped);
+
+    if (!isActivePlayback || !ctx) {
+      if (isPausedRef.current) {
+        pb.pauseOriginalTime = elapsedOriginal;
+      }
+      return;
+    }
+
+    clearAllTimeouts();
+    stopAllNotes();
+
+    pb.startTime = currentTime;
+    pb.elapsedOriginalAtStart = elapsedOriginal;
+
+    const remainingNotes = pb.midiData.notes.filter(note => note.time >= elapsedOriginal);
+    scheduleNotes(remainingNotes, elapsedOriginal, currentTime);
+  }, [clearAllTimeouts, getElapsedOriginalTime, scheduleNotes, stopAllNotes]);
+
   /**
    * Start the progress update animation loop
    * @param {number} duration - Total duration in seconds (unscaled)
-   * @param {number} startTime - Audio context start time
    * @private
    */
-  const startProgressLoop = useCallback((duration, startTime) => {
+  const startProgressLoop = useCallback((duration) => {
     const updateProgress = () => {
       const ctx = audioEngine.context;
       if (!ctx) return;
 
-      const elapsed = ctx.currentTime - startTime;
-      // Scale duration by tempo factor for progress calculation
-      const scaledDuration = duration / tempoFactorRef.current;
-      const progressValue = Math.min(elapsed / scaledDuration, 1);
+      const elapsedOriginal = getElapsedOriginalTime(ctx.currentTime);
+      const progressValue = Math.min(elapsedOriginal / duration, 1);
 
       setProgress(progressValue);
 
@@ -276,7 +329,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     };
 
     rafRef.current = requestAnimationFrame(updateProgress);
-  }, [stopInternal]);
+  }, [getElapsedOriginalTime, stopInternal]);
 
   /**
    * Start playing a MIDI file
@@ -298,7 +351,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
       playbackRef.current.midiData = midiData;
       playbackRef.current.startTime = startTime;
-      playbackRef.current.pauseTime = 0;
+      playbackRef.current.pauseOriginalTime = 0;
+      playbackRef.current.elapsedOriginalAtStart = 0;
 
       setCurrentMidi(midiData);
       setIsPlaying(true);
@@ -309,7 +363,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       scheduleNotes(midiData.notes, 0, startTime);
 
       // Start progress update loop
-      startProgressLoop(midiData.duration, startTime);
+      startProgressLoop(midiData.duration);
     });
   }, [stopInternal, scheduleNotes, startProgressLoop]);
 
@@ -321,7 +375,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
     const ctx = audioEngine.context;
     const currentTime = ctx?.currentTime || 0;
-    playbackRef.current.pauseTime = currentTime - playbackRef.current.startTime;
+    const elapsedOriginal = getElapsedOriginalTime(currentTime);
+    playbackRef.current.pauseOriginalTime = elapsedOriginal;
 
     clearAllTimeouts();
     stopAllNotes();
@@ -333,7 +388,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
     setIsPaused(true);
     setIsPlaying(false);
-  }, [isPlaying, isPaused, clearAllTimeouts, stopAllNotes]);
+  }, [isPlaying, isPaused, clearAllTimeouts, getElapsedOriginalTime, stopAllNotes]);
 
   /**
    * Resume playback from paused position
@@ -344,14 +399,12 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
     audioEngine.ensureAudioContext().then(() => {
       const ctx = audioEngine.context;
-      // Convert elapsed scaled time back to original time
-      const elapsedScaled = pb.pauseTime;
-      const tempo = tempoFactorRef.current;
-      const elapsedOriginal = elapsedScaled * tempo;
-      const newStartTime = (ctx?.currentTime || 0) - elapsedScaled;
+      const elapsedOriginal = pb.pauseOriginalTime;
+      const newStartTime = ctx?.currentTime || 0;
 
       pb.startTime = newStartTime;
-      pb.pauseTime = 0;
+      pb.pauseOriginalTime = 0;
+      pb.elapsedOriginalAtStart = elapsedOriginal;
 
       setIsPaused(false);
       setIsPlaying(true);
@@ -361,7 +414,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       scheduleNotes(remainingNotes, elapsedOriginal, newStartTime);
 
       // Restart progress loop
-      startProgressLoop(pb.midiData.duration, newStartTime);
+      startProgressLoop(pb.midiData.duration);
     });
   }, [isPaused, scheduleNotes, startProgressLoop]);
 

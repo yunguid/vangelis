@@ -72,24 +72,6 @@
     "license": "Mutopia Project license (public domain or Creative Commons; see infoUrl)"
   },
   {
-    "id": "glazunov-op27-reverie",
-    "name": "R\u00eaverie, Op. 27",
-    "composer": "Alexander Glazunov",
-    "source": "Mutopia Project",
-    "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1574",
-    "sourceUrl": "https://www.mutopiaproject.org/ftp/GlazunovA/O27/glazunov_reverie_op27/glazunov_reverie_op27.mid",
-    "license": "Mutopia Project license (public domain or Creative Commons; see infoUrl)"
-  },
-  {
-    "id": "cui-le-reveil",
-    "name": "Le R\u00e9veil (The Morning Song)",
-    "composer": "C\u00e9sar Cui",
-    "source": "Mutopia Project",
-    "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=151",
-    "sourceUrl": "https://www.mutopiaproject.org/ftp/CuiC/O17/cui_krantenlied/cui_krantenlied.mid",
-    "license": "Mutopia Project license (public domain or Creative Commons; see infoUrl)"
-  },
-  {
     "id": "alyabyev-the-nightingale",
     "name": "The Nightingale (Solovey)",
     "composer": "Alexander Alyabyev",

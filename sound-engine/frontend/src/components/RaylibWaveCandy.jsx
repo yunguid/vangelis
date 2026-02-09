@@ -5,6 +5,8 @@ import { withBase } from '../utils/baseUrl.js';
 const RAYLIB_SCRIPT_URL = withBase('raylib/wavecandy.js');
 const RAYLIB_WASM_DIR = withBase('raylib/');
 const TARGET_FPS_INTERVAL = 33;
+const FALLBACK_WIDTH = 1200;
+const FALLBACK_HEIGHT = 220;
 
 let raylibFactoryPromise = null;
 
@@ -87,6 +89,13 @@ const resampleByteToFloat = (src, dst) => {
   }
 };
 
+const measureViewport = (container) => {
+  const rect = container.getBoundingClientRect();
+  const cssWidth = Math.max(1, Math.round(container.clientWidth || rect.width || FALLBACK_WIDTH));
+  const cssHeight = Math.max(1, Math.round(container.clientHeight || rect.height || FALLBACK_HEIGHT));
+  return { cssWidth, cssHeight };
+};
+
 const RaylibWaveCandy = ({ fallback = null }) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -116,14 +125,11 @@ const RaylibWaveCandy = ({ fallback = null }) => {
     if (!canvas) return;
 
     if (container) {
-      const rect = container.getBoundingClientRect();
+      const { cssWidth, cssHeight } = measureViewport(container);
       const dpr = window.devicePixelRatio || 1;
-      const cssWidth = Math.max(1, Math.floor(rect.width)) || 1200;
-      const cssHeight = Math.max(1, Math.floor(rect.height)) || 220;
-      canvas.style.width = `${cssWidth}px`;
-      canvas.style.height = `${cssHeight}px`;
-      canvas.width = Math.max(1, Math.floor(cssWidth * dpr));
-      canvas.height = Math.max(1, Math.floor(cssHeight * dpr));
+      canvas.width = Math.max(1, Math.round(cssWidth * dpr));
+      canvas.height = Math.max(1, Math.round(cssHeight * dpr));
+      sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
     }
 
     loadRaylibFactory()
@@ -224,36 +230,50 @@ const RaylibWaveCandy = ({ fallback = null }) => {
     };
 
     const resize = () => {
-      const rect = container.getBoundingClientRect();
+      const { cssWidth, cssHeight } = measureViewport(container);
       const dpr = window.devicePixelRatio || 1;
-      const cssWidth = Math.max(1, Math.floor(rect.width));
-      const cssHeight = Math.max(1, Math.floor(rect.height));
-      const deviceWidth = Math.max(1, Math.floor(cssWidth * dpr));
-      const deviceHeight = Math.max(1, Math.floor(cssHeight * dpr));
+      const deviceWidth = Math.max(1, Math.round(cssWidth * dpr));
+      const deviceHeight = Math.max(1, Math.round(cssHeight * dpr));
       if (
         sizeRef.current.width !== cssWidth ||
         sizeRef.current.height !== cssHeight ||
         sizeRef.current.dpr !== dpr
       ) {
         sizeRef.current = { width: cssWidth, height: cssHeight, dpr };
-        canvas.style.width = `${cssWidth}px`;
-        canvas.style.height = `${cssHeight}px`;
         canvas.width = deviceWidth;
         canvas.height = deviceHeight;
         if (module._wc_set_size) {
-          module._wc_set_size(deviceWidth, deviceHeight);
+          // Raylib layout logic expects CSS pixel dimensions, not device pixels.
+          module._wc_set_size(cssWidth, cssHeight);
         }
       }
     };
 
-    resize();
+    let resizeRaf = null;
+    const queueResize = () => {
+      if (resizeRaf != null) return;
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = null;
+        resize();
+      });
+    };
+
+    queueResize();
     let resizeObserver;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        queueResize();
+      }
+    };
+
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(resize);
+      resizeObserver = new ResizeObserver(queueResize);
       resizeObserver.observe(container);
-    } else {
-      window.addEventListener('resize', resize);
     }
+    window.addEventListener('resize', queueResize);
+    window.addEventListener('pageshow', queueResize);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.visualViewport?.addEventListener('resize', queueResize);
 
     let rafId;
     let lastFrame = 0;
@@ -303,11 +323,16 @@ const RaylibWaveCandy = ({ fallback = null }) => {
     rafId = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(rafId);
+      if (resizeRaf != null) {
+        cancelAnimationFrame(resizeRaf);
+      }
       if (resizeObserver) {
         resizeObserver.disconnect();
-      } else {
-        window.removeEventListener('resize', resize);
       }
+      window.removeEventListener('resize', queueResize);
+      window.removeEventListener('pageshow', queueResize);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.visualViewport?.removeEventListener('resize', queueResize);
     };
   }, [ready, failed]);
 
