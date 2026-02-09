@@ -6,6 +6,7 @@
 
 import { Midi } from '@tonejs/midi';
 import russianMidiLibrary from '../data/russianMidiLibrary.json';
+import { withBase } from './baseUrl.js';
 
 /**
  * @typedef {Object} MidiNote
@@ -54,7 +55,12 @@ import russianMidiLibrary from '../data/russianMidiLibrary.json';
 export async function parseMidiFile(source) {
   const arrayBuffer = source instanceof File
     ? await source.arrayBuffer()
-    : await fetch(source).then(r => r.arrayBuffer());
+    : await fetch(source).then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch MIDI: ${response.status} ${response.statusText}`);
+      }
+      return response.arrayBuffer();
+    });
 
   const midi = new Midi(arrayBuffer);
 
@@ -98,16 +104,18 @@ function flattenTracks(tracks) {
 /**
  * Get list of built-in MIDI files available in the app
  * These files are bundled in /public/midi/
+ * @param {string} [base] - Optional base URL override for deployment subpaths
  * @returns {MidiFileInfo[]} Array of MIDI file metadata
  * @example
  * const files = getBuiltInMidiFiles();
  * files.forEach(file => console.log(file.name, 'by', file.composer));
  */
-export function getBuiltInMidiFiles() {
+export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
+  const toBuiltInPath = (relativePath) => withBase(`midi/${relativePath}`, base);
   const russianFiles = russianMidiLibrary.map((entry) => ({
     id: entry.id,
     name: entry.name,
-    path: `/midi/russian/${entry.id}.mid`,
+    path: toBuiltInPath(`russian/${entry.id}.mid`),
     composer: entry.composer,
     sourceUrl: entry.sourceUrl
   }));
@@ -118,52 +126,52 @@ export function getBuiltInMidiFiles() {
     {
       id: 'rachmaninoff-concerto2-mov1',
       name: 'Piano Concerto No. 2 - I. Moderato',
-      path: '/midi/rachmaninoff-concerto2-mov1.mid',
+      path: toBuiltInPath('rachmaninoff-concerto2-mov1.mid'),
       composer: 'Sergei Rachmaninoff',
       soundSetId: 'rachmaninoff-orchestral-lite'
     },
     {
       id: 'rachmaninoff-concerto2-mov2',
       name: 'Piano Concerto No. 2 - II. Adagio',
-      path: '/midi/rachmaninoff-concerto2-mov2.mid',
+      path: toBuiltInPath('rachmaninoff-concerto2-mov2.mid'),
       composer: 'Sergei Rachmaninoff',
       soundSetId: 'rachmaninoff-orchestral-lite'
     },
     {
       id: 'rachmaninoff-concerto2-mov3',
       name: 'Piano Concerto No. 2 - III. Allegro',
-      path: '/midi/rachmaninoff-concerto2-mov3.mid',
+      path: toBuiltInPath('rachmaninoff-concerto2-mov3.mid'),
       composer: 'Sergei Rachmaninoff'
     },
     // Other pieces
     {
       id: 'bach-wtc-prelude',
       name: 'WTC Book I - Prelude in C',
-      path: '/midi/bach-wtc-prelude-c.mid',
+      path: toBuiltInPath('bach-wtc-prelude-c.mid'),
       composer: 'J.S. Bach'
     },
     {
       id: 'satie-gnossienne',
       name: 'Gnossienne No. 1',
-      path: '/midi/satie-gnossienne-1.mid',
+      path: toBuiltInPath('satie-gnossienne-1.mid'),
       composer: 'Erik Satie'
     },
     {
       id: 'satie-gymnopedie',
       name: 'Gymnopedie No. 1',
-      path: '/midi/satie-gymnopedie-1.mid',
+      path: toBuiltInPath('satie-gymnopedie-1.mid'),
       composer: 'Erik Satie'
     },
     {
       id: 'bach-cello-prelude',
       name: 'Cello Suite No. 1 - Prelude',
-      path: '/midi/bach-prelude-cello.mid',
+      path: toBuiltInPath('bach-prelude-cello.mid'),
       composer: 'J.S. Bach'
     },
     {
       id: 'rachmaninoff-vocalise',
       name: 'Vocalise Op. 34',
-      path: '/midi/rachmaninoff-vocalise.mid',
+      path: toBuiltInPath('rachmaninoff-vocalise.mid'),
       composer: 'Sergei Rachmaninoff'
     }
   ];

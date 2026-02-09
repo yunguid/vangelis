@@ -7,6 +7,7 @@ const RAYLIB_WASM_DIR = withBase('raylib/');
 const TARGET_FPS_INTERVAL = 33;
 const FALLBACK_WIDTH = 1200;
 const FALLBACK_HEIGHT = 220;
+const RESIZE_POLL_INTERVAL_MS = 350;
 
 let raylibFactoryPromise = null;
 
@@ -258,8 +259,26 @@ const RaylibWaveCandy = ({ fallback = null }) => {
       });
     };
 
+    const ensureCanvasSizeSync = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = Math.max(1, Math.round(container.clientWidth || sizeRef.current.width || FALLBACK_WIDTH));
+      const cssHeight = Math.max(1, Math.round(container.clientHeight || sizeRef.current.height || FALLBACK_HEIGHT));
+      const expectedWidth = Math.max(1, Math.round(cssWidth * dpr));
+      const expectedHeight = Math.max(1, Math.round(cssHeight * dpr));
+      if (
+        canvas.width !== expectedWidth ||
+        canvas.height !== expectedHeight ||
+        sizeRef.current.width !== cssWidth ||
+        sizeRef.current.height !== cssHeight ||
+        sizeRef.current.dpr !== dpr
+      ) {
+        queueResize();
+      }
+    };
+
     queueResize();
     let resizeObserver;
+    const resizePollId = window.setInterval(queueResize, RESIZE_POLL_INTERVAL_MS);
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         queueResize();
@@ -271,6 +290,7 @@ const RaylibWaveCandy = ({ fallback = null }) => {
       resizeObserver.observe(container);
     }
     window.addEventListener('resize', queueResize);
+    window.addEventListener('orientationchange', queueResize);
     window.addEventListener('pageshow', queueResize);
     document.addEventListener('visibilitychange', handleVisibility);
     window.visualViewport?.addEventListener('resize', queueResize);
@@ -280,6 +300,7 @@ const RaylibWaveCandy = ({ fallback = null }) => {
 
     const tick = (time) => {
       rafId = requestAnimationFrame(tick);
+      ensureCanvasSizeSync();
       if (time - lastFrame < TARGET_FPS_INTERVAL) return;
       lastFrame = time;
 
@@ -329,7 +350,9 @@ const RaylibWaveCandy = ({ fallback = null }) => {
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
+      clearInterval(resizePollId);
       window.removeEventListener('resize', queueResize);
+      window.removeEventListener('orientationchange', queueResize);
       window.removeEventListener('pageshow', queueResize);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.visualViewport?.removeEventListener('resize', queueResize);

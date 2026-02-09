@@ -91,7 +91,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const tempoFactorRef = useRef(1.0);
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
-  const activeNotesRef = useRef(new Set());
+  const activeNoteCountsRef = useRef(new Map());
+  const activeVoiceIdsRef = useRef(new Set());
   const timeoutsRef = useRef([]);
   const rafRef = useRef(null);
   const playbackRef = useRef({
@@ -140,12 +141,13 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   /**
    * Trigger a note on event
    * @param {string} noteId - Unique note identifier (e.g., 'C4')
+   * @param {string} voiceId - Internal voice id used by the audio engine
    * @param {number} frequency - Note frequency in Hz
    * @param {number} velocity - Note velocity (0-1)
    * @param {string} [instrumentFamily] - GM instrument family for waveform selection
    * @private
    */
-  const triggerNoteOn = useCallback((noteId, frequency, velocity, instrumentFamily) => {
+  const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, instrumentFamily) => {
     // Use instrument-specific waveform if available, otherwise fall back to global
     let waveform = waveformRef.current;
     if (instrumentFamily) {
@@ -160,26 +162,37 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     }
 
     audioEngine.playFrequency({
-      noteId,
+      noteId: voiceId,
       frequency,
       waveformType: waveform,
       params: audioParamsRef.current,
       velocity
     });
 
-    activeNotesRef.current.add(noteId);
-    setActiveNotes(new Set(activeNotesRef.current));
+    activeVoiceIdsRef.current.add(voiceId);
+    const counts = activeNoteCountsRef.current;
+    counts.set(noteId, (counts.get(noteId) || 0) + 1);
+    setActiveNotes(new Set(counts.keys()));
   }, []);
 
   /**
    * Trigger a note off event
-   * @param {string} noteId - Note identifier to stop
+   * @param {string} noteId - Display note identifier to clear from visualization
+   * @param {string} voiceId - Internal voice id to release in audio engine
    * @private
    */
-  const triggerNoteOff = useCallback((noteId) => {
-    audioEngine.stopNote(noteId);
-    activeNotesRef.current.delete(noteId);
-    setActiveNotes(new Set(activeNotesRef.current));
+  const triggerNoteOff = useCallback((noteId, voiceId) => {
+    audioEngine.stopNote(voiceId);
+    activeVoiceIdsRef.current.delete(voiceId);
+
+    const counts = activeNoteCountsRef.current;
+    const nextCount = (counts.get(noteId) || 0) - 1;
+    if (nextCount > 0) {
+      counts.set(noteId, nextCount);
+    } else {
+      counts.delete(noteId);
+    }
+    setActiveNotes(new Set(counts.keys()));
   }, []);
 
   /**
@@ -187,10 +200,11 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @private
    */
   const stopAllNotes = useCallback(() => {
-    activeNotesRef.current.forEach(noteId => {
-      audioEngine.stopNote(noteId);
+    activeVoiceIdsRef.current.forEach(voiceId => {
+      audioEngine.stopNote(voiceId);
     });
-    activeNotesRef.current.clear();
+    activeVoiceIdsRef.current.clear();
+    activeNoteCountsRef.current.clear();
     setActiveNotes(new Set());
   }, []);
 
@@ -242,29 +256,35 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     const now = ctx.currentTime;
     const tempo = tempoFactorRef.current;
 
-    notes.forEach(note => {
-      // Scale note time by tempo factor (higher tempo = shorter times)
-      const noteTime = (note.time - offset) / tempo;
-      if (noteTime < 0) return;
+    notes.forEach((note, index) => {
+      const noteEnd = note.time + note.duration;
+      if (noteEnd <= offset) return;
 
-      const noteDuration = note.duration / tempo;
+      const noteLead = Math.max(0, note.time - offset);
+      const remainingOriginalDuration = Math.max(0, noteEnd - Math.max(offset, note.time));
+      if (remainingOriginalDuration <= 0) return;
+
+      // Scale note timings by tempo factor (higher tempo = shorter times)
+      const noteTime = noteLead / tempo;
+      const noteDuration = remainingOriginalDuration / tempo;
       const scheduledStart = startTime + noteTime;
       const scheduledEnd = scheduledStart + noteDuration;
 
       const { noteId } = midiNoteToName(note.midi);
       const frequency = midiNoteToFrequency(note.midi);
+      const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
 
       // Schedule note on (pass instrument family for waveform selection)
       const startDelay = Math.max(0, (scheduledStart - now) * 1000);
       const startId = setTimeout(() => {
-        triggerNoteOn(noteId, frequency, note.velocity, note.instrumentFamily);
+        triggerNoteOn(noteId, voiceId, frequency, note.velocity, note.instrumentFamily);
       }, startDelay);
       timeoutsRef.current.push(startId);
 
       // Schedule note off
       const endDelay = Math.max(0, (scheduledEnd - now) * 1000);
       const endId = setTimeout(() => {
-        triggerNoteOff(noteId);
+        triggerNoteOff(noteId, voiceId);
       }, endDelay);
       timeoutsRef.current.push(endId);
     });
@@ -280,16 +300,20 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     }
 
     const pb = playbackRef.current;
-    const isActivePlayback = isPlayingRef.current && !isPausedRef.current && pb.midiData;
+    const hasMidi = Boolean(pb.midiData);
+    const isPausedPlayback = isPausedRef.current && hasMidi;
+    const isActivePlayback = isPlayingRef.current && !isPausedRef.current && hasMidi;
     const ctx = audioEngine.context;
     const currentTime = ctx?.currentTime || pb.startTime;
-    const elapsedOriginal = getElapsedOriginalTime(currentTime);
+    const elapsedOriginal = isPausedPlayback
+      ? pb.pauseOriginalTime
+      : getElapsedOriginalTime(currentTime);
 
     tempoFactorRef.current = clamped;
     setTempoFactorState(clamped);
 
     if (!isActivePlayback || !ctx) {
-      if (isPausedRef.current) {
+      if (isPausedPlayback) {
         pb.pauseOriginalTime = elapsedOriginal;
       }
       return;
@@ -301,8 +325,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     pb.startTime = currentTime;
     pb.elapsedOriginalAtStart = elapsedOriginal;
 
-    const remainingNotes = pb.midiData.notes.filter(note => note.time >= elapsedOriginal);
-    scheduleNotes(remainingNotes, elapsedOriginal, currentTime);
+    scheduleNotes(pb.midiData.notes, elapsedOriginal, currentTime);
   }, [clearAllTimeouts, getElapsedOriginalTime, scheduleNotes, stopAllNotes]);
 
   /**
@@ -409,9 +432,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       setIsPaused(false);
       setIsPlaying(true);
 
-      // Filter notes based on original (unscaled) time
-      const remainingNotes = pb.midiData.notes.filter(note => note.time >= elapsedOriginal);
-      scheduleNotes(remainingNotes, elapsedOriginal, newStartTime);
+      // Schedule from original timeline offset; includes notes sustaining through resume point.
+      scheduleNotes(pb.midiData.notes, elapsedOriginal, newStartTime);
 
       // Restart progress loop
       startProgressLoop(pb.midiData.duration);
