@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import MidiTab from './MidiTab.jsx';
 import SamplesTab from './SamplesTab.jsx';
 import './Sidebar.css';
+
+const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
 
 /**
  * Collapsed sidebar rail with expandable panel
@@ -39,6 +41,24 @@ const Sidebar = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || typeof document === 'undefined') return undefined;
+    const isMobileViewport = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia(MOBILE_BREAKPOINT_QUERY).matches;
+    if (!isMobileViewport) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [isOpen]);
 
   const handleRailClick = useCallback((tab) => {
     if (isOpen && activeTab === tab) {
@@ -87,6 +107,7 @@ const Sidebar = ({
             aria-expanded={isOpen && activeTab === tab.id}
           >
             {tab.icon}
+            <span className="sidebar-rail__label">{tab.label}</span>
             {tab.isActive && <span className="sidebar-rail__pulse" />}
           </button>
         ))}
@@ -95,12 +116,23 @@ const Sidebar = ({
       {/* Expandable Panel */}
       <div
         className={`sidebar-panel ${isOpen ? 'sidebar-panel--open' : ''}`}
+        aria-hidden={!isOpen}
+        role="complementary"
+        aria-label={activeTab === 'midi' ? 'MIDI browser' : 'Samples browser'}
         {...(!isOpen && { inert: '' })}
       >
         <div className="sidebar-panel__header">
           <h2 className="sidebar-panel__title">
             {activeTab === 'midi' ? 'MIDI' : 'Samples'}
           </h2>
+          <button
+            type="button"
+            className="sidebar-panel__close"
+            onClick={onClose}
+            aria-label="Close sidebar panel"
+          >
+            <span aria-hidden="true">x</span>
+          </button>
         </div>
         <div className="sidebar-panel__content">
           {activeTab === 'midi' && (
