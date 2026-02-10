@@ -243,7 +243,7 @@ const App = () => {
                   <span>Warming up audio engine…</span>
                 </div>
               )}
-              <div className="keyboard-hints"> .    
+              <div className="keyboard-hints">
                 <span className="keyboard-hint">Shift + / opens shortcuts </span>
                 <span className="keyboard-hint">Z / X for octave</span>
               </div>
@@ -279,7 +279,7 @@ const App = () => {
                   aria-label="Close shortcuts"
                   onClick={() => setShowShortcuts(false)}
                 >
-                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true">x</span>
                 </button>
               </div>
               <dl className="shortcuts-grid">

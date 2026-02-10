@@ -1,113 +1,332 @@
 /**
  * Responsive Styles
- * Media queries for different screen sizes
+ * Mobile-first refinements for compact layouts
  */
 
-/* Tablet */
-@media (max-width: 1024px) {
+/* Large tablet / small laptop */
+@media (max-width: 1200px) {
   .app-shell {
-    padding: var(--space-2xl) var(--space-lg) calc(var(--space-2xl) + var(--space-lg));
+    width: min(100%, 1100px);
+    padding: var(--space-xl) var(--space-lg) var(--space-2xl);
     gap: var(--space-lg);
   }
 
   .zone-top {
-    width: min(520px, 100%);
+    width: min(640px, 100%);
   }
 
-  .zone-center {
-    width: min(1200px, 95vw);
-  }
-
-  .zone-bottom {
-    width: min(1000px, 92vw);
-  }
-
-  .wave-candy,
-  .controls-surface,
-  .keyboard-surface {
-    width: min(1000px, 92vw);
-  }
-
-  .wave-candy-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* Mobile Landscape / Small Tablet */
-@media (max-width: 768px) {
-  .app-shell {
-    padding: var(--space-lg) var(--space-md) var(--space-xl);
-    gap: var(--space-lg);
-  }
-
-  .zone-top {
-    padding: var(--space-sm) var(--space-md);
-  }
-
+  .zone-center,
+  .zone-bottom,
   .wave-candy,
   .keyboard-surface,
   .controls-surface {
-    width: min(95vw, 100%);
-  }
-
-  .keyboard-surface {
-    aspect-ratio: auto;
-    padding: var(--space-md);
-  }
-
-  .controls-surface {
-    padding: var(--space-md);
-    grid-template-columns: 1fr;
-    gap: var(--space-md);
-  }
-
-  .wave-candy-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .panel-footer {
-    flex-direction: column;
-  }
-
-  .shortcuts-grid {
-    grid-template-columns: 1fr;
+    width: min(100%, 96vw);
   }
 }
 
-/* Mobile Portrait */
-@media (max-width: 520px) {
+/* Tablet and down */
+@media (max-width: 900px) {
+  :root {
+    --wave-candy-height: clamp(140px, 24vh, 190px);
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: none;
+    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
+      calc(88px + env(safe-area-inset-bottom, 0px));
+    gap: var(--space-md);
+  }
+
+  .zone-top,
+  .zone-center,
+  .zone-bottom,
+  .wave-candy,
+  .keyboard-surface,
+  .controls-surface {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .zone-top {
+    padding: 12px 14px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+
   .brand-title {
-    letter-spacing: 0.18em;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+  }
+
+  .header-controls {
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .header-controls .button-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .zone-center {
+    gap: var(--space-md);
+    padding: 0;
+  }
+
+  .zone-bottom {
+    padding-bottom: 0;
+  }
+
+  .wave-candy {
+    padding: 10px;
+  }
+
+  .wave-candy--raylib {
+    height: var(--wave-candy-height);
+    min-height: var(--wave-candy-height);
+  }
+
+  .wave-candy-gear {
+    top: 8px;
+    right: 8px;
+    font-size: 0.76rem;
   }
 
   .keyboard-surface {
-    padding: var(--space-md);
-    border-radius: 24px;
+    min-height: 240px;
+    max-height: none;
+    padding: 12px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+
+  .keyboard-header {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 10px;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+  }
+
+  .keyboard-legend {
+    font-size: 0.63rem;
+    letter-spacing: 0.08em;
+  }
+
+  .keyboard-region {
+    gap: 8px;
   }
 
   .white-keys {
-    border-radius: 16px;
+    min-height: clamp(110px, 28vw, 145px);
+  }
+
+  .key-white .note-label,
+  .key-white .key-label {
+    font-size: clamp(0.48rem, 1.7vw, 0.62rem);
   }
 
   .key-black {
-    height: 58%;
+    margin-top: 6px;
+    min-width: clamp(19px, 5vw, 30px);
+    min-height: clamp(40px, 13vw, 64px);
+    border-radius: 0 0 10px 10px;
+  }
+
+  .keyboard-meta {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    padding: 4px 8px;
+  }
+
+  .keyboard-hints {
+    gap: 8px;
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    opacity: 0.65;
+  }
+
+  .warmup-indicator {
+    position: static;
+    max-width: 100%;
+    width: fit-content;
+    padding: 8px 10px;
+    gap: 8px;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    box-shadow: none;
   }
 
   .controls-surface {
-    padding: var(--space-md);
+    padding: 12px;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    border-radius: 12px;
   }
 
   .controls-panel,
   .controls-panel.wide {
-    gap: var(--space-sm);
+    gap: 12px;
+  }
+
+  .panel {
+    padding: 12px;
+    gap: 12px;
+    border-radius: 12px;
+  }
+
+  .controls-heading {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+  }
+
+  .label-stack {
+    gap: 8px;
+    align-items: center;
+  }
+
+  .slider-group {
+    gap: 8px;
   }
 
   .slider-grid {
     grid-template-columns: 1fr;
   }
 
+  .slider-description {
+    font-size: 0.68rem;
+    letter-spacing: 0.02em;
+  }
+
+  .toggle-row {
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+  }
+
+  .waveform-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .waveform-button {
+    min-height: 72px;
+    padding: 12px;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+  }
+
+  .waveform-button.is-active {
+    transform: none;
+  }
+
+  .panel-footer {
+    flex-direction: column;
+  }
+
+  .shortcuts-overlay {
+    padding: 16px;
+  }
+
+  .shortcuts-card {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .shortcuts-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+/* Phone landscape */
+@media (max-width: 700px) {
+  .zone-top {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .brand-title {
+    width: 100%;
+    text-align: center;
+  }
+
+  .header-controls {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .keyboard-hints {
+    display: none;
+  }
+
+  .waveform-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile portrait */
+@media (max-width: 520px) {
+  .app-shell {
+    padding-right: 8px;
+    padding-left: 8px;
+    padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .zone-top {
+    padding: 10px 12px;
+  }
+
+  .brand-title {
+    font-size: 0.92rem;
+    letter-spacing: 0.1em;
+  }
+
+  .header-controls .button-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .wave-candy--raylib {
+    height: clamp(120px, 22vh, 160px);
+    min-height: clamp(120px, 22vh, 160px);
+  }
+
+  .keyboard-surface {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .keyboard-header {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+  }
+
+  .keyboard-legend {
+    font-size: 0.58rem;
+  }
+
+  .white-keys {
+    border-radius: 12px;
+  }
+
+  .key-black {
+    min-width: clamp(17px, 5.5vw, 24px);
+    min-height: clamp(34px, 14vw, 50px);
+  }
+
+  .controls-surface {
+    padding: 10px;
+    gap: 10px;
+  }
+
   .panel {
-    padding: var(--space-md);
+    padding: 10px;
   }
 }
 
