@@ -420,6 +420,38 @@ class AudioEngine {
 
   // ============ Note Playback ============
 
+  playBufferedSample({ noteId, buffer, frequency, baseFrequency, params = {}, velocity = 1, loop = false }) {
+    if (!buffer) return null;
+    if (!this.context) {
+      this.ensureAudioContext().catch(() => {});
+      return null;
+    }
+
+    this.ensureSamplePool(this.context);
+
+    const sanitized = sanitizeAudioParams(params);
+    this.applyGlobalParams(sanitized);
+
+    const voiceId = noteId || `sample-${++this.voiceSerial}`;
+    const voice = this.samplePool?.acquire(voiceId);
+    if (!voice) return null;
+
+    voice.startSample({
+      noteId: voiceId,
+      buffer,
+      frequency,
+      baseFrequency,
+      velocity,
+      params: sanitized,
+      loop
+    });
+
+    return {
+      voiceId,
+      analyser: this.globalNodes?.analyser
+    };
+  }
+
   playFrequency({ noteId, frequency, waveformType, params = {}, velocity = 1 }) {
     if (!this.context) {
       this.ensureAudioContext().catch(() => {});
@@ -433,30 +465,22 @@ class AudioEngine {
       return null;
     }
 
-    const sanitized = sanitizeAudioParams(params);
-    this.applyGlobalParams(sanitized);
-
-    const voiceId = noteId || `voice-${++this.voiceSerial}`;
-
     if (this.customSample) {
-      const voice = this.samplePool?.acquire(voiceId);
-      if (!voice) return null;
-
-      voice.startSample({
-        noteId: voiceId,
+      return this.playBufferedSample({
+        noteId,
         buffer: this.customSample,
         frequency,
         baseFrequency: this.customSampleBaseFrequency,
         velocity,
-        params: sanitized,
+        params,
         loop: this.customSampleLoop
       });
-
-      return {
-        voiceId,
-        analyser: this.globalNodes?.analyser
-      };
     }
+
+    const sanitized = sanitizeAudioParams(params);
+    this.applyGlobalParams(sanitized);
+
+    const voiceId = noteId || `voice-${++this.voiceSerial}`;
 
     this.worklet.noteOn({
       noteId: voiceId,
@@ -474,10 +498,9 @@ class AudioEngine {
   stopNote(noteId) {
     if (!noteId) return;
 
-    if (this.customSample && this.samplePool) {
+    if (this.samplePool) {
       const releaseTime = this.currentParams?.release ?? AUDIO_PARAM_DEFAULTS.release;
       this.samplePool.release(noteId, releaseTime);
-      return;
     }
 
     this.worklet.noteOff(noteId);

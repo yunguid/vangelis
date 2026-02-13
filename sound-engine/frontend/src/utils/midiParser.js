@@ -35,6 +35,7 @@ import { withBase } from './baseUrl.js';
  * @property {string} path - Path to MIDI file
  * @property {string} composer - Composer name
  * @property {string|null} [soundSetId] - Optional built-in sound set id for samples
+ * @property {string[]} [layerFamilies] - Optional forced layer families (e.g. ['piano', 'strings'])
  * @property {string} [sourceUrl] - Optional source URL for MIDI file metadata
  */
 
@@ -128,20 +129,24 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
       name: 'Piano Concerto No. 2 - I. Moderato',
       path: toBuiltInPath('rachmaninoff-concerto2-mov1.mid'),
       composer: 'Sergei Rachmaninoff',
-      soundSetId: 'rachmaninoff-orchestral-lite'
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano', 'strings']
     },
     {
       id: 'rachmaninoff-concerto2-mov2',
       name: 'Piano Concerto No. 2 - II. Adagio',
       path: toBuiltInPath('rachmaninoff-concerto2-mov2.mid'),
       composer: 'Sergei Rachmaninoff',
-      soundSetId: 'rachmaninoff-orchestral-lite'
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano', 'strings']
     },
     {
       id: 'rachmaninoff-concerto2-mov3',
       name: 'Piano Concerto No. 2 - III. Allegro',
       path: toBuiltInPath('rachmaninoff-concerto2-mov3.mid'),
-      composer: 'Sergei Rachmaninoff'
+      composer: 'Sergei Rachmaninoff',
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano', 'strings']
     },
     // Other pieces
     {

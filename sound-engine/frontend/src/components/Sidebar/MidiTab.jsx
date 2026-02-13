@@ -42,7 +42,14 @@ const MidiTab = ({
 
     try {
       const midiData = await loadMidiWithFallback(file);
-      onPlay(midiData);
+      onPlay({
+        ...midiData,
+        name: file.name || midiData.name,
+        sourceFileId: file.id,
+        composer: file.composer,
+        soundSetId: file.soundSetId || null,
+        layerFamilies: Array.isArray(file.layerFamilies) ? file.layerFamilies : []
+      });
     } catch (err) {
       console.error('Failed to load MIDI file:', err);
       setError(file.sourceUrl

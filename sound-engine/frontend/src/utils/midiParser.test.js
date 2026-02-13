@@ -19,6 +19,17 @@ describe('getBuiltInMidiFiles', () => {
     expect(vocalise?.path).toBe('/midi/rachmaninoff-vocalise.mid');
   });
 
+  it('assigns piano+strings layering metadata to Rachmaninoff concerto files', () => {
+    const files = getBuiltInMidiFiles('/');
+    const rachConcerto = files.filter((file) => file.id.startsWith('rachmaninoff-concerto2-'));
+
+    expect(rachConcerto.length).toBe(3);
+    expect(rachConcerto.every((file) => file.soundSetId === 'rachmaninoff-orchestral-lite')).toBe(true);
+    expect(rachConcerto.every((file) => Array.isArray(file.layerFamilies))).toBe(true);
+    expect(rachConcerto.every((file) => file.layerFamilies.includes('piano'))).toBe(true);
+    expect(rachConcerto.every((file) => file.layerFamilies.includes('strings'))).toBe(true);
+  });
+
   it('maps every built-in entry to a committed midi file', () => {
     const files = getBuiltInMidiFiles('/');
     const testDir = path.dirname(fileURLToPath(import.meta.url));
