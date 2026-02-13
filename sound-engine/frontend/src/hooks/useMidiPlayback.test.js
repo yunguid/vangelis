@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useMidiPlayback } from './useMidiPlayback.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import { ensureSoundSetLoaded } from '../utils/instrumentSamples.js';
@@ -61,11 +61,11 @@ describe('useMidiPlayback layering', () => {
         soundSetId: 'rachmaninoff-orchestral-lite',
         layerFamilies: ['piano', 'strings']
       });
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
-    await waitFor(() => {
-      expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
-    });
+    expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
 
     await act(async () => {
       vi.runAllTimers();
@@ -92,11 +92,11 @@ describe('useMidiPlayback layering', () => {
         soundSetId: 'rachmaninoff-orchestral-lite',
         layerFamilies: ['piano', 'strings']
       });
+      await Promise.resolve();
+      await Promise.resolve();
     });
 
-    await waitFor(() => {
-      expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
-    });
+    expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
 
     await act(async () => {
       vi.runAllTimers();
