@@ -508,4 +508,22 @@ describe('useMidiPlayback layering', () => {
     expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('triangle');
     expect(result.current.currentMidi?.notes?.[0]?.instrumentFamily).toBe('piano');
   });
+
+  it('ignores invalid tempo inputs that are not finite numbers', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    expect(result.current.tempoFactor).toBe(1);
+
+    await act(async () => {
+      result.current.setTempo(Number.NaN);
+      result.current.setTempo(Number.POSITIVE_INFINITY);
+      result.current.setTempo('not-a-number');
+      await Promise.resolve();
+    });
+
+    expect(result.current.tempoFactor).toBe(1);
+  });
 });

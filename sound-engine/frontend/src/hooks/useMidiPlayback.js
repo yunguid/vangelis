@@ -474,7 +474,12 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
   // Tempo factor setter with clamping. Re-schedules remaining notes if tempo changes mid-playback.
   const setTempo = useCallback((factor) => {
-    const clamped = Math.max(0.25, Math.min(2.0, factor));
+    const numericFactor = Number(factor);
+    if (!Number.isFinite(numericFactor)) {
+      return;
+    }
+
+    const clamped = Math.max(0.25, Math.min(2.0, numericFactor));
     const previousTempo = tempoFactorRef.current;
 
     if (Math.abs(clamped - previousTempo) < 0.001) {
