@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  hasMatchingByteSize,
   resolveSafeOutputPath,
   validateStarterSoundManifest
 } from './starter_sound_sync_utils.mjs';
@@ -80,12 +81,22 @@ for (const pack of manifest.packs || []) {
       let localBlobSha = null;
       let sourceBlobSha = entry.sha || null;
       if (verifyExisting) {
-        localBlobSha = await computeGitBlobShaFromFile(targetPath);
-        integrity = sourceBlobSha && localBlobSha === sourceBlobSha ? 'verified' : 'mismatch';
+        const localStats = await fs.stat(targetPath);
+        const localBytes = Number(localStats.size) || 0;
+        const expectedBytes = Number(entry.size);
+        if (!hasMatchingByteSize(localBytes, expectedBytes)) {
+          integrity = 'mismatch';
+          console.error(`[error] size mismatch (existing) ${pack.id}/${relativePath}`);
+        } else {
+          localBlobSha = await computeGitBlobShaFromFile(targetPath);
+          integrity = sourceBlobSha && localBlobSha === sourceBlobSha ? 'verified' : 'mismatch';
+          if (integrity === 'mismatch') {
+            console.error(`[error] integrity mismatch (existing) ${pack.id}/${relativePath}`);
+          }
+        }
         if (integrity === 'mismatch') {
           failed += 1;
           mismatched += 1;
-          console.error(`[error] integrity mismatch (existing) ${pack.id}/${relativePath}`);
         } else if (integrity === 'verified') {
           verified += 1;
         }
@@ -110,6 +121,10 @@ for (const pack of manifest.packs || []) {
       enforceAllowlist(rawUrl, manifest.allowlistedDomains || []);
 
       const data = await fetchBuffer(rawUrl);
+      const expectedBytes = Number(entry.size);
+      if (!hasMatchingByteSize(data.length, expectedBytes)) {
+        throw new Error(`Size mismatch for ${relativePath}`);
+      }
       const sourceBlobSha = entry.sha || null;
       const localBlobSha = computeGitBlobSha(data);
       if (sourceBlobSha && localBlobSha !== sourceBlobSha) {

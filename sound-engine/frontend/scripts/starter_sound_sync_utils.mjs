@@ -50,6 +50,23 @@ export function computeGitBlobSha(buffer) {
     .digest('hex');
 }
 
+export function normalizeExpectedSize(value) {
+  if (value == null) return null;
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue) || numberValue < 0) {
+    return null;
+  }
+  return Math.trunc(numberValue);
+}
+
+export function hasMatchingByteSize(actualBytes, expectedSize) {
+  const normalizedExpected = normalizeExpectedSize(expectedSize);
+  if (normalizedExpected == null) {
+    return true;
+  }
+  return actualBytes === normalizedExpected;
+}
+
 export async function computeGitBlobShaFromFile(filePath) {
   const fileStat = await fsp.stat(filePath);
   const hash = createHash('sha1');

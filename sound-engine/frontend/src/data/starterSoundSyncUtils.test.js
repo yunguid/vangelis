@@ -5,6 +5,8 @@ import fs from 'node:fs/promises';
 import {
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  hasMatchingByteSize,
+  normalizeExpectedSize,
   resolveSafeOutputPath,
   validateStarterSoundManifest
 } from '../../scripts/starter_sound_sync_utils.mjs';
@@ -77,5 +79,19 @@ describe('starter_sound_sync_utils', () => {
     } finally {
       await fs.unlink(tmpFilePath).catch(() => {});
     }
+  });
+
+  it('normalizes expected sizes and validates byte-size matches', () => {
+    expect(normalizeExpectedSize(120)).toBe(120);
+    expect(normalizeExpectedSize('120')).toBe(120);
+    expect(normalizeExpectedSize(120.9)).toBe(120);
+    expect(normalizeExpectedSize(-1)).toBeNull();
+    expect(normalizeExpectedSize('abc')).toBeNull();
+
+    expect(hasMatchingByteSize(120, 120)).toBe(true);
+    expect(hasMatchingByteSize(120, '120')).toBe(true);
+    expect(hasMatchingByteSize(121, 120)).toBe(false);
+    expect(hasMatchingByteSize(120, null)).toBe(true);
+    expect(hasMatchingByteSize(120, 'bad')).toBe(true);
   });
 });
