@@ -7,18 +7,40 @@ import { audioEngine } from './audioEngine.js';
 import { withBase } from './baseUrl.js';
 import { getAllSoundSetManifests, getSoundSetManifest } from '../data/soundSets.js';
 import { noteIdToMidi, pickBestInstrumentCandidate } from './instrumentSelection.js';
+import { isUsableInstrumentDefinition } from './instrumentManifestGuards.js';
 
 const toSamplePath = (relativePath, base = import.meta.env.BASE_URL) =>
   withBase(`samples/${relativePath}`, base);
 
 const soundSetCache = new Map();
+const rejectedInstrumentLog = new Set();
+
+function toInstrumentLogKey(soundSetId, instrumentId, samplePath) {
+  return `${soundSetId || 'unknown-set'}::${instrumentId || 'unknown-instrument'}::${samplePath || 'unknown-path'}`;
+}
 
 function materializeSoundSet(definition, base = import.meta.env.BASE_URL) {
   if (!definition) return null;
 
+  const soundSetId = definition.id || 'unknown-set';
+  const sanitizedInstruments = (definition.instruments || []).filter((instrument) => {
+    if (isUsableInstrumentDefinition(instrument)) {
+      return true;
+    }
+
+    const logKey = toInstrumentLogKey(soundSetId, instrument.id, instrument.samplePath);
+    if (!rejectedInstrumentLog.has(logKey)) {
+      rejectedInstrumentLog.add(logKey);
+      console.warn(
+        `Ignoring invalid instrument "${instrument.id || 'unknown'}" in sound set "${soundSetId}".`
+      );
+    }
+    return false;
+  });
+
   return {
     ...definition,
-    instruments: (definition.instruments || []).map((instrument) => ({
+    instruments: sanitizedInstruments.map((instrument) => ({
       ...instrument,
       sampleUrl: instrument.sampleUrl || (instrument.samplePath ? toSamplePath(instrument.samplePath, base) : null)
     }))
