@@ -57,6 +57,7 @@ The sync pipeline enforces:
 - duplicate source-prefix detection (prevents accidental duplicate downloads from same upstream tree path)
 - deterministic source manifest
 - deterministic inventory ordering (packs + files sorted for stable diffs)
+- inventory summary counters are derived from entry data (prevents counter drift)
 - git-blob checksum verification against upstream tree SHA
 - no free-form crawl targets
 

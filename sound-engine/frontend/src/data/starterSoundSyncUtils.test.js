@@ -9,6 +9,7 @@ import {
   hasMatchingByteSize,
   normalizeExpectedSize,
   resolveSafeOutputPath,
+  summarizeInventoryPacks,
   validateStarterSoundManifest
 } from '../../scripts/starter_sound_sync_utils.mjs';
 
@@ -135,5 +136,35 @@ describe('starter_sound_sync_utils', () => {
     expect(getBlobIntegrityStatus(validSha, null)).toBe('mismatch');
     expect(getBlobIntegrityStatus(null, validSha)).toBe('unverified');
     expect(getBlobIntegrityStatus('invalid-sha', validSha)).toBe('unverified');
+  });
+
+  it('derives stable summary counters from inventory entries', () => {
+    const summary = summarizeInventoryPacks([
+      {
+        id: 'pack-a',
+        files: [
+          { status: 'downloaded', integrity: 'verified', bytes: 1200 },
+          { status: 'skipped', integrity: 'verified', bytes: 800 },
+          { status: 'failed', integrity: 'mismatch', bytes: null }
+        ]
+      },
+      {
+        id: 'pack-b',
+        files: [
+          { status: 'downloaded', integrity: 'unverified', bytes: 1024 },
+          { status: 'skipped', integrity: 'skipped', bytes: 512 }
+        ]
+      }
+    ]);
+
+    expect(summary).toEqual({
+      downloaded: 2,
+      skipped: 2,
+      failed: 1,
+      verified: 2,
+      mismatched: 1,
+      totalBytes: 3536,
+      totalMB: Number((3536 / (1024 * 1024)).toFixed(2))
+    });
   });
 });

@@ -7,6 +7,7 @@ import {
   getBlobIntegrityStatus,
   hasMatchingByteSize,
   resolveSafeOutputPath,
+  summarizeInventoryPacks,
   validateStarterSoundManifest
 } from './starter_sound_sync_utils.mjs';
 
@@ -190,20 +191,24 @@ for (const pack of manifest.packs || []) {
 
 inventory.packs.sort((a, b) => a.id.localeCompare(b.id));
 
-inventory.summary = {
-  downloaded,
-  skipped,
-  failed,
-  verified,
-  mismatched,
-  totalBytes,
-  totalMB: Number((totalBytes / (1024 * 1024)).toFixed(2))
-};
+const derivedSummary = summarizeInventoryPacks(inventory.packs);
+const trackedSummary = { downloaded, skipped, failed, verified, mismatched, totalBytes };
+if (
+  trackedSummary.downloaded !== derivedSummary.downloaded
+  || trackedSummary.skipped !== derivedSummary.skipped
+  || trackedSummary.failed !== derivedSummary.failed
+  || trackedSummary.verified !== derivedSummary.verified
+  || trackedSummary.mismatched !== derivedSummary.mismatched
+  || trackedSummary.totalBytes !== derivedSummary.totalBytes
+) {
+  console.warn('[warn] summary counters drift detected; using derived inventory summary');
+}
+inventory.summary = derivedSummary;
 
 await fs.writeFile(inventoryPath, JSON.stringify(inventory, null, 2));
-log(`\nStarter sound sync complete: ${downloaded} downloaded, ${skipped} skipped, ${failed} failed.`);
+log(`\nStarter sound sync complete: ${inventory.summary.downloaded} downloaded, ${inventory.summary.skipped} skipped, ${inventory.summary.failed} failed.`);
 
-if (failed > 0) {
+if (inventory.summary.failed > 0) {
   process.exitCode = 1;
 }
 

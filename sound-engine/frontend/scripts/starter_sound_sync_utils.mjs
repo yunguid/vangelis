@@ -83,6 +83,29 @@ export function getBlobIntegrityStatus(sourceBlobSha, localBlobSha) {
   return sourceBlobSha === localBlobSha ? 'verified' : 'mismatch';
 }
 
+export function summarizeInventoryPacks(packs = []) {
+  const allEntries = packs.flatMap((pack) => pack.files || []);
+  const downloaded = allEntries.filter((entry) => entry.status === 'downloaded').length;
+  const skipped = allEntries.filter((entry) => entry.status === 'skipped').length;
+  const failed = allEntries.filter((entry) => entry.status === 'failed').length;
+  const verified = allEntries.filter((entry) => entry.integrity === 'verified').length;
+  const mismatched = allEntries.filter((entry) => entry.integrity === 'mismatch').length;
+  const totalBytes = allEntries.reduce(
+    (sum, entry) => sum + (Number.isFinite(entry.bytes) ? entry.bytes : 0),
+    0
+  );
+
+  return {
+    downloaded,
+    skipped,
+    failed,
+    verified,
+    mismatched,
+    totalBytes,
+    totalMB: Number((totalBytes / (1024 * 1024)).toFixed(2))
+  };
+}
+
 export async function computeGitBlobShaFromFile(filePath) {
   const fileStat = await fsp.stat(filePath);
   const hash = createHash('sha1');
