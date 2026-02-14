@@ -67,6 +67,16 @@ export function hasMatchingByteSize(actualBytes, expectedSize) {
   return actualBytes === normalizedExpected;
 }
 
+export function getBlobIntegrityStatus(sourceBlobSha, localBlobSha) {
+  if (!sourceBlobSha || !SHA_REGEX.test(sourceBlobSha)) {
+    return 'unverified';
+  }
+  if (!localBlobSha || !SHA_REGEX.test(localBlobSha)) {
+    return 'mismatch';
+  }
+  return sourceBlobSha === localBlobSha ? 'verified' : 'mismatch';
+}
+
 export async function computeGitBlobShaFromFile(filePath) {
   const fileStat = await fsp.stat(filePath);
   const hash = createHash('sha1');

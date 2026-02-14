@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  getBlobIntegrityStatus,
   hasMatchingByteSize,
   resolveSafeOutputPath,
   validateStarterSoundManifest
@@ -89,7 +90,7 @@ for (const pack of manifest.packs || []) {
           console.error(`[error] size mismatch (existing) ${pack.id}/${relativePath}`);
         } else {
           localBlobSha = await computeGitBlobShaFromFile(targetPath);
-          integrity = sourceBlobSha && localBlobSha === sourceBlobSha ? 'verified' : 'mismatch';
+          integrity = getBlobIntegrityStatus(sourceBlobSha, localBlobSha);
           if (integrity === 'mismatch') {
             console.error(`[error] integrity mismatch (existing) ${pack.id}/${relativePath}`);
           }
@@ -127,10 +128,11 @@ for (const pack of manifest.packs || []) {
       }
       const sourceBlobSha = entry.sha || null;
       const localBlobSha = computeGitBlobSha(data);
-      if (sourceBlobSha && localBlobSha !== sourceBlobSha) {
+      const integrity = getBlobIntegrityStatus(sourceBlobSha, localBlobSha);
+      if (integrity === 'mismatch') {
         throw new Error(`Checksum mismatch for ${relativePath}`);
       }
-      if (sourceBlobSha && localBlobSha === sourceBlobSha) {
+      if (integrity === 'verified') {
         verified += 1;
       }
 
@@ -147,7 +149,7 @@ for (const pack of manifest.packs || []) {
         status: 'downloaded',
         sourceBlobSha,
         localBlobSha,
-        integrity: sourceBlobSha ? 'verified' : 'unverified'
+        integrity
       });
       log(`[download] ${pack.id}: ${relativePath}`);
     } catch (error) {

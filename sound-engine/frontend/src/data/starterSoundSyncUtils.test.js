@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import {
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  getBlobIntegrityStatus,
   hasMatchingByteSize,
   normalizeExpectedSize,
   resolveSafeOutputPath,
@@ -93,5 +94,16 @@ describe('starter_sound_sync_utils', () => {
     expect(hasMatchingByteSize(121, 120)).toBe(false);
     expect(hasMatchingByteSize(120, null)).toBe(true);
     expect(hasMatchingByteSize(120, 'bad')).toBe(true);
+  });
+
+  it('classifies blob integrity status deterministically', () => {
+    const validSha = '440300901dfe9275fd84e0b7763af1f8443ae62e';
+    const otherSha = '7d225b9b9fcd9f4f1d1144c4da4fb5a94832c8e2';
+
+    expect(getBlobIntegrityStatus(validSha, validSha)).toBe('verified');
+    expect(getBlobIntegrityStatus(validSha, otherSha)).toBe('mismatch');
+    expect(getBlobIntegrityStatus(validSha, null)).toBe('mismatch');
+    expect(getBlobIntegrityStatus(null, validSha)).toBe('unverified');
+    expect(getBlobIntegrityStatus('invalid-sha', validSha)).toBe('unverified');
   });
 });
