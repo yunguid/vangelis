@@ -10,6 +10,7 @@ import {
   normalizeExpectedSize,
   resolveSafeOutputPath,
   summarizeInventoryPacks,
+  toPathCollisionKey,
   validateStarterSoundManifest
 } from '../../scripts/starter_sound_sync_utils.mjs';
 
@@ -47,6 +48,14 @@ describe('starter_sound_sync_utils', () => {
     });
     expect(() => validateStarterSoundManifest(duplicateTarget)).toThrow(/targetDir duplicates existing targetDir/i);
 
+    const caseVariantTarget = structuredClone(validManifest);
+    caseVariantTarget.packs.push({
+      ...caseVariantTarget.packs[0],
+      id: 'other-pack',
+      targetDir: 'starter-pack/strings/VIOLIN'
+    });
+    expect(() => validateStarterSoundManifest(caseVariantTarget)).toThrow(/targetDir duplicates existing targetDir/i);
+
     const unsafe = structuredClone(validManifest);
     unsafe.packs[0].targetDir = '../outside';
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
@@ -72,6 +81,17 @@ describe('starter_sound_sync_utils', () => {
     });
 
     expect(() => validateStarterSoundManifest(overlappingSourcePrefix))
+      .toThrow(/overlaps sourcePathPrefix/i);
+
+    const caseVariantSourcePrefix = structuredClone(validManifest);
+    caseVariantSourcePrefix.packs.push({
+      ...caseVariantSourcePrefix.packs[0],
+      id: 'case-pack',
+      sourcePathPrefix: 'strings/violin section/susvib',
+      targetDir: 'starter-pack/strings/violin-case'
+    });
+
+    expect(() => validateStarterSoundManifest(caseVariantSourcePrefix))
       .toThrow(/overlaps sourcePathPrefix/i);
 
     const uniqueSourcePrefix = structuredClone(validManifest);
@@ -147,6 +167,13 @@ describe('starter_sound_sync_utils', () => {
     expect(getBlobIntegrityStatus(validSha, null)).toBe('mismatch');
     expect(getBlobIntegrityStatus(null, validSha)).toBe('unverified');
     expect(getBlobIntegrityStatus('invalid-sha', validSha)).toBe('unverified');
+  });
+
+  it('normalizes path collision keys case-insensitively', () => {
+    expect(toPathCollisionKey('starter-pack/Strings/Violin'))
+      .toBe(toPathCollisionKey('Starter-Pack/strings/violin'));
+    expect(toPathCollisionKey('starter-pack\\Strings\\Violin\\'))
+      .toBe('starter-pack/strings/violin');
   });
 
   it('derives stable summary counters from inventory entries', () => {

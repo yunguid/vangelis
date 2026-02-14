@@ -36,6 +36,10 @@ function normalizeManifestPath(value) {
     .replace(/\/+$/g, '');
 }
 
+export function toPathCollisionKey(value) {
+  return normalizeManifestPath(value).toLowerCase();
+}
+
 export function resolveSafeOutputPath(outputRoot, targetDir, relativePath) {
   assert(isSafeRelativePath(targetDir), `Unsafe targetDir "${targetDir}"`);
   assert(isSafeRelativePath(relativePath), `Unsafe relative path "${relativePath}"`);
@@ -154,21 +158,23 @@ export function validateStarterSoundManifest(value) {
     assert(isSafeRelativePath(pack.targetDir), `Pack "${pack.id}" targetDir is unsafe`);
     assert(pack.targetDir.startsWith('starter-pack/'), `Pack "${pack.id}" targetDir must stay within starter-pack/`);
     const normalizedTargetDir = normalizeManifestPath(pack.targetDir);
-    assert(!normalizedTargetDirs.has(normalizedTargetDir),
+    const targetDirCollisionKey = toPathCollisionKey(pack.targetDir);
+    assert(!normalizedTargetDirs.has(targetDirCollisionKey),
       `Pack "${pack.id}" targetDir duplicates existing targetDir "${normalizedTargetDir}"`);
-    normalizedTargetDirs.add(normalizedTargetDir);
+    normalizedTargetDirs.add(targetDirCollisionKey);
 
     const normalizedSourcePrefix = normalizeManifestPath(pack.sourcePathPrefix);
+    const sourcePrefixCollisionKey = toPathCollisionKey(pack.sourcePathPrefix);
     const repoRefKey = `${pack.repo}@${pack.ref}`;
     const existingPrefixes = sourcePrefixesByRepoRef.get(repoRefKey) || [];
     const overlapping = existingPrefixes.find((candidate) =>
-      normalizedSourcePrefix === candidate.prefix
-      || normalizedSourcePrefix.startsWith(`${candidate.prefix}/`)
-      || candidate.prefix.startsWith(`${normalizedSourcePrefix}/`)
+      sourcePrefixCollisionKey === candidate.prefix
+      || sourcePrefixCollisionKey.startsWith(`${candidate.prefix}/`)
+      || candidate.prefix.startsWith(`${sourcePrefixCollisionKey}/`)
     );
     assert(!overlapping,
       `Pack "${pack.id}" overlaps sourcePathPrefix with pack "${overlapping?.id}" for ${repoRefKey}`);
-    existingPrefixes.push({ id: pack.id, prefix: normalizedSourcePrefix });
+    existingPrefixes.push({ id: pack.id, prefix: sourcePrefixCollisionKey });
     sourcePrefixesByRepoRef.set(repoRefKey, existingPrefixes);
 
     assert(typeof pack.license === 'string' && pack.license.length > 0, `Pack "${pack.id}" missing license`);

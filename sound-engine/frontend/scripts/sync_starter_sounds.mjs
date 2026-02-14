@@ -8,6 +8,7 @@ import {
   hasMatchingByteSize,
   resolveSafeOutputPath,
   summarizeInventoryPacks,
+  toPathCollisionKey,
   validateStarterSoundManifest
 } from './starter_sound_sync_utils.mjs';
 
@@ -78,8 +79,9 @@ for (const pack of manifest.packs || []) {
     const relativePath = path.relative(pack.sourcePathPrefix, entry.path);
     const targetPath = resolveSafeOutputPath(outputRoot, pack.targetDir, relativePath);
     const normalizedTargetPath = normalizeToPosix(path.relative(outputRoot, targetPath));
+    const targetCollisionKey = toPathCollisionKey(normalizedTargetPath);
     const targetOwner = `${pack.id}:${entry.path}`;
-    const existingOwner = targetPathOwners.get(normalizedTargetPath);
+    const existingOwner = targetPathOwners.get(targetCollisionKey);
     if (existingOwner && existingOwner !== targetOwner) {
       failed += 1;
       mismatched += 1;
@@ -93,7 +95,7 @@ for (const pack of manifest.packs || []) {
       console.error(`[error] target path collision ${pack.id}/${relativePath} -> ${normalizedTargetPath} (owner: ${existingOwner})`);
       return;
     }
-    targetPathOwners.set(normalizedTargetPath, targetOwner);
+    targetPathOwners.set(targetCollisionKey, targetOwner);
     const exists = await fileExists(targetPath);
 
     if (exists && !forceDownload) {
