@@ -16,6 +16,8 @@ const quiet = args.has('--quiet');
 const verifyExisting = args.has('--verify-existing');
 const maxConcurrent = 6;
 const REQUEST_TIMEOUT_MS = 25000;
+const MAX_FETCH_ATTEMPTS = 4;
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 const treeCache = new Map();
 
@@ -180,7 +182,7 @@ async function listPackFiles(pack) {
 async function fetchRepoTree(repo, ref) {
   const treeUrl = `https://api.github.com/repos/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
   enforceAllowlist(treeUrl, manifest.allowlistedDomains || []);
-  const response = await fetchWithTimeout(treeUrl, { headers: githubHeaders() });
+  const response = await fetchWithRetry(treeUrl, { headers: githubHeaders() });
   if (!response.ok) {
     throw new Error(`Failed to fetch repository tree for ${repo}@${ref}: ${response.status} ${response.statusText}`);
   }
@@ -228,11 +230,36 @@ function enforceAllowlist(url, allowlist) {
 }
 
 async function fetchBuffer(url) {
-  const response = await fetchWithTimeout(url);
+  const response = await fetchWithRetry(url);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
   return Buffer.from(await response.arrayBuffer());
+}
+
+async function fetchWithRetry(url, options = {}) {
+  let attempt = 0;
+  while (attempt < MAX_FETCH_ATTEMPTS) {
+    attempt += 1;
+    try {
+      const response = await fetchWithTimeout(url, options);
+      if (response.ok || !RETRYABLE_STATUS.has(response.status) || attempt >= MAX_FETCH_ATTEMPTS) {
+        return response;
+      }
+      const waitMs = computeBackoffMs(attempt);
+      log(`[retry] ${new URL(url).hostname} ${response.status} attempt ${attempt}/${MAX_FETCH_ATTEMPTS} in ${waitMs}ms`);
+      await sleep(waitMs);
+    } catch (error) {
+      if (!isRetryableNetworkError(error) || attempt >= MAX_FETCH_ATTEMPTS) {
+        throw error;
+      }
+      const waitMs = computeBackoffMs(attempt);
+      log(`[retry] network error (${error.name}) attempt ${attempt}/${MAX_FETCH_ATTEMPTS} in ${waitMs}ms`);
+      await sleep(waitMs);
+    }
+  }
+
+  throw new Error(`Exhausted retry attempts for ${url}`);
 }
 
 async function fetchWithTimeout(url, options = {}) {
@@ -263,15 +290,39 @@ function normalizeToPosix(value) {
 }
 
 async function runConcurrent(taskFactories, limit) {
-  const queue = [...taskFactories];
+  const queue = taskFactories;
+  let nextIndex = 0;
   const workers = Array.from({ length: Math.max(1, limit) }, async () => {
-    while (queue.length > 0) {
-      const task = queue.shift();
+    while (nextIndex < queue.length) {
+      const taskIndex = nextIndex;
+      nextIndex += 1;
+      const task = queue[taskIndex];
       // eslint-disable-next-line no-await-in-loop
       await task();
     }
   });
   await Promise.all(workers);
+}
+
+function computeBackoffMs(attempt) {
+  const base = 250;
+  const jitter = Math.floor(Math.random() * 120);
+  return base * (2 ** (attempt - 1)) + jitter;
+}
+
+function isRetryableNetworkError(error) {
+  if (!error) return false;
+  if (error.name === 'AbortError') return true;
+  const message = String(error.message || '').toLowerCase();
+  return message.includes('network')
+    || message.includes('timed out')
+    || message.includes('socket')
+    || message.includes('econnreset')
+    || message.includes('ecanceled');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function validateManifest(value) {

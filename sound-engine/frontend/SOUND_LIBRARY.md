@@ -40,6 +40,10 @@ The sync script writes inventory metadata to:
 
 - `src/data/starterSoundInventory.json`
 
+Network behavior:
+- automatic retries with exponential backoff + jitter for transient HTTP/network failures
+- bounded request timeouts per fetch
+
 ## Security
 
 The sync pipeline enforces:
