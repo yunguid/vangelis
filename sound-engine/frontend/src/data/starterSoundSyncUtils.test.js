@@ -52,7 +52,7 @@ describe('starter_sound_sync_utils', () => {
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
   });
 
-  it('rejects duplicate source prefix mappings across packs', () => {
+  it('rejects duplicate or overlapping source prefixes per repo ref', () => {
     const duplicateSourcePrefix = structuredClone(validManifest);
     duplicateSourcePrefix.packs.push({
       ...duplicateSourcePrefix.packs[0],
@@ -61,7 +61,18 @@ describe('starter_sound_sync_utils', () => {
     });
 
     expect(() => validateStarterSoundManifest(duplicateSourcePrefix))
-      .toThrow(/duplicates existing source prefix mapping/i);
+      .toThrow(/overlaps sourcePathPrefix/i);
+
+    const overlappingSourcePrefix = structuredClone(validManifest);
+    overlappingSourcePrefix.packs.push({
+      ...overlappingSourcePrefix.packs[0],
+      id: 'third-pack',
+      sourcePathPrefix: 'Strings/Violin Section',
+      targetDir: 'starter-pack/strings/violin-parent'
+    });
+
+    expect(() => validateStarterSoundManifest(overlappingSourcePrefix))
+      .toThrow(/overlaps sourcePathPrefix/i);
 
     const uniqueSourcePrefix = structuredClone(validManifest);
     uniqueSourcePrefix.packs.push({
