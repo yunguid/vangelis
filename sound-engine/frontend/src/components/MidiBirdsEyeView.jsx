@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { clamp, midiNoteToName } from '../utils/math.js';
+import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 
 const DEFAULT_MIN_MIDI = 21;
 const DEFAULT_MAX_MIDI = 108;
@@ -11,10 +12,14 @@ const SIDE_PADDING = 16;
 
 const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => {
   const canvasRef = useRef(null);
-  const propsRef = useRef({ currentMidi, progress, activeNotes, isPlaying });
+  const noteRenderWindow = useMemo(
+    () => buildNoteRenderWindow(currentMidi?.notes || []),
+    [currentMidi]
+  );
+  const propsRef = useRef({ currentMidi, progress, activeNotes, isPlaying, noteRenderWindow });
   const noteIdCacheRef = useRef(new Map());
 
-  propsRef.current = { currentMidi, progress, activeNotes, isPlaying };
+  propsRef.current = { currentMidi, progress, activeNotes, isPlaying, noteRenderWindow };
 
   const midiRange = useMemo(() => {
     const notes = currentMidi?.notes || [];
@@ -96,7 +101,12 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
     };
 
     const draw = () => {
-      const { currentMidi: midi, progress: playbackProgress, activeNotes: activeNoteSet } = propsRef.current;
+      const {
+        currentMidi: midi,
+        progress: playbackProgress,
+        activeNotes: activeNoteSet,
+        noteRenderWindow: renderWindow
+      } = propsRef.current;
       const { width, height } = syncCanvasSize();
 
       ctx.clearRect(0, 0, width, height);
@@ -118,19 +128,24 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
       ctx.lineTo(width - SIDE_PADDING, trackBottom - 1);
       ctx.stroke();
 
-      if (!midi?.notes?.length || !midi.duration) {
+      if (!midi?.duration || !renderWindow.notes.length) {
         return;
       }
 
       const nowTime = clamp(playbackProgress, 0, 1) * midi.duration;
-      const windowStart = nowTime - LOOKBEHIND_SECONDS;
-      const windowEnd = nowTime + LOOKAHEAD_SECONDS;
       const midiSpan = Math.max(1, midiRange.max - midiRange.min);
       const laneBaseWidth = playfieldWidth / (midiSpan + 1);
+      const { startIndex, endIndex, windowStart, windowEnd } = getVisibleNoteRange({
+        startTimes: renderWindow.startTimes,
+        nowTime,
+        lookBehindSeconds: LOOKBEHIND_SECONDS,
+        lookAheadSeconds: LOOKAHEAD_SECONDS,
+        maxDuration: renderWindow.maxDuration
+      });
 
-      for (const note of midi.notes) {
-        const noteEnd = note.time + note.duration;
-        if (noteEnd < windowStart || note.time > windowEnd) continue;
+      for (let noteIndex = startIndex; noteIndex < endIndex; noteIndex += 1) {
+        const note = renderWindow.notes[noteIndex];
+        if (note.endTime < windowStart || note.time > windowEnd) continue;
 
         const leadSeconds = note.time - nowTime;
         const depthNorm = clamp(
