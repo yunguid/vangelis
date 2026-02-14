@@ -137,6 +137,7 @@ export function validateStarterSoundManifest(value) {
   assert(value.packs.length > 0, 'Starter sound manifest has no packs');
 
   const domainSet = new Set();
+  const normalizedDomains = [];
   value.allowlistedDomains.forEach((domain) => {
     assert(typeof domain === 'string' && domain.length > 0, 'Allowlisted domain must be a non-empty string');
     assert(domain.trim() === domain, `Allowlisted domain contains invalid whitespace: "${domain}"`);
@@ -145,7 +146,13 @@ export function validateStarterSoundManifest(value) {
     assert(HOSTNAME_REGEX.test(normalizedDomain), `Allowlisted domain contains invalid characters: "${domain}"`);
     assert(!domainSet.has(normalizedDomain), `Duplicate allowlisted domain "${domain}"`);
     domainSet.add(normalizedDomain);
+    normalizedDomains.push(normalizedDomain);
   });
+  const sortedDomains = [...normalizedDomains].sort((a, b) => a.localeCompare(b));
+  assert(
+    normalizedDomains.every((domain, index) => domain === sortedDomains[index]),
+    'Allowlisted domains must be sorted lexicographically'
+  );
 
   const ids = new Set();
   const normalizedTargetDirs = new Set();

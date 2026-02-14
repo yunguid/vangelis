@@ -24,6 +24,9 @@ describe('starter sound source manifest', () => {
     expect(manifest.allowlistedDomains).toContain('raw.githubusercontent.com');
     expect(manifest.allowlistedDomains).toContain('api.github.com');
     expect(new Set(manifest.allowlistedDomains).size).toBe(manifest.allowlistedDomains.length);
+    expect(manifest.allowlistedDomains).toEqual(
+      [...manifest.allowlistedDomains].sort((a, b) => a.localeCompare(b))
+    );
   });
 
   it('declares complete metadata for every starter pack source', () => {

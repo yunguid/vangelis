@@ -2,8 +2,8 @@
   "version": 1,
   "description": "Curated legal source manifest for bundled high-quality starter sounds.",
   "allowlistedDomains": [
-    "raw.githubusercontent.com",
-    "api.github.com"
+    "api.github.com",
+    "raw.githubusercontent.com"
   ],
   "licenseNotice": "VSCO 2 Community Edition is distributed under CC0/public-domain dedication according to upstream project docs.",
   "packs": [

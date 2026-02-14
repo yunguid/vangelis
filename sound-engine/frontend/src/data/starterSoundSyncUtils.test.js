@@ -16,7 +16,7 @@ import {
 
 const validManifest = {
   version: 1,
-  allowlistedDomains: ['raw.githubusercontent.com', 'api.github.com'],
+  allowlistedDomains: ['api.github.com', 'raw.githubusercontent.com'],
   packs: [
     {
       id: 'ok-pack',
@@ -159,6 +159,13 @@ describe('starter_sound_sync_utils', () => {
     badDomains.allowlistedDomains = ['Raw.GitHubusercontent.com', 'api.github.com'];
     expect(() => validateStarterSoundManifest(badDomains))
       .toThrow(/allowlisted domain must be lowercase/i);
+  });
+
+  it('rejects unsorted allowlisted domain order', () => {
+    const unsortedDomains = structuredClone(validManifest);
+    unsortedDomains.allowlistedDomains = ['raw.githubusercontent.com', 'api.github.com'];
+    expect(() => validateStarterSoundManifest(unsortedDomains))
+      .toThrow(/must be sorted lexicographically/i);
   });
 
   it('resolves safe output paths and blocks traversal', () => {
