@@ -188,6 +188,8 @@ for (const pack of manifest.packs || []) {
   inventory.packs.push(packInventory);
 }
 
+inventory.packs.sort((a, b) => a.id.localeCompare(b.id));
+
 inventory.summary = {
   downloaded,
   skipped,

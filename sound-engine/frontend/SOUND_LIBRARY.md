@@ -55,6 +55,7 @@ The sync pipeline enforces:
 - output-path confinement (prevents write traversal outside `public/samples`)
 - target-path collision detection (prevents multiple sources writing same local asset path)
 - deterministic source manifest
+- deterministic inventory ordering (packs + files sorted for stable diffs)
 - git-blob checksum verification against upstream tree SHA
 - no free-form crawl targets
 
