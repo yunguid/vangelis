@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   getSamplesByCategory,
   getSample,
@@ -44,6 +44,38 @@ const buildStarterCatalog = () => {
   return items;
 };
 
+const selectFeaturedStarterItems = (items, maxTotal = 16, maxPerFamily = 4) => {
+  const grouped = new Map();
+  items.forEach((item) => {
+    if (!grouped.has(item.family)) {
+      grouped.set(item.family, []);
+    }
+    grouped.get(item.family).push(item);
+  });
+
+  const featured = [];
+  const consumeFamily = (family) => {
+    const familyItems = grouped.get(family) || [];
+    for (let i = 0; i < familyItems.length && i < maxPerFamily && featured.length < maxTotal; i += 1) {
+      featured.push(familyItems[i]);
+    }
+    grouped.delete(family);
+  };
+
+  STARTER_FAMILY_ORDER.forEach(consumeFamily);
+
+  if (featured.length < maxTotal) {
+    const leftovers = [...grouped.values()].flat();
+    leftovers.sort((a, b) => a.name.localeCompare(b.name));
+    for (const item of leftovers) {
+      if (featured.length >= maxTotal) break;
+      featured.push(item);
+    }
+  }
+
+  return featured;
+};
+
 /**
  * Samples browser tab - import and browse local samples
  */
@@ -56,7 +88,11 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [error, setError] = useState(null);
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
-  const starterCatalog = buildStarterCatalog();
+  const starterCatalog = useMemo(() => buildStarterCatalog(), []);
+  const featuredStarterCatalog = useMemo(
+    () => selectFeaturedStarterItems(starterCatalog),
+    [starterCatalog]
+  );
 
   // Load samples on mount
   useEffect(() => {
@@ -316,7 +352,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       <div className="samples-tab__section">
         <h3 className="samples-tab__heading">Starter Pack</h3>
         <div className="samples-tab__starter-grid">
-          {starterCatalog.slice(0, 16).map((starterSample) => (
+          {featuredStarterCatalog.map((starterSample) => (
             <button
               key={starterSample.id}
               type="button"

@@ -19,7 +19,7 @@ describe('SamplesTab starter pack integration', () => {
     render(<SamplesTab onSampleSelect={vi.fn()} activeSampleId={null} />);
 
     expect(screen.getByText('Starter Pack')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Upright Piano Low/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Harp High/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /French Horn Low/i })).toBeInTheDocument();
 
     await waitFor(() => {
@@ -35,7 +35,7 @@ describe('SamplesTab starter pack integration', () => {
       expect(screen.getByText(/No samples yet/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Upright Piano Mid/i }));
+    fireEvent.click(screen.getByRole('button', { name: /French Horn Mid/i }));
 
     expect(onSampleSelect).toHaveBeenCalledTimes(1);
     expect(onSampleSelect).toHaveBeenCalledWith(expect.objectContaining({
