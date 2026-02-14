@@ -42,6 +42,18 @@ describe('getBuiltInMidiFiles', () => {
     expect(vocalise?.layerFamilies).toEqual(['piano', 'strings', 'brass']);
   });
 
+  it('assigns orchestral extended layering metadata to selected Russian library pieces', () => {
+    const files = getBuiltInMidiFiles('/');
+    const mussorgsky = files.find((file) => file.id === 'mussorgsky-night-on-bald-mountain');
+    const alyabyev = files.find((file) => file.id === 'alyabyev-the-nightingale');
+
+    expect(mussorgsky?.soundSetId).toBe('orchestral-extended-starter');
+    expect(mussorgsky?.layerFamilies).toEqual(['strings', 'brass', 'reed']);
+
+    expect(alyabyev?.soundSetId).toBe('orchestral-extended-starter');
+    expect(alyabyev?.layerFamilies).toEqual(['strings', 'reed', 'piano']);
+  });
+
   it('maps every built-in entry to a committed midi file', () => {
     const files = getBuiltInMidiFiles('/');
     const testDir = path.dirname(fileURLToPath(import.meta.url));

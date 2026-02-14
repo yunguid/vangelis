@@ -159,6 +159,99 @@ export const SOUNDSET_MANIFEST = {
         minMidi: 69
       }
     ]
+  },
+  'orchestral-extended-starter': {
+    id: 'orchestral-extended-starter',
+    name: 'Orchestral Extended Starter',
+    quality: {
+      sampleRate: 44100,
+      bitDepth: 24
+    },
+    layerFamilies: ['strings', 'brass', 'reed', 'piano'],
+    instruments: [
+      {
+        id: 'harp-low',
+        label: 'Harp Low',
+        families: ['piano', 'chromatic percussion'],
+        samplePath: 'starter-pack/strings/harp/KSHarp_C3_mf.wav',
+        baseNote: 'C3',
+        maxMidi: 64
+      },
+      {
+        id: 'harp-high',
+        label: 'Harp High',
+        families: ['piano', 'chromatic percussion'],
+        samplePath: 'starter-pack/strings/harp/KSHarp_G5_mf.wav',
+        baseNote: 'G5',
+        minMidi: 65
+      },
+      {
+        id: 'violin-mid',
+        label: 'Violin Section Mid',
+        families: ['strings', 'ensemble'],
+        samplePath: 'starter-pack/strings/violin/VlnEns_susVib_C4_v1.wav',
+        baseNote: 'C4',
+        minMidi: 68
+      },
+      {
+        id: 'cello-low',
+        label: 'Cello Section Low',
+        families: ['strings', 'ensemble'],
+        samplePath: 'starter-pack/strings/cello/susvib_C1_v1_1.wav',
+        baseNote: 'C1',
+        maxMidi: 67
+      },
+      {
+        id: 'bassoon-low',
+        label: 'Bassoon Low',
+        families: ['reed'],
+        samplePath: 'starter-pack/woodwinds/bassoon/PSBassoon_C2_v1_1.wav',
+        baseNote: 'C2',
+        maxMidi: 61
+      },
+      {
+        id: 'clarinet-mid',
+        label: 'Clarinet Mid',
+        families: ['reed'],
+        samplePath: 'starter-pack/woodwinds/clarinet/DCClar_susLong_D3_v1_rr1_sum.wav',
+        baseNote: 'D3',
+        minMidi: 62,
+        maxMidi: 78
+      },
+      {
+        id: 'clarinet-high',
+        label: 'Clarinet High',
+        families: ['reed'],
+        samplePath: 'starter-pack/woodwinds/clarinet/DCClar_susLong_F#5_v1_rr1_sum.wav',
+        baseNote: 'F#5',
+        minMidi: 79
+      },
+      {
+        id: 'horn-low',
+        label: 'French Horn Low',
+        families: ['brass'],
+        samplePath: 'starter-pack/brass/horn/MOHorn_sus_C1_v1_1.wav',
+        baseNote: 'C1',
+        maxMidi: 58
+      },
+      {
+        id: 'trombone-mid',
+        label: 'Tenor Trombone',
+        families: ['brass'],
+        samplePath: 'starter-pack/brass/trombone/tenortbn_sus_C3_v1_1.wav',
+        baseNote: 'C3',
+        minMidi: 59,
+        maxMidi: 69
+      },
+      {
+        id: 'trumpet-high',
+        label: 'Trumpet High',
+        families: ['brass'],
+        samplePath: 'starter-pack/brass/trumpet/Sum_SHTrumpet_sus_C5_v1_rr1.wav',
+        baseNote: 'C5',
+        minMidi: 70
+      }
+    ]
   }
 };
 

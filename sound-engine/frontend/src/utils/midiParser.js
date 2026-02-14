@@ -113,12 +113,28 @@ function flattenTracks(tracks) {
  */
 export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   const toBuiltInPath = (relativePath) => withBase(`midi/${relativePath}`, base);
+  const libraryPlaybackProfiles = {
+    'mussorgsky-night-on-bald-mountain': {
+      soundSetId: 'orchestral-extended-starter',
+      layerFamilies: ['strings', 'brass', 'reed']
+    },
+    'bortniansky-the-angel-cried': {
+      soundSetId: 'orchestral-extended-starter',
+      layerFamilies: ['strings', 'reed', 'piano']
+    },
+    'alyabyev-the-nightingale': {
+      soundSetId: 'orchestral-extended-starter',
+      layerFamilies: ['strings', 'reed', 'piano']
+    }
+  };
+
   const russianFiles = russianMidiLibrary.map((entry) => ({
     id: entry.id,
     name: entry.name,
     path: toBuiltInPath(`russian/${entry.id}.mid`),
     composer: entry.composer,
-    sourceUrl: entry.sourceUrl
+    sourceUrl: entry.sourceUrl,
+    ...(libraryPlaybackProfiles[entry.id] || {})
   }));
 
   return [

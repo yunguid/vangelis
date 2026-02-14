@@ -102,6 +102,86 @@
         "sampleRate": 44100,
         "bitDepth": 24
       }
+    },
+    {
+      "id": "vsco-clarinet-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Woodwinds/Clarinet/susLong",
+      "targetDir": "starter-pack/woodwinds/clarinet",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-bassoon-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Woodwinds/Bassoon/sus",
+      "targetDir": "starter-pack/woodwinds/bassoon",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-trumpet-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Brass/Trumpet/sus",
+      "targetDir": "starter-pack/brass/trumpet",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-tenor-trombone-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Brass/Tenor Trombone/sus",
+      "targetDir": "starter-pack/brass/trombone",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-harp",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Harp",
+      "targetDir": "starter-pack/strings/harp",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
     }
   ]
 }

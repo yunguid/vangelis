@@ -16,6 +16,11 @@ Included collections:
 - Strings / Cello Section / susvib
 - Strings / Solo Contrabass / SusVib
 - Brass / F Horn / sus
+- Brass / Trumpet / sus
+- Brass / Tenor Trombone / sus
+- Woodwinds / Clarinet / susLong
+- Woodwinds / Bassoon / sus
+- Strings / Harp
 
 This starter pack is synced via:
 

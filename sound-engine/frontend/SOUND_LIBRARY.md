@@ -1,6 +1,7 @@
 # Starter Sound Library
 
 This project ships with a curated **starter pack** of orchestral/piano samples under `public/samples/starter-pack`.
+Current committed starter-pack footprint: **~644 MB** (Git LFS).
 
 ## Goals
 - high-quality baseline sounds out of the box
