@@ -540,9 +540,14 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       console.warn('No MIDI data to play');
       return;
     }
-    const effectiveMidiData = {
+    const midiDuration = resolveMidiDuration({
       ...midiData,
       notes: normalizedNotes
+    });
+    const effectiveMidiData = {
+      ...midiData,
+      notes: normalizedNotes,
+      duration: midiDuration
     };
 
     const playRequestSeq = playRequestSeqRef.current + 1;
@@ -589,7 +594,6 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       playbackRef.current.startTime = startTime;
       playbackRef.current.pauseOriginalTime = 0;
       playbackRef.current.elapsedOriginalAtStart = 0;
-      const midiDuration = resolveMidiDuration(effectiveMidiData);
 
       setCurrentMidi(effectiveMidiData);
       setIsPlaying(true);

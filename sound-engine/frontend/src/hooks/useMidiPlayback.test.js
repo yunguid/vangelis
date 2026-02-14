@@ -425,6 +425,7 @@ describe('useMidiPlayback layering', () => {
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
     expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
     expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(62);
+    expect(result.current.currentMidi?.duration).toBeCloseTo(0.15, 5);
   });
 
   it('filters invalid notes before scheduling playback', async () => {
