@@ -30,6 +30,8 @@ let downloaded = 0;
 let skipped = 0;
 let failed = 0;
 let totalBytes = 0;
+let verified = 0;
+let mismatched = 0;
 
 const inventory = {
   generatedAt: new Date().toISOString(),
@@ -77,7 +79,10 @@ for (const pack of manifest.packs || []) {
         integrity = sourceBlobSha && localBlobSha === sourceBlobSha ? 'verified' : 'mismatch';
         if (integrity === 'mismatch') {
           failed += 1;
+          mismatched += 1;
           console.error(`[error] integrity mismatch (existing) ${pack.id}/${relativePath}`);
+        } else if (integrity === 'verified') {
+          verified += 1;
         }
       }
 
@@ -104,6 +109,9 @@ for (const pack of manifest.packs || []) {
       const localBlobSha = computeGitBlobSha(data);
       if (sourceBlobSha && localBlobSha !== sourceBlobSha) {
         throw new Error(`Checksum mismatch for ${relativePath}`);
+      }
+      if (sourceBlobSha && localBlobSha === sourceBlobSha) {
+        verified += 1;
       }
 
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
@@ -136,6 +144,7 @@ for (const pack of manifest.packs || []) {
   });
 
   await runConcurrent(tasks, maxConcurrent);
+  packInventory.files.sort((a, b) => a.path.localeCompare(b.path));
   inventory.packs.push(packInventory);
 }
 
@@ -143,6 +152,8 @@ inventory.summary = {
   downloaded,
   skipped,
   failed,
+  verified,
+  mismatched,
   totalBytes,
   totalMB: Number((totalBytes / (1024 * 1024)).toFixed(2))
 };

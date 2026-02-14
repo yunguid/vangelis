@@ -15,6 +15,11 @@ describe('starter sound inventory integrity', () => {
     expect(inventory.summary?.failed).toBe(0);
 
     inventory.packs.forEach((pack) => {
+      const paths = pack.files.map((entry) => entry.path);
+      const sorted = [...paths].sort((a, b) => a.localeCompare(b));
+      expect(paths).toEqual(sorted);
+      expect(new Set(paths).size).toBe(paths.length);
+
       pack.files.forEach((entry) => {
         expect(entry.path.startsWith('starter-pack/')).toBe(true);
         expect(['skipped', 'downloaded']).toContain(entry.status);
@@ -24,5 +29,8 @@ describe('starter sound inventory integrity', () => {
         }
       });
     });
+
+    expect(typeof inventory.summary?.verified).toBe('number');
+    expect(typeof inventory.summary?.mismatched).toBe('number');
   });
 });
