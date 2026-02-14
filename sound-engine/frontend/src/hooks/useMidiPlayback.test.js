@@ -39,6 +39,16 @@ describe('useMidiPlayback layering', () => {
     global.cancelAnimationFrame = originalCancelAnimationFrame;
   });
 
+  const createDeferred = () => {
+    let resolve;
+    let reject;
+    const promise = new Promise((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  };
+
   it('plays stacked sample layers when a sound set is available', async () => {
     ensureSoundSetLoaded.mockResolvedValue({
       id: 'rachmaninoff-orchestral-lite',
@@ -154,5 +164,84 @@ describe('useMidiPlayback layering', () => {
     const waveforms = audioEngine.playFrequency.mock.calls.map((call) => call[0].waveformType);
     expect(waveforms).toContain('triangle');
     expect(waveforms).toContain('saw');
+  });
+
+  it('ignores stale play request that resolves after a newer play starts', async () => {
+    const firstLoad = createDeferred();
+    ensureSoundSetLoaded
+      .mockImplementationOnce(() => firstLoad.promise)
+      .mockResolvedValueOnce(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1 }],
+        soundSetId: 'slow-first'
+      });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 67, time: 0, duration: 0.1, velocity: 1 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      firstLoad.resolve(null);
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playFrequency.mock.calls[0][0].noteId).toContain('midi-67-');
+    expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(67);
+  });
+
+  it('does not start playback if stop is called before async soundset load resolves', async () => {
+    const slowLoad = createDeferred();
+    ensureSoundSetLoaded.mockImplementationOnce(() => slowLoad.promise);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 1 }],
+        soundSetId: 'slow-stop'
+      });
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await act(async () => {
+      slowLoad.resolve(null);
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
+    expect(result.current.isPlaying).toBe(false);
+    expect(result.current.currentMidi).toBeNull();
   });
 });
