@@ -33,6 +33,25 @@ describe('starter sound inventory integrity', () => {
       });
     });
 
+    const allEntries = inventory.packs.flatMap((pack) => pack.files);
+    const downloadedCount = allEntries.filter((entry) => entry.status === 'downloaded').length;
+    const skippedCount = allEntries.filter((entry) => entry.status === 'skipped').length;
+    const failedCount = allEntries.filter((entry) => entry.status === 'failed').length;
+    const verifiedCount = allEntries.filter((entry) => entry.integrity === 'verified').length;
+    const mismatchedCount = allEntries.filter((entry) => entry.integrity === 'mismatch').length;
+    const computedTotalBytes = allEntries.reduce(
+      (sum, entry) => sum + (Number.isFinite(entry.bytes) ? entry.bytes : 0),
+      0
+    );
+
+    expect(inventory.summary?.downloaded).toBe(downloadedCount);
+    expect(inventory.summary?.skipped).toBe(skippedCount);
+    expect(inventory.summary?.failed).toBe(failedCount);
+    expect(inventory.summary?.verified).toBe(verifiedCount);
+    expect(inventory.summary?.mismatched).toBe(mismatchedCount);
+    expect(inventory.summary?.totalBytes).toBe(computedTotalBytes);
+    expect(inventory.summary?.totalMB).toBe(Number((computedTotalBytes / (1024 * 1024)).toFixed(2)));
+
     expect(typeof inventory.summary?.verified).toBe('number');
     expect(typeof inventory.summary?.mismatched).toBe('number');
   });
