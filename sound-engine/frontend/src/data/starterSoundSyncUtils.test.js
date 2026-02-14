@@ -142,6 +142,18 @@ describe('starter_sound_sync_utils', () => {
     expect(() => validateStarterSoundManifest(badRef)).toThrow(/40-char commit SHA/i);
   });
 
+  it('rejects license or attribution values with surrounding whitespace', () => {
+    const paddedLicense = structuredClone(validManifest);
+    paddedLicense.packs[0].license = ' CC0-1.0';
+    expect(() => validateStarterSoundManifest(paddedLicense))
+      .toThrow(/license has invalid surrounding whitespace/i);
+
+    const paddedAttribution = structuredClone(validManifest);
+    paddedAttribution.packs[0].attribution = 'Example attribution ';
+    expect(() => validateStarterSoundManifest(paddedAttribution))
+      .toThrow(/attribution has invalid surrounding whitespace/i);
+  });
+
   it('rejects uppercase allowlisted domain entries', () => {
     const badDomains = structuredClone(validManifest);
     badDomains.allowlistedDomains = ['Raw.GitHubusercontent.com', 'api.github.com'];

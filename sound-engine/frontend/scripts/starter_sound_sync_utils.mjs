@@ -182,8 +182,10 @@ export function validateStarterSoundManifest(value) {
     existingPrefixes.push({ id: pack.id, prefix: sourcePrefixCollisionKey });
     sourcePrefixesByRepoRef.set(repoRefKey, existingPrefixes);
 
-    assert(typeof pack.license === 'string' && pack.license.length > 0, `Pack "${pack.id}" missing license`);
-    assert(typeof pack.attribution === 'string' && pack.attribution.length > 0, `Pack "${pack.id}" missing attribution`);
+    assert(typeof pack.license === 'string' && pack.license.trim().length > 0, `Pack "${pack.id}" missing license`);
+    assert(pack.license === pack.license.trim(), `Pack "${pack.id}" license has invalid surrounding whitespace`);
+    assert(typeof pack.attribution === 'string' && pack.attribution.trim().length > 0, `Pack "${pack.id}" missing attribution`);
+    assert(pack.attribution === pack.attribution.trim(), `Pack "${pack.id}" attribution has invalid surrounding whitespace`);
 
     assert(Array.isArray(pack.includeExtensions), `Pack "${pack.id}" includeExtensions must be an array`);
     assert(pack.includeExtensions.length > 0, `Pack "${pack.id}" includeExtensions cannot be empty`);

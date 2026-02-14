@@ -53,6 +53,7 @@ The sync pipeline enforces:
 - strict lowercase domain allowlist (`raw.githubusercontent.com`, `api.github.com`)
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
 - pack IDs are enforced as lowercase kebab-case for stable manifests
+- license + attribution metadata must be non-empty and whitespace-clean
 - output-path confinement (prevents write traversal outside `public/samples`)
 - target-path collision detection (prevents multiple sources writing same local asset path)
 - duplicate/overlapping source-prefix detection per repo ref (case-insensitive, prevents duplicate upstream slices)
