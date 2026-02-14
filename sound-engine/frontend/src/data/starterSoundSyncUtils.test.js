@@ -51,6 +51,29 @@ describe('starter_sound_sync_utils', () => {
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
   });
 
+  it('rejects duplicate source prefix mappings across packs', () => {
+    const duplicateSourcePrefix = structuredClone(validManifest);
+    duplicateSourcePrefix.packs.push({
+      ...duplicateSourcePrefix.packs[0],
+      id: 'second-pack',
+      targetDir: 'starter-pack/strings/violin-alt'
+    });
+
+    expect(() => validateStarterSoundManifest(duplicateSourcePrefix))
+      .toThrow(/duplicates existing source prefix mapping/i);
+
+    const uniqueSourcePrefix = structuredClone(validManifest);
+    uniqueSourcePrefix.packs.push({
+      ...uniqueSourcePrefix.packs[0],
+      id: 'second-pack',
+      sourcePathPrefix: 'Strings/Viola Section/susvib',
+      targetDir: 'starter-pack/strings/viola'
+    });
+
+    expect(() => validateStarterSoundManifest(uniqueSourcePrefix))
+      .not.toThrow();
+  });
+
   it('rejects disallowed file extensions and non-SHA refs', () => {
     const badExt = structuredClone(validManifest);
     badExt.packs[0].includeExtensions = ['.exe'];

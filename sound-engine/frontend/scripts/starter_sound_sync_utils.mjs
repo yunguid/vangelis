@@ -118,6 +118,7 @@ export function validateStarterSoundManifest(value) {
 
   const ids = new Set();
   const normalizedTargetDirs = new Set();
+  const sourceMappings = new Set();
   value.packs.forEach((pack) => {
     assert(typeof pack.id === 'string' && pack.id.length > 0, 'Each pack must define a non-empty id');
     assert(pack.id.trim() === pack.id, `Pack id has invalid whitespace: "${pack.id}"`);
@@ -133,6 +134,13 @@ export function validateStarterSoundManifest(value) {
     assert(!normalizedTargetDirs.has(normalizedTargetDir),
       `Pack "${pack.id}" targetDir duplicates existing targetDir "${normalizedTargetDir}"`);
     normalizedTargetDirs.add(normalizedTargetDir);
+
+    const normalizedSourcePrefix = normalizeManifestPath(pack.sourcePathPrefix);
+    const sourceMappingKey = `${pack.repo}@${pack.ref}::${normalizedSourcePrefix}`;
+    assert(!sourceMappings.has(sourceMappingKey),
+      `Pack "${pack.id}" duplicates existing source prefix mapping "${sourceMappingKey}"`);
+    sourceMappings.add(sourceMappingKey);
+
     assert(typeof pack.license === 'string' && pack.license.length > 0, `Pack "${pack.id}" missing license`);
     assert(typeof pack.attribution === 'string' && pack.attribution.length > 0, `Pack "${pack.id}" missing attribution`);
 

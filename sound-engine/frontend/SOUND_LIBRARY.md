@@ -54,6 +54,7 @@ The sync pipeline enforces:
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
 - output-path confinement (prevents write traversal outside `public/samples`)
 - target-path collision detection (prevents multiple sources writing same local asset path)
+- duplicate source-prefix detection (prevents accidental duplicate downloads from same upstream tree path)
 - deterministic source manifest
 - deterministic inventory ordering (packs + files sorted for stable diffs)
 - git-blob checksum verification against upstream tree SHA
