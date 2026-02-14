@@ -24,6 +24,7 @@ const log = (...values) => {
 };
 
 const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+validateManifest(manifest);
 
 let downloaded = 0;
 let skipped = 0;
@@ -261,4 +262,28 @@ async function runConcurrent(taskFactories, limit) {
     }
   });
   await Promise.all(workers);
+}
+
+function validateManifest(value) {
+  if (!value || typeof value !== 'object') {
+    throw new Error('Starter sound manifest is invalid');
+  }
+
+  if (!Array.isArray(value.allowlistedDomains) || value.allowlistedDomains.length === 0) {
+    throw new Error('Starter sound manifest must define allowlisted domains');
+  }
+
+  if (!Array.isArray(value.packs) || value.packs.length === 0) {
+    throw new Error('Starter sound manifest has no packs');
+  }
+
+  const SHA_REGEX = /^[0-9a-f]{40}$/;
+  value.packs.forEach((pack) => {
+    if (!SHA_REGEX.test(pack.ref || '')) {
+      throw new Error(`Pack "${pack.id}" must pin an immutable 40-char commit SHA`);
+    }
+    if (typeof pack.targetDir !== 'string' || !pack.targetDir.startsWith('starter-pack/')) {
+      throw new Error(`Pack "${pack.id}" targetDir must stay within starter-pack/`);
+    }
+  });
 }

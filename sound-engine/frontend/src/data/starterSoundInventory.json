@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-14T21:59:18.184Z",
+  "generatedAt": "2026-02-14T22:02:14.401Z",
   "sourceManifestVersion": 1,
   "packs": [
     {
@@ -16,49 +16,13 @@
       },
       "files": [
         {
-          "path": "starter-pack/piano/UR1_C1_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C1_pp_RR1.wav",
-          "bytes": 1331494,
-          "status": "skipped",
-          "sourceBlobSha": "cb70a3d508163e4035600cfe287e191960be76db",
-          "localBlobSha": "cb70a3d508163e4035600cfe287e191960be76db",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C1_pp_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C1_pp_RR2.wav",
-          "bytes": 2038540,
-          "status": "skipped",
-          "sourceBlobSha": "345b0946181a427bb30a25730162b8c4c42c16e3",
-          "localBlobSha": "345b0946181a427bb30a25730162b8c4c42c16e3",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C1_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C1_mf_RR2.wav",
-          "bytes": 3392398,
-          "status": "skipped",
-          "sourceBlobSha": "d61c9698c4c1cf306b7e440ead630a6f3495680e",
-          "localBlobSha": "d61c9698c4c1cf306b7e440ead630a6f3495680e",
-          "integrity": "verified"
-        },
-        {
           "path": "starter-pack/piano/UR1_C1_f_RR1.wav",
           "sourcePath": "Keys/Upright Nr1/UR1_C1_f_RR1.wav",
           "bytes": 3130978,
           "status": "skipped",
           "sourceBlobSha": "0c9987efda27e50babf86ed50fb335d90a96fd3d",
-          "localBlobSha": "0c9987efda27e50babf86ed50fb335d90a96fd3d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C2_f_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C2_f_RR1.wav",
-          "bytes": 3811820,
-          "status": "skipped",
-          "sourceBlobSha": "84cd2353a68dbe43054e9edea7537c7abbceb96a",
-          "localBlobSha": "84cd2353a68dbe43054e9edea7537c7abbceb96a",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C1_f_RR2.wav",
@@ -66,17 +30,44 @@
           "bytes": 3915528,
           "status": "skipped",
           "sourceBlobSha": "f5f80eefd769a4b990c10322e7c93100e54f808b",
-          "localBlobSha": "f5f80eefd769a4b990c10322e7c93100e54f808b",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_C2_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C2_mf_RR1.wav",
-          "bytes": 2384234,
+          "path": "starter-pack/piano/UR1_C1_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_mf_RR2.wav",
+          "bytes": 3392398,
           "status": "skipped",
-          "sourceBlobSha": "67c55237469793ee90fa9dd6457fd51a714f9fe1",
-          "localBlobSha": "67c55237469793ee90fa9dd6457fd51a714f9fe1",
-          "integrity": "verified"
+          "sourceBlobSha": "d61c9698c4c1cf306b7e440ead630a6f3495680e",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C1_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_pp_RR1.wav",
+          "bytes": 1331494,
+          "status": "skipped",
+          "sourceBlobSha": "cb70a3d508163e4035600cfe287e191960be76db",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C1_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_pp_RR2.wav",
+          "bytes": 2038540,
+          "status": "skipped",
+          "sourceBlobSha": "345b0946181a427bb30a25730162b8c4c42c16e3",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C2_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_f_RR1.wav",
+          "bytes": 3811820,
+          "status": "skipped",
+          "sourceBlobSha": "84cd2353a68dbe43054e9edea7537c7abbceb96a",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C2_f_RR2.wav",
@@ -84,17 +75,17 @@
           "bytes": 3751096,
           "status": "skipped",
           "sourceBlobSha": "d26d4053963aee3b7f44845e2c1e5f4453470179",
-          "localBlobSha": "d26d4053963aee3b7f44845e2c1e5f4453470179",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_C2_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C2_pp_RR1.wav",
-          "bytes": 1866674,
+          "path": "starter-pack/piano/UR1_C2_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_mf_RR1.wav",
+          "bytes": 2384234,
           "status": "skipped",
-          "sourceBlobSha": "aad159499f633ad8f5b5f1679ffd00e8c9077085",
-          "localBlobSha": "aad159499f633ad8f5b5f1679ffd00e8c9077085",
-          "integrity": "verified"
+          "sourceBlobSha": "67c55237469793ee90fa9dd6457fd51a714f9fe1",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C2_mf_RR2.wav",
@@ -102,17 +93,17 @@
           "bytes": 3334902,
           "status": "skipped",
           "sourceBlobSha": "0b91a52c2f733f540f58e7416b96e5595bac74c0",
-          "localBlobSha": "0b91a52c2f733f540f58e7416b96e5595bac74c0",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_C3_f_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C3_f_RR2.wav",
-          "bytes": 3604186,
+          "path": "starter-pack/piano/UR1_C2_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_pp_RR1.wav",
+          "bytes": 1866674,
           "status": "skipped",
-          "sourceBlobSha": "6e38823eb4928da19488391dca7601f5b87f120c",
-          "localBlobSha": "6e38823eb4928da19488391dca7601f5b87f120c",
-          "integrity": "verified"
+          "sourceBlobSha": "aad159499f633ad8f5b5f1679ffd00e8c9077085",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C3_f_RR1.wav",
@@ -120,26 +111,17 @@
           "bytes": 3518256,
           "status": "skipped",
           "sourceBlobSha": "dacaecf9ac8913b176970684a5767557a4b7adb9",
-          "localBlobSha": "dacaecf9ac8913b176970684a5767557a4b7adb9",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_C3_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C3_mf_RR1.wav",
-          "bytes": 2150126,
+          "path": "starter-pack/piano/UR1_C3_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_f_RR2.wav",
+          "bytes": 3604186,
           "status": "skipped",
-          "sourceBlobSha": "622047ce32400cd99c0193f245955e3572d85a1b",
-          "localBlobSha": "622047ce32400cd99c0193f245955e3572d85a1b",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C3_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C3_pp_RR1.wav",
-          "bytes": 1252962,
-          "status": "skipped",
-          "sourceBlobSha": "b9b046afcfb96255f219242cf1eaaa96c6c18435",
-          "localBlobSha": "b9b046afcfb96255f219242cf1eaaa96c6c18435",
-          "integrity": "verified"
+          "sourceBlobSha": "6e38823eb4928da19488391dca7601f5b87f120c",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C3_mf_RR2.wav",
@@ -147,8 +129,26 @@
           "bytes": 3308386,
           "status": "skipped",
           "sourceBlobSha": "32d8a3bcade4393952cb50bef37d8dc0eb09423e",
-          "localBlobSha": "32d8a3bcade4393952cb50bef37d8dc0eb09423e",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_mf_RR1.wav",
+          "bytes": 2150126,
+          "status": "skipped",
+          "sourceBlobSha": "622047ce32400cd99c0193f245955e3572d85a1b",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_pp_RR1.wav",
+          "bytes": 1252962,
+          "status": "skipped",
+          "sourceBlobSha": "b9b046afcfb96255f219242cf1eaaa96c6c18435",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C3_pp_RR2.wav",
@@ -156,26 +156,8 @@
           "bytes": 1978814,
           "status": "skipped",
           "sourceBlobSha": "3605a4a7b601c273c6874dcaf4c937f21d66d1a5",
-          "localBlobSha": "3605a4a7b601c273c6874dcaf4c937f21d66d1a5",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C4_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C4_mf_RR1.wav",
-          "bytes": 2495426,
-          "status": "skipped",
-          "sourceBlobSha": "99c511c4d2d3fd91b68cdf530fa043e2b03f076f",
-          "localBlobSha": "99c511c4d2d3fd91b68cdf530fa043e2b03f076f",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C4_f_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C4_f_RR2.wav",
-          "bytes": 3104238,
-          "status": "skipped",
-          "sourceBlobSha": "b6d78cbe89d497199d3b6f90b4badd5a8d3d88c4",
-          "localBlobSha": "b6d78cbe89d497199d3b6f90b4badd5a8d3d88c4",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C4_f_RR1.wav",
@@ -183,8 +165,26 @@
           "bytes": 3262386,
           "status": "skipped",
           "sourceBlobSha": "d76c049063c299b9e78587cab7600882b3de0b58",
-          "localBlobSha": "d76c049063c299b9e78587cab7600882b3de0b58",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_f_RR2.wav",
+          "bytes": 3104238,
+          "status": "skipped",
+          "sourceBlobSha": "b6d78cbe89d497199d3b6f90b4badd5a8d3d88c4",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_mf_RR1.wav",
+          "bytes": 2495426,
+          "status": "skipped",
+          "sourceBlobSha": "99c511c4d2d3fd91b68cdf530fa043e2b03f076f",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C4_mf_RR2.wav",
@@ -192,8 +192,8 @@
           "bytes": 2601474,
           "status": "skipped",
           "sourceBlobSha": "53c637f052c5b4ddc5d975d494963fbb57b370fb",
-          "localBlobSha": "53c637f052c5b4ddc5d975d494963fbb57b370fb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C4_pp_RR2.wav",
@@ -201,8 +201,8 @@
           "bytes": 1175854,
           "status": "skipped",
           "sourceBlobSha": "7bf1428e674ebf683fc54d8cc460b539eca751e2",
-          "localBlobSha": "7bf1428e674ebf683fc54d8cc460b539eca751e2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C4_pp_RR1.wav",
@@ -210,8 +210,8 @@
           "bytes": 1948154,
           "status": "skipped",
           "sourceBlobSha": "a5a8d82859df78cfd1c4ffdedd1b9b8ac209d6d4",
-          "localBlobSha": "a5a8d82859df78cfd1c4ffdedd1b9b8ac209d6d4",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C5_f_RR1.wav",
@@ -219,35 +219,8 @@
           "bytes": 1910466,
           "status": "skipped",
           "sourceBlobSha": "aca4969e3bd81b18eae2a45ad41aee1d4c4a192d",
-          "localBlobSha": "aca4969e3bd81b18eae2a45ad41aee1d4c4a192d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C5_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C5_mf_RR1.wav",
-          "bytes": 1905930,
-          "status": "skipped",
-          "sourceBlobSha": "b0079bd7ec568998e65df839d5387fb56e264b7d",
-          "localBlobSha": "b0079bd7ec568998e65df839d5387fb56e264b7d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C5_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C5_mf_RR2.wav",
-          "bytes": 1917910,
-          "status": "skipped",
-          "sourceBlobSha": "6d052b5ff3f278fdc5763baa28e50e52bdb90533",
-          "localBlobSha": "6d052b5ff3f278fdc5763baa28e50e52bdb90533",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C5_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C5_pp_RR1.wav",
-          "bytes": 1573878,
-          "status": "skipped",
-          "sourceBlobSha": "b18f8dd3cfc2115befe960866a646d80c5c078ee",
-          "localBlobSha": "b18f8dd3cfc2115befe960866a646d80c5c078ee",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C5_f_RR2.wav",
@@ -255,8 +228,35 @@
           "bytes": 2461478,
           "status": "skipped",
           "sourceBlobSha": "541fc4b1b01c68642c4c3c798f948673e962f996",
-          "localBlobSha": "541fc4b1b01c68642c4c3c798f948673e962f996",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_mf_RR1.wav",
+          "bytes": 1905930,
+          "status": "skipped",
+          "sourceBlobSha": "b0079bd7ec568998e65df839d5387fb56e264b7d",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_mf_RR2.wav",
+          "bytes": 1917910,
+          "status": "skipped",
+          "sourceBlobSha": "6d052b5ff3f278fdc5763baa28e50e52bdb90533",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_pp_RR1.wav",
+          "bytes": 1573878,
+          "status": "skipped",
+          "sourceBlobSha": "b18f8dd3cfc2115befe960866a646d80c5c078ee",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C5_pp_RR2.wav",
@@ -264,8 +264,8 @@
           "bytes": 1680558,
           "status": "skipped",
           "sourceBlobSha": "4c172e4285c39997bc86d066a23779b0d610eafc",
-          "localBlobSha": "4c172e4285c39997bc86d066a23779b0d610eafc",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C6_f_RR1.wav",
@@ -273,26 +273,8 @@
           "bytes": 1184214,
           "status": "skipped",
           "sourceBlobSha": "96a2005cbe74a9ccc5ac6f9ee554c5caeff65041",
-          "localBlobSha": "96a2005cbe74a9ccc5ac6f9ee554c5caeff65041",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C6_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C6_mf_RR1.wav",
-          "bytes": 1018802,
-          "status": "skipped",
-          "sourceBlobSha": "2c3af039f8bcf9ead897dbb46f158fe6330088dd",
-          "localBlobSha": "2c3af039f8bcf9ead897dbb46f158fe6330088dd",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C6_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C6_mf_RR2.wav",
-          "bytes": 1152126,
-          "status": "skipped",
-          "sourceBlobSha": "58b056f2da0b1ed5e0eabe74f9954e76d407d594",
-          "localBlobSha": "58b056f2da0b1ed5e0eabe74f9954e76d407d594",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C6_f_RR2.wav",
@@ -300,8 +282,26 @@
           "bytes": 1239644,
           "status": "skipped",
           "sourceBlobSha": "c7919d8e4c5a1f8faacd5d08f5bd7bb77856e9f0",
-          "localBlobSha": "c7919d8e4c5a1f8faacd5d08f5bd7bb77856e9f0",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_mf_RR1.wav",
+          "bytes": 1018802,
+          "status": "skipped",
+          "sourceBlobSha": "2c3af039f8bcf9ead897dbb46f158fe6330088dd",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_mf_RR2.wav",
+          "bytes": 1152126,
+          "status": "skipped",
+          "sourceBlobSha": "58b056f2da0b1ed5e0eabe74f9954e76d407d594",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C6_pp_RR1.wav",
@@ -309,8 +309,8 @@
           "bytes": 1019544,
           "status": "skipped",
           "sourceBlobSha": "baaa90c2bb98c0b070013aec41a953803e0adf08",
-          "localBlobSha": "baaa90c2bb98c0b070013aec41a953803e0adf08",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C6_pp_RR2.wav",
@@ -318,8 +318,8 @@
           "bytes": 987228,
           "status": "skipped",
           "sourceBlobSha": "74c966e1d4dd4e7c99898f93afae0b9ed80eefbf",
-          "localBlobSha": "74c966e1d4dd4e7c99898f93afae0b9ed80eefbf",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C7_f_RR1.wav",
@@ -327,35 +327,8 @@
           "bytes": 670740,
           "status": "skipped",
           "sourceBlobSha": "fad2dd6a4d9da48b3dcee5ec6383821b51128fc7",
-          "localBlobSha": "fad2dd6a4d9da48b3dcee5ec6383821b51128fc7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C7_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C7_mf_RR1.wav",
-          "bytes": 469466,
-          "status": "skipped",
-          "sourceBlobSha": "bdadd24805e085c03f6f6323dd03b464dc5a9181",
-          "localBlobSha": "bdadd24805e085c03f6f6323dd03b464dc5a9181",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C7_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C7_pp_RR1.wav",
-          "bytes": 502340,
-          "status": "skipped",
-          "sourceBlobSha": "4c9525e1f9dd3686aa185230c303ad7fb6208371",
-          "localBlobSha": "4c9525e1f9dd3686aa185230c303ad7fb6208371",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_C7_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_C7_mf_RR2.wav",
-          "bytes": 577034,
-          "status": "skipped",
-          "sourceBlobSha": "b46925ef19ae1cad7e08c4e9970f0fd43795436d",
-          "localBlobSha": "b46925ef19ae1cad7e08c4e9970f0fd43795436d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C7_f_RR2.wav",
@@ -363,8 +336,35 @@
           "bytes": 712028,
           "status": "skipped",
           "sourceBlobSha": "9da3cb40203d57fa1324dd4f7809ca8fe633bf89",
-          "localBlobSha": "9da3cb40203d57fa1324dd4f7809ca8fe633bf89",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_mf_RR1.wav",
+          "bytes": 469466,
+          "status": "skipped",
+          "sourceBlobSha": "bdadd24805e085c03f6f6323dd03b464dc5a9181",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_mf_RR2.wav",
+          "bytes": 577034,
+          "status": "skipped",
+          "sourceBlobSha": "b46925ef19ae1cad7e08c4e9970f0fd43795436d",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_pp_RR1.wav",
+          "bytes": 502340,
+          "status": "skipped",
+          "sourceBlobSha": "4c9525e1f9dd3686aa185230c303ad7fb6208371",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_C7_pp_RR2.wav",
@@ -372,26 +372,8 @@
           "bytes": 544560,
           "status": "skipped",
           "sourceBlobSha": "c3ddf3ad2a6501dd4b178ec0f7e7aece6d799e37",
-          "localBlobSha": "c3ddf3ad2a6501dd4b178ec0f7e7aece6d799e37",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G1_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G1_pp_RR1.wav",
-          "bytes": 1363468,
-          "status": "skipped",
-          "sourceBlobSha": "24e7b92825f7fd78f74a6b1e62b303681d77078b",
-          "localBlobSha": "24e7b92825f7fd78f74a6b1e62b303681d77078b",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G1_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G1_mf_RR2.wav",
-          "bytes": 3117554,
-          "status": "skipped",
-          "sourceBlobSha": "2e374f75ddd77f93e319b74cfaefaf9a7d207da2",
-          "localBlobSha": "2e374f75ddd77f93e319b74cfaefaf9a7d207da2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G1_f_RR2.wav",
@@ -399,8 +381,8 @@
           "bytes": 3626534,
           "status": "skipped",
           "sourceBlobSha": "4a53e29e43e7732d126908af820cfe1cdfdaeed2",
-          "localBlobSha": "4a53e29e43e7732d126908af820cfe1cdfdaeed2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G1_mf_RR1.wav",
@@ -408,8 +390,26 @@
           "bytes": 3191510,
           "status": "skipped",
           "sourceBlobSha": "1aca0fb64ba6c1bb477f4c46bb3a6dddf84d09f3",
-          "localBlobSha": "1aca0fb64ba6c1bb477f4c46bb3a6dddf84d09f3",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G1_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G1_mf_RR2.wav",
+          "bytes": 3117554,
+          "status": "skipped",
+          "sourceBlobSha": "2e374f75ddd77f93e319b74cfaefaf9a7d207da2",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G1_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G1_pp_RR1.wav",
+          "bytes": 1363468,
+          "status": "skipped",
+          "sourceBlobSha": "24e7b92825f7fd78f74a6b1e62b303681d77078b",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G2_f_RR1.wav",
@@ -417,8 +417,8 @@
           "bytes": 3562426,
           "status": "skipped",
           "sourceBlobSha": "e6fb7235a285c7ca0837c938bbfc5c430211d42a",
-          "localBlobSha": "e6fb7235a285c7ca0837c938bbfc5c430211d42a",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G2_f_RR2.wav",
@@ -426,8 +426,8 @@
           "bytes": 4121650,
           "status": "skipped",
           "sourceBlobSha": "dd147cd60acc63f5df8db18eda7a7a9437b1fdf6",
-          "localBlobSha": "dd147cd60acc63f5df8db18eda7a7a9437b1fdf6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G2_mf_RR1.wav",
@@ -435,17 +435,8 @@
           "bytes": 2429878,
           "status": "skipped",
           "sourceBlobSha": "7afcc4d73739bbc52ed313a0f21dae36970039b2",
-          "localBlobSha": "7afcc4d73739bbc52ed313a0f21dae36970039b2",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G2_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G2_pp_RR1.wav",
-          "bytes": 2302416,
-          "status": "skipped",
-          "sourceBlobSha": "06820c56e752e1e6a5f7dbe0da3bc87c9ff461a5",
-          "localBlobSha": "06820c56e752e1e6a5f7dbe0da3bc87c9ff461a5",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G2_mf_RR2.wav",
@@ -453,17 +444,17 @@
           "bytes": 3614038,
           "status": "skipped",
           "sourceBlobSha": "85227145b6f1e208db96fefd7276c6743b137999",
-          "localBlobSha": "85227145b6f1e208db96fefd7276c6743b137999",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G3_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G3_mf_RR1.wav",
-          "bytes": 2602206,
+          "path": "starter-pack/piano/UR1_G2_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G2_pp_RR1.wav",
+          "bytes": 2302416,
           "status": "skipped",
-          "sourceBlobSha": "85581601bc6c00f010fdffc7ac24ea53c4a19147",
-          "localBlobSha": "85581601bc6c00f010fdffc7ac24ea53c4a19147",
-          "integrity": "verified"
+          "sourceBlobSha": "06820c56e752e1e6a5f7dbe0da3bc87c9ff461a5",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G3_f_RR1.wav",
@@ -471,17 +462,8 @@
           "bytes": 3996466,
           "status": "skipped",
           "sourceBlobSha": "0af3651b302695ed7a1ae4194f970f100c6b19ef",
-          "localBlobSha": "0af3651b302695ed7a1ae4194f970f100c6b19ef",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G3_pp_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G3_pp_RR1.wav",
-          "bytes": 1805230,
-          "status": "skipped",
-          "sourceBlobSha": "33c8b7e4ecd74b38ce5d31b4ce610a01ff6dde9f",
-          "localBlobSha": "33c8b7e4ecd74b38ce5d31b4ce610a01ff6dde9f",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G3_f_RR2.wav",
@@ -489,17 +471,17 @@
           "bytes": 3890306,
           "status": "skipped",
           "sourceBlobSha": "dfc30af7005eb230f79ee6552e891dc8f20f5984",
-          "localBlobSha": "dfc30af7005eb230f79ee6552e891dc8f20f5984",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G3_pp_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G3_pp_RR2.wav",
-          "bytes": 2436286,
+          "path": "starter-pack/piano/UR1_G3_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_mf_RR1.wav",
+          "bytes": 2602206,
           "status": "skipped",
-          "sourceBlobSha": "e6e46d7f2408f049be45046a9491533a516440ba",
-          "localBlobSha": "e6e46d7f2408f049be45046a9491533a516440ba",
-          "integrity": "verified"
+          "sourceBlobSha": "85581601bc6c00f010fdffc7ac24ea53c4a19147",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G3_mf_RR2.wav",
@@ -507,17 +489,26 @@
           "bytes": 3785062,
           "status": "skipped",
           "sourceBlobSha": "220f0911622aaa1147176d287850cdac98bbe7ce",
-          "localBlobSha": "220f0911622aaa1147176d287850cdac98bbe7ce",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G4_f_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G4_f_RR2.wav",
-          "bytes": 2355630,
+          "path": "starter-pack/piano/UR1_G3_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_pp_RR1.wav",
+          "bytes": 1805230,
           "status": "skipped",
-          "sourceBlobSha": "7c812c4ae7ddec6912d792b32ae50bc5220740a8",
-          "localBlobSha": "7c812c4ae7ddec6912d792b32ae50bc5220740a8",
-          "integrity": "verified"
+          "sourceBlobSha": "33c8b7e4ecd74b38ce5d31b4ce610a01ff6dde9f",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G3_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_pp_RR2.wav",
+          "bytes": 2436286,
+          "status": "skipped",
+          "sourceBlobSha": "e6e46d7f2408f049be45046a9491533a516440ba",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G4_f_RR1.wav",
@@ -525,17 +516,17 @@
           "bytes": 2362410,
           "status": "skipped",
           "sourceBlobSha": "2df24b4e3a2e36591c8849bc6bd6b80a3412503d",
-          "localBlobSha": "2df24b4e3a2e36591c8849bc6bd6b80a3412503d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G4_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G4_mf_RR2.wav",
-          "bytes": 1854386,
+          "path": "starter-pack/piano/UR1_G4_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_f_RR2.wav",
+          "bytes": 2355630,
           "status": "skipped",
-          "sourceBlobSha": "4462ae852b9db9a5f4d235a8ff6475e43807678f",
-          "localBlobSha": "4462ae852b9db9a5f4d235a8ff6475e43807678f",
-          "integrity": "verified"
+          "sourceBlobSha": "7c812c4ae7ddec6912d792b32ae50bc5220740a8",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G4_mf_RR1.wav",
@@ -543,8 +534,17 @@
           "bytes": 2240934,
           "status": "skipped",
           "sourceBlobSha": "b6727511ac816dd81e2e4f2dcc4d1c7b3349efcd",
-          "localBlobSha": "b6727511ac816dd81e2e4f2dcc4d1c7b3349efcd",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G4_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_mf_RR2.wav",
+          "bytes": 1854386,
+          "status": "skipped",
+          "sourceBlobSha": "4462ae852b9db9a5f4d235a8ff6475e43807678f",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G4_pp_RR1.wav",
@@ -552,8 +552,8 @@
           "bytes": 1840722,
           "status": "skipped",
           "sourceBlobSha": "d4f2fb2465ddb686035519575bdd29e684ae40f6",
-          "localBlobSha": "d4f2fb2465ddb686035519575bdd29e684ae40f6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G4_pp_RR2.wav",
@@ -561,8 +561,8 @@
           "bytes": 1680314,
           "status": "skipped",
           "sourceBlobSha": "a75d4b80defb68e3c88515156ebb13edaa9501d6",
-          "localBlobSha": "a75d4b80defb68e3c88515156ebb13edaa9501d6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G5_f_RR1.wav",
@@ -570,26 +570,8 @@
           "bytes": 1538602,
           "status": "skipped",
           "sourceBlobSha": "da4a4d93ea16e8de93b63b4ca58a287ed0aa69f1",
-          "localBlobSha": "da4a4d93ea16e8de93b63b4ca58a287ed0aa69f1",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G5_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G5_mf_RR2.wav",
-          "bytes": 1468242,
-          "status": "skipped",
-          "sourceBlobSha": "008654a4d88862d186796549b6f0e3f4e216211c",
-          "localBlobSha": "008654a4d88862d186796549b6f0e3f4e216211c",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G5_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G5_mf_RR1.wav",
-          "bytes": 1665486,
-          "status": "skipped",
-          "sourceBlobSha": "b6e139fb26fa6b67ca931c5db8ad60d8beb075a8",
-          "localBlobSha": "b6e139fb26fa6b67ca931c5db8ad60d8beb075a8",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G5_f_RR2.wav",
@@ -597,35 +579,26 @@
           "bytes": 1496310,
           "status": "skipped",
           "sourceBlobSha": "3325d2584bc5cb18c75369df6d5963bfff4f1b3c",
-          "localBlobSha": "3325d2584bc5cb18c75369df6d5963bfff4f1b3c",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G5_pp_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G5_pp_RR2.wav",
-          "bytes": 1181794,
+          "path": "starter-pack/piano/UR1_G5_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_mf_RR1.wav",
+          "bytes": 1665486,
           "status": "skipped",
-          "sourceBlobSha": "dcad2002a7eda654a7e161cd1c6f99bae56c97b4",
-          "localBlobSha": "dcad2002a7eda654a7e161cd1c6f99bae56c97b4",
-          "integrity": "verified"
+          "sourceBlobSha": "b6e139fb26fa6b67ca931c5db8ad60d8beb075a8",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G6_f_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G6_f_RR1.wav",
-          "bytes": 810946,
+          "path": "starter-pack/piano/UR1_G5_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_mf_RR2.wav",
+          "bytes": 1468242,
           "status": "skipped",
-          "sourceBlobSha": "63fc4bb1222dd4beab69adfe52077c2165ce2496",
-          "localBlobSha": "63fc4bb1222dd4beab69adfe52077c2165ce2496",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G6_f_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G6_f_RR2.wav",
-          "bytes": 786374,
-          "status": "skipped",
-          "sourceBlobSha": "6a3d8b0c7633c4f44a26b7ee5865bad2b8d10e4b",
-          "localBlobSha": "6a3d8b0c7633c4f44a26b7ee5865bad2b8d10e4b",
-          "integrity": "verified"
+          "sourceBlobSha": "008654a4d88862d186796549b6f0e3f4e216211c",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G5_pp_RR1.wav",
@@ -633,17 +606,35 @@
           "bytes": 1531990,
           "status": "skipped",
           "sourceBlobSha": "d11b161a1d509ecb76953ceac32b246855268148",
-          "localBlobSha": "d11b161a1d509ecb76953ceac32b246855268148",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G6_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G6_mf_RR2.wav",
-          "bytes": 930886,
+          "path": "starter-pack/piano/UR1_G5_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_pp_RR2.wav",
+          "bytes": 1181794,
           "status": "skipped",
-          "sourceBlobSha": "1b00fb9ac0c4f067b67ea6b3588bc5254c036360",
-          "localBlobSha": "1b00fb9ac0c4f067b67ea6b3588bc5254c036360",
-          "integrity": "verified"
+          "sourceBlobSha": "dcad2002a7eda654a7e161cd1c6f99bae56c97b4",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_f_RR1.wav",
+          "bytes": 810946,
+          "status": "skipped",
+          "sourceBlobSha": "63fc4bb1222dd4beab69adfe52077c2165ce2496",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_f_RR2.wav",
+          "bytes": 786374,
+          "status": "skipped",
+          "sourceBlobSha": "6a3d8b0c7633c4f44a26b7ee5865bad2b8d10e4b",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G6_mf_RR1.wav",
@@ -651,8 +642,17 @@
           "bytes": 860698,
           "status": "skipped",
           "sourceBlobSha": "81108c59a76bee0a6e890e0e110e42edd1d29aa2",
-          "localBlobSha": "81108c59a76bee0a6e890e0e110e42edd1d29aa2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_mf_RR2.wav",
+          "bytes": 930886,
+          "status": "skipped",
+          "sourceBlobSha": "1b00fb9ac0c4f067b67ea6b3588bc5254c036360",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G6_pp_RR1.wav",
@@ -660,26 +660,8 @@
           "bytes": 623248,
           "status": "skipped",
           "sourceBlobSha": "8ae8714bc743e33b428d9bed372557567f5f2564",
-          "localBlobSha": "8ae8714bc743e33b428d9bed372557567f5f2564",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G7_f_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G7_f_RR1.wav",
-          "bytes": 502066,
-          "status": "skipped",
-          "sourceBlobSha": "4bae0651e83e975c9719f7bfe2fd86a9bbb3a062",
-          "localBlobSha": "4bae0651e83e975c9719f7bfe2fd86a9bbb3a062",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/piano/UR1_G7_mf_RR1.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G7_mf_RR1.wav",
-          "bytes": 369990,
-          "status": "skipped",
-          "sourceBlobSha": "ccd334879367a96ef88f239a05a6b14167055eb1",
-          "localBlobSha": "ccd334879367a96ef88f239a05a6b14167055eb1",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G6_pp_RR2.wav",
@@ -687,17 +669,17 @@
           "bytes": 547342,
           "status": "skipped",
           "sourceBlobSha": "a7c995535d9f2beba953f58272d65c81854c04a4",
-          "localBlobSha": "a7c995535d9f2beba953f58272d65c81854c04a4",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/piano/UR1_G7_mf_RR2.wav",
-          "sourcePath": "Keys/Upright Nr1/UR1_G7_mf_RR2.wav",
-          "bytes": 446034,
+          "path": "starter-pack/piano/UR1_G7_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_f_RR1.wav",
+          "bytes": 502066,
           "status": "skipped",
-          "sourceBlobSha": "37c98a8cd45ebf13a81453160a42350e6c51ba1a",
-          "localBlobSha": "37c98a8cd45ebf13a81453160a42350e6c51ba1a",
-          "integrity": "verified"
+          "sourceBlobSha": "4bae0651e83e975c9719f7bfe2fd86a9bbb3a062",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G7_f_RR2.wav",
@@ -705,8 +687,26 @@
           "bytes": 450206,
           "status": "skipped",
           "sourceBlobSha": "0aef8cbaecefccca74645f185728a96069e8bdd6",
-          "localBlobSha": "0aef8cbaecefccca74645f185728a96069e8bdd6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_mf_RR1.wav",
+          "bytes": 369990,
+          "status": "skipped",
+          "sourceBlobSha": "ccd334879367a96ef88f239a05a6b14167055eb1",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_mf_RR2.wav",
+          "bytes": 446034,
+          "status": "skipped",
+          "sourceBlobSha": "37c98a8cd45ebf13a81453160a42350e6c51ba1a",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G7_pp_RR1.wav",
@@ -714,8 +714,8 @@
           "bytes": 297872,
           "status": "skipped",
           "sourceBlobSha": "cf38fbb2328816d7b32584667c9d189e2414e0ee",
-          "localBlobSha": "cf38fbb2328816d7b32584667c9d189e2414e0ee",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/piano/UR1_G7_pp_RR2.wav",
@@ -723,8 +723,8 @@
           "bytes": 500414,
           "status": "skipped",
           "sourceBlobSha": "f8b5f0ba4360fa141da1509f3cf093363143bcaa",
-          "localBlobSha": "f8b5f0ba4360fa141da1509f3cf093363143bcaa",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -742,22 +742,22 @@
       },
       "files": [
         {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_A2_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A2_v1.wav",
+          "bytes": 1979216,
+          "status": "skipped",
+          "sourceBlobSha": "b86c2e7000da2a80466196acca2ddbdf6cf83fe8",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
           "path": "starter-pack/strings/violin/VlnEns_susVib_A3_v1.wav",
           "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A3_v1.wav",
           "bytes": 1890316,
           "status": "skipped",
           "sourceBlobSha": "ec84b89a4b93ecdc7e23d0c023b897b6f151bca7",
-          "localBlobSha": "ec84b89a4b93ecdc7e23d0c023b897b6f151bca7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_A3_v2.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A3_v2.wav",
-          "bytes": 1671704,
-          "status": "skipped",
-          "sourceBlobSha": "401653718e521b65712da594a53d22184f4a207a",
-          "localBlobSha": "401653718e521b65712da594a53d22184f4a207a",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_A2_v2.wav",
@@ -765,17 +765,17 @@
           "bytes": 2231504,
           "status": "skipped",
           "sourceBlobSha": "5960b46c4678a146834594031d0bba1048855102",
-          "localBlobSha": "5960b46c4678a146834594031d0bba1048855102",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_B2_v2.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_B2_v2.wav",
-          "bytes": 2373380,
+          "path": "starter-pack/strings/violin/VlnEns_susVib_A3_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A3_v2.wav",
+          "bytes": 1671704,
           "status": "skipped",
-          "sourceBlobSha": "4f54ea9180f4c11ec3d0e92f556003be59cb0f0c",
-          "localBlobSha": "4f54ea9180f4c11ec3d0e92f556003be59cb0f0c",
-          "integrity": "verified"
+          "sourceBlobSha": "401653718e521b65712da594a53d22184f4a207a",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_B2_v1.wav",
@@ -783,17 +783,17 @@
           "bytes": 2314360,
           "status": "skipped",
           "sourceBlobSha": "c2bdf89eed02c0e7fbb11b52799ac62276787ff8",
-          "localBlobSha": "c2bdf89eed02c0e7fbb11b52799ac62276787ff8",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_A2_v1.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A2_v1.wav",
-          "bytes": 1979216,
+          "path": "starter-pack/strings/violin/VlnEns_susVib_B2_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_B2_v2.wav",
+          "bytes": 2373380,
           "status": "skipped",
-          "sourceBlobSha": "b86c2e7000da2a80466196acca2ddbdf6cf83fe8",
-          "localBlobSha": "b86c2e7000da2a80466196acca2ddbdf6cf83fe8",
-          "integrity": "verified"
+          "sourceBlobSha": "4f54ea9180f4c11ec3d0e92f556003be59cb0f0c",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_B4_v1.wav",
@@ -801,8 +801,8 @@
           "bytes": 2056964,
           "status": "skipped",
           "sourceBlobSha": "8e22cb66ba5bccb4df68decf98139b3008733e8a",
-          "localBlobSha": "8e22cb66ba5bccb4df68decf98139b3008733e8a",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_B4_v2.wav",
@@ -810,8 +810,8 @@
           "bytes": 1923744,
           "status": "skipped",
           "sourceBlobSha": "598c11bd6fb25e33c599836428e03336ad5a5031",
-          "localBlobSha": "598c11bd6fb25e33c599836428e03336ad5a5031",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_C4_v1.wav",
@@ -819,8 +819,8 @@
           "bytes": 2063320,
           "status": "skipped",
           "sourceBlobSha": "6d81fcafba04ca992a8b85665a56e60337929ce0",
-          "localBlobSha": "6d81fcafba04ca992a8b85665a56e60337929ce0",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_C4_v2.wav",
@@ -828,8 +828,8 @@
           "bytes": 2017512,
           "status": "skipped",
           "sourceBlobSha": "1c8e05059b270f870342a03e19b93882d6dd1e1b",
-          "localBlobSha": "1c8e05059b270f870342a03e19b93882d6dd1e1b",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_D3_v1.wav",
@@ -837,8 +837,8 @@
           "bytes": 2061808,
           "status": "skipped",
           "sourceBlobSha": "e47f9a53d487475fb049039ca7846e11c1ff830a",
-          "localBlobSha": "e47f9a53d487475fb049039ca7846e11c1ff830a",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_D3_v2.wav",
@@ -846,26 +846,8 @@
           "bytes": 2457908,
           "status": "skipped",
           "sourceBlobSha": "31143ae1a31ddd57baa38b3e79a4415b108a0007",
-          "localBlobSha": "31143ae1a31ddd57baa38b3e79a4415b108a0007",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_D5_v2.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_D5_v2.wav",
-          "bytes": 1976276,
-          "status": "skipped",
-          "sourceBlobSha": "804a72a49c07eed754e377b354f8e54a4805476d",
-          "localBlobSha": "804a72a49c07eed754e377b354f8e54a4805476d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_E4_v2.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_E4_v2.wav",
-          "bytes": 1702620,
-          "status": "skipped",
-          "sourceBlobSha": "2c33cc296b9b3654fd08fc9e9887042eabee738d",
-          "localBlobSha": "2c33cc296b9b3654fd08fc9e9887042eabee738d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_D5_v1.wav",
@@ -873,26 +855,17 @@
           "bytes": 2116352,
           "status": "skipped",
           "sourceBlobSha": "fa455a7f8fe8c5c00b36c8e131bbc340204ae1c8",
-          "localBlobSha": "fa455a7f8fe8c5c00b36c8e131bbc340204ae1c8",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_F#3_v1.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_F#3_v1.wav",
-          "bytes": 1585612,
+          "path": "starter-pack/strings/violin/VlnEns_susVib_D5_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_D5_v2.wav",
+          "bytes": 1976276,
           "status": "skipped",
-          "sourceBlobSha": "996ca7e6b1d9541d2f2fd7f53ba88294693893e7",
-          "localBlobSha": "996ca7e6b1d9541d2f2fd7f53ba88294693893e7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_F#3_v2.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_F#3_v2.wav",
-          "bytes": 1720800,
-          "status": "skipped",
-          "sourceBlobSha": "33a19df9d89a5dbb174b9f72e6ae79a07327b2b6",
-          "localBlobSha": "33a19df9d89a5dbb174b9f72e6ae79a07327b2b6",
-          "integrity": "verified"
+          "sourceBlobSha": "804a72a49c07eed754e377b354f8e54a4805476d",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_E4_v1.wav",
@@ -900,8 +873,35 @@
           "bytes": 2315540,
           "status": "skipped",
           "sourceBlobSha": "838b43d3c9e763898817869d411ab26463b7464f",
-          "localBlobSha": "838b43d3c9e763898817869d411ab26463b7464f",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_E4_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_E4_v2.wav",
+          "bytes": 1702620,
+          "status": "skipped",
+          "sourceBlobSha": "2c33cc296b9b3654fd08fc9e9887042eabee738d",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_F#3_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_F#3_v1.wav",
+          "bytes": 1585612,
+          "status": "skipped",
+          "sourceBlobSha": "996ca7e6b1d9541d2f2fd7f53ba88294693893e7",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_F#3_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_F#3_v2.wav",
+          "bytes": 1720800,
+          "status": "skipped",
+          "sourceBlobSha": "33a19df9d89a5dbb174b9f72e6ae79a07327b2b6",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_G2_v1.wav",
@@ -909,26 +909,8 @@
           "bytes": 2341712,
           "status": "skipped",
           "sourceBlobSha": "e2de84e8b912dbfb8df3efe7b8ee241e2bcfa027",
-          "localBlobSha": "e2de84e8b912dbfb8df3efe7b8ee241e2bcfa027",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_G4_v1.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G4_v1.wav",
-          "bytes": 2330236,
-          "status": "skipped",
-          "sourceBlobSha": "81d3994ebbf467cbbc88bb2d2ad0dd94d96e7e04",
-          "localBlobSha": "81d3994ebbf467cbbc88bb2d2ad0dd94d96e7e04",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/violin/VlnEns_susVib_G4_v2.wav",
-          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G4_v2.wav",
-          "bytes": 2150136,
-          "status": "skipped",
-          "sourceBlobSha": "c36674326c6d0b6ae8bf5d20b52b6ddd005719bb",
-          "localBlobSha": "c36674326c6d0b6ae8bf5d20b52b6ddd005719bb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/violin/VlnEns_susVib_G2_v2.wav",
@@ -936,8 +918,26 @@
           "bytes": 2681324,
           "status": "skipped",
           "sourceBlobSha": "b7693eb5c9d104fc01e130ee2552dac546ee85f7",
-          "localBlobSha": "b7693eb5c9d104fc01e130ee2552dac546ee85f7",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_G4_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G4_v1.wav",
+          "bytes": 2330236,
+          "status": "skipped",
+          "sourceBlobSha": "81d3994ebbf467cbbc88bb2d2ad0dd94d96e7e04",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_G4_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G4_v2.wav",
+          "bytes": 2150136,
+          "status": "skipped",
+          "sourceBlobSha": "c36674326c6d0b6ae8bf5d20b52b6ddd005719bb",
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -955,13 +955,13 @@
       },
       "files": [
         {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_B4_v1_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_B4_v1_1.wav",
-          "bytes": 2203118,
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_A3_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_A3_v1_1.wav",
+          "bytes": 2491352,
           "status": "skipped",
-          "sourceBlobSha": "66520dad5b544b8e93c48e0f3aa941b3e85bc633",
-          "localBlobSha": "66520dad5b544b8e93c48e0f3aa941b3e85bc633",
-          "integrity": "verified"
+          "sourceBlobSha": "a57d0e5e328257ef14a3dd09b1debea045671527",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_A3_v2_1.wav",
@@ -969,8 +969,8 @@
           "bytes": 2861282,
           "status": "skipped",
           "sourceBlobSha": "b479361fe3bed076db011092b8d48bca54daf83f",
-          "localBlobSha": "b479361fe3bed076db011092b8d48bca54daf83f",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_B2_v1_1.wav",
@@ -978,8 +978,8 @@
           "bytes": 2861510,
           "status": "skipped",
           "sourceBlobSha": "86e2428bca77c49d795e5e3d5be7dd9b022fce65",
-          "localBlobSha": "86e2428bca77c49d795e5e3d5be7dd9b022fce65",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_B2_v2_1.wav",
@@ -987,17 +987,17 @@
           "bytes": 3268364,
           "status": "skipped",
           "sourceBlobSha": "0f7bee6ccadc6e25a101cbd7be1c27ac6e896ea4",
-          "localBlobSha": "0f7bee6ccadc6e25a101cbd7be1c27ac6e896ea4",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_A3_v1_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_A3_v1_1.wav",
-          "bytes": 2491352,
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_B4_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_B4_v1_1.wav",
+          "bytes": 2203118,
           "status": "skipped",
-          "sourceBlobSha": "a57d0e5e328257ef14a3dd09b1debea045671527",
-          "localBlobSha": "a57d0e5e328257ef14a3dd09b1debea045671527",
-          "integrity": "verified"
+          "sourceBlobSha": "66520dad5b544b8e93c48e0f3aa941b3e85bc633",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_B4_v2_1.wav",
@@ -1005,17 +1005,8 @@
           "bytes": 2893766,
           "status": "skipped",
           "sourceBlobSha": "818ac60340e41f1287024c738d43c5bf3cf7dc9d",
-          "localBlobSha": "818ac60340e41f1287024c738d43c5bf3cf7dc9d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_C4_v1_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C4_v1_1.wav",
-          "bytes": 2289656,
-          "status": "skipped",
-          "sourceBlobSha": "a88aa6006bbc4ad1b25e4f08eb2d8ac974a7097f",
-          "localBlobSha": "a88aa6006bbc4ad1b25e4f08eb2d8ac974a7097f",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_C2_v1_1.wav",
@@ -1023,35 +1014,8 @@
           "bytes": 2642360,
           "status": "skipped",
           "sourceBlobSha": "b1cfb66c1ab03bdb9adac7e347b427bc61524b94",
-          "localBlobSha": "b1cfb66c1ab03bdb9adac7e347b427bc61524b94",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_D2_v2_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D2_v2_1.wav",
-          "bytes": 3049772,
-          "status": "skipped",
-          "sourceBlobSha": "bf8a94de83b7d96375bef7c94e07d616f43f9c14",
-          "localBlobSha": "bf8a94de83b7d96375bef7c94e07d616f43f9c14",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_C4_v2_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C4_v2_1.wav",
-          "bytes": 2954936,
-          "status": "skipped",
-          "sourceBlobSha": "4561f010d9b6de44b121246731042d1879d38ab7",
-          "localBlobSha": "4561f010d9b6de44b121246731042d1879d38ab7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_D2_v1_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D2_v1_1.wav",
-          "bytes": 2359898,
-          "status": "skipped",
-          "sourceBlobSha": "d508161e1c7a255d291f1d32f9605a9c215357aa",
-          "localBlobSha": "d508161e1c7a255d291f1d32f9605a9c215357aa",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_C2_v2_1.wav",
@@ -1059,8 +1023,44 @@
           "bytes": 3318188,
           "status": "skipped",
           "sourceBlobSha": "7851268d881b226650cba4ef1d4e9578ae212099",
-          "localBlobSha": "7851268d881b226650cba4ef1d4e9578ae212099",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_C4_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C4_v1_1.wav",
+          "bytes": 2289656,
+          "status": "skipped",
+          "sourceBlobSha": "a88aa6006bbc4ad1b25e4f08eb2d8ac974a7097f",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_C4_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C4_v2_1.wav",
+          "bytes": 2954936,
+          "status": "skipped",
+          "sourceBlobSha": "4561f010d9b6de44b121246731042d1879d38ab7",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D2_v1_1.wav",
+          "bytes": 2359898,
+          "status": "skipped",
+          "sourceBlobSha": "d508161e1c7a255d291f1d32f9605a9c215357aa",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D2_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D2_v2_1.wav",
+          "bytes": 3049772,
+          "status": "skipped",
+          "sourceBlobSha": "bf8a94de83b7d96375bef7c94e07d616f43f9c14",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_D3_v1_1.wav",
@@ -1068,17 +1068,8 @@
           "bytes": 2789648,
           "status": "skipped",
           "sourceBlobSha": "9a3a65b93d871964a666d6a86deec4d29425d828",
-          "localBlobSha": "9a3a65b93d871964a666d6a86deec4d29425d828",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_D5_v1_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D5_v1_1.wav",
-          "bytes": 2087798,
-          "status": "skipped",
-          "sourceBlobSha": "57d1de0867673e6861f318c01ed3358ffbff2996",
-          "localBlobSha": "57d1de0867673e6861f318c01ed3358ffbff2996",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_D3_v2_1.wav",
@@ -1086,17 +1077,17 @@
           "bytes": 3596756,
           "status": "skipped",
           "sourceBlobSha": "2f6d74aa54f4f23889de311ff85d9f704fb600b9",
-          "localBlobSha": "2f6d74aa54f4f23889de311ff85d9f704fb600b9",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_E2_v1_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_E2_v1_1.wav",
-          "bytes": 2520044,
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D5_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D5_v1_1.wav",
+          "bytes": 2087798,
           "status": "skipped",
-          "sourceBlobSha": "6401156b3518b6f39e95fdaefc74cc814d6aceb2",
-          "localBlobSha": "6401156b3518b6f39e95fdaefc74cc814d6aceb2",
-          "integrity": "verified"
+          "sourceBlobSha": "57d1de0867673e6861f318c01ed3358ffbff2996",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_D5_v2_1.wav",
@@ -1104,8 +1095,17 @@
           "bytes": 2638244,
           "status": "skipped",
           "sourceBlobSha": "05a181827b7f6b3f339a92fa8eaf648f352651a5",
-          "localBlobSha": "05a181827b7f6b3f339a92fa8eaf648f352651a5",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_E2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_E2_v1_1.wav",
+          "bytes": 2520044,
+          "status": "skipped",
+          "sourceBlobSha": "6401156b3518b6f39e95fdaefc74cc814d6aceb2",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_E2_v2_1.wav",
@@ -1113,8 +1113,8 @@
           "bytes": 3027656,
           "status": "skipped",
           "sourceBlobSha": "764698fba8db1da82ecc6b5ec54fe61c0036e4f2",
-          "localBlobSha": "764698fba8db1da82ecc6b5ec54fe61c0036e4f2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_E4_v1_1.wav",
@@ -1122,8 +1122,8 @@
           "bytes": 2044358,
           "status": "skipped",
           "sourceBlobSha": "c97e8f4eeffe3fd94afeb8a3d32099105ab270d2",
-          "localBlobSha": "c97e8f4eeffe3fd94afeb8a3d32099105ab270d2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_E4_v2_1.wav",
@@ -1131,8 +1131,8 @@
           "bytes": 2559086,
           "status": "skipped",
           "sourceBlobSha": "c0e669461ba50854dd80e68767604a6f57471cc2",
-          "localBlobSha": "c0e669461ba50854dd80e68767604a6f57471cc2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_F3_v1_1.wav",
@@ -1140,17 +1140,8 @@
           "bytes": 2487818,
           "status": "skipped",
           "sourceBlobSha": "f9e0fa27802046cf9ed1e6b5625b6a815b3c09e8",
-          "localBlobSha": "f9e0fa27802046cf9ed1e6b5625b6a815b3c09e8",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/viola/ViolaEns_susvib_G2_v1_1.wav",
-          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_G2_v1_1.wav",
-          "bytes": 2001644,
-          "status": "skipped",
-          "sourceBlobSha": "7c6dbafbe1f5de539b5861515f1bf39987e354cb",
-          "localBlobSha": "7c6dbafbe1f5de539b5861515f1bf39987e354cb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_F3_v2_1.wav",
@@ -1158,8 +1149,17 @@
           "bytes": 3471944,
           "status": "skipped",
           "sourceBlobSha": "e6b387021b4b98c926d737b2d451037aad087d0e",
-          "localBlobSha": "e6b387021b4b98c926d737b2d451037aad087d0e",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_G2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_G2_v1_1.wav",
+          "bytes": 2001644,
+          "status": "skipped",
+          "sourceBlobSha": "7c6dbafbe1f5de539b5861515f1bf39987e354cb",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_G2_v2_1.wav",
@@ -1167,8 +1167,8 @@
           "bytes": 3637364,
           "status": "skipped",
           "sourceBlobSha": "e8b4cc651229723bc4dcb781d715d6b995b5589d",
-          "localBlobSha": "e8b4cc651229723bc4dcb781d715d6b995b5589d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_G4_v1_1.wav",
@@ -1176,8 +1176,8 @@
           "bytes": 2542586,
           "status": "skipped",
           "sourceBlobSha": "2f34fb8b8826e09cf0427d1710b650a5c3dd3010",
-          "localBlobSha": "2f34fb8b8826e09cf0427d1710b650a5c3dd3010",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/viola/ViolaEns_susvib_G4_v2_1.wav",
@@ -1185,8 +1185,8 @@
           "bytes": 3103628,
           "status": "skipped",
           "sourceBlobSha": "54255fd83b3bf242022e61ff6d9fe518401dc537",
-          "localBlobSha": "54255fd83b3bf242022e61ff6d9fe518401dc537",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -1204,40 +1204,13 @@
       },
       "files": [
         {
-          "path": "starter-pack/strings/cello/susvib_B3_v1_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_B3_v1_1.wav",
-          "bytes": 1690082,
-          "status": "skipped",
-          "sourceBlobSha": "16d846690d7c4d385f3cfc8f1fe25873d6bd5b01",
-          "localBlobSha": "16d846690d7c4d385f3cfc8f1fe25873d6bd5b01",
-          "integrity": "verified"
-        },
-        {
           "path": "starter-pack/strings/cello/susvib_A2_v1_1.wav",
           "sourcePath": "Strings/Cello Section/susvib/susvib_A2_v1_1.wav",
           "bytes": 2336738,
           "status": "skipped",
           "sourceBlobSha": "76df6b474aff133b2ac9d96bf2466cb6fd865c72",
-          "localBlobSha": "76df6b474aff133b2ac9d96bf2466cb6fd865c72",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/cello/susvib_B1_v1_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_B1_v1_1.wav",
-          "bytes": 2372492,
-          "status": "skipped",
-          "sourceBlobSha": "d6a4a2d1a688c6ccb4e1e1a56b878c9c93df468b",
-          "localBlobSha": "d6a4a2d1a688c6ccb4e1e1a56b878c9c93df468b",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/cello/susvib_B3_v3_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_B3_v3_1.wav",
-          "bytes": 2865086,
-          "status": "skipped",
-          "sourceBlobSha": "3b1685e657db57bd71c979da8c2d9d35d2d0d197",
-          "localBlobSha": "3b1685e657db57bd71c979da8c2d9d35d2d0d197",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_A2_v3_1.wav",
@@ -1245,8 +1218,17 @@
           "bytes": 3082676,
           "status": "skipped",
           "sourceBlobSha": "ad696c6ad3cbacb37b6d9cf4f26da4a54521e7ce",
-          "localBlobSha": "ad696c6ad3cbacb37b6d9cf4f26da4a54521e7ce",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_B1_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_B1_v1_1.wav",
+          "bytes": 2372492,
+          "status": "skipped",
+          "sourceBlobSha": "d6a4a2d1a688c6ccb4e1e1a56b878c9c93df468b",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_B1_v3_1.wav",
@@ -1254,17 +1236,26 @@
           "bytes": 3372962,
           "status": "skipped",
           "sourceBlobSha": "56c81412c60a2b04b8556dfa26a7e0127357c5cb",
-          "localBlobSha": "56c81412c60a2b04b8556dfa26a7e0127357c5cb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/cello/susvib_C3_v1_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_C3_v1_1.wav",
-          "bytes": 2444174,
+          "path": "starter-pack/strings/cello/susvib_B3_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_B3_v1_1.wav",
+          "bytes": 1690082,
           "status": "skipped",
-          "sourceBlobSha": "73ccb5dc2cc2a07926a1c41aa3c5621b19f420bf",
-          "localBlobSha": "73ccb5dc2cc2a07926a1c41aa3c5621b19f420bf",
-          "integrity": "verified"
+          "sourceBlobSha": "16d846690d7c4d385f3cfc8f1fe25873d6bd5b01",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_B3_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_B3_v3_1.wav",
+          "bytes": 2865086,
+          "status": "skipped",
+          "sourceBlobSha": "3b1685e657db57bd71c979da8c2d9d35d2d0d197",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_C1_v1_1.wav",
@@ -1272,17 +1263,8 @@
           "bytes": 2347376,
           "status": "skipped",
           "sourceBlobSha": "ff87d1ae488d87189f33a0d18550d3bcde012f3d",
-          "localBlobSha": "ff87d1ae488d87189f33a0d18550d3bcde012f3d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/cello/susvib_C3_v3_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_C3_v3_1.wav",
-          "bytes": 3019394,
-          "status": "skipped",
-          "sourceBlobSha": "a192845091cb8e669c72d3ff4a88eb1c5968e626",
-          "localBlobSha": "a192845091cb8e669c72d3ff4a88eb1c5968e626",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_C1_v3_1.wav",
@@ -1290,8 +1272,26 @@
           "bytes": 3335948,
           "status": "skipped",
           "sourceBlobSha": "d3820a6d57daf9a202a000bff0fa082a3f77acf6",
-          "localBlobSha": "d3820a6d57daf9a202a000bff0fa082a3f77acf6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_C3_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_C3_v1_1.wav",
+          "bytes": 2444174,
+          "status": "skipped",
+          "sourceBlobSha": "73ccb5dc2cc2a07926a1c41aa3c5621b19f420bf",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_C3_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_C3_v3_1.wav",
+          "bytes": 3019394,
+          "status": "skipped",
+          "sourceBlobSha": "a192845091cb8e669c72d3ff4a88eb1c5968e626",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_D2_v1_1.wav",
@@ -1299,8 +1299,8 @@
           "bytes": 2550956,
           "status": "skipped",
           "sourceBlobSha": "8076f809d4f6a8057f3835e12d22751a25e39252",
-          "localBlobSha": "8076f809d4f6a8057f3835e12d22751a25e39252",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_D2_v3_1.wav",
@@ -1308,8 +1308,8 @@
           "bytes": 3291368,
           "status": "skipped",
           "sourceBlobSha": "fdb46242bb68876ad275b9b8ed10c4b8508b9292",
-          "localBlobSha": "fdb46242bb68876ad275b9b8ed10c4b8508b9292",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_D4_v1_1.wav",
@@ -1317,8 +1317,8 @@
           "bytes": 2153228,
           "status": "skipped",
           "sourceBlobSha": "e1125afc13def9b43e4612cdcebd11b99fce20cc",
-          "localBlobSha": "e1125afc13def9b43e4612cdcebd11b99fce20cc",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_D4_v3_1.wav",
@@ -1326,8 +1326,8 @@
           "bytes": 2801210,
           "status": "skipped",
           "sourceBlobSha": "9189549dab9d3e0928fc7e42f94c04d66d28c52b",
-          "localBlobSha": "9189549dab9d3e0928fc7e42f94c04d66d28c52b",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_E1_v1_1.wav",
@@ -1335,8 +1335,8 @@
           "bytes": 2468348,
           "status": "skipped",
           "sourceBlobSha": "fcd27d29a8c0d520539cef6aad659bf9006ae730",
-          "localBlobSha": "fcd27d29a8c0d520539cef6aad659bf9006ae730",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_E1_v1_2.wav",
@@ -1344,17 +1344,8 @@
           "bytes": 2439512,
           "status": "skipped",
           "sourceBlobSha": "d5756d400ce67b25c332e04061dd9f32dc89d283",
-          "localBlobSha": "d5756d400ce67b25c332e04061dd9f32dc89d283",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/cello/susvib_E3_v1_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_E3_v1_1.wav",
-          "bytes": 2456672,
-          "status": "skipped",
-          "sourceBlobSha": "63f4d6df3a25fb95f417b5d45b5f8bf6a11107bf",
-          "localBlobSha": "63f4d6df3a25fb95f417b5d45b5f8bf6a11107bf",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_E1_v3_1.wav",
@@ -1362,35 +1353,17 @@
           "bytes": 3080426,
           "status": "skipped",
           "sourceBlobSha": "666f0d1ba1a76133c12c9859222c1c7094b613cf",
-          "localBlobSha": "666f0d1ba1a76133c12c9859222c1c7094b613cf",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/cello/susvib_F2_v1_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_F2_v1_1.wav",
-          "bytes": 2186012,
+          "path": "starter-pack/strings/cello/susvib_E3_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_E3_v1_1.wav",
+          "bytes": 2456672,
           "status": "skipped",
-          "sourceBlobSha": "78f52c49ddc8a357657d92b05cd89f15beb6c717",
-          "localBlobSha": "78f52c49ddc8a357657d92b05cd89f15beb6c717",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/cello/susvib_F4_v1_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_F4_v1_1.wav",
-          "bytes": 1922948,
-          "status": "skipped",
-          "sourceBlobSha": "7f39cccecb392eaa0ff4c94e3607dc2294458a30",
-          "localBlobSha": "7f39cccecb392eaa0ff4c94e3607dc2294458a30",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/cello/susvib_F2_v3_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_F2_v3_1.wav",
-          "bytes": 3062696,
-          "status": "skipped",
-          "sourceBlobSha": "a384e84a342ab9be12ca55b92c845a3c351b75bf",
-          "localBlobSha": "a384e84a342ab9be12ca55b92c845a3c351b75bf",
-          "integrity": "verified"
+          "sourceBlobSha": "63f4d6df3a25fb95f417b5d45b5f8bf6a11107bf",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_E3_v3_1.wav",
@@ -1398,17 +1371,35 @@
           "bytes": 3278270,
           "status": "skipped",
           "sourceBlobSha": "7711cb67795d692b0d732eb8fd234c41d5980f42",
-          "localBlobSha": "7711cb67795d692b0d732eb8fd234c41d5980f42",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/cello/susvib_G1_v1_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_G1_v1_1.wav",
-          "bytes": 2161700,
+          "path": "starter-pack/strings/cello/susvib_F2_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_F2_v1_1.wav",
+          "bytes": 2186012,
           "status": "skipped",
-          "sourceBlobSha": "42a2731d11a4749c3026f0618e21a8c9370c2024",
-          "localBlobSha": "42a2731d11a4749c3026f0618e21a8c9370c2024",
-          "integrity": "verified"
+          "sourceBlobSha": "78f52c49ddc8a357657d92b05cd89f15beb6c717",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_F2_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_F2_v3_1.wav",
+          "bytes": 3062696,
+          "status": "skipped",
+          "sourceBlobSha": "a384e84a342ab9be12ca55b92c845a3c351b75bf",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_F4_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_F4_v1_1.wav",
+          "bytes": 1922948,
+          "status": "skipped",
+          "sourceBlobSha": "7f39cccecb392eaa0ff4c94e3607dc2294458a30",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_F4_v3_1.wav",
@@ -1416,8 +1407,17 @@
           "bytes": 2726342,
           "status": "skipped",
           "sourceBlobSha": "074f12a91124e13ea0e4fb34d9ecbe7279ec0806",
-          "localBlobSha": "074f12a91124e13ea0e4fb34d9ecbe7279ec0806",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_G1_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_G1_v1_1.wav",
+          "bytes": 2161700,
+          "status": "skipped",
+          "sourceBlobSha": "42a2731d11a4749c3026f0618e21a8c9370c2024",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_G1_v3_1.wav",
@@ -1425,17 +1425,8 @@
           "bytes": 3370496,
           "status": "skipped",
           "sourceBlobSha": "35971538059e18b8f38cdc556630967777a0a0d5",
-          "localBlobSha": "35971538059e18b8f38cdc556630967777a0a0d5",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/cello/susvib_G3_v3_1.wav",
-          "sourcePath": "Strings/Cello Section/susvib/susvib_G3_v3_1.wav",
-          "bytes": 3335768,
-          "status": "skipped",
-          "sourceBlobSha": "732d0c80596fdfc593f55b5a24f65c07cd3191cd",
-          "localBlobSha": "732d0c80596fdfc593f55b5a24f65c07cd3191cd",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/cello/susvib_G3_v1_1.wav",
@@ -1443,8 +1434,17 @@
           "bytes": 2431598,
           "status": "skipped",
           "sourceBlobSha": "7880157fbb8e57fb0b7a694b8569701bc0d942ea",
-          "localBlobSha": "7880157fbb8e57fb0b7a694b8569701bc0d942ea",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_G3_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_G3_v3_1.wav",
+          "bytes": 3335768,
+          "status": "skipped",
+          "sourceBlobSha": "732d0c80596fdfc593f55b5a24f65c07cd3191cd",
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -1462,31 +1462,13 @@
       },
       "files": [
         {
-          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_B2_v1_rr1.wav",
-          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_B2_v1_rr1.wav",
-          "bytes": 1246160,
-          "status": "skipped",
-          "sourceBlobSha": "ec3908bbb75b03c60c5fdfc182761016e90b3a89",
-          "localBlobSha": "ec3908bbb75b03c60c5fdfc182761016e90b3a89",
-          "integrity": "verified"
-        },
-        {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A#0_v1_rr1.wav",
           "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_A#0_v1_rr1.wav",
           "bytes": 1336820,
           "status": "skipped",
           "sourceBlobSha": "6121cdd1a2011599c3f016c8bba312902d8dff5f",
-          "localBlobSha": "6121cdd1a2011599c3f016c8bba312902d8dff5f",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_B2_v3_rr1.wav",
-          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_B2_v3_rr1.wav",
-          "bytes": 1633420,
-          "status": "skipped",
-          "sourceBlobSha": "9424df5a5e339fc2aec523d78b99efa0de6e4d09",
-          "localBlobSha": "9424df5a5e339fc2aec523d78b99efa0de6e4d09",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A#0_v3_rr1.wav",
@@ -1494,8 +1476,8 @@
           "bytes": 2193316,
           "status": "skipped",
           "sourceBlobSha": "93b045a2ce6f37a7b479ee32c17b87a791bc16e0",
-          "localBlobSha": "93b045a2ce6f37a7b479ee32c17b87a791bc16e0",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A1_v1_rr1.wav",
@@ -1503,8 +1485,8 @@
           "bytes": 2131692,
           "status": "skipped",
           "sourceBlobSha": "552d5297f6a9b0384a4544eda9689fbb1f9f0950",
-          "localBlobSha": "552d5297f6a9b0384a4544eda9689fbb1f9f0950",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A1_v3_rr1.wav",
@@ -1512,8 +1494,26 @@
           "bytes": 1975160,
           "status": "skipped",
           "sourceBlobSha": "2829c3686a2ae6c728cd2c924679b66d850d74de",
-          "localBlobSha": "2829c3686a2ae6c728cd2c924679b66d850d74de",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_B2_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_B2_v1_rr1.wav",
+          "bytes": 1246160,
+          "status": "skipped",
+          "sourceBlobSha": "ec3908bbb75b03c60c5fdfc182761016e90b3a89",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_B2_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_B2_v3_rr1.wav",
+          "bytes": 1633420,
+          "status": "skipped",
+          "sourceBlobSha": "9424df5a5e339fc2aec523d78b99efa0de6e4d09",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C#2_v1_rr1.wav",
@@ -1521,8 +1521,8 @@
           "bytes": 1349416,
           "status": "skipped",
           "sourceBlobSha": "7c9dde09e9bc254c0b7523ccce679c69b87a25e3",
-          "localBlobSha": "7c9dde09e9bc254c0b7523ccce679c69b87a25e3",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C#2_v3_rr1.wav",
@@ -1530,8 +1530,8 @@
           "bytes": 1860096,
           "status": "skipped",
           "sourceBlobSha": "b84db77f1fec73b106f2f108037c66d23a35c1ce",
-          "localBlobSha": "b84db77f1fec73b106f2f108037c66d23a35c1ce",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C1_v1_rr1.wav",
@@ -1539,8 +1539,8 @@
           "bytes": 1835940,
           "status": "skipped",
           "sourceBlobSha": "b0698cd7f3deab8320de5bda1d96d1c3443a51b2",
-          "localBlobSha": "b0698cd7f3deab8320de5bda1d96d1c3443a51b2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C1_v3_rr1.wav",
@@ -1548,26 +1548,8 @@
           "bytes": 2479908,
           "status": "skipped",
           "sourceBlobSha": "961971106505e82db1b2a2c850e573528a75c6e7",
-          "localBlobSha": "961971106505e82db1b2a2c850e573528a75c6e7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_D1_v3_rr1.wav",
-          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_D1_v3_rr1.wav",
-          "bytes": 2450408,
-          "status": "skipped",
-          "sourceBlobSha": "e66dde25194ee27477b4fdd31fd7726e84df2d73",
-          "localBlobSha": "e66dde25194ee27477b4fdd31fd7726e84df2d73",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E1_v1_rr1.wav",
-          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_E1_v1_rr1.wav",
-          "bytes": 2429548,
-          "status": "skipped",
-          "sourceBlobSha": "b1fbaaf4c5226a1ea8447b4e3687fb0539d62b0c",
-          "localBlobSha": "b1fbaaf4c5226a1ea8447b4e3687fb0539d62b0c",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_D1_v1_rr1.wav",
@@ -1575,8 +1557,26 @@
           "bytes": 3057536,
           "status": "skipped",
           "sourceBlobSha": "305eaa62b5a84f1035a8723792fe0f4011d7f9e6",
-          "localBlobSha": "305eaa62b5a84f1035a8723792fe0f4011d7f9e6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_D1_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_D1_v3_rr1.wav",
+          "bytes": 2450408,
+          "status": "skipped",
+          "sourceBlobSha": "e66dde25194ee27477b4fdd31fd7726e84df2d73",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_E1_v1_rr1.wav",
+          "bytes": 2429548,
+          "status": "skipped",
+          "sourceBlobSha": "b1fbaaf4c5226a1ea8447b4e3687fb0539d62b0c",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E1_v3_rr1.wav",
@@ -1584,8 +1584,8 @@
           "bytes": 2051084,
           "status": "skipped",
           "sourceBlobSha": "c1749de03dc4ea9b49eca55318e7698b76e5b65d",
-          "localBlobSha": "c1749de03dc4ea9b49eca55318e7698b76e5b65d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E2_v1_rr1.wav",
@@ -1593,8 +1593,8 @@
           "bytes": 1533524,
           "status": "skipped",
           "sourceBlobSha": "8a7643452697f29cfddba49c23549fdc913a8726",
-          "localBlobSha": "8a7643452697f29cfddba49c23549fdc913a8726",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E2_v3_rr1.wav",
@@ -1602,8 +1602,8 @@
           "bytes": 1874324,
           "status": "skipped",
           "sourceBlobSha": "2fc3c01f5d1a0449489800a5b5dabd3bc8817c80",
-          "localBlobSha": "2fc3c01f5d1a0449489800a5b5dabd3bc8817c80",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#0_v1_rr1.wav",
@@ -1611,26 +1611,8 @@
           "bytes": 1597380,
           "status": "skipped",
           "sourceBlobSha": "ddd3f5c1bff906167aa16bee3ceb45589fc32f22",
-          "localBlobSha": "ddd3f5c1bff906167aa16bee3ceb45589fc32f22",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#1_v1_rr1.wav",
-          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_F#1_v1_rr1.wav",
-          "bytes": 1153568,
-          "status": "skipped",
-          "sourceBlobSha": "cb95407f5853c21b4544a117bcca9cf074f45e71",
-          "localBlobSha": "cb95407f5853c21b4544a117bcca9cf074f45e71",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#1_v1_rr1.wav",
-          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G#1_v1_rr1.wav",
-          "bytes": 1256636,
-          "status": "skipped",
-          "sourceBlobSha": "318147f57e7e2c6c13306e2a703dbcba670454a8",
-          "localBlobSha": "318147f57e7e2c6c13306e2a703dbcba670454a8",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#0_v3_rr1.wav",
@@ -1638,8 +1620,17 @@
           "bytes": 2177272,
           "status": "skipped",
           "sourceBlobSha": "4ffc597b3930f4e383be776141f0dab145120d62",
-          "localBlobSha": "4ffc597b3930f4e383be776141f0dab145120d62",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_F#1_v1_rr1.wav",
+          "bytes": 1153568,
+          "status": "skipped",
+          "sourceBlobSha": "cb95407f5853c21b4544a117bcca9cf074f45e71",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#1_v3_rr1.wav",
@@ -1647,8 +1638,17 @@
           "bytes": 1710912,
           "status": "skipped",
           "sourceBlobSha": "dce2dab98559f73837834f23d80a1f73f6a57ad1",
-          "localBlobSha": "dce2dab98559f73837834f23d80a1f73f6a57ad1",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G#1_v1_rr1.wav",
+          "bytes": 1256636,
+          "status": "skipped",
+          "sourceBlobSha": "318147f57e7e2c6c13306e2a703dbcba670454a8",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#1_v3_rr1.wav",
@@ -1656,8 +1656,8 @@
           "bytes": 1874712,
           "status": "skipped",
           "sourceBlobSha": "6f701d221e67b5451cb80affd3002e743c8e4e68",
-          "localBlobSha": "6f701d221e67b5451cb80affd3002e743c8e4e68",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#2_v1_rr1.wav",
@@ -1665,8 +1665,8 @@
           "bytes": 1352760,
           "status": "skipped",
           "sourceBlobSha": "a9f242894bb6b52da9f7bef619023888e3b70c65",
-          "localBlobSha": "a9f242894bb6b52da9f7bef619023888e3b70c65",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#2_v3_rr1.wav",
@@ -1674,8 +1674,8 @@
           "bytes": 1821888,
           "status": "skipped",
           "sourceBlobSha": "e64bf733e9622fb6bea298708d0d30e3ce1c49b6",
-          "localBlobSha": "e64bf733e9622fb6bea298708d0d30e3ce1c49b6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G0_v1_rr1.wav",
@@ -1683,8 +1683,8 @@
           "bytes": 1583696,
           "status": "skipped",
           "sourceBlobSha": "35ee3d675424306c55438f2130f2c05e312da3f6",
-          "localBlobSha": "35ee3d675424306c55438f2130f2c05e312da3f6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G0_v3_rr1.wav",
@@ -1692,8 +1692,8 @@
           "bytes": 1990464,
           "status": "skipped",
           "sourceBlobSha": "834df8922de2c341ee5f841f5bcc13e0bcb1206c",
-          "localBlobSha": "834df8922de2c341ee5f841f5bcc13e0bcb1206c",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -1711,31 +1711,13 @@
       },
       "files": [
         {
-          "path": "starter-pack/brass/horn/MOHorn_sus_A0_v1_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A0_v1_1.wav",
-          "bytes": 947196,
-          "status": "skipped",
-          "sourceBlobSha": "bec79afe2bde69ed445c52da977b83e31cc81ed7",
-          "localBlobSha": "bec79afe2bde69ed445c52da977b83e31cc81ed7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_A#1_v3_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A#1_v3_1.wav",
-          "bytes": 1829064,
-          "status": "skipped",
-          "sourceBlobSha": "8fe919bf02a81284083f9a356db56591ffbb5e31",
-          "localBlobSha": "8fe919bf02a81284083f9a356db56591ffbb5e31",
-          "integrity": "verified"
-        },
-        {
           "path": "starter-pack/brass/horn/MOHorn_sus_A#1_v1_1.wav",
           "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A#1_v1_1.wav",
           "bytes": 2417592,
           "status": "skipped",
           "sourceBlobSha": "573db456092f7eff6af7245819f162828f749e10",
-          "localBlobSha": "573db456092f7eff6af7245819f162828f749e10",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_A#1_v2_1.wav",
@@ -1743,26 +1725,26 @@
           "bytes": 2740036,
           "status": "skipped",
           "sourceBlobSha": "62c15504278f9c2dfaa0006530d34a5a3d92ecb0",
-          "localBlobSha": "62c15504278f9c2dfaa0006530d34a5a3d92ecb0",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/horn/MOHorn_sus_A2_v2_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A2_v2_1.wav",
-          "bytes": 2542000,
+          "path": "starter-pack/brass/horn/MOHorn_sus_A#1_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A#1_v3_1.wav",
+          "bytes": 1829064,
           "status": "skipped",
-          "sourceBlobSha": "5ea35c7b0bf50d85195ba726380e611817f4ba9a",
-          "localBlobSha": "5ea35c7b0bf50d85195ba726380e611817f4ba9a",
-          "integrity": "verified"
+          "sourceBlobSha": "8fe919bf02a81284083f9a356db56591ffbb5e31",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/horn/MOHorn_sus_A2_v3_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A2_v3_1.wav",
-          "bytes": 1305440,
+          "path": "starter-pack/brass/horn/MOHorn_sus_A0_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A0_v1_1.wav",
+          "bytes": 947196,
           "status": "skipped",
-          "sourceBlobSha": "d4088d29905d60944c524d443f66c55035301e47",
-          "localBlobSha": "d4088d29905d60944c524d443f66c55035301e47",
-          "integrity": "verified"
+          "sourceBlobSha": "bec79afe2bde69ed445c52da977b83e31cc81ed7",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_A2_v1_1.wav",
@@ -1770,26 +1752,26 @@
           "bytes": 2672192,
           "status": "skipped",
           "sourceBlobSha": "d358aadfb3bb1e0f28ab742d96f5418dc750057b",
-          "localBlobSha": "d358aadfb3bb1e0f28ab742d96f5418dc750057b",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/horn/MOHorn_sus_C1_v3_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C1_v3_1.wav",
-          "bytes": 704216,
+          "path": "starter-pack/brass/horn/MOHorn_sus_A2_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A2_v2_1.wav",
+          "bytes": 2542000,
           "status": "skipped",
-          "sourceBlobSha": "3503c90afff58abd64db51f24e7f0ffc02954e3d",
-          "localBlobSha": "3503c90afff58abd64db51f24e7f0ffc02954e3d",
-          "integrity": "verified"
+          "sourceBlobSha": "5ea35c7b0bf50d85195ba726380e611817f4ba9a",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/horn/MOHorn_sus_C1_v2_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C1_v2_1.wav",
-          "bytes": 807756,
+          "path": "starter-pack/brass/horn/MOHorn_sus_A2_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A2_v3_1.wav",
+          "bytes": 1305440,
           "status": "skipped",
-          "sourceBlobSha": "48ea1921e88607d0aea8aece16be6bc2456f6a4e",
-          "localBlobSha": "48ea1921e88607d0aea8aece16be6bc2456f6a4e",
-          "integrity": "verified"
+          "sourceBlobSha": "d4088d29905d60944c524d443f66c55035301e47",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_C1_v1_1.wav",
@@ -1797,17 +1779,26 @@
           "bytes": 1093856,
           "status": "skipped",
           "sourceBlobSha": "eed8f32ab91afd3381e42d0a5d0ad1d2beccbd11",
-          "localBlobSha": "eed8f32ab91afd3381e42d0a5d0ad1d2beccbd11",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v2_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D#1_v2_1.wav",
-          "bytes": 970468,
+          "path": "starter-pack/brass/horn/MOHorn_sus_C1_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C1_v2_1.wav",
+          "bytes": 807756,
           "status": "skipped",
-          "sourceBlobSha": "20c33d3ffb3bf369e30359e3eb8b8ac7548adda3",
-          "localBlobSha": "20c33d3ffb3bf369e30359e3eb8b8ac7548adda3",
-          "integrity": "verified"
+          "sourceBlobSha": "48ea1921e88607d0aea8aece16be6bc2456f6a4e",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C1_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C1_v3_1.wav",
+          "bytes": 704216,
+          "status": "skipped",
+          "sourceBlobSha": "3503c90afff58abd64db51f24e7f0ffc02954e3d",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_C3_v1_1.wav",
@@ -1815,35 +1806,8 @@
           "bytes": 2519448,
           "status": "skipped",
           "sourceBlobSha": "e53d2d03f0902c9f3a6add7c6bf51122bcc7d573",
-          "localBlobSha": "e53d2d03f0902c9f3a6add7c6bf51122bcc7d573",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v1_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D#1_v1_1.wav",
-          "bytes": 1425196,
-          "status": "skipped",
-          "sourceBlobSha": "238de6f129810744e89a22c414daf926e1b55a37",
-          "localBlobSha": "238de6f129810744e89a22c414daf926e1b55a37",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v4_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v4_1.wav",
-          "bytes": 1761688,
-          "status": "skipped",
-          "sourceBlobSha": "98bc7d3d4709c8d7a240a1f39c615bef3af7e5b0",
-          "localBlobSha": "98bc7d3d4709c8d7a240a1f39c615bef3af7e5b0",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v3_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v3_1.wav",
-          "bytes": 2114316,
-          "status": "skipped",
-          "sourceBlobSha": "69e3187ccc4d4338931d412a9f50978ca576db5c",
-          "localBlobSha": "69e3187ccc4d4338931d412a9f50978ca576db5c",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_C3_v2_1.wav",
@@ -1851,8 +1815,44 @@
           "bytes": 2240888,
           "status": "skipped",
           "sourceBlobSha": "9f89dc248404a1a1e0240035ac5fa55c89e9c9cd",
-          "localBlobSha": "9f89dc248404a1a1e0240035ac5fa55c89e9c9cd",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v3_1.wav",
+          "bytes": 2114316,
+          "status": "skipped",
+          "sourceBlobSha": "69e3187ccc4d4338931d412a9f50978ca576db5c",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D#1_v1_1.wav",
+          "bytes": 1425196,
+          "status": "skipped",
+          "sourceBlobSha": "238de6f129810744e89a22c414daf926e1b55a37",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v4_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v4_1.wav",
+          "bytes": 1761688,
+          "status": "skipped",
+          "sourceBlobSha": "98bc7d3d4709c8d7a240a1f39c615bef3af7e5b0",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D#1_v2_1.wav",
+          "bytes": 970468,
+          "status": "skipped",
+          "sourceBlobSha": "20c33d3ffb3bf369e30359e3eb8b8ac7548adda3",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v3_1.wav",
@@ -1860,26 +1860,8 @@
           "bytes": 927292,
           "status": "skipped",
           "sourceBlobSha": "db97debcf24dfa898ce069d9b21b5bbea371e552",
-          "localBlobSha": "db97debcf24dfa898ce069d9b21b5bbea371e552",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v4_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v4_1.wav",
-          "bytes": 1166236,
-          "status": "skipped",
-          "sourceBlobSha": "e61e2d828400580fd267e5af934eee65e62d21b7",
-          "localBlobSha": "e61e2d828400580fd267e5af934eee65e62d21b7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_D4_v1_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D4_v1_1.wav",
-          "bytes": 1445100,
-          "status": "skipped",
-          "sourceBlobSha": "0d13acd769ecdfc234c416fe859a4eda9aac2f22",
-          "localBlobSha": "0d13acd769ecdfc234c416fe859a4eda9aac2f22",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_D2_v1_1.wav",
@@ -1887,17 +1869,8 @@
           "bytes": 2500360,
           "status": "skipped",
           "sourceBlobSha": "e63cadc76d2b3e56ee26ad558e52fd633cc8c4b1",
-          "localBlobSha": "e63cadc76d2b3e56ee26ad558e52fd633cc8c4b1",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v3_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v3_1.wav",
-          "bytes": 1746204,
-          "status": "skipped",
-          "sourceBlobSha": "aec5cfdb8e2532338f69f6726c77c1d8e5044f0d",
-          "localBlobSha": "aec5cfdb8e2532338f69f6726c77c1d8e5044f0d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_D2_v2_1.wav",
@@ -1905,8 +1878,35 @@
           "bytes": 2583372,
           "status": "skipped",
           "sourceBlobSha": "665f09cf0fe70efdcec1d93b064d5a5a32d6ebe0",
-          "localBlobSha": "665f09cf0fe70efdcec1d93b064d5a5a32d6ebe0",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v3_1.wav",
+          "bytes": 1746204,
+          "status": "skipped",
+          "sourceBlobSha": "aec5cfdb8e2532338f69f6726c77c1d8e5044f0d",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v4_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v4_1.wav",
+          "bytes": 1166236,
+          "status": "skipped",
+          "sourceBlobSha": "e61e2d828400580fd267e5af934eee65e62d21b7",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D4_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D4_v1_1.wav",
+          "bytes": 1445100,
+          "status": "skipped",
+          "sourceBlobSha": "0d13acd769ecdfc234c416fe859a4eda9aac2f22",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_F2_v1_1.wav",
@@ -1914,44 +1914,8 @@
           "bytes": 2163124,
           "status": "skipped",
           "sourceBlobSha": "90c68f7833a7aa2325dea7159aad8af4c9b13a76",
-          "localBlobSha": "90c68f7833a7aa2325dea7159aad8af4c9b13a76",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_F4_v1_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F4_v1_1.wav",
-          "bytes": 1477536,
-          "status": "skipped",
-          "sourceBlobSha": "3061198e82995900230e9ddde1138a076d8dca9f",
-          "localBlobSha": "3061198e82995900230e9ddde1138a076d8dca9f",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_G1_v2_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_G1_v2_1.wav",
-          "bytes": 1300556,
-          "status": "skipped",
-          "sourceBlobSha": "e09ff9550c6ed4b660baeaba5497040ca7add35e",
-          "localBlobSha": "e09ff9550c6ed4b660baeaba5497040ca7add35e",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_F2_v3_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F2_v3_1.wav",
-          "bytes": 1692688,
-          "status": "skipped",
-          "sourceBlobSha": "af9345753c5b31083a3e344dd7bbf6c978de59c3",
-          "localBlobSha": "af9345753c5b31083a3e344dd7bbf6c978de59c3",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/horn/MOHorn_sus_G1_v1_1.wav",
-          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_G1_v1_1.wav",
-          "bytes": 2038728,
-          "status": "skipped",
-          "sourceBlobSha": "587133d2ed466473bd29438555973d9e75c3285a",
-          "localBlobSha": "587133d2ed466473bd29438555973d9e75c3285a",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_F2_v2_1.wav",
@@ -1959,8 +1923,44 @@
           "bytes": 2558276,
           "status": "skipped",
           "sourceBlobSha": "37655b24ac23b96a47a6bb75c091bedef6913632",
-          "localBlobSha": "37655b24ac23b96a47a6bb75c091bedef6913632",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_F2_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F2_v3_1.wav",
+          "bytes": 1692688,
+          "status": "skipped",
+          "sourceBlobSha": "af9345753c5b31083a3e344dd7bbf6c978de59c3",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_F4_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F4_v1_1.wav",
+          "bytes": 1477536,
+          "status": "skipped",
+          "sourceBlobSha": "3061198e82995900230e9ddde1138a076d8dca9f",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_G1_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_G1_v1_1.wav",
+          "bytes": 2038728,
+          "status": "skipped",
+          "sourceBlobSha": "587133d2ed466473bd29438555973d9e75c3285a",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_G1_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_G1_v2_1.wav",
+          "bytes": 1300556,
+          "status": "skipped",
+          "sourceBlobSha": "e09ff9550c6ed4b660baeaba5497040ca7add35e",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/horn/MOHorn_sus_G1_v3_1.wav",
@@ -1968,8 +1968,8 @@
           "bytes": 941656,
           "status": "skipped",
           "sourceBlobSha": "e824ccfe9f9b0a33e31151cec90e838dc769d949",
-          "localBlobSha": "e824ccfe9f9b0a33e31151cec90e838dc769d949",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -1987,40 +1987,22 @@
       },
       "files": [
         {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#2_v2_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#2_v2_rr1_sum.wav",
-          "bytes": 1909388,
-          "status": "skipped",
-          "sourceBlobSha": "4ab307dd0c82ce0900eb7439bdb8d0a1008d4034",
-          "localBlobSha": "4ab307dd0c82ce0900eb7439bdb8d0a1008d4034",
-          "integrity": "verified"
-        },
-        {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#2_v1_rr1_sum.wav",
           "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#2_v1_rr1_sum.wav",
           "bytes": 1825324,
           "status": "skipped",
           "sourceBlobSha": "c02251ea67183260dd5f3b4cca97eeb0e8f23bed",
-          "localBlobSha": "c02251ea67183260dd5f3b4cca97eeb0e8f23bed",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#3_v1_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#3_v1_rr1_sum.wav",
-          "bytes": 1599888,
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#2_v2_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#2_v2_rr1_sum.wav",
+          "bytes": 1909388,
           "status": "skipped",
-          "sourceBlobSha": "f8db827226f661779d8965737fa0850d8275be9a",
-          "localBlobSha": "f8db827226f661779d8965737fa0850d8275be9a",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#3_v2_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#3_v2_rr1_sum.wav",
-          "bytes": 1791140,
-          "status": "skipped",
-          "sourceBlobSha": "c80415402c31b050eb51796e17fba541a24a57a0",
-          "localBlobSha": "c80415402c31b050eb51796e17fba541a24a57a0",
-          "integrity": "verified"
+          "sourceBlobSha": "4ab307dd0c82ce0900eb7439bdb8d0a1008d4034",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#2_v3_rr1_sum.wav",
@@ -2028,8 +2010,26 @@
           "bytes": 2335540,
           "status": "skipped",
           "sourceBlobSha": "d08b0b0242b1695b533f14c7774c4e5bd7f83646",
-          "localBlobSha": "d08b0b0242b1695b533f14c7774c4e5bd7f83646",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#3_v1_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#3_v1_rr1_sum.wav",
+          "bytes": 1599888,
+          "status": "skipped",
+          "sourceBlobSha": "f8db827226f661779d8965737fa0850d8275be9a",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#3_v2_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#3_v2_rr1_sum.wav",
+          "bytes": 1791140,
+          "status": "skipped",
+          "sourceBlobSha": "c80415402c31b050eb51796e17fba541a24a57a0",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#3_v3_rr1_sum.wav",
@@ -2037,17 +2037,8 @@
           "bytes": 2059160,
           "status": "skipped",
           "sourceBlobSha": "08f1508a646a60a8795861688932e38955cc8ba0",
-          "localBlobSha": "08f1508a646a60a8795861688932e38955cc8ba0",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D2_v1_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D2_v1_rr1_sum.wav",
-          "bytes": 806612,
-          "status": "skipped",
-          "sourceBlobSha": "22e4849edce9f5f75473852d71b1a71e75502505",
-          "localBlobSha": "22e4849edce9f5f75473852d71b1a71e75502505",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#4_v1_rr1_sum.wav",
@@ -2055,35 +2046,8 @@
           "bytes": 1996064,
           "status": "skipped",
           "sourceBlobSha": "27315505c21685cdc911e3ae30ce8712c712da26",
-          "localBlobSha": "27315505c21685cdc911e3ae30ce8712c712da26",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D2_v3_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D2_v3_rr1_sum.wav",
-          "bytes": 1381704,
-          "status": "skipped",
-          "sourceBlobSha": "3d40552dd6d2dead91c702fe68175869a988009d",
-          "localBlobSha": "3d40552dd6d2dead91c702fe68175869a988009d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D2_v2_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D2_v2_rr1_sum.wav",
-          "bytes": 1689164,
-          "status": "skipped",
-          "sourceBlobSha": "e435f825232aff390c93e0462d9e93e9e488d7ed",
-          "localBlobSha": "e435f825232aff390c93e0462d9e93e9e488d7ed",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#4_v3_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#4_v3_rr1_sum.wav",
-          "bytes": 1885948,
-          "status": "skipped",
-          "sourceBlobSha": "bc184323f783462fb1bbb3f49ad57ddaaac2cb11",
-          "localBlobSha": "bc184323f783462fb1bbb3f49ad57ddaaac2cb11",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#4_v2_rr1_sum.wav",
@@ -2091,8 +2055,44 @@
           "bytes": 1823220,
           "status": "skipped",
           "sourceBlobSha": "4250227b229f8f94ea73ecb3ff4e996bfa1cf91b",
-          "localBlobSha": "4250227b229f8f94ea73ecb3ff4e996bfa1cf91b",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_A#4_v3_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_A#4_v3_rr1_sum.wav",
+          "bytes": 1885948,
+          "status": "skipped",
+          "sourceBlobSha": "bc184323f783462fb1bbb3f49ad57ddaaac2cb11",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D2_v1_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D2_v1_rr1_sum.wav",
+          "bytes": 806612,
+          "status": "skipped",
+          "sourceBlobSha": "22e4849edce9f5f75473852d71b1a71e75502505",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D2_v2_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D2_v2_rr1_sum.wav",
+          "bytes": 1689164,
+          "status": "skipped",
+          "sourceBlobSha": "e435f825232aff390c93e0462d9e93e9e488d7ed",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D2_v3_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D2_v3_rr1_sum.wav",
+          "bytes": 1381704,
+          "status": "skipped",
+          "sourceBlobSha": "3d40552dd6d2dead91c702fe68175869a988009d",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D3_v1_rr1_sum.wav",
@@ -2100,8 +2100,8 @@
           "bytes": 2230948,
           "status": "skipped",
           "sourceBlobSha": "8f3f973a0d69c3c721f1eb8b27f208c80bd17ceb",
-          "localBlobSha": "8f3f973a0d69c3c721f1eb8b27f208c80bd17ceb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D3_v2_rr1_sum.wav",
@@ -2109,17 +2109,8 @@
           "bytes": 1876188,
           "status": "skipped",
           "sourceBlobSha": "dfffae60b3793d9687b2cb2c9b3850f593c723c6",
-          "localBlobSha": "dfffae60b3793d9687b2cb2c9b3850f593c723c6",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D4_v2_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D4_v2_rr1_sum.wav",
-          "bytes": 2047596,
-          "status": "skipped",
-          "sourceBlobSha": "9efaf747591d3c39b7b6e87a077963a1ac71ae45",
-          "localBlobSha": "9efaf747591d3c39b7b6e87a077963a1ac71ae45",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D3_v3_rr1_sum.wav",
@@ -2127,8 +2118,8 @@
           "bytes": 1856124,
           "status": "skipped",
           "sourceBlobSha": "aa7a1f5f31cef8d36552072d9f275b7940c879c0",
-          "localBlobSha": "aa7a1f5f31cef8d36552072d9f275b7940c879c0",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D4_v1_rr1_sum.wav",
@@ -2136,8 +2127,17 @@
           "bytes": 1987372,
           "status": "skipped",
           "sourceBlobSha": "c3284691eb2dfe4f1be1b116b804a2e41062bb9c",
-          "localBlobSha": "c3284691eb2dfe4f1be1b116b804a2e41062bb9c",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D4_v2_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_D4_v2_rr1_sum.wav",
+          "bytes": 2047596,
+          "status": "skipped",
+          "sourceBlobSha": "9efaf747591d3c39b7b6e87a077963a1ac71ae45",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D4_v3_rr1_sum.wav",
@@ -2145,8 +2145,8 @@
           "bytes": 2087348,
           "status": "skipped",
           "sourceBlobSha": "119bec0bc1ad924b04e416966239d6af3a67a764",
-          "localBlobSha": "119bec0bc1ad924b04e416966239d6af3a67a764",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D5_v1_rr1_sum.wav",
@@ -2154,8 +2154,8 @@
           "bytes": 1692352,
           "status": "skipped",
           "sourceBlobSha": "ee07579d393b6c9a43aaf65f375d2012c3d0c774",
-          "localBlobSha": "ee07579d393b6c9a43aaf65f375d2012c3d0c774",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D5_v2_rr1_sum.wav",
@@ -2163,35 +2163,8 @@
           "bytes": 1772224,
           "status": "skipped",
           "sourceBlobSha": "d2c1fa23c73a15d50b581b6f83aa9e56e7e01a0c",
-          "localBlobSha": "d2c1fa23c73a15d50b581b6f83aa9e56e7e01a0c",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F#5_v1_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F#5_v1_rr1_sum.wav",
-          "bytes": 1025344,
-          "status": "skipped",
-          "sourceBlobSha": "0e30b7890f8c35943fa4eb693c704ce5c595acec",
-          "localBlobSha": "0e30b7890f8c35943fa4eb693c704ce5c595acec",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F#5_v3_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F#5_v3_rr1_sum.wav",
-          "bytes": 1586272,
-          "status": "skipped",
-          "sourceBlobSha": "9655d9014a2500386d01f80bf0d7e3100e8caa59",
-          "localBlobSha": "9655d9014a2500386d01f80bf0d7e3100e8caa59",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F#5_v2_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F#5_v2_rr1_sum.wav",
-          "bytes": 1252444,
-          "status": "skipped",
-          "sourceBlobSha": "5e103799bb30ef1afa405511230c852b942a9d7c",
-          "localBlobSha": "5e103799bb30ef1afa405511230c852b942a9d7c",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_D5_v3_rr1_sum.wav",
@@ -2199,8 +2172,35 @@
           "bytes": 1593652,
           "status": "skipped",
           "sourceBlobSha": "a06b19f95d397920e21a56cdb85223a39e860d47",
-          "localBlobSha": "a06b19f95d397920e21a56cdb85223a39e860d47",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F#5_v1_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F#5_v1_rr1_sum.wav",
+          "bytes": 1025344,
+          "status": "skipped",
+          "sourceBlobSha": "0e30b7890f8c35943fa4eb693c704ce5c595acec",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F#5_v2_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F#5_v2_rr1_sum.wav",
+          "bytes": 1252444,
+          "status": "skipped",
+          "sourceBlobSha": "5e103799bb30ef1afa405511230c852b942a9d7c",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F#5_v3_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F#5_v3_rr1_sum.wav",
+          "bytes": 1586272,
+          "status": "skipped",
+          "sourceBlobSha": "9655d9014a2500386d01f80bf0d7e3100e8caa59",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F2_v1_rr1_sum.wav",
@@ -2208,8 +2208,8 @@
           "bytes": 1527412,
           "status": "skipped",
           "sourceBlobSha": "a8b913d7e923c58f150e757f1748da37c80587b4",
-          "localBlobSha": "a8b913d7e923c58f150e757f1748da37c80587b4",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F2_v2_rr1_sum.wav",
@@ -2217,8 +2217,8 @@
           "bytes": 1835164,
           "status": "skipped",
           "sourceBlobSha": "090db5da13fb0ec67673b6a656887644c923d341",
-          "localBlobSha": "090db5da13fb0ec67673b6a656887644c923d341",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F2_v3_rr1_sum.wav",
@@ -2226,17 +2226,8 @@
           "bytes": 1747440,
           "status": "skipped",
           "sourceBlobSha": "04b88f5463edcbdfb44e64826d26d8528b4a12f6",
-          "localBlobSha": "04b88f5463edcbdfb44e64826d26d8528b4a12f6",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F3_v2_rr1_sum.wav",
-          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F3_v2_rr1_sum.wav",
-          "bytes": 2069572,
-          "status": "skipped",
-          "sourceBlobSha": "1a445b0610a060c571574916d140344fc60922b2",
-          "localBlobSha": "1a445b0610a060c571574916d140344fc60922b2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F3_v1_rr1_sum.wav",
@@ -2244,8 +2235,17 @@
           "bytes": 1762976,
           "status": "skipped",
           "sourceBlobSha": "31ac755ac1dff319c409505d26706d9851bb7e92",
-          "localBlobSha": "31ac755ac1dff319c409505d26706d9851bb7e92",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F3_v2_rr1_sum.wav",
+          "sourcePath": "Woodwinds/Clarinet/susLong/DCClar_susLong_F3_v2_rr1_sum.wav",
+          "bytes": 2069572,
+          "status": "skipped",
+          "sourceBlobSha": "1a445b0610a060c571574916d140344fc60922b2",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F3_v3_rr1_sum.wav",
@@ -2253,8 +2253,8 @@
           "bytes": 1743712,
           "status": "skipped",
           "sourceBlobSha": "fc79b6d0f5b3420f4e24b0392484b43a864a6d50",
-          "localBlobSha": "fc79b6d0f5b3420f4e24b0392484b43a864a6d50",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F4_v1_rr1_sum.wav",
@@ -2262,8 +2262,8 @@
           "bytes": 2034208,
           "status": "skipped",
           "sourceBlobSha": "04e3a4727ee49ff915baeb65c1d32ee4e9ec37e2",
-          "localBlobSha": "04e3a4727ee49ff915baeb65c1d32ee4e9ec37e2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F4_v2_rr1_sum.wav",
@@ -2271,8 +2271,8 @@
           "bytes": 2142808,
           "status": "skipped",
           "sourceBlobSha": "9188e6eb2204ec227bac95cf254b9ce20e5d9d58",
-          "localBlobSha": "9188e6eb2204ec227bac95cf254b9ce20e5d9d58",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/clarinet/DCClar_susLong_F4_v3_rr1_sum.wav",
@@ -2280,8 +2280,8 @@
           "bytes": 2373520,
           "status": "skipped",
           "sourceBlobSha": "086d21e2c435964f31b77df757b763e6d6b5eb54",
-          "localBlobSha": "086d21e2c435964f31b77df757b763e6d6b5eb54",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -2299,22 +2299,22 @@
       },
       "files": [
         {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_A#0_v1_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_A#0_v1_1.wav",
+          "bytes": 1604336,
+          "status": "skipped",
+          "sourceBlobSha": "f99b00f4944c8571dabc04683549935e4a81c987",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_A#0_v2_1.wav",
           "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_A#0_v2_1.wav",
           "bytes": 1277208,
           "status": "skipped",
           "sourceBlobSha": "40be07cae85c8038a0bc2790f55391ba05bfd9ca",
-          "localBlobSha": "40be07cae85c8038a0bc2790f55391ba05bfd9ca",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_A#1_v2_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_A#1_v2_1.wav",
-          "bytes": 1139172,
-          "status": "skipped",
-          "sourceBlobSha": "d216c128e16b6e82e203e65cb3e5374873125b95",
-          "localBlobSha": "d216c128e16b6e82e203e65cb3e5374873125b95",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_A#1_v1_1.wav",
@@ -2322,8 +2322,17 @@
           "bytes": 1305956,
           "status": "skipped",
           "sourceBlobSha": "ddd0d4eace186255cb3cd3fe1f9bfa4bc8507947",
-          "localBlobSha": "ddd0d4eace186255cb3cd3fe1f9bfa4bc8507947",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_A#1_v2_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_A#1_v2_1.wav",
+          "bytes": 1139172,
+          "status": "skipped",
+          "sourceBlobSha": "d216c128e16b6e82e203e65cb3e5374873125b95",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_A1_v1_1.wav",
@@ -2331,17 +2340,8 @@
           "bytes": 1590160,
           "status": "skipped",
           "sourceBlobSha": "cb1109d73a34b69c08b52a2398fb0ba4b775f852",
-          "localBlobSha": "cb1109d73a34b69c08b52a2398fb0ba4b775f852",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_A#0_v1_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_A#0_v1_1.wav",
-          "bytes": 1604336,
-          "status": "skipped",
-          "sourceBlobSha": "f99b00f4944c8571dabc04683549935e4a81c987",
-          "localBlobSha": "f99b00f4944c8571dabc04683549935e4a81c987",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_A1_v2_1.wav",
@@ -2349,26 +2349,8 @@
           "bytes": 1272168,
           "status": "skipped",
           "sourceBlobSha": "1c0cbd04167c64567abd3e292c2ba20602f22cea",
-          "localBlobSha": "1c0cbd04167c64567abd3e292c2ba20602f22cea",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C#1_v1_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C#1_v1_1.wav",
-          "bytes": 1090836,
-          "status": "skipped",
-          "sourceBlobSha": "b79ee313cb48502ab0aa8dec46bc9fb5e4077988",
-          "localBlobSha": "b79ee313cb48502ab0aa8dec46bc9fb5e4077988",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C2_v1_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C2_v1_1.wav",
-          "bytes": 1121404,
-          "status": "skipped",
-          "sourceBlobSha": "10ff119e43e0785b606bd4c1586dcb62bf6be6b5",
-          "localBlobSha": "10ff119e43e0785b606bd4c1586dcb62bf6be6b5",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_A3_v1_1.wav",
@@ -2376,8 +2358,8 @@
           "bytes": 1713280,
           "status": "skipped",
           "sourceBlobSha": "59c1fb41b41670807ad44d06d0f54fecac4fa0ae",
-          "localBlobSha": "59c1fb41b41670807ad44d06d0f54fecac4fa0ae",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_A3_v2_1.wav",
@@ -2385,8 +2367,17 @@
           "bytes": 1711380,
           "status": "skipped",
           "sourceBlobSha": "b0056a9582d14d97ca93d3c0b3b67637ad444bfe",
-          "localBlobSha": "b0056a9582d14d97ca93d3c0b3b67637ad444bfe",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C#1_v1_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C#1_v1_1.wav",
+          "bytes": 1090836,
+          "status": "skipped",
+          "sourceBlobSha": "b79ee313cb48502ab0aa8dec46bc9fb5e4077988",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_C#1_v2_1.wav",
@@ -2394,8 +2385,17 @@
           "bytes": 1053324,
           "status": "skipped",
           "sourceBlobSha": "2f91082298b60cf5a3b04b2f089ff7380e6ba90d",
-          "localBlobSha": "2f91082298b60cf5a3b04b2f089ff7380e6ba90d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C2_v1_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C2_v1_1.wav",
+          "bytes": 1121404,
+          "status": "skipped",
+          "sourceBlobSha": "10ff119e43e0785b606bd4c1586dcb62bf6be6b5",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_C2_v2_1.wav",
@@ -2403,17 +2403,8 @@
           "bytes": 1118832,
           "status": "skipped",
           "sourceBlobSha": "14b9d5e95ccd565ea9e3eb2b8ef8c641ac3ac022",
-          "localBlobSha": "14b9d5e95ccd565ea9e3eb2b8ef8c641ac3ac022",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C3_v2_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C3_v2_1.wav",
-          "bytes": 1394452,
-          "status": "skipped",
-          "sourceBlobSha": "7778b0fa352d6466272f2e0a7b053ca38ac1e35f",
-          "localBlobSha": "7778b0fa352d6466272f2e0a7b053ca38ac1e35f",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_C3_v1_1.wav",
@@ -2421,35 +2412,17 @@
           "bytes": 1540544,
           "status": "skipped",
           "sourceBlobSha": "346fcf577136aac725b49419a915c92efa078d6a",
-          "localBlobSha": "346fcf577136aac725b49419a915c92efa078d6a",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C4_v2_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C4_v2_1.wav",
-          "bytes": 1737168,
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C3_v2_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C3_v2_1.wav",
+          "bytes": 1394452,
           "status": "skipped",
-          "sourceBlobSha": "0c1d22dd2f18c5dabfcb6a5d6ac694f3f0c8dd71",
-          "localBlobSha": "0c1d22dd2f18c5dabfcb6a5d6ac694f3f0c8dd71",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_D#3_v2_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_D#3_v2_1.wav",
-          "bytes": 1111204,
-          "status": "skipped",
-          "sourceBlobSha": "567d185f861d30cde23a3843f86fc907cf130720",
-          "localBlobSha": "567d185f861d30cde23a3843f86fc907cf130720",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_D#3_v1_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_D#3_v1_1.wav",
-          "bytes": 1524036,
-          "status": "skipped",
-          "sourceBlobSha": "f11eba53f3d278cb38b79af9d62b5b769393bbdd",
-          "localBlobSha": "f11eba53f3d278cb38b79af9d62b5b769393bbdd",
-          "integrity": "verified"
+          "sourceBlobSha": "7778b0fa352d6466272f2e0a7b053ca38ac1e35f",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_C4_v1_1.wav",
@@ -2457,8 +2430,35 @@
           "bytes": 1969476,
           "status": "skipped",
           "sourceBlobSha": "b046554b78d5edaaeb4a81d045833365253bae60",
-          "localBlobSha": "b046554b78d5edaaeb4a81d045833365253bae60",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_C4_v2_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_C4_v2_1.wav",
+          "bytes": 1737168,
+          "status": "skipped",
+          "sourceBlobSha": "0c1d22dd2f18c5dabfcb6a5d6ac694f3f0c8dd71",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_D#3_v1_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_D#3_v1_1.wav",
+          "bytes": 1524036,
+          "status": "skipped",
+          "sourceBlobSha": "f11eba53f3d278cb38b79af9d62b5b769393bbdd",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_D#3_v2_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_D#3_v2_1.wav",
+          "bytes": 1111204,
+          "status": "skipped",
+          "sourceBlobSha": "567d185f861d30cde23a3843f86fc907cf130720",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_D#4_v2_1.wav",
@@ -2466,35 +2466,8 @@
           "bytes": 1304912,
           "status": "skipped",
           "sourceBlobSha": "1302bf15411e3bc017686c9094c6bfa1563ed176",
-          "localBlobSha": "1302bf15411e3bc017686c9094c6bfa1563ed176",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_F1_v2_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_F1_v2_1.wav",
-          "bytes": 1418740,
-          "status": "skipped",
-          "sourceBlobSha": "6b6c81a47d6e77853dd711a471e97ee631ae7f78",
-          "localBlobSha": "6b6c81a47d6e77853dd711a471e97ee631ae7f78",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_G2_v1_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_G2_v1_1.wav",
-          "bytes": 1509644,
-          "status": "skipped",
-          "sourceBlobSha": "1802d35ea36b486169050595296b758b41b3bfc7",
-          "localBlobSha": "1802d35ea36b486169050595296b758b41b3bfc7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/woodwinds/bassoon/PSBassoon_G#3_v1_1.wav",
-          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_G#3_v1_1.wav",
-          "bytes": 1405324,
-          "status": "skipped",
-          "sourceBlobSha": "9d5e0ac1c1fafd0b650e249a3fc799b9685b4d38",
-          "localBlobSha": "9d5e0ac1c1fafd0b650e249a3fc799b9685b4d38",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_F1_v1_1.wav",
@@ -2502,8 +2475,26 @@
           "bytes": 1751604,
           "status": "skipped",
           "sourceBlobSha": "ef632d2b0dc9970afb62c5945413d4da628883fb",
-          "localBlobSha": "ef632d2b0dc9970afb62c5945413d4da628883fb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_F1_v2_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_F1_v2_1.wav",
+          "bytes": 1418740,
+          "status": "skipped",
+          "sourceBlobSha": "6b6c81a47d6e77853dd711a471e97ee631ae7f78",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_G#3_v1_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_G#3_v1_1.wav",
+          "bytes": 1405324,
+          "status": "skipped",
+          "sourceBlobSha": "9d5e0ac1c1fafd0b650e249a3fc799b9685b4d38",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_G#3_v2_1.wav",
@@ -2511,8 +2502,17 @@
           "bytes": 1271796,
           "status": "skipped",
           "sourceBlobSha": "c88e1744e0298c353479a08c607fe13469cef2b6",
-          "localBlobSha": "c88e1744e0298c353479a08c607fe13469cef2b6",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/woodwinds/bassoon/PSBassoon_G2_v1_1.wav",
+          "sourcePath": "Woodwinds/Bassoon/sus/PSBassoon_G2_v1_1.wav",
+          "bytes": 1509644,
+          "status": "skipped",
+          "sourceBlobSha": "1802d35ea36b486169050595296b758b41b3bfc7",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/woodwinds/bassoon/PSBassoon_G2_v2_1.wav",
@@ -2520,8 +2520,8 @@
           "bytes": 1273248,
           "status": "skipped",
           "sourceBlobSha": "95a39a3c70c033e7167792f0e9d7f592a252044f",
-          "localBlobSha": "95a39a3c70c033e7167792f0e9d7f592a252044f",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -2539,13 +2539,13 @@
       },
       "files": [
         {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A2_v3_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_A2_v3_rr1.wav",
-          "bytes": 1041256,
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A#3_v1_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_A#3_v1_rr1.wav",
+          "bytes": 3398084,
           "status": "skipped",
-          "sourceBlobSha": "85310d01faf50dbd83ed4a65ac7bed50d97904e1",
-          "localBlobSha": "85310d01faf50dbd83ed4a65ac7bed50d97904e1",
-          "integrity": "verified"
+          "sourceBlobSha": "685f2d59ac73190c90384112d889083bc37a33c0",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A#3_v3_rr1.wav",
@@ -2553,8 +2553,8 @@
           "bytes": 1667240,
           "status": "skipped",
           "sourceBlobSha": "f6b2753da2ae19e4748a91b0ed412decf3973fda",
-          "localBlobSha": "f6b2753da2ae19e4748a91b0ed412decf3973fda",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A2_v1_rr1.wav",
@@ -2562,8 +2562,17 @@
           "bytes": 2100400,
           "status": "skipped",
           "sourceBlobSha": "59f4b5eadb7907b9656c5251869efa435a485c15",
-          "localBlobSha": "59f4b5eadb7907b9656c5251869efa435a485c15",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A2_v3_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_A2_v3_rr1.wav",
+          "bytes": 1041256,
+          "status": "skipped",
+          "sourceBlobSha": "85310d01faf50dbd83ed4a65ac7bed50d97904e1",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A4_v1_rr1.wav",
@@ -2571,8 +2580,8 @@
           "bytes": 2528080,
           "status": "skipped",
           "sourceBlobSha": "544285c24f712f098254f0f4677cb96e9c272081",
-          "localBlobSha": "544285c24f712f098254f0f4677cb96e9c272081",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A4_v3_rr1.wav",
@@ -2580,26 +2589,8 @@
           "bytes": 1730412,
           "status": "skipped",
           "sourceBlobSha": "bbdc0773c636c611b953ed1383f8cf1eb6b53b38",
-          "localBlobSha": "bbdc0773c636c611b953ed1383f8cf1eb6b53b38",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_A#3_v1_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_A#3_v1_rr1.wav",
-          "bytes": 3398084,
-          "status": "skipped",
-          "sourceBlobSha": "685f2d59ac73190c90384112d889083bc37a33c0",
-          "localBlobSha": "685f2d59ac73190c90384112d889083bc37a33c0",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_C3_v1_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_C3_v1_rr1.wav",
-          "bytes": 2677040,
-          "status": "skipped",
-          "sourceBlobSha": "efc0c148e06d6cf1b2c5e65efc568635e4fac38f",
-          "localBlobSha": "efc0c148e06d6cf1b2c5e65efc568635e4fac38f",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_C3_v3_rr1.wav",
@@ -2607,17 +2598,17 @@
           "bytes": 1234136,
           "status": "skipped",
           "sourceBlobSha": "d5490467cf68db010843924b975fd71edfc41273",
-          "localBlobSha": "d5490467cf68db010843924b975fd71edfc41273",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_C5_v3_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_C5_v3_rr1.wav",
-          "bytes": 1339832,
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_C3_v1_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_C3_v1_rr1.wav",
+          "bytes": 2677040,
           "status": "skipped",
-          "sourceBlobSha": "9e43868b7c7e47a8ee107c68c6072756ef0f6bc1",
-          "localBlobSha": "9e43868b7c7e47a8ee107c68c6072756ef0f6bc1",
-          "integrity": "verified"
+          "sourceBlobSha": "efc0c148e06d6cf1b2c5e65efc568635e4fac38f",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_C5_v1_rr1.wav",
@@ -2625,26 +2616,17 @@
           "bytes": 2568220,
           "status": "skipped",
           "sourceBlobSha": "bff7f04cb34938be10dca3793e3bdae722f88aa2",
-          "localBlobSha": "bff7f04cb34938be10dca3793e3bdae722f88aa2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_D#3_v3_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_D#3_v3_rr1.wav",
-          "bytes": 1654796,
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_C5_v3_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_C5_v3_rr1.wav",
+          "bytes": 1339832,
           "status": "skipped",
-          "sourceBlobSha": "0b2c29a0d8744377dd839065be025a47b7bde77e",
-          "localBlobSha": "0b2c29a0d8744377dd839065be025a47b7bde77e",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_D4_v3_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_D4_v3_rr1.wav",
-          "bytes": 1422408,
-          "status": "skipped",
-          "sourceBlobSha": "815560ece9f2e8d0ad6a33ba24a014345ea59814",
-          "localBlobSha": "815560ece9f2e8d0ad6a33ba24a014345ea59814",
-          "integrity": "verified"
+          "sourceBlobSha": "9e43868b7c7e47a8ee107c68c6072756ef0f6bc1",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_D#3_v1_rr1.wav",
@@ -2652,17 +2634,17 @@
           "bytes": 2757848,
           "status": "skipped",
           "sourceBlobSha": "939984455c785033eaef8d951bb3888666ce29cb",
-          "localBlobSha": "939984455c785033eaef8d951bb3888666ce29cb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_F2_v3_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_F2_v3_rr1.wav",
-          "bytes": 980856,
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_D#3_v3_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_D#3_v3_rr1.wav",
+          "bytes": 1654796,
           "status": "skipped",
-          "sourceBlobSha": "ee1895af491c7c332439dae630de17e1a83a4abd",
-          "localBlobSha": "ee1895af491c7c332439dae630de17e1a83a4abd",
-          "integrity": "verified"
+          "sourceBlobSha": "0b2c29a0d8744377dd839065be025a47b7bde77e",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_D4_v1_rr1.wav",
@@ -2670,8 +2652,17 @@
           "bytes": 2878200,
           "status": "skipped",
           "sourceBlobSha": "5270a6927aa41b90f804df59b9888449aa01a2bb",
-          "localBlobSha": "5270a6927aa41b90f804df59b9888449aa01a2bb",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_D4_v3_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_D4_v3_rr1.wav",
+          "bytes": 1422408,
+          "status": "skipped",
+          "sourceBlobSha": "815560ece9f2e8d0ad6a33ba24a014345ea59814",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_F2_v1_rr1.wav",
@@ -2679,17 +2670,17 @@
           "bytes": 2204420,
           "status": "skipped",
           "sourceBlobSha": "31229c3ab9801808ee11cd278d11247b1c2ef9aa",
-          "localBlobSha": "31229c3ab9801808ee11cd278d11247b1c2ef9aa",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_F4_v3_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_F4_v3_rr1.wav",
-          "bytes": 1269372,
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_F2_v3_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_F2_v3_rr1.wav",
+          "bytes": 980856,
           "status": "skipped",
-          "sourceBlobSha": "cb508c5bf2e3c21dc3441194499fc6d0e7344f4b",
-          "localBlobSha": "cb508c5bf2e3c21dc3441194499fc6d0e7344f4b",
-          "integrity": "verified"
+          "sourceBlobSha": "ee1895af491c7c332439dae630de17e1a83a4abd",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_F4_v1_rr1.wav",
@@ -2697,17 +2688,17 @@
           "bytes": 2442252,
           "status": "skipped",
           "sourceBlobSha": "c14125cf6f506ed3a5d495fee4130381d050b109",
-          "localBlobSha": "c14125cf6f506ed3a5d495fee4130381d050b109",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_G3_v3_rr1.wav",
-          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_G3_v3_rr1.wav",
-          "bytes": 1638452,
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_F4_v3_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_F4_v3_rr1.wav",
+          "bytes": 1269372,
           "status": "skipped",
-          "sourceBlobSha": "a301819024fe8d1fb8cdf86f9b5d0d8121c8c073",
-          "localBlobSha": "a301819024fe8d1fb8cdf86f9b5d0d8121c8c073",
-          "integrity": "verified"
+          "sourceBlobSha": "cb508c5bf2e3c21dc3441194499fc6d0e7344f4b",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_G3_v1_rr1.wav",
@@ -2715,8 +2706,17 @@
           "bytes": 3010072,
           "status": "skipped",
           "sourceBlobSha": "129e67aa9df78209517b461e38d8d1176a0e2861",
-          "localBlobSha": "129e67aa9df78209517b461e38d8d1176a0e2861",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trumpet/Sum_SHTrumpet_sus_G3_v3_rr1.wav",
+          "sourcePath": "Brass/Trumpet/sus/Sum_SHTrumpet_sus_G3_v3_rr1.wav",
+          "bytes": 1638452,
+          "status": "skipped",
+          "sourceBlobSha": "a301819024fe8d1fb8cdf86f9b5d0d8121c8c073",
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -2734,49 +2734,22 @@
       },
       "files": [
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_A#0_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_A#0_v2_1.wav",
-          "bytes": 735596,
-          "status": "skipped",
-          "sourceBlobSha": "e81b27ce12cc7921533136f7c822ad66bde17b48",
-          "localBlobSha": "e81b27ce12cc7921533136f7c822ad66bde17b48",
-          "integrity": "verified"
-        },
-        {
           "path": "starter-pack/brass/trombone/tenortbn_sus_A#0_v1_1.wav",
           "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_A#0_v1_1.wav",
           "bytes": 847440,
           "status": "skipped",
           "sourceBlobSha": "adf430c94439820bb8876f7208b8f1756eb101c4",
-          "localBlobSha": "adf430c94439820bb8876f7208b8f1756eb101c4",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_A#1_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_A#1_v3_1.wav",
-          "bytes": 930872,
+          "path": "starter-pack/brass/trombone/tenortbn_sus_A#0_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_A#0_v2_1.wav",
+          "bytes": 735596,
           "status": "skipped",
-          "sourceBlobSha": "52f58161c3944d30fb5598144697650b29224947",
-          "localBlobSha": "52f58161c3944d30fb5598144697650b29224947",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_C#1_v1_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C#1_v1_1.wav",
-          "bytes": 1313124,
-          "status": "skipped",
-          "sourceBlobSha": "ecf7830fd218e877e6c761ba755e57c3cad81ac5",
-          "localBlobSha": "ecf7830fd218e877e6c761ba755e57c3cad81ac5",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_A#1_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_A#1_v2_1.wav",
-          "bytes": 1658240,
-          "status": "skipped",
-          "sourceBlobSha": "bfed422b95827132a8cd27cdf5f6bc3073dbc293",
-          "localBlobSha": "bfed422b95827132a8cd27cdf5f6bc3073dbc293",
-          "integrity": "verified"
+          "sourceBlobSha": "e81b27ce12cc7921533136f7c822ad66bde17b48",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_A#1_v1_1.wav",
@@ -2784,8 +2757,35 @@
           "bytes": 3153736,
           "status": "skipped",
           "sourceBlobSha": "bebc48d3e9e0a15c375bfb331d8c0034d2bf3d52",
-          "localBlobSha": "bebc48d3e9e0a15c375bfb331d8c0034d2bf3d52",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_A#1_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_A#1_v2_1.wav",
+          "bytes": 1658240,
+          "status": "skipped",
+          "sourceBlobSha": "bfed422b95827132a8cd27cdf5f6bc3073dbc293",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_A#1_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_A#1_v3_1.wav",
+          "bytes": 930872,
+          "status": "skipped",
+          "sourceBlobSha": "52f58161c3944d30fb5598144697650b29224947",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_C#1_v1_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C#1_v1_1.wav",
+          "bytes": 1313124,
+          "status": "skipped",
+          "sourceBlobSha": "ecf7830fd218e877e6c761ba755e57c3cad81ac5",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_C#1_v2_1.wav",
@@ -2793,26 +2793,8 @@
           "bytes": 790124,
           "status": "skipped",
           "sourceBlobSha": "232b246c39891a738c246a41685a2ed5a7c7470d",
-          "localBlobSha": "232b246c39891a738c246a41685a2ed5a7c7470d",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_C#3_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C#3_v3_1.wav",
-          "bytes": 1373392,
-          "status": "skipped",
-          "sourceBlobSha": "dfb869ad2e91b4fca51c017c7517c1bbf9958ce6",
-          "localBlobSha": "dfb869ad2e91b4fca51c017c7517c1bbf9958ce6",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_C#3_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C#3_v2_1.wav",
-          "bytes": 1899776,
-          "status": "skipped",
-          "sourceBlobSha": "8e546c8995c15c63c856099030ae45c5abbc8924",
-          "localBlobSha": "8e546c8995c15c63c856099030ae45c5abbc8924",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_C#3_v1_1.wav",
@@ -2820,44 +2802,26 @@
           "bytes": 3507148,
           "status": "skipped",
           "sourceBlobSha": "4388462bb1234613e754ad798404cc6b3e0fa792",
-          "localBlobSha": "4388462bb1234613e754ad798404cc6b3e0fa792",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_C3_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C3_v3_1.wav",
-          "bytes": 1351140,
+          "path": "starter-pack/brass/trombone/tenortbn_sus_C#3_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C#3_v2_1.wav",
+          "bytes": 1899776,
           "status": "skipped",
-          "sourceBlobSha": "a91b32be153b69d65c46f5be1e38310c70353661",
-          "localBlobSha": "a91b32be153b69d65c46f5be1e38310c70353661",
-          "integrity": "verified"
+          "sourceBlobSha": "8e546c8995c15c63c856099030ae45c5abbc8924",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_C3_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C3_v2_1.wav",
-          "bytes": 1612016,
+          "path": "starter-pack/brass/trombone/tenortbn_sus_C#3_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C#3_v3_1.wav",
+          "bytes": 1373392,
           "status": "skipped",
-          "sourceBlobSha": "dbb030c2fdcfddf56ec0cbd1cc9cc2c03eb3aa33",
-          "localBlobSha": "dbb030c2fdcfddf56ec0cbd1cc9cc2c03eb3aa33",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_D#1_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#1_v2_1.wav",
-          "bytes": 1166532,
-          "status": "skipped",
-          "sourceBlobSha": "1ed2a84fb7bb34ab7cb80dd9e60adedf3e544a2b",
-          "localBlobSha": "1ed2a84fb7bb34ab7cb80dd9e60adedf3e544a2b",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_D#1_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#1_v3_1.wav",
-          "bytes": 881860,
-          "status": "skipped",
-          "sourceBlobSha": "f40c52cd3f82d755429815e79e1541554ea5b48d",
-          "localBlobSha": "f40c52cd3f82d755429815e79e1541554ea5b48d",
-          "integrity": "verified"
+          "sourceBlobSha": "dfb869ad2e91b4fca51c017c7517c1bbf9958ce6",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_C3_v1_1.wav",
@@ -2865,8 +2829,26 @@
           "bytes": 3920128,
           "status": "skipped",
           "sourceBlobSha": "b61096af88a303b6acc983e8a6aa22c83f3a8233",
-          "localBlobSha": "b61096af88a303b6acc983e8a6aa22c83f3a8233",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_C3_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C3_v2_1.wav",
+          "bytes": 1612016,
+          "status": "skipped",
+          "sourceBlobSha": "dbb030c2fdcfddf56ec0cbd1cc9cc2c03eb3aa33",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_C3_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_C3_v3_1.wav",
+          "bytes": 1351140,
+          "status": "skipped",
+          "sourceBlobSha": "a91b32be153b69d65c46f5be1e38310c70353661",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_D#1_v1_1.wav",
@@ -2874,53 +2856,26 @@
           "bytes": 2080020,
           "status": "skipped",
           "sourceBlobSha": "3ada83e7586270bb31bd388a0c8236adcc4aa5a4",
-          "localBlobSha": "3ada83e7586270bb31bd388a0c8236adcc4aa5a4",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_D#3_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#3_v3_1.wav",
-          "bytes": 1239208,
+          "path": "starter-pack/brass/trombone/tenortbn_sus_D#1_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#1_v2_1.wav",
+          "bytes": 1166532,
           "status": "skipped",
-          "sourceBlobSha": "cb97ac413666687d63624c704e832b4196e0ddd6",
-          "localBlobSha": "cb97ac413666687d63624c704e832b4196e0ddd6",
-          "integrity": "verified"
+          "sourceBlobSha": "1ed2a84fb7bb34ab7cb80dd9e60adedf3e544a2b",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_D#3_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#3_v2_1.wav",
-          "bytes": 2429760,
+          "path": "starter-pack/brass/trombone/tenortbn_sus_D#1_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#1_v3_1.wav",
+          "bytes": 881860,
           "status": "skipped",
-          "sourceBlobSha": "f328088a8745a2c01d1d39c78db9a65599f86bca",
-          "localBlobSha": "f328088a8745a2c01d1d39c78db9a65599f86bca",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_D2_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D2_v3_1.wav",
-          "bytes": 1162132,
-          "status": "skipped",
-          "sourceBlobSha": "eef36ce79c6497eacde16aca18edbfbd0418e837",
-          "localBlobSha": "eef36ce79c6497eacde16aca18edbfbd0418e837",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_D2_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D2_v2_1.wav",
-          "bytes": 1733144,
-          "status": "skipped",
-          "sourceBlobSha": "879dbfba0ad741de2c7b34688ce7a6c763b54da2",
-          "localBlobSha": "879dbfba0ad741de2c7b34688ce7a6c763b54da2",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_D2_v1_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D2_v1_1.wav",
-          "bytes": 2733168,
-          "status": "skipped",
-          "sourceBlobSha": "2721e50862bd57ada8245162917fc048e03b061a",
-          "localBlobSha": "2721e50862bd57ada8245162917fc048e03b061a",
-          "integrity": "verified"
+          "sourceBlobSha": "f40c52cd3f82d755429815e79e1541554ea5b48d",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_D#3_v1_1.wav",
@@ -2928,17 +2883,53 @@
           "bytes": 4283492,
           "status": "skipped",
           "sourceBlobSha": "a40cbae87dab599f03cce9319cfcdac5b90293d7",
-          "localBlobSha": "a40cbae87dab599f03cce9319cfcdac5b90293d7",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_F1_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F1_v3_1.wav",
-          "bytes": 1197948,
+          "path": "starter-pack/brass/trombone/tenortbn_sus_D#3_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#3_v2_1.wav",
+          "bytes": 2429760,
           "status": "skipped",
-          "sourceBlobSha": "81a07a374fad649fb6d2589cea8756b0af3fc8f2",
-          "localBlobSha": "81a07a374fad649fb6d2589cea8756b0af3fc8f2",
-          "integrity": "verified"
+          "sourceBlobSha": "f328088a8745a2c01d1d39c78db9a65599f86bca",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_D#3_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D#3_v3_1.wav",
+          "bytes": 1239208,
+          "status": "skipped",
+          "sourceBlobSha": "cb97ac413666687d63624c704e832b4196e0ddd6",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_D2_v1_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D2_v1_1.wav",
+          "bytes": 2733168,
+          "status": "skipped",
+          "sourceBlobSha": "2721e50862bd57ada8245162917fc048e03b061a",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_D2_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D2_v2_1.wav",
+          "bytes": 1733144,
+          "status": "skipped",
+          "sourceBlobSha": "879dbfba0ad741de2c7b34688ce7a6c763b54da2",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_D2_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_D2_v3_1.wav",
+          "bytes": 1162132,
+          "status": "skipped",
+          "sourceBlobSha": "eef36ce79c6497eacde16aca18edbfbd0418e837",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_F1_v1_1.wav",
@@ -2946,8 +2937,8 @@
           "bytes": 2281664,
           "status": "skipped",
           "sourceBlobSha": "c9214a98d0743da8a396db3fdfa3c9cbdd07b5ce",
-          "localBlobSha": "c9214a98d0743da8a396db3fdfa3c9cbdd07b5ce",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_F1_v2_1.wav",
@@ -2955,44 +2946,17 @@
           "bytes": 1400820,
           "status": "skipped",
           "sourceBlobSha": "baabbbd2f72b8e34259cef60bde4b6c2f1fd554c",
-          "localBlobSha": "baabbbd2f72b8e34259cef60bde4b6c2f1fd554c",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_F2_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F2_v3_1.wav",
-          "bytes": 1107668,
+          "path": "starter-pack/brass/trombone/tenortbn_sus_F1_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F1_v3_1.wav",
+          "bytes": 1197948,
           "status": "skipped",
-          "sourceBlobSha": "f6c1025383f62db27083c3cb78d5046d748ada4c",
-          "localBlobSha": "f6c1025383f62db27083c3cb78d5046d748ada4c",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_F2_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F2_v2_1.wav",
-          "bytes": 1752628,
-          "status": "skipped",
-          "sourceBlobSha": "34359f397938e10a675d5906f21cd90392cad15b",
-          "localBlobSha": "34359f397938e10a675d5906f21cd90392cad15b",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_F3_v3_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F3_v3_1.wav",
-          "bytes": 1299872,
-          "status": "skipped",
-          "sourceBlobSha": "c6164474bad88e9d7718358a669ba076d825fff7",
-          "localBlobSha": "c6164474bad88e9d7718358a669ba076d825fff7",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/brass/trombone/tenortbn_sus_F3_v2_1.wav",
-          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F3_v2_1.wav",
-          "bytes": 2127892,
-          "status": "skipped",
-          "sourceBlobSha": "aad935618350cdffb0af783043d3b63e00b6092a",
-          "localBlobSha": "aad935618350cdffb0af783043d3b63e00b6092a",
-          "integrity": "verified"
+          "sourceBlobSha": "81a07a374fad649fb6d2589cea8756b0af3fc8f2",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_F2_v1_1.wav",
@@ -3000,8 +2964,26 @@
           "bytes": 3612792,
           "status": "skipped",
           "sourceBlobSha": "7f98be760c0092deabe3026562d783b6473772bf",
-          "localBlobSha": "7f98be760c0092deabe3026562d783b6473772bf",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_F2_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F2_v2_1.wav",
+          "bytes": 1752628,
+          "status": "skipped",
+          "sourceBlobSha": "34359f397938e10a675d5906f21cd90392cad15b",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_F2_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F2_v3_1.wav",
+          "bytes": 1107668,
+          "status": "skipped",
+          "sourceBlobSha": "f6c1025383f62db27083c3cb78d5046d748ada4c",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/brass/trombone/tenortbn_sus_F3_v1_1.wav",
@@ -3009,8 +2991,26 @@
           "bytes": 4557044,
           "status": "skipped",
           "sourceBlobSha": "4c6cd39dc8a64bf7517308616a6390cce1e190e5",
-          "localBlobSha": "4c6cd39dc8a64bf7517308616a6390cce1e190e5",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_F3_v2_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F3_v2_1.wav",
+          "bytes": 2127892,
+          "status": "skipped",
+          "sourceBlobSha": "aad935618350cdffb0af783043d3b63e00b6092a",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/trombone/tenortbn_sus_F3_v3_1.wav",
+          "sourcePath": "Brass/Tenor Trombone/sus/tenortbn_sus_F3_v3_1.wav",
+          "bytes": 1299872,
+          "status": "skipped",
+          "sourceBlobSha": "c6164474bad88e9d7718358a669ba076d825fff7",
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     },
@@ -3028,49 +3028,13 @@
       },
       "files": [
         {
-          "path": "starter-pack/strings/harp/KSHarp_A6_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_A6_mf.wav",
-          "bytes": 636870,
-          "status": "skipped",
-          "sourceBlobSha": "9fc9959804954e24e6837c426d702031fd2a3b7f",
-          "localBlobSha": "9fc9959804954e24e6837c426d702031fd2a3b7f",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_B5_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_B5_mf.wav",
-          "bytes": 779058,
-          "status": "skipped",
-          "sourceBlobSha": "2d2689e8ca023cd685ed5a29161f3d641f109da9",
-          "localBlobSha": "2d2689e8ca023cd685ed5a29161f3d641f109da9",
-          "integrity": "verified"
-        },
-        {
           "path": "starter-pack/strings/harp/KSHarp_A2_mf.wav",
           "sourcePath": "Strings/Harp/KSHarp_A2_mf.wav",
           "bytes": 2007670,
           "status": "skipped",
           "sourceBlobSha": "265383d75cb23b2882ca297e6c50908e3ec8247a",
-          "localBlobSha": "265383d75cb23b2882ca297e6c50908e3ec8247a",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_B3_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_B3_mf.wav",
-          "bytes": 1981130,
-          "status": "skipped",
-          "sourceBlobSha": "8d06cd55bc871d19f25a2bb1b56c7a567aabbc6b",
-          "localBlobSha": "8d06cd55bc871d19f25a2bb1b56c7a567aabbc6b",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_B6_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_B6_mf.wav",
-          "bytes": 483966,
-          "status": "skipped",
-          "sourceBlobSha": "d350ad472b663c9c239802f10228cd0073cf698d",
-          "localBlobSha": "d350ad472b663c9c239802f10228cd0073cf698d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_A4_mf.wav",
@@ -3078,8 +3042,17 @@
           "bytes": 2143618,
           "status": "skipped",
           "sourceBlobSha": "acbece38a84e886cb5516e0f29d6ff5d38900fe1",
-          "localBlobSha": "acbece38a84e886cb5516e0f29d6ff5d38900fe1",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_A6_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_A6_mf.wav",
+          "bytes": 636870,
+          "status": "skipped",
+          "sourceBlobSha": "9fc9959804954e24e6837c426d702031fd2a3b7f",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_B1_mf.wav",
@@ -3087,17 +3060,35 @@
           "bytes": 2284022,
           "status": "skipped",
           "sourceBlobSha": "bb26292fd8b4d4d7f95703c69667c8f2234eebc8",
-          "localBlobSha": "bb26292fd8b4d4d7f95703c69667c8f2234eebc8",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/harp/KSHarp_D7_f.wav",
-          "sourcePath": "Strings/Harp/KSHarp_D7_f.wav",
-          "bytes": 396134,
+          "path": "starter-pack/strings/harp/KSHarp_B3_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_B3_mf.wav",
+          "bytes": 1981130,
           "status": "skipped",
-          "sourceBlobSha": "096a6d12f2a4e01c952d85100d11030b8ab2fdf9",
-          "localBlobSha": "096a6d12f2a4e01c952d85100d11030b8ab2fdf9",
-          "integrity": "verified"
+          "sourceBlobSha": "8d06cd55bc871d19f25a2bb1b56c7a567aabbc6b",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_B5_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_B5_mf.wav",
+          "bytes": 779058,
+          "status": "skipped",
+          "sourceBlobSha": "2d2689e8ca023cd685ed5a29161f3d641f109da9",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_B6_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_B6_mf.wav",
+          "bytes": 483966,
+          "status": "skipped",
+          "sourceBlobSha": "d350ad472b663c9c239802f10228cd0073cf698d",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_C3_mf.wav",
@@ -3105,17 +3096,8 @@
           "bytes": 1586172,
           "status": "skipped",
           "sourceBlobSha": "20e91e167e86132bb16601f682c90444779d8a23",
-          "localBlobSha": "20e91e167e86132bb16601f682c90444779d8a23",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_D6_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_D6_mf.wav",
-          "bytes": 687750,
-          "status": "skipped",
-          "sourceBlobSha": "f66e88f651740695e4971c3197e6a1d61d6380c1",
-          "localBlobSha": "f66e88f651740695e4971c3197e6a1d61d6380c1",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_C5_mf.wav",
@@ -3123,8 +3105,8 @@
           "bytes": 1237142,
           "status": "skipped",
           "sourceBlobSha": "748b4b1366616972c2a22e81fc48a86178801c45",
-          "localBlobSha": "748b4b1366616972c2a22e81fc48a86178801c45",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_D2_mf.wav",
@@ -3132,8 +3114,8 @@
           "bytes": 1741118,
           "status": "skipped",
           "sourceBlobSha": "2a9d5a18ceb32459a29995a4e68e06c8f78dff5d",
-          "localBlobSha": "2a9d5a18ceb32459a29995a4e68e06c8f78dff5d",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_D4_mf.wav",
@@ -3141,62 +3123,26 @@
           "bytes": 1921690,
           "status": "skipped",
           "sourceBlobSha": "342eec5072e2c0a7fb7cb03b6f5b46d84ed6ac69",
-          "localBlobSha": "342eec5072e2c0a7fb7cb03b6f5b46d84ed6ac69",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/harp/KSHarp_E5_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_E5_mf.wav",
-          "bytes": 1171586,
+          "path": "starter-pack/strings/harp/KSHarp_D6_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_D6_mf.wav",
+          "bytes": 687750,
           "status": "skipped",
-          "sourceBlobSha": "20675907d698db011d0c8bc72cf9af4e7a1ac971",
-          "localBlobSha": "20675907d698db011d0c8bc72cf9af4e7a1ac971",
-          "integrity": "verified"
+          "sourceBlobSha": "f66e88f651740695e4971c3197e6a1d61d6380c1",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
-          "path": "starter-pack/strings/harp/KSHarp_F6_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_F6_mf.wav",
-          "bytes": 413126,
+          "path": "starter-pack/strings/harp/KSHarp_D7_f.wav",
+          "sourcePath": "Strings/Harp/KSHarp_D7_f.wav",
+          "bytes": 396134,
           "status": "skipped",
-          "sourceBlobSha": "5d80932f790a28c088fab5dc2727c01ef2a130fc",
-          "localBlobSha": "5d80932f790a28c088fab5dc2727c01ef2a130fc",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_F4_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_F4_mf.wav",
-          "bytes": 1913498,
-          "status": "skipped",
-          "sourceBlobSha": "a1966639b165b623ac533270d616814cbc5389ef",
-          "localBlobSha": "a1966639b165b623ac533270d616814cbc5389ef",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_E3_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_E3_mf.wav",
-          "bytes": 2461138,
-          "status": "skipped",
-          "sourceBlobSha": "5c6c7410ae0ff7800214931f9db9a7f52db5987e",
-          "localBlobSha": "5c6c7410ae0ff7800214931f9db9a7f52db5987e",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_F7_f.wav",
-          "sourcePath": "Strings/Harp/KSHarp_F7_f.wav",
-          "bytes": 332482,
-          "status": "skipped",
-          "sourceBlobSha": "2451907b2acc4cdf9b371111c760abc9bb866926",
-          "localBlobSha": "2451907b2acc4cdf9b371111c760abc9bb866926",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_F2_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_F2_mf.wav",
-          "bytes": 3086590,
-          "status": "skipped",
-          "sourceBlobSha": "03c3ce65453dc79a0b36805126b57574ff7dc654",
-          "localBlobSha": "03c3ce65453dc79a0b36805126b57574ff7dc654",
-          "integrity": "verified"
+          "sourceBlobSha": "096a6d12f2a4e01c952d85100d11030b8ab2fdf9",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_E1_f.wav",
@@ -3204,8 +3150,62 @@
           "bytes": 4001190,
           "status": "skipped",
           "sourceBlobSha": "483714bd64ecf4947fe70d0ae0da6f2292c958f2",
-          "localBlobSha": "483714bd64ecf4947fe70d0ae0da6f2292c958f2",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_E5_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_E5_mf.wav",
+          "bytes": 1171586,
+          "status": "skipped",
+          "sourceBlobSha": "20675907d698db011d0c8bc72cf9af4e7a1ac971",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_E3_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_E3_mf.wav",
+          "bytes": 2461138,
+          "status": "skipped",
+          "sourceBlobSha": "5c6c7410ae0ff7800214931f9db9a7f52db5987e",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_F2_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_F2_mf.wav",
+          "bytes": 3086590,
+          "status": "skipped",
+          "sourceBlobSha": "03c3ce65453dc79a0b36805126b57574ff7dc654",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_F4_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_F4_mf.wav",
+          "bytes": 1913498,
+          "status": "skipped",
+          "sourceBlobSha": "a1966639b165b623ac533270d616814cbc5389ef",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_F6_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_F6_mf.wav",
+          "bytes": 413126,
+          "status": "skipped",
+          "sourceBlobSha": "5d80932f790a28c088fab5dc2727c01ef2a130fc",
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_F7_f.wav",
+          "sourcePath": "Strings/Harp/KSHarp_F7_f.wav",
+          "bytes": 332482,
+          "status": "skipped",
+          "sourceBlobSha": "2451907b2acc4cdf9b371111c760abc9bb866926",
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_G1_mp.wav",
@@ -3213,17 +3213,8 @@
           "bytes": 1189890,
           "status": "skipped",
           "sourceBlobSha": "b7935d0f8828a40be189f960960d4cb8d3235328",
-          "localBlobSha": "b7935d0f8828a40be189f960960d4cb8d3235328",
-          "integrity": "verified"
-        },
-        {
-          "path": "starter-pack/strings/harp/KSHarp_G5_mf.wav",
-          "sourcePath": "Strings/Harp/KSHarp_G5_mf.wav",
-          "bytes": 1049778,
-          "status": "skipped",
-          "sourceBlobSha": "8e3593345c95368ae9d74591c1046d21de6a8e60",
-          "localBlobSha": "8e3593345c95368ae9d74591c1046d21de6a8e60",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
         },
         {
           "path": "starter-pack/strings/harp/KSHarp_G3_mf.wav",
@@ -3231,8 +3222,17 @@
           "bytes": 1806874,
           "status": "skipped",
           "sourceBlobSha": "a2f7fcc2bce81d039d9c0c529a94159f589f36e1",
-          "localBlobSha": "a2f7fcc2bce81d039d9c0c529a94159f589f36e1",
-          "integrity": "verified"
+          "localBlobSha": null,
+          "integrity": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/harp/KSHarp_G5_mf.wav",
+          "sourcePath": "Strings/Harp/KSHarp_G5_mf.wav",
+          "bytes": 1049778,
+          "status": "skipped",
+          "sourceBlobSha": "8e3593345c95368ae9d74591c1046d21de6a8e60",
+          "localBlobSha": null,
+          "integrity": "skipped"
         }
       ]
     }
