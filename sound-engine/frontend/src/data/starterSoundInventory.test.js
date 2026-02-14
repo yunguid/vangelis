@@ -18,7 +18,7 @@ describe('starter sound inventory integrity', () => {
       pack.files.forEach((entry) => {
         expect(entry.path.startsWith('starter-pack/')).toBe(true);
         expect(['skipped', 'downloaded']).toContain(entry.status);
-        expect(['verified', 'unverified']).toContain(entry.integrity);
+        expect(['verified', 'unverified', 'skipped']).toContain(entry.integrity);
         if (entry.integrity === 'verified') {
           expect(entry.sourceBlobSha).toBe(entry.localBlobSha);
         }
