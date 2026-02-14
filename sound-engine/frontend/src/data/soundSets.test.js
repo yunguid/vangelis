@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getAllSoundSetManifests } from './soundSets.js';
+import { isUsableInstrumentDefinition } from '../utils/instrumentManifestGuards.js';
 
 describe('sound set manifest quality and integrity', () => {
   it('ensures every sample path points to a committed starter-pack file', () => {
@@ -40,5 +41,23 @@ describe('sound set manifest quality and integrity', () => {
         expect(candidates.length).toBeGreaterThan(0);
       });
     });
+  });
+
+  it('ensures every instrument entry passes runtime safety guards', () => {
+    const soundSets = getAllSoundSetManifests();
+    const invalid = [];
+
+    soundSets.forEach((soundSet) => {
+      soundSet.instruments.forEach((instrument) => {
+        if (!isUsableInstrumentDefinition(instrument)) {
+          invalid.push({
+            soundSetId: soundSet.id,
+            instrumentId: instrument.id
+          });
+        }
+      });
+    });
+
+    expect(invalid).toEqual([]);
   });
 });
