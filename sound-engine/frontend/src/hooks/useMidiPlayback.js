@@ -555,8 +555,11 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const resume = useCallback(() => {
     const pb = playbackRef.current;
     if (!pb.midiData || !isPaused) return;
+    const resumeRequestSeq = playRequestSeqRef.current;
 
     audioEngine.ensureAudioContext().then(() => {
+      if (resumeRequestSeq !== playRequestSeqRef.current) return;
+
       const ctx = audioEngine.context;
       const elapsedOriginal = pb.pauseOriginalTime;
       const newStartTime = ctx?.currentTime || 0;

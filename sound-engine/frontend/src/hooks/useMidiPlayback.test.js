@@ -286,4 +286,54 @@ describe('useMidiPlayback layering', () => {
       expect.any(Error)
     );
   });
+
+  it('ignores stale resume request when stop is called before async resume resolves', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.runAllTimers();
+    });
+
+    await act(async () => {
+      result.current.pause();
+    });
+
+    const playCallsBeforeResume = audioEngine.playFrequency.mock.calls.length;
+
+    const resumeDeferred = createDeferred();
+    audioEngine.ensureAudioContext.mockImplementationOnce(() => resumeDeferred.promise);
+
+    await act(async () => {
+      result.current.resume();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      result.current.stop();
+    });
+
+    await act(async () => {
+      resumeDeferred.resolve(audioEngine.context);
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.runAllTimers();
+    });
+
+    expect(result.current.isPlaying).toBe(false);
+    expect(result.current.isPaused).toBe(false);
+    expect(result.current.currentMidi).toBeNull();
+    expect(audioEngine.playFrequency.mock.calls.length).toBe(playCallsBeforeResume);
+  });
 });
