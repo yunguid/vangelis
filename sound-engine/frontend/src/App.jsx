@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
 import Sidebar from './components/Sidebar';
+import MidiBirdsEyeView from './components/MidiBirdsEyeView';
 import { audioEngine } from './utils/audioEngine.js';
 import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM } from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
@@ -21,6 +22,7 @@ const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('midi');
   const [activeSampleId, setActiveSampleId] = useState(null);
+  const [performanceView, setPerformanceView] = useState('keys');
   const fileInputRef = useRef(null);
   const scrollRaf = useRef(null);
   const wasmLoaded = engineStatus.wasmReady;
@@ -80,13 +82,25 @@ const App = () => {
 
   // Handle sample selection from sidebar
   const handleSampleSelect = useCallback(async (sample) => {
-    if (!sample || !sample.audioData) return;
+    if (!sample) return;
 
     setSampleLoading(true);
     try {
-      // Create a File-like object from the stored audio data
-      const blob = new Blob([sample.audioData], { type: sample.mimeType || 'audio/wav' });
-      const file = new File([blob], sample.name + '.wav', { type: sample.mimeType || 'audio/wav' });
+      let blob;
+      if (sample.audioData) {
+        blob = new Blob([sample.audioData], { type: sample.mimeType || 'audio/wav' });
+      } else if (sample.sourceUrl) {
+        const response = await fetch(sample.sourceUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch starter sample: ${response.status}`);
+        }
+        blob = await response.blob();
+      } else {
+        return;
+      }
+
+      const inferredMimeType = sample.mimeType || blob.type || 'audio/wav';
+      const file = new File([blob], sample.name + '.wav', { type: inferredMimeType });
 
       const info = await audioEngine.loadCustomSample(file);
       setSampleInfo({
@@ -224,19 +238,47 @@ const App = () => {
           <WaveCandy />
           <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
             <div className="keyboard-header">
-              <span>Keyboard</span>
+              <div className="keyboard-view-toggle" role="tablist" aria-label="Performance view mode">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={performanceView === 'keys'}
+                  className={`keyboard-view-toggle__btn ${performanceView === 'keys' ? 'keyboard-view-toggle__btn--active' : ''}`}
+                  onClick={() => setPerformanceView('keys')}
+                >
+                  Keys
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={performanceView === 'birdsEye'}
+                  className={`keyboard-view-toggle__btn ${performanceView === 'birdsEye' ? 'keyboard-view-toggle__btn--active' : ''}`}
+                  onClick={() => setPerformanceView('birdsEye')}
+                >
+                  Bird&apos;s-Eye
+                </button>
+              </div>
               <span className="keyboard-legend">
                 {sampleInfo ? `Sample: ${sampleInfo.name}` : `Waveform: ${waveformType}`}
                 {isRecording && <span className="recording-indicator"> [REC]</span>}
               </span>
             </div>
             <div className="keyboard-region">
-              <SynthKeyboard
-                waveformType={waveformType}
-                audioParams={audioParams}
-                wasmLoaded={wasmLoaded}
-                externalActiveNotes={midiPlayback.activeNotes}
-              />
+              {performanceView === 'keys' ? (
+                <SynthKeyboard
+                  waveformType={waveformType}
+                  audioParams={audioParams}
+                  wasmLoaded={wasmLoaded}
+                  externalActiveNotes={midiPlayback.activeNotes}
+                />
+              ) : (
+                <MidiBirdsEyeView
+                  currentMidi={midiPlayback.currentMidi}
+                  progress={midiPlayback.progress}
+                  activeNotes={midiPlayback.activeNotes}
+                  isPlaying={midiPlayback.isPlaying}
+                />
+              )}
               {!isGraphWarm && (
                 <div className="warmup-indicator" aria-live="polite">
                   <span className="warmup-indicator__pulse" aria-hidden="true" />
@@ -244,8 +286,17 @@ const App = () => {
                 </div>
               )}
               <div className="keyboard-hints">
-                <span className="keyboard-hint">Shift + / opens shortcuts </span>
-                <span className="keyboard-hint">Z / X for octave</span>
+                {performanceView === 'keys' ? (
+                  <>
+                    <span className="keyboard-hint">Shift + / opens shortcuts </span>
+                    <span className="keyboard-hint">Z / X for octave</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="keyboard-hint">Bird&apos;s-eye shows incoming MIDI notes</span>
+                    <span className="keyboard-hint">Switch to Keys to play manually</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -325,6 +376,8 @@ const App = () => {
           progress={midiPlayback.progress}
           currentMidi={midiPlayback.currentMidi}
           tempoFactor={midiPlayback.tempoFactor}
+          activeSoundSetName={midiPlayback.activeSoundSetName}
+          layeringMode={midiPlayback.layeringMode}
           onPlay={midiPlayback.play}
           onPause={midiPlayback.pause}
           onResume={midiPlayback.resume}

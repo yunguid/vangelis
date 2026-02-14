@@ -26,7 +26,7 @@ vi.mock('./components/Scene', () => ({
 
 // Mock SynthKeyboard (complex component)
 vi.mock('./components/SynthKeyboard', () => ({
-  default: () => <div data-testid="keyboard-mock">Keyboard</div>,
+  default: () => <div data-testid="keyboard-mock">Synth</div>,
 }));
 
 describe('App', () => {
@@ -42,6 +42,12 @@ describe('App', () => {
   it('renders keyboard section', () => {
     render(<App />);
     expect(screen.getByRole('region', { name: 'Virtual keyboard' })).toBeInTheDocument();
+  });
+
+  it('renders manual performance view toggle', () => {
+    render(<App />);
+    expect(screen.getByRole('tab', { name: 'Keys' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: "Bird's-Eye" })).toBeInTheDocument();
   });
 
   it('shows waveform type', () => {

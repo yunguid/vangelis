@@ -11,6 +11,8 @@ const MidiTab = ({
   progress,
   currentMidi,
   tempoFactor,
+  activeSoundSetName,
+  layeringMode,
   onPlay,
   onPause,
   onResume,
@@ -20,9 +22,15 @@ const MidiTab = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef(null);
 
   const builtInFiles = getBuiltInMidiFiles();
+  const filteredFiles = builtInFiles.filter((file) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return `${file.name} ${file.composer}`.toLowerCase().includes(query);
+  });
 
   const loadMidiWithFallback = useCallback(async (file) => {
     try {
@@ -96,6 +104,8 @@ const MidiTab = ({
           progress={progress}
           currentMidi={currentMidi}
           tempoFactor={tempoFactor}
+          activeSoundSetName={activeSoundSetName}
+          layeringMode={layeringMode}
           onPlay={handlePlayCurrent}
           onPause={onPause}
           onResume={onResume}
@@ -106,8 +116,16 @@ const MidiTab = ({
 
       <div className="midi-tab__section">
         <h3 className="midi-tab__heading">Library</h3>
+        <input
+          type="search"
+          className="midi-tab__search"
+          placeholder="Filter by title or composer"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          aria-label="Filter MIDI library"
+        />
         <ul className="midi-tab__list">
-          {builtInFiles.map((file) => (
+          {filteredFiles.map((file) => (
             <li key={file.id} className="midi-tab__item">
               <button
                 type="button"
@@ -117,10 +135,29 @@ const MidiTab = ({
               >
                 <span className="midi-tab__file-name">{file.name}</span>
                 <span className="midi-tab__file-composer">{file.composer}</span>
+                {(file.soundSetId || (Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0)) && (
+                  <span className="midi-tab__file-tags">
+                    {file.soundSetId && (
+                      <span className="midi-tab__file-tag midi-tab__file-tag--set">
+                        {file.soundSetId}
+                      </span>
+                    )}
+                    {Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0 && (
+                      <span className="midi-tab__file-tag midi-tab__file-tag--layers">
+                        {file.layerFamilies.join(' + ')}
+                      </span>
+                    )}
+                  </span>
+                )}
               </button>
             </li>
           ))}
         </ul>
+        {filteredFiles.length === 0 && (
+          <div className="midi-tab__empty">
+            No matches for “{searchQuery.trim()}”.
+          </div>
+        )}
       </div>
 
       <div className="midi-tab__section">

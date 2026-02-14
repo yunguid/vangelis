@@ -21,6 +21,8 @@ const Sidebar = ({
   progress,
   currentMidi,
   tempoFactor,
+  activeSoundSetName,
+  layeringMode,
   onPlay,
   onPause,
   onResume,
@@ -122,16 +124,24 @@ const Sidebar = ({
         {...(!isOpen && { inert: '' })}
       >
         <div className="sidebar-panel__header">
-          <h2 className="sidebar-panel__title">
-            {activeTab === 'midi' ? 'MIDI' : 'Samples'}
-          </h2>
+          <div className="sidebar-panel__heading-group">
+            <h2 className="sidebar-panel__title">
+              {activeTab === 'midi' ? 'MIDI Studio' : 'Sample Vault'}
+            </h2>
+            <p className="sidebar-panel__subtitle">
+              {activeTab === 'midi'
+                ? (currentMidi?.name || 'Library + transport')
+                : (activeSampleId ? 'Sample armed' : 'Select or import a source')
+              }
+            </p>
+          </div>
           <button
             type="button"
             className="sidebar-panel__close"
             onClick={onClose}
             aria-label="Close sidebar panel"
           >
-            <span aria-hidden="true">x</span>
+            <span aria-hidden="true">×</span>
           </button>
         </div>
         <div className="sidebar-panel__content">
@@ -142,6 +152,8 @@ const Sidebar = ({
               progress={progress}
               currentMidi={currentMidi}
               tempoFactor={tempoFactor}
+              activeSoundSetName={activeSoundSetName}
+              layeringMode={layeringMode}
               onPlay={onPlay}
               onPause={onPause}
               onResume={onResume}

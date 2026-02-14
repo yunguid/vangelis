@@ -5,70 +5,52 @@
 
 import { audioEngine } from './audioEngine.js';
 import { withBase } from './baseUrl.js';
-
-const NOTE_OFFSETS = {
-  C: -9,
-  'C#': -8,
-  D: -7,
-  'D#': -6,
-  E: -5,
-  F: -4,
-  'F#': -3,
-  G: -2,
-  'G#': -1,
-  A: 0,
-  'A#': 1,
-  B: 2
-};
+import { getAllSoundSetManifests, getSoundSetManifest } from '../data/soundSets.js';
+import { noteIdToMidi, pickBestInstrumentCandidate } from './instrumentSelection.js';
+import { isUsableInstrumentDefinition } from './instrumentManifestGuards.js';
 
 const toSamplePath = (relativePath, base = import.meta.env.BASE_URL) =>
   withBase(`samples/${relativePath}`, base);
 
-const BUILT_IN_SOUNDSETS = {
-  'rachmaninoff-orchestral-lite': {
-    id: 'rachmaninoff-orchestral-lite',
-    name: 'Rachmaninoff Concerto No. 2 (Chamber Samples)',
-    layerFamilies: ['piano', 'strings'],
-    instruments: [
-      {
-        id: 'piano',
-        label: 'Piano',
-        families: ['piano'],
-        sampleUrl: toSamplePath('rachmaninoff/piano-c4.wav'),
-        baseNote: 'C4'
-      },
-      {
-        id: 'violin',
-        label: 'Violin',
-        families: ['strings', 'ensemble'],
-        sampleUrl: toSamplePath('rachmaninoff/violin-g3.wav'),
-        baseNote: 'G3',
-        minMidi: 60
-      },
-      {
-        id: 'cello',
-        label: 'Cello',
-        families: ['strings', 'ensemble'],
-        sampleUrl: toSamplePath('rachmaninoff/cello-c2.wav'),
-        baseNote: 'C2',
-        maxMidi: 59
-      }
-    ]
-  }
-};
-
 const soundSetCache = new Map();
+const rejectedInstrumentLog = new Set();
+
+function toInstrumentLogKey(soundSetId, instrumentId, samplePath) {
+  return `${soundSetId || 'unknown-set'}::${instrumentId || 'unknown-instrument'}::${samplePath || 'unknown-path'}`;
+}
+
+function materializeSoundSet(definition, base = import.meta.env.BASE_URL) {
+  if (!definition) return null;
+
+  const soundSetId = definition.id || 'unknown-set';
+  const sanitizedInstruments = (definition.instruments || []).filter((instrument) => {
+    if (isUsableInstrumentDefinition(instrument)) {
+      return true;
+    }
+
+    const logKey = toInstrumentLogKey(soundSetId, instrument.id, instrument.samplePath);
+    if (!rejectedInstrumentLog.has(logKey)) {
+      rejectedInstrumentLog.add(logKey);
+      console.warn(
+        `Ignoring invalid instrument "${instrument.id || 'unknown'}" in sound set "${soundSetId}".`
+      );
+    }
+    return false;
+  });
+
+  return {
+    ...definition,
+    instruments: sanitizedInstruments.map((instrument) => ({
+      ...instrument,
+      sampleUrl: instrument.sampleUrl || (instrument.samplePath ? toSamplePath(instrument.samplePath, base) : null)
+    }))
+  };
+}
 
 function noteIdToFrequency(noteId) {
-  const match = /^([A-G]#?)(-?\d+)$/.exec(noteId);
-  if (!match) return null;
-  const [, name, octaveRaw] = match;
-  const octave = Number.parseInt(octaveRaw, 10);
-  const offset = NOTE_OFFSETS[name];
-  if (Number.isNaN(octave) || offset === undefined) return null;
-
-  const semitoneOffset = (octave - 4) * 12 + offset;
-  return 440 * Math.pow(2, semitoneOffset / 12);
+  const midi = noteIdToMidi(noteId);
+  if (!Number.isFinite(midi)) return null;
+  return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
 function buildInstrumentLookup(instruments) {
@@ -91,17 +73,8 @@ function buildInstrumentLookup(instruments) {
   return { byFamily, byName };
 }
 
-function instrumentMatchesMidiRange(instrument, midiNote) {
-  if (typeof midiNote !== 'number') return true;
-  const aboveMin = instrument.minMidi == null || midiNote >= instrument.minMidi;
-  const belowMax = instrument.maxMidi == null || midiNote <= instrument.maxMidi;
-  return aboveMin && belowMax;
-}
-
 function pickFromCandidates(candidates, note) {
-  if (!candidates?.length) return null;
-  const ranged = candidates.find((instrument) => instrumentMatchesMidiRange(instrument, note?.midi));
-  return ranged || candidates[0] || null;
+  return pickBestInstrumentCandidate(candidates, note?.midi);
 }
 
 function pickInstrumentForNote(lookup, note = {}) {
@@ -145,18 +118,25 @@ function pickInstrumentsForNote(lookup, note = {}, layerFamilies = []) {
 }
 
 async function loadInstrumentBuffer(ctx, instrument) {
+  if (!instrument.sampleUrl) {
+    throw new Error(`Missing sample URL for instrument "${instrument.id || instrument.label || 'unknown'}"`);
+  }
   const response = await fetch(instrument.sampleUrl);
   if (!response.ok) {
     throw new Error(`Failed to load sample ${instrument.sampleUrl}`);
   }
   const arrayBuffer = await response.arrayBuffer();
   const buffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+  const baseMidi = Number.isFinite(instrument.baseMidi)
+    ? instrument.baseMidi
+    : noteIdToMidi(instrument.baseNote || 'C4');
   const baseFrequency = instrument.baseFrequency || noteIdToFrequency(instrument.baseNote || 'C4');
 
   return {
     ...instrument,
     buffer,
-    baseFrequency
+    baseFrequency,
+    baseMidi
   };
 }
 
@@ -165,7 +145,15 @@ async function loadInstrumentBuffer(ctx, instrument) {
  * @param {string} id
  */
 export function getBuiltInSoundSet(id) {
-  return BUILT_IN_SOUNDSETS[id] || null;
+  return materializeSoundSet(getSoundSetManifest(id));
+}
+
+/**
+ * List all built-in sound set definitions (without decoded buffers).
+ * @returns {Array}
+ */
+export function listBuiltInSoundSets() {
+  return getAllSoundSetManifests().map((entry) => materializeSoundSet(entry)).filter(Boolean);
 }
 
 /**
@@ -177,12 +165,18 @@ export async function ensureSoundSetLoaded(id) {
   if (!id) return null;
   if (soundSetCache.has(id)) return soundSetCache.get(id);
 
-  const soundSet = BUILT_IN_SOUNDSETS[id];
+  const soundSet = materializeSoundSet(getSoundSetManifest(id));
   if (!soundSet) return null;
 
   const ctx = await audioEngine.ensureAudioContext();
+  const instrumentsWithUrls = (soundSet.instruments || []).filter((instrument) => Boolean(instrument.sampleUrl));
+  if (instrumentsWithUrls.length === 0) {
+    soundSetCache.set(id, null);
+    return null;
+  }
+
   const settledInstruments = await Promise.allSettled(
-    soundSet.instruments.map((instrument) => loadInstrumentBuffer(ctx, instrument))
+    instrumentsWithUrls.map((instrument) => loadInstrumentBuffer(ctx, instrument))
   );
   const loadedInstruments = settledInstruments
     .filter((result) => result.status === 'fulfilled')

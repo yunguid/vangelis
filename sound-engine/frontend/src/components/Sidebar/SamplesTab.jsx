@@ -1,13 +1,97 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  getAllSamples,
   getSamplesByCategory,
   getSample,
   storeSample,
-  deleteSample,
   deleteCategory,
   getStorageStats
 } from '../../utils/sampleStorage.js';
+import { getAllSoundSetManifests } from '../../data/soundSets.js';
+import { withBase } from '../../utils/baseUrl.js';
+
+const STARTER_FAMILY_ORDER = ['piano', 'strings', 'brass', 'reed', 'chromatic percussion'];
+
+const createDecoderContext = () => {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) {
+    throw new Error('Web Audio API is not available');
+  }
+  return new AudioContextCtor();
+};
+
+const closeDecoderContext = async (ctx) => {
+  if (!ctx || typeof ctx.close !== 'function') return;
+  try {
+    await ctx.close();
+  } catch {
+    // Ignore close errors from already-closed contexts.
+  }
+};
+
+const buildStarterCatalog = () => {
+  const manifests = getAllSoundSetManifests();
+  const uniqueByPath = new Map();
+
+  manifests.forEach((soundSet) => {
+    (soundSet.instruments || []).forEach((instrument) => {
+      if (!instrument.samplePath) return;
+      if (uniqueByPath.has(instrument.samplePath)) return;
+
+      const family = (instrument.families || [])[0] || 'other';
+      uniqueByPath.set(instrument.samplePath, {
+        id: `starter-${soundSet.id}-${instrument.id}`,
+        name: instrument.label || instrument.id,
+        family,
+        sourceUrl: withBase(`samples/${instrument.samplePath}`),
+        mimeType: 'audio/wav'
+      });
+    });
+  });
+
+  const items = [...uniqueByPath.values()];
+  items.sort((a, b) => {
+    const familyRankA = STARTER_FAMILY_ORDER.indexOf(a.family);
+    const familyRankB = STARTER_FAMILY_ORDER.indexOf(b.family);
+    const normalizedRankA = familyRankA === -1 ? 999 : familyRankA;
+    const normalizedRankB = familyRankB === -1 ? 999 : familyRankB;
+    if (normalizedRankA !== normalizedRankB) return normalizedRankA - normalizedRankB;
+    return a.name.localeCompare(b.name);
+  });
+
+  return items;
+};
+
+const selectFeaturedStarterItems = (items, maxTotal = 16, maxPerFamily = 4) => {
+  const grouped = new Map();
+  items.forEach((item) => {
+    if (!grouped.has(item.family)) {
+      grouped.set(item.family, []);
+    }
+    grouped.get(item.family).push(item);
+  });
+
+  const featured = [];
+  const consumeFamily = (family) => {
+    const familyItems = grouped.get(family) || [];
+    for (let i = 0; i < familyItems.length && i < maxPerFamily && featured.length < maxTotal; i += 1) {
+      featured.push(familyItems[i]);
+    }
+    grouped.delete(family);
+  };
+
+  STARTER_FAMILY_ORDER.forEach(consumeFamily);
+
+  if (featured.length < maxTotal) {
+    const leftovers = [...grouped.values()].flat();
+    leftovers.sort((a, b) => a.name.localeCompare(b.name));
+    for (const item of leftovers) {
+      if (featured.length >= maxTotal) break;
+      featured.push(item);
+    }
+  }
+
+  return featured;
+};
 
 /**
  * Samples browser tab - import and browse local samples
@@ -19,8 +103,31 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [importing, setImporting] = useState(false);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
+  const [starterSearchQuery, setStarterSearchQuery] = useState('');
+  const [starterFamilyFilter, setStarterFamilyFilter] = useState('all');
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const starterCatalog = useMemo(() => buildStarterCatalog(), []);
+  const featuredStarterCatalog = useMemo(
+    () => selectFeaturedStarterItems(starterCatalog),
+    [starterCatalog]
+  );
+  const starterFamilies = useMemo(() => {
+    const present = new Set(starterCatalog.map((item) => item.family));
+    const ordered = STARTER_FAMILY_ORDER.filter((family) => present.has(family));
+    const extras = [...present].filter((family) => !STARTER_FAMILY_ORDER.includes(family)).sort((a, b) => a.localeCompare(b));
+    return ['all', ...ordered, ...extras];
+  }, [starterCatalog]);
+  const filteredStarterCatalog = useMemo(() => {
+    const normalizedQuery = starterSearchQuery.trim().toLowerCase();
+    return featuredStarterCatalog.filter((item) => {
+      if (starterFamilyFilter !== 'all' && item.family !== starterFamilyFilter) {
+        return false;
+      }
+      if (!normalizedQuery) return true;
+      return `${item.name} ${item.family}`.toLowerCase().includes(normalizedQuery);
+    });
+  }, [featuredStarterCatalog, starterFamilyFilter, starterSearchQuery]);
 
   // Load samples on mount
   useEffect(() => {
@@ -63,6 +170,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     setImporting(true);
     setError(null);
 
+    let decoderCtx = null;
     try {
       // Filter for audio files
       const audioFiles = files.filter(f =>
@@ -74,6 +182,8 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
         setError('No audio files found in selection');
         return;
       }
+
+      decoderCtx = createDecoderContext();
 
       // Extract category from folder path
       const getCategoryFromPath = (file) => {
@@ -88,19 +198,14 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
 
       // Process files in batches to avoid memory issues
       const batchSize = 5;
-      let processed = 0;
 
       for (let i = 0; i < audioFiles.length; i += batchSize) {
         const batch = audioFiles.slice(i, i + batchSize);
 
-        await Promise.all(batch.map(async (file) => {
+        for (const file of batch) {
           try {
             const arrayBuffer = await file.arrayBuffer();
-
-            // Create audio context to decode and get metadata
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-            audioCtx.close();
+            const audioBuffer = await decoderCtx.decodeAudioData(arrayBuffer.slice(0));
 
             await storeSample({
               name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
@@ -112,12 +217,10 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
               channels: audioBuffer.numberOfChannels,
               sourcePath: file.webkitRelativePath || file.name
             });
-
-            processed++;
           } catch (err) {
             console.warn(`Failed to import ${file.name}:`, err);
           }
-        }));
+        }
       }
 
       // Reload samples list
@@ -132,6 +235,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       setError('Failed to import samples');
     } finally {
       setImporting(false);
+      await closeDecoderContext(decoderCtx);
       if (folderInputRef.current) {
         folderInputRef.current.value = '';
       }
@@ -146,11 +250,11 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     setImporting(true);
     setError(null);
 
+    let decoderCtx = null;
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-      audioCtx.close();
+      decoderCtx = createDecoderContext();
+      const audioBuffer = await decoderCtx.decodeAudioData(arrayBuffer.slice(0));
 
       await storeSample({
         name: file.name.replace(/\.[^/.]+$/, ''),
@@ -170,6 +274,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       setError('Failed to import sample');
     } finally {
       setImporting(false);
+      await closeDecoderContext(decoderCtx);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -189,16 +294,10 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     }
   }, [onSampleSelect]);
 
-  // Handle sample deletion
-  const handleDeleteSample = useCallback(async (e, sampleId) => {
-    e.stopPropagation();
-    try {
-      await deleteSample(sampleId);
-      await loadSamples();
-    } catch (err) {
-      console.error('Failed to delete sample:', err);
-    }
-  }, []);
+  const handleSelectStarterSample = useCallback((starterSample) => {
+    if (!starterSample || !onSampleSelect) return;
+    onSampleSelect(starterSample);
+  }, [onSampleSelect]);
 
   // Handle category deletion
   const handleDeleteCategory = useCallback(async (e, category) => {
@@ -282,6 +381,51 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
         </div>
       )}
 
+      {/* Starter pack quick access */}
+      <div className="samples-tab__section">
+        <h3 className="samples-tab__heading">Starter Pack</h3>
+        <div className="samples-tab__starter-controls">
+          <input
+            type="search"
+            className="samples-tab__starter-search"
+            placeholder="Find starter sample"
+            value={starterSearchQuery}
+            onChange={(event) => setStarterSearchQuery(event.target.value)}
+            aria-label="Filter starter samples"
+          />
+          <div className="samples-tab__starter-families">
+            {starterFamilies.map((family) => (
+              <button
+                key={family}
+                type="button"
+                className={`samples-tab__starter-family-btn ${starterFamilyFilter === family ? 'samples-tab__starter-family-btn--active' : ''}`}
+                onClick={() => setStarterFamilyFilter(family)}
+              >
+                {family}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="samples-tab__starter-grid">
+          {filteredStarterCatalog.map((starterSample) => (
+            <button
+              key={starterSample.id}
+              type="button"
+              className={`samples-tab__starter-btn ${activeSampleId === starterSample.id ? 'samples-tab__starter-btn--active' : ''}`}
+              onClick={() => handleSelectStarterSample(starterSample)}
+            >
+              <span className="samples-tab__starter-name">{starterSample.name}</span>
+              <span className="samples-tab__starter-family">{starterSample.family}</span>
+            </button>
+          ))}
+        </div>
+        {filteredStarterCatalog.length === 0 && (
+          <div className="samples-tab__starter-empty">
+            No starter samples match this filter.
+          </div>
+        )}
+      </div>
+
       {/* Samples List */}
       <div className="samples-tab__section">
         <h3 className="samples-tab__heading">Library</h3>
@@ -296,33 +440,36 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
           <div className="samples-tab__categories">
             {categories.map(category => (
               <div key={category} className="samples-tab__category">
-                <button
-                  type="button"
-                  className={`samples-tab__category-header ${expandedCategories.has(category) ? 'samples-tab__category-header--expanded' : ''}`}
-                  onClick={() => toggleCategory(category)}
-                >
-                  <svg
-                    className="samples-tab__category-chevron"
-                    viewBox="0 0 24 24"
-                    width="12"
-                    height="12"
-                    fill="currentColor"
+                <div className="samples-tab__category-row">
+                  <button
+                    type="button"
+                    className={`samples-tab__category-header ${expandedCategories.has(category) ? 'samples-tab__category-header--expanded' : ''}`}
+                    onClick={() => toggleCategory(category)}
                   >
-                    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
-                  </svg>
-                  <span className="samples-tab__category-name">{category}</span>
-                  <span className="samples-tab__category-count">{samples[category].length}</span>
+                    <svg
+                      className="samples-tab__category-chevron"
+                      viewBox="0 0 24 24"
+                      width="12"
+                      height="12"
+                      fill="currentColor"
+                    >
+                      <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                    </svg>
+                    <span className="samples-tab__category-name">{category}</span>
+                    <span className="samples-tab__category-count">{samples[category].length}</span>
+                  </button>
                   <button
                     type="button"
                     className="samples-tab__category-delete"
                     onClick={(e) => handleDeleteCategory(e, category)}
-                    title="Delete category"
+                    title={`Delete ${category} category`}
+                    aria-label={`Delete ${category} category`}
                   >
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
                       <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                     </svg>
                   </button>
-                </button>
+                </div>
 
                 {expandedCategories.has(category) && (
                   <ul className="samples-tab__list">

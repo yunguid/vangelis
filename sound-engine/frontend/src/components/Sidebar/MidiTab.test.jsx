@@ -47,6 +47,9 @@ describe('MidiTab', () => {
     const onPlay = vi.fn();
     render(<MidiTab {...defaultProps({ onPlay })} />);
 
+    expect(screen.getByText('rachmaninoff-orchestral-lite')).toBeInTheDocument();
+    expect(screen.getByText('piano + strings')).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole('button', { name: /piano concerto no\. 2 - i\. moderato/i }));
 
     await waitFor(() => {
