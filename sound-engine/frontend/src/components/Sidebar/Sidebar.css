@@ -640,6 +640,13 @@
   flex-direction: column;
 }
 
+.samples-tab__category-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
 .samples-tab__category-header {
   display: flex;
   align-items: center;
@@ -688,6 +695,11 @@
 
 .samples-tab__category-delete {
   opacity: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px;
   background: transparent;
   border: none;
@@ -697,7 +709,7 @@
   transition: all 100ms ease;
 }
 
-.samples-tab__category-header:hover .samples-tab__category-delete {
+.samples-tab__category-row:hover .samples-tab__category-delete {
   opacity: 1;
 }
 
