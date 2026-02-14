@@ -56,6 +56,14 @@ describe('starter_sound_sync_utils', () => {
     });
     expect(() => validateStarterSoundManifest(caseVariantTarget)).toThrow(/targetDir duplicates existing targetDir/i);
 
+    const slashVariantTarget = structuredClone(validManifest);
+    slashVariantTarget.packs.push({
+      ...slashVariantTarget.packs[0],
+      id: 'other-pack',
+      targetDir: 'starter-pack//strings/violin/'
+    });
+    expect(() => validateStarterSoundManifest(slashVariantTarget)).toThrow(/targetDir duplicates existing targetDir/i);
+
     const unsafe = structuredClone(validManifest);
     unsafe.packs[0].targetDir = '../outside';
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
@@ -92,6 +100,17 @@ describe('starter_sound_sync_utils', () => {
     });
 
     expect(() => validateStarterSoundManifest(caseVariantSourcePrefix))
+      .toThrow(/overlaps sourcePathPrefix/i);
+
+    const slashVariantSourcePrefix = structuredClone(validManifest);
+    slashVariantSourcePrefix.packs.push({
+      ...slashVariantSourcePrefix.packs[0],
+      id: 'slash-pack',
+      sourcePathPrefix: 'Strings//Violin Section//susVib/',
+      targetDir: 'starter-pack/strings/violin-slash'
+    });
+
+    expect(() => validateStarterSoundManifest(slashVariantSourcePrefix))
       .toThrow(/overlaps sourcePathPrefix/i);
 
     const uniqueSourcePrefix = structuredClone(validManifest);
@@ -180,6 +199,8 @@ describe('starter_sound_sync_utils', () => {
     expect(toPathCollisionKey('starter-pack/Strings/Violin'))
       .toBe(toPathCollisionKey('Starter-Pack/strings/violin'));
     expect(toPathCollisionKey('starter-pack\\Strings\\Violin\\'))
+      .toBe('starter-pack/strings/violin');
+    expect(toPathCollisionKey('starter-pack//Strings///Violin/'))
       .toBe('starter-pack/strings/violin');
   });
 

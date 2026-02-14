@@ -33,6 +33,7 @@ function isSafeRelativePath(value) {
 function normalizeManifestPath(value) {
   return String(value || '')
     .replaceAll('\\', '/')
+    .replace(/\/+/g, '/')
     .replace(/\/+$/g, '');
 }
 
