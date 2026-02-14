@@ -138,9 +138,11 @@ export function validateStarterSoundManifest(value) {
   value.allowlistedDomains.forEach((domain) => {
     assert(typeof domain === 'string' && domain.length > 0, 'Allowlisted domain must be a non-empty string');
     assert(domain.trim() === domain, `Allowlisted domain contains invalid whitespace: "${domain}"`);
-    assert(HOSTNAME_REGEX.test(domain), `Allowlisted domain contains invalid characters: "${domain}"`);
-    assert(!domainSet.has(domain), `Duplicate allowlisted domain "${domain}"`);
-    domainSet.add(domain);
+    const normalizedDomain = domain.toLowerCase();
+    assert(domain === normalizedDomain, `Allowlisted domain must be lowercase: "${domain}"`);
+    assert(HOSTNAME_REGEX.test(normalizedDomain), `Allowlisted domain contains invalid characters: "${domain}"`);
+    assert(!domainSet.has(normalizedDomain), `Duplicate allowlisted domain "${domain}"`);
+    domainSet.add(normalizedDomain);
   });
 
   const ids = new Set();

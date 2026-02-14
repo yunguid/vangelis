@@ -116,6 +116,13 @@ describe('starter_sound_sync_utils', () => {
     expect(() => validateStarterSoundManifest(badRef)).toThrow(/40-char commit SHA/i);
   });
 
+  it('rejects uppercase allowlisted domain entries', () => {
+    const badDomains = structuredClone(validManifest);
+    badDomains.allowlistedDomains = ['Raw.GitHubusercontent.com', 'api.github.com'];
+    expect(() => validateStarterSoundManifest(badDomains))
+      .toThrow(/allowlisted domain must be lowercase/i);
+  });
+
   it('resolves safe output paths and blocks traversal', () => {
     const root = '/tmp/vangelis-samples';
     const safe = resolveSafeOutputPath(root, 'starter-pack/strings', 'violin/sample.wav');
