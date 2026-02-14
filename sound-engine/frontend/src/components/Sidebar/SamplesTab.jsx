@@ -86,6 +86,8 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [importing, setImporting] = useState(false);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
+  const [starterSearchQuery, setStarterSearchQuery] = useState('');
+  const [starterFamilyFilter, setStarterFamilyFilter] = useState('all');
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const starterCatalog = useMemo(() => buildStarterCatalog(), []);
@@ -93,6 +95,22 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     () => selectFeaturedStarterItems(starterCatalog),
     [starterCatalog]
   );
+  const starterFamilies = useMemo(() => {
+    const present = new Set(starterCatalog.map((item) => item.family));
+    const ordered = STARTER_FAMILY_ORDER.filter((family) => present.has(family));
+    const extras = [...present].filter((family) => !STARTER_FAMILY_ORDER.includes(family)).sort((a, b) => a.localeCompare(b));
+    return ['all', ...ordered, ...extras];
+  }, [starterCatalog]);
+  const filteredStarterCatalog = useMemo(() => {
+    const normalizedQuery = starterSearchQuery.trim().toLowerCase();
+    return featuredStarterCatalog.filter((item) => {
+      if (starterFamilyFilter !== 'all' && item.family !== starterFamilyFilter) {
+        return false;
+      }
+      if (!normalizedQuery) return true;
+      return `${item.name} ${item.family}`.toLowerCase().includes(normalizedQuery);
+    });
+  }, [featuredStarterCatalog, starterFamilyFilter, starterSearchQuery]);
 
   // Load samples on mount
   useEffect(() => {
@@ -351,8 +369,30 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       {/* Starter pack quick access */}
       <div className="samples-tab__section">
         <h3 className="samples-tab__heading">Starter Pack</h3>
+        <div className="samples-tab__starter-controls">
+          <input
+            type="search"
+            className="samples-tab__starter-search"
+            placeholder="Find starter sample"
+            value={starterSearchQuery}
+            onChange={(event) => setStarterSearchQuery(event.target.value)}
+            aria-label="Filter starter samples"
+          />
+          <div className="samples-tab__starter-families">
+            {starterFamilies.map((family) => (
+              <button
+                key={family}
+                type="button"
+                className={`samples-tab__starter-family-btn ${starterFamilyFilter === family ? 'samples-tab__starter-family-btn--active' : ''}`}
+                onClick={() => setStarterFamilyFilter(family)}
+              >
+                {family}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="samples-tab__starter-grid">
-          {featuredStarterCatalog.map((starterSample) => (
+          {filteredStarterCatalog.map((starterSample) => (
             <button
               key={starterSample.id}
               type="button"
@@ -364,6 +404,11 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
             </button>
           ))}
         </div>
+        {filteredStarterCatalog.length === 0 && (
+          <div className="samples-tab__starter-empty">
+            No starter samples match this filter.
+          </div>
+        )}
       </div>
 
       {/* Samples List */}

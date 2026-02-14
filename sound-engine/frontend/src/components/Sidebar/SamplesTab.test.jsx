@@ -44,4 +44,20 @@ describe('SamplesTab starter pack integration', () => {
       mimeType: 'audio/wav'
     }));
   });
+
+  it('filters starter quick-access list by family and search', async () => {
+    render(<SamplesTab onSampleSelect={vi.fn()} activeSampleId={null} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/No samples yet/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^reed$/i }));
+    expect(screen.getByRole('button', { name: /Bassoon Low/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /French Horn Low/i })).not.toBeInTheDocument();
+
+    const searchInput = screen.getByLabelText('Filter starter samples');
+    fireEvent.change(searchInput, { target: { value: 'zzz-does-not-exist' } });
+    expect(screen.getByText('No starter samples match this filter.')).toBeInTheDocument();
+  });
 });
