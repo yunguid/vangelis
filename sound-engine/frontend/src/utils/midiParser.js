@@ -114,9 +114,37 @@ function flattenTracks(tracks) {
 export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   const toBuiltInPath = (relativePath) => withBase(`midi/${relativePath}`, base);
   const libraryPlaybackProfiles = {
+    'tchaikovsky-op39-01-morning-prayer': {
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano', 'strings']
+    },
+    'tchaikovsky-op39-05-march-wooden-soldiers': {
+      soundSetId: 'orchestral-extended-starter',
+      layerFamilies: ['strings', 'brass', 'piano']
+    },
+    'tchaikovsky-op39-16-old-french-song': {
+      soundSetId: 'cinematic-starter-pack',
+      layerFamilies: ['piano', 'strings']
+    },
+    'rachmaninoff-op23-04-prelude': {
+      soundSetId: 'cinematic-starter-pack',
+      layerFamilies: ['piano', 'strings', 'brass']
+    },
+    'rachmaninoff-op23-05-prelude': {
+      soundSetId: 'cinematic-starter-pack',
+      layerFamilies: ['piano', 'strings', 'brass']
+    },
     'mussorgsky-night-on-bald-mountain': {
       soundSetId: 'orchestral-extended-starter',
       layerFamilies: ['strings', 'brass', 'reed']
+    },
+    'rimsky-korsakov-op11-07-etude': {
+      soundSetId: 'orchestral-extended-starter',
+      layerFamilies: ['strings', 'reed', 'brass']
+    },
+    'scriabin-op11-13-prelude': {
+      soundSetId: 'cinematic-starter-pack',
+      layerFamilies: ['piano', 'strings']
     },
     'bortniansky-the-angel-cried': {
       soundSetId: 'orchestral-extended-starter',
@@ -125,6 +153,10 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
     'alyabyev-the-nightingale': {
       soundSetId: 'orchestral-extended-starter',
       layerFamilies: ['strings', 'reed', 'piano']
+    },
+    'stanchinsky-prelude-c-minor': {
+      soundSetId: 'cinematic-starter-pack',
+      layerFamilies: ['piano', 'strings']
     }
   };
 

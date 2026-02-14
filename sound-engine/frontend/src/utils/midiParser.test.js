@@ -46,12 +46,20 @@ describe('getBuiltInMidiFiles', () => {
     const files = getBuiltInMidiFiles('/');
     const mussorgsky = files.find((file) => file.id === 'mussorgsky-night-on-bald-mountain');
     const alyabyev = files.find((file) => file.id === 'alyabyev-the-nightingale');
+    const tchaikovskyMarch = files.find((file) => file.id === 'tchaikovsky-op39-05-march-wooden-soldiers');
+    const scriabin = files.find((file) => file.id === 'scriabin-op11-13-prelude');
 
     expect(mussorgsky?.soundSetId).toBe('orchestral-extended-starter');
     expect(mussorgsky?.layerFamilies).toEqual(['strings', 'brass', 'reed']);
 
     expect(alyabyev?.soundSetId).toBe('orchestral-extended-starter');
     expect(alyabyev?.layerFamilies).toEqual(['strings', 'reed', 'piano']);
+
+    expect(tchaikovskyMarch?.soundSetId).toBe('orchestral-extended-starter');
+    expect(tchaikovskyMarch?.layerFamilies).toEqual(['strings', 'brass', 'piano']);
+
+    expect(scriabin?.soundSetId).toBe('cinematic-starter-pack');
+    expect(scriabin?.layerFamilies).toEqual(['piano', 'strings']);
   });
 
   it('maps every built-in entry to a committed midi file', () => {
