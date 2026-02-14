@@ -6,21 +6,7 @@
 import { audioEngine } from './audioEngine.js';
 import { withBase } from './baseUrl.js';
 import { getAllSoundSetManifests, getSoundSetManifest } from '../data/soundSets.js';
-
-const NOTE_OFFSETS = {
-  C: -9,
-  'C#': -8,
-  D: -7,
-  'D#': -6,
-  E: -5,
-  F: -4,
-  'F#': -3,
-  G: -2,
-  'G#': -1,
-  A: 0,
-  'A#': 1,
-  B: 2
-};
+import { noteIdToMidi, pickBestInstrumentCandidate } from './instrumentSelection.js';
 
 const toSamplePath = (relativePath, base = import.meta.env.BASE_URL) =>
   withBase(`samples/${relativePath}`, base);
@@ -40,15 +26,9 @@ function materializeSoundSet(definition, base = import.meta.env.BASE_URL) {
 }
 
 function noteIdToFrequency(noteId) {
-  const match = /^([A-G]#?)(-?\d+)$/.exec(noteId);
-  if (!match) return null;
-  const [, name, octaveRaw] = match;
-  const octave = Number.parseInt(octaveRaw, 10);
-  const offset = NOTE_OFFSETS[name];
-  if (Number.isNaN(octave) || offset === undefined) return null;
-
-  const semitoneOffset = (octave - 4) * 12 + offset;
-  return 440 * Math.pow(2, semitoneOffset / 12);
+  const midi = noteIdToMidi(noteId);
+  if (!Number.isFinite(midi)) return null;
+  return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
 function buildInstrumentLookup(instruments) {
@@ -71,17 +51,8 @@ function buildInstrumentLookup(instruments) {
   return { byFamily, byName };
 }
 
-function instrumentMatchesMidiRange(instrument, midiNote) {
-  if (typeof midiNote !== 'number') return true;
-  const aboveMin = instrument.minMidi == null || midiNote >= instrument.minMidi;
-  const belowMax = instrument.maxMidi == null || midiNote <= instrument.maxMidi;
-  return aboveMin && belowMax;
-}
-
 function pickFromCandidates(candidates, note) {
-  if (!candidates?.length) return null;
-  const ranged = candidates.find((instrument) => instrumentMatchesMidiRange(instrument, note?.midi));
-  return ranged || candidates[0] || null;
+  return pickBestInstrumentCandidate(candidates, note?.midi);
 }
 
 function pickInstrumentForNote(lookup, note = {}) {
@@ -134,12 +105,16 @@ async function loadInstrumentBuffer(ctx, instrument) {
   }
   const arrayBuffer = await response.arrayBuffer();
   const buffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+  const baseMidi = Number.isFinite(instrument.baseMidi)
+    ? instrument.baseMidi
+    : noteIdToMidi(instrument.baseNote || 'C4');
   const baseFrequency = instrument.baseFrequency || noteIdToFrequency(instrument.baseNote || 'C4');
 
   return {
     ...instrument,
     buffer,
-    baseFrequency
+    baseFrequency,
+    baseMidi
   };
 }
 
