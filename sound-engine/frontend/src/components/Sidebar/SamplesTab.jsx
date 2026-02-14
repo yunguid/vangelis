@@ -1,13 +1,48 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  getAllSamples,
   getSamplesByCategory,
   getSample,
   storeSample,
-  deleteSample,
   deleteCategory,
   getStorageStats
 } from '../../utils/sampleStorage.js';
+import { getAllSoundSetManifests } from '../../data/soundSets.js';
+import { withBase } from '../../utils/baseUrl.js';
+
+const STARTER_FAMILY_ORDER = ['piano', 'strings', 'brass', 'reed', 'chromatic percussion'];
+
+const buildStarterCatalog = () => {
+  const manifests = getAllSoundSetManifests();
+  const uniqueByPath = new Map();
+
+  manifests.forEach((soundSet) => {
+    (soundSet.instruments || []).forEach((instrument) => {
+      if (!instrument.samplePath) return;
+      if (uniqueByPath.has(instrument.samplePath)) return;
+
+      const family = (instrument.families || [])[0] || 'other';
+      uniqueByPath.set(instrument.samplePath, {
+        id: `starter-${soundSet.id}-${instrument.id}`,
+        name: instrument.label || instrument.id,
+        family,
+        sourceUrl: withBase(`samples/${instrument.samplePath}`),
+        mimeType: 'audio/wav'
+      });
+    });
+  });
+
+  const items = [...uniqueByPath.values()];
+  items.sort((a, b) => {
+    const familyRankA = STARTER_FAMILY_ORDER.indexOf(a.family);
+    const familyRankB = STARTER_FAMILY_ORDER.indexOf(b.family);
+    const normalizedRankA = familyRankA === -1 ? 999 : familyRankA;
+    const normalizedRankB = familyRankB === -1 ? 999 : familyRankB;
+    if (normalizedRankA !== normalizedRankB) return normalizedRankA - normalizedRankB;
+    return a.name.localeCompare(b.name);
+  });
+
+  return items;
+};
 
 /**
  * Samples browser tab - import and browse local samples
@@ -21,6 +56,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [error, setError] = useState(null);
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const starterCatalog = buildStarterCatalog();
 
   // Load samples on mount
   useEffect(() => {
@@ -189,16 +225,10 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     }
   }, [onSampleSelect]);
 
-  // Handle sample deletion
-  const handleDeleteSample = useCallback(async (e, sampleId) => {
-    e.stopPropagation();
-    try {
-      await deleteSample(sampleId);
-      await loadSamples();
-    } catch (err) {
-      console.error('Failed to delete sample:', err);
-    }
-  }, []);
+  const handleSelectStarterSample = useCallback((starterSample) => {
+    if (!starterSample || !onSampleSelect) return;
+    onSampleSelect(starterSample);
+  }, [onSampleSelect]);
 
   // Handle category deletion
   const handleDeleteCategory = useCallback(async (e, category) => {
@@ -281,6 +311,24 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
           {stats.count} samples ({stats.totalSizeMB} MB)
         </div>
       )}
+
+      {/* Starter pack quick access */}
+      <div className="samples-tab__section">
+        <h3 className="samples-tab__heading">Starter Pack</h3>
+        <div className="samples-tab__starter-grid">
+          {starterCatalog.slice(0, 16).map((starterSample) => (
+            <button
+              key={starterSample.id}
+              type="button"
+              className={`samples-tab__starter-btn ${activeSampleId === starterSample.id ? 'samples-tab__starter-btn--active' : ''}`}
+              onClick={() => handleSelectStarterSample(starterSample)}
+            >
+              <span className="samples-tab__starter-name">{starterSample.name}</span>
+              <span className="samples-tab__starter-family">{starterSample.family}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Samples List */}
       <div className="samples-tab__section">

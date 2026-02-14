@@ -82,13 +82,25 @@ const App = () => {
 
   // Handle sample selection from sidebar
   const handleSampleSelect = useCallback(async (sample) => {
-    if (!sample || !sample.audioData) return;
+    if (!sample) return;
 
     setSampleLoading(true);
     try {
-      // Create a File-like object from the stored audio data
-      const blob = new Blob([sample.audioData], { type: sample.mimeType || 'audio/wav' });
-      const file = new File([blob], sample.name + '.wav', { type: sample.mimeType || 'audio/wav' });
+      let blob;
+      if (sample.audioData) {
+        blob = new Blob([sample.audioData], { type: sample.mimeType || 'audio/wav' });
+      } else if (sample.sourceUrl) {
+        const response = await fetch(sample.sourceUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch starter sample: ${response.status}`);
+        }
+        blob = await response.blob();
+      } else {
+        return;
+      }
+
+      const inferredMimeType = sample.mimeType || blob.type || 'audio/wav';
+      const file = new File([blob], sample.name + '.wav', { type: inferredMimeType });
 
       const info = await audioEngine.loadCustomSample(file);
       setSampleInfo({
