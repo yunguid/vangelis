@@ -28,6 +28,7 @@ describe('starter sound source manifest', () => {
       expect(typeof pack.id).toBe('string');
       expect(typeof pack.repo).toBe('string');
       expect(typeof pack.ref).toBe('string');
+      expect(pack.ref).toMatch(/^[0-9a-f]{40}$/);
       expect(typeof pack.sourcePathPrefix).toBe('string');
       expect(typeof pack.targetDir).toBe('string');
       expect(typeof pack.license).toBe('string');

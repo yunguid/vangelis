@@ -20,6 +20,8 @@ The source manifest is tracked in:
 
 - `src/data/starterSoundSources.json`
 
+Sources are pinned to an upstream commit SHA for deterministic reproducible downloads.
+
 Do **not** add proprietary sample content (e.g. Spitfire LABS assets) to this repo.
 
 ## Sync Script
