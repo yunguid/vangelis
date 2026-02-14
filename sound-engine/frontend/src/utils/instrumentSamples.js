@@ -4,6 +4,7 @@
  */
 
 import { audioEngine } from './audioEngine.js';
+import { withBase } from './baseUrl.js';
 
 const NOTE_OFFSETS = {
   C: -9,
@@ -20,30 +21,27 @@ const NOTE_OFFSETS = {
   B: 2
 };
 
+const toSamplePath = (relativePath, base = import.meta.env.BASE_URL) =>
+  withBase(`samples/${relativePath}`, base);
+
 const BUILT_IN_SOUNDSETS = {
   'rachmaninoff-orchestral-lite': {
     id: 'rachmaninoff-orchestral-lite',
     name: 'Rachmaninoff Concerto No. 2 (Chamber Samples)',
+    layerFamilies: ['piano', 'strings'],
     instruments: [
       {
         id: 'piano',
         label: 'Piano',
         families: ['piano'],
-        sampleUrl: '/samples/rachmaninoff/piano-c4.wav',
+        sampleUrl: toSamplePath('rachmaninoff/piano-c4.wav'),
         baseNote: 'C4'
-      },
-      {
-        id: 'flute',
-        label: 'Flute',
-        families: ['pipe'],
-        sampleUrl: '/samples/rachmaninoff/flute-c5.wav',
-        baseNote: 'C5'
       },
       {
         id: 'violin',
         label: 'Violin',
         families: ['strings', 'ensemble'],
-        sampleUrl: '/samples/rachmaninoff/violin-g3.wav',
+        sampleUrl: toSamplePath('rachmaninoff/violin-g3.wav'),
         baseNote: 'G3',
         minMidi: 60
       },
@@ -51,7 +49,7 @@ const BUILT_IN_SOUNDSETS = {
         id: 'cello',
         label: 'Cello',
         families: ['strings', 'ensemble'],
-        sampleUrl: '/samples/rachmaninoff/cello-c2.wav',
+        sampleUrl: toSamplePath('rachmaninoff/cello-c2.wav'),
         baseNote: 'C2',
         maxMidi: 59
       }
@@ -93,7 +91,20 @@ function buildInstrumentLookup(instruments) {
   return { byFamily, byName };
 }
 
-function pickInstrumentForNote(lookup, note) {
+function instrumentMatchesMidiRange(instrument, midiNote) {
+  if (typeof midiNote !== 'number') return true;
+  const aboveMin = instrument.minMidi == null || midiNote >= instrument.minMidi;
+  const belowMax = instrument.maxMidi == null || midiNote <= instrument.maxMidi;
+  return aboveMin && belowMax;
+}
+
+function pickFromCandidates(candidates, note) {
+  if (!candidates?.length) return null;
+  const ranged = candidates.find((instrument) => instrumentMatchesMidiRange(instrument, note?.midi));
+  return ranged || candidates[0] || null;
+}
+
+function pickInstrumentForNote(lookup, note = {}) {
   if (!lookup) return null;
 
   if (note.instrumentName && lookup.byName.has(note.instrumentName)) {
@@ -101,22 +112,36 @@ function pickInstrumentForNote(lookup, note) {
   }
 
   if (note.instrumentFamily && lookup.byFamily.has(note.instrumentFamily)) {
-    const candidates = lookup.byFamily.get(note.instrumentFamily);
-    if (!candidates?.length) return null;
-
-    if (typeof note.midi === 'number') {
-      const ranged = candidates.find((instrument) => {
-        const aboveMin = instrument.minMidi == null || note.midi >= instrument.minMidi;
-        const belowMax = instrument.maxMidi == null || note.midi <= instrument.maxMidi;
-        return aboveMin && belowMax;
-      });
-      if (ranged) return ranged;
-    }
-
-    return candidates[0];
+    return pickFromCandidates(lookup.byFamily.get(note.instrumentFamily), note);
   }
 
   return null;
+}
+
+function pickInstrumentsForNote(lookup, note = {}, layerFamilies = []) {
+  if (!lookup) return [];
+
+  const layered = [];
+  layerFamilies.forEach((family) => {
+    const candidates = lookup.byFamily.get(family);
+    const picked = pickFromCandidates(candidates, note);
+    if (picked) layered.push(picked);
+  });
+
+  if (layered.length > 0) {
+    // Dedupe instruments while preserving family order.
+    const deduped = [];
+    const seen = new Set();
+    layered.forEach((instrument) => {
+      if (seen.has(instrument.id)) return;
+      seen.add(instrument.id);
+      deduped.push(instrument);
+    });
+    return deduped;
+  }
+
+  const fallback = pickInstrumentForNote(lookup, note);
+  return fallback ? [fallback] : [];
 }
 
 async function loadInstrumentBuffer(ctx, instrument) {
@@ -146,7 +171,7 @@ export function getBuiltInSoundSet(id) {
 /**
  * Load and cache a built-in sound set.
  * @param {string} id
- * @returns {Promise<{id: string, name: string, instruments: Array, pickInstrument: function}>}
+ * @returns {Promise<{id: string, name: string, instruments: Array, layerFamilies: Array<string>, pickInstrument: function, pickInstruments: function}|null>}
  */
 export async function ensureSoundSetLoaded(id) {
   if (!id) return null;
@@ -156,17 +181,31 @@ export async function ensureSoundSetLoaded(id) {
   if (!soundSet) return null;
 
   const ctx = await audioEngine.ensureAudioContext();
-  const loadedInstruments = await Promise.all(
+  const settledInstruments = await Promise.allSettled(
     soundSet.instruments.map((instrument) => loadInstrumentBuffer(ctx, instrument))
   );
+  const loadedInstruments = settledInstruments
+    .filter((result) => result.status === 'fulfilled')
+    .map((result) => result.value);
+
+  if (loadedInstruments.length === 0) {
+    console.warn(`Sound set "${id}" could not load any samples; falling back to synth layers.`);
+    soundSetCache.set(id, null);
+    return null;
+  }
 
   const lookup = buildInstrumentLookup(loadedInstruments);
+  const layerFamilies = Array.isArray(soundSet.layerFamilies)
+    ? soundSet.layerFamilies.filter(Boolean)
+    : [];
 
   const loaded = {
     id: soundSet.id,
     name: soundSet.name,
     instruments: loadedInstruments,
-    pickInstrument: (note) => pickInstrumentForNote(lookup, note)
+    layerFamilies,
+    pickInstrument: (note) => pickInstrumentForNote(lookup, note),
+    pickInstruments: (note) => pickInstrumentsForNote(lookup, note, layerFamilies)
   };
 
   soundSetCache.set(id, loaded);

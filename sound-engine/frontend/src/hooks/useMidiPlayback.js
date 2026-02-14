@@ -7,6 +7,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
+import { ensureSoundSetLoaded } from '../utils/instrumentSamples.js';
 
 /**
  * Map GM instrument families to appropriate waveforms
@@ -30,6 +31,15 @@ const FAMILY_WAVEFORMS = {
   percussive: null,       // Skip or use sample
   'sound effects': null
 };
+
+function toLayerToken(value, fallback = 'layer') {
+  if (typeof value !== 'string') return fallback;
+  const normalized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
 
 /**
  * @typedef {Object} MidiPlaybackOptions
@@ -93,6 +103,9 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const isPausedRef = useRef(false);
   const activeNoteCountsRef = useRef(new Map());
   const activeVoiceIdsRef = useRef(new Set());
+  const scheduledVoiceMapRef = useRef(new Map());
+  const soundSetRef = useRef(null);
+  const layerFamiliesRef = useRef([]);
   const timeoutsRef = useRef([]);
   const rafRef = useRef(null);
   const playbackRef = useRef({
@@ -138,42 +151,109 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     timeoutsRef.current = [];
   }, []);
 
+  const registerActiveVoices = useCallback((noteId, voiceIds) => {
+    if (!Array.isArray(voiceIds) || voiceIds.length === 0) return;
+
+    const counts = activeNoteCountsRef.current;
+    counts.set(noteId, (counts.get(noteId) || 0) + voiceIds.length);
+    voiceIds.forEach((id) => activeVoiceIdsRef.current.add(id));
+    setActiveNotes(new Set(counts.keys()));
+  }, []);
+
   /**
    * Trigger a note on event
    * @param {string} noteId - Unique note identifier (e.g., 'C4')
    * @param {string} voiceId - Internal voice id used by the audio engine
    * @param {number} frequency - Note frequency in Hz
    * @param {number} velocity - Note velocity (0-1)
-   * @param {string} [instrumentFamily] - GM instrument family for waveform selection
+   * @param {Object} [noteMeta] - Note metadata (instrument family/name/channel)
+   * @returns {string[]} Voice ids actually started
    * @private
    */
-  const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, instrumentFamily) => {
+  const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, noteMeta = {}) => {
+    const startedVoiceIds = [];
+    const params = audioParamsRef.current;
+    const soundSet = soundSetRef.current;
+
+    if (soundSet?.pickInstruments) {
+      const pickedInstruments = soundSet.pickInstruments(noteMeta);
+      pickedInstruments?.forEach((instrument, layerIndex) => {
+        if (!instrument?.buffer || !instrument?.baseFrequency) return;
+        const layerToken = toLayerToken(instrument.id, `sample-${layerIndex}`);
+        const layerVoiceId = `${voiceId}-${layerToken}-${layerIndex}`;
+        const started = audioEngine.playBufferedSample({
+          noteId: layerVoiceId,
+          buffer: instrument.buffer,
+          frequency,
+          baseFrequency: instrument.baseFrequency,
+          params,
+          velocity,
+          loop: instrument.loop
+        });
+        if (started?.voiceId) {
+          startedVoiceIds.push(started.voiceId);
+        }
+      });
+
+      if (startedVoiceIds.length > 0) {
+        registerActiveVoices(noteId, startedVoiceIds);
+        return startedVoiceIds;
+      }
+    }
+
+    const stackedFamilies = layerFamiliesRef.current;
+    if (stackedFamilies.length > 0) {
+      stackedFamilies.forEach((family, layerIndex) => {
+        const familyWaveform = FAMILY_WAVEFORMS[family];
+        if (familyWaveform === null) return;
+        const waveform = familyWaveform || waveformRef.current;
+        const layerToken = toLayerToken(family, `wave-${layerIndex}`);
+        const layerVoiceId = `${voiceId}-${layerToken}-${layerIndex}`;
+        const started = audioEngine.playFrequency({
+          noteId: layerVoiceId,
+          frequency,
+          waveformType: waveform,
+          params,
+          velocity
+        });
+        if (started?.voiceId) {
+          startedVoiceIds.push(started.voiceId);
+        }
+      });
+
+      if (startedVoiceIds.length > 0) {
+        registerActiveVoices(noteId, startedVoiceIds);
+        return startedVoiceIds;
+      }
+    }
+
     // Use instrument-specific waveform if available, otherwise fall back to global
     let waveform = waveformRef.current;
-    if (instrumentFamily) {
-      const familyWaveform = FAMILY_WAVEFORMS[instrumentFamily];
+    if (noteMeta.instrumentFamily) {
+      const familyWaveform = FAMILY_WAVEFORMS[noteMeta.instrumentFamily];
       if (familyWaveform) {
         waveform = familyWaveform;
       }
       // If familyWaveform is null (percussion), skip the note
       if (familyWaveform === null) {
-        return;
+        return startedVoiceIds;
       }
     }
 
-    audioEngine.playFrequency({
+    const started = audioEngine.playFrequency({
       noteId: voiceId,
       frequency,
       waveformType: waveform,
-      params: audioParamsRef.current,
+      params,
       velocity
     });
+    if (started?.voiceId) {
+      startedVoiceIds.push(started.voiceId);
+      registerActiveVoices(noteId, startedVoiceIds);
+    }
 
-    activeVoiceIdsRef.current.add(voiceId);
-    const counts = activeNoteCountsRef.current;
-    counts.set(noteId, (counts.get(noteId) || 0) + 1);
-    setActiveNotes(new Set(counts.keys()));
-  }, []);
+    return startedVoiceIds;
+  }, [registerActiveVoices]);
 
   /**
    * Trigger a note off event
@@ -205,6 +285,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     });
     activeVoiceIdsRef.current.clear();
     activeNoteCountsRef.current.clear();
+    scheduledVoiceMapRef.current.clear();
     setActiveNotes(new Set());
   }, []);
 
@@ -224,6 +305,9 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     playbackRef.current.startTime = 0;
     playbackRef.current.pauseOriginalTime = 0;
     playbackRef.current.elapsedOriginalAtStart = 0;
+    soundSetRef.current = null;
+    layerFamiliesRef.current = [];
+    scheduledVoiceMapRef.current.clear();
 
     setIsPlaying(false);
     setIsPaused(false);
@@ -274,17 +358,25 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       const frequency = midiNoteToFrequency(note.midi);
       const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
 
-      // Schedule note on (pass instrument family for waveform selection)
+      // Schedule note on
       const startDelay = Math.max(0, (scheduledStart - now) * 1000);
       const startId = setTimeout(() => {
-        triggerNoteOn(noteId, voiceId, frequency, note.velocity, note.instrumentFamily);
+        const startedVoiceIds = triggerNoteOn(noteId, voiceId, frequency, note.velocity, note);
+        if (startedVoiceIds.length > 0) {
+          scheduledVoiceMapRef.current.set(voiceId, startedVoiceIds);
+        }
       }, startDelay);
       timeoutsRef.current.push(startId);
 
       // Schedule note off
       const endDelay = Math.max(0, (scheduledEnd - now) * 1000);
       const endId = setTimeout(() => {
-        triggerNoteOff(noteId, voiceId);
+        const startedVoiceIds = scheduledVoiceMapRef.current.get(voiceId);
+        scheduledVoiceMapRef.current.delete(voiceId);
+        if (!startedVoiceIds?.length) return;
+        startedVoiceIds.forEach((activeVoiceId) => {
+          triggerNoteOff(noteId, activeVoiceId);
+        });
       }, endDelay);
       timeoutsRef.current.push(endId);
     });
@@ -365,9 +457,22 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     }
 
     // Ensure audio context is ready
-    audioEngine.ensureAudioContext().then(() => {
+    audioEngine.ensureAudioContext().then(async () => {
       // Stop any existing playback
       stopInternal();
+
+      let loadedSoundSet = null;
+      if (midiData.soundSetId) {
+        try {
+          loadedSoundSet = await ensureSoundSetLoaded(midiData.soundSetId);
+        } catch (error) {
+          console.warn(`Failed to load sound set "${midiData.soundSetId}":`, error);
+        }
+      }
+      soundSetRef.current = loadedSoundSet;
+      layerFamiliesRef.current = Array.isArray(midiData.layerFamilies)
+        ? midiData.layerFamilies.filter(Boolean)
+        : [];
 
       const ctx = audioEngine.context;
       const startTime = ctx?.currentTime || 0;
@@ -387,6 +492,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
       // Start progress update loop
       startProgressLoop(midiData.duration);
+    }).catch((error) => {
+      console.warn('Failed to start MIDI playback:', error);
     });
   }, [stopInternal, scheduleNotes, startProgressLoop]);
 
