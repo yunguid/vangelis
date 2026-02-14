@@ -34,7 +34,6 @@ let verified = 0;
 let mismatched = 0;
 
 const inventory = {
-  generatedAt: new Date().toISOString(),
   sourceManifestVersion: manifest.version || 1,
   packs: []
 };
