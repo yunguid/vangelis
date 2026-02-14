@@ -63,6 +63,39 @@ function resolveMidiDuration(midiData) {
   return derivedDuration > 0 ? derivedDuration : 1;
 }
 
+function normalizeMidiNotes(notes) {
+  if (!Array.isArray(notes)) return [];
+
+  return notes
+    .map((note) => {
+      const midi = Number(note?.midi);
+      const time = Number(note?.time);
+      const duration = Number(note?.duration);
+      const velocityRaw = Number(note?.velocity);
+
+      if (!Number.isFinite(midi) || !Number.isFinite(time) || !Number.isFinite(duration)) {
+        return null;
+      }
+
+      const normalizedDuration = Math.max(0, duration);
+      if (normalizedDuration <= 0) {
+        return null;
+      }
+
+      return {
+        ...note,
+        midi,
+        time: Math.max(0, time),
+        duration: normalizedDuration,
+        velocity: Number.isFinite(velocityRaw)
+          ? Math.min(1, Math.max(0, velocityRaw))
+          : 1
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.time - b.time);
+}
+
 /**
  * @typedef {Object} MidiPlaybackOptions
  * @property {string} waveformType - Current waveform type (sine, saw, square, etc.)
@@ -479,10 +512,15 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @param {Object} midiData - Parsed MIDI data from parseMidiFile()
    */
   const play = useCallback((midiData) => {
-    if (!midiData || !midiData.notes || midiData.notes.length === 0) {
+    const normalizedNotes = normalizeMidiNotes(midiData?.notes);
+    if (!midiData || normalizedNotes.length === 0) {
       console.warn('No MIDI data to play');
       return;
     }
+    const effectiveMidiData = {
+      ...midiData,
+      notes: normalizedNotes
+    };
 
     const playRequestSeq = playRequestSeqRef.current + 1;
     playRequestSeqRef.current = playRequestSeq;
@@ -497,17 +535,17 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       let loadedSoundSet = null;
       if (midiData.soundSetId) {
         try {
-          loadedSoundSet = await ensureSoundSetLoaded(midiData.soundSetId);
+          loadedSoundSet = await ensureSoundSetLoaded(effectiveMidiData.soundSetId);
         } catch (error) {
-          console.warn(`Failed to load sound set "${midiData.soundSetId}":`, error);
+          console.warn(`Failed to load sound set "${effectiveMidiData.soundSetId}":`, error);
         }
       }
       if (playRequestSeq !== playRequestSeqRef.current) return;
 
       soundSetRef.current = loadedSoundSet;
       setActiveSoundSetName(loadedSoundSet?.name || null);
-      const requestedLayerFamilies = Array.isArray(midiData.layerFamilies)
-        ? midiData.layerFamilies.filter(Boolean)
+      const requestedLayerFamilies = Array.isArray(effectiveMidiData.layerFamilies)
+        ? effectiveMidiData.layerFamilies.filter(Boolean)
         : [];
       const soundSetLayerFamilies = Array.isArray(loadedSoundSet?.layerFamilies)
         ? loadedSoundSet.layerFamilies.filter(Boolean)
@@ -528,19 +566,19 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       const ctx = audioEngine.context;
       const startTime = ctx?.currentTime || 0;
 
-      playbackRef.current.midiData = midiData;
+      playbackRef.current.midiData = effectiveMidiData;
       playbackRef.current.startTime = startTime;
       playbackRef.current.pauseOriginalTime = 0;
       playbackRef.current.elapsedOriginalAtStart = 0;
-      const midiDuration = resolveMidiDuration(midiData);
+      const midiDuration = resolveMidiDuration(effectiveMidiData);
 
-      setCurrentMidi(midiData);
+      setCurrentMidi(effectiveMidiData);
       setIsPlaying(true);
       setIsPaused(false);
       setProgress(0);
 
       // Schedule all notes
-      scheduleNotes(midiData.notes, 0, startTime);
+      scheduleNotes(effectiveMidiData.notes, 0, startTime);
 
       // Start progress update loop
       startProgressLoop(midiDuration);

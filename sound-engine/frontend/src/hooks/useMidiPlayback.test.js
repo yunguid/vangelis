@@ -264,6 +264,9 @@ describe('useMidiPlayback layering', () => {
       });
       await Promise.resolve();
       await Promise.resolve();
+    });
+
+    await act(async () => {
       vi.runAllTimers();
     });
 
@@ -392,5 +395,58 @@ describe('useMidiPlayback layering', () => {
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
     expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
     expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(62);
+  });
+
+  it('filters invalid notes before scheduling playback', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [
+          { midi: 60, time: 0.1, duration: 0.1, velocity: 0.9 },
+          { midi: 'bad', time: 0, duration: 0.2, velocity: 0.8 },
+          { midi: 62, time: -0.2, duration: 0, velocity: 0.7 }
+        ]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(result.current.currentMidi?.notes).toHaveLength(1);
+    expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(60);
+    expect(result.current.currentMidi?.notes?.[0]?.velocity).toBe(0.9);
+  });
+
+  it('warns and does not start when all notes are invalid', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: null, time: 0, duration: 0 }]
+      });
+      await Promise.resolve();
+    });
+
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    expect(result.current.isPlaying).toBe(false);
+    expect(consoleWarnSpy).toHaveBeenCalledWith('No MIDI data to play');
   });
 });
