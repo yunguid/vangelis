@@ -11,6 +11,23 @@ import { withBase } from '../../utils/baseUrl.js';
 
 const STARTER_FAMILY_ORDER = ['piano', 'strings', 'brass', 'reed', 'chromatic percussion'];
 
+const createDecoderContext = () => {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) {
+    throw new Error('Web Audio API is not available');
+  }
+  return new AudioContextCtor();
+};
+
+const closeDecoderContext = async (ctx) => {
+  if (!ctx || typeof ctx.close !== 'function') return;
+  try {
+    await ctx.close();
+  } catch {
+    // Ignore close errors from already-closed contexts.
+  }
+};
+
 const buildStarterCatalog = () => {
   const manifests = getAllSoundSetManifests();
   const uniqueByPath = new Map();
@@ -153,6 +170,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     setImporting(true);
     setError(null);
 
+    let decoderCtx = null;
     try {
       // Filter for audio files
       const audioFiles = files.filter(f =>
@@ -164,6 +182,8 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
         setError('No audio files found in selection');
         return;
       }
+
+      decoderCtx = createDecoderContext();
 
       // Extract category from folder path
       const getCategoryFromPath = (file) => {
@@ -178,19 +198,14 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
 
       // Process files in batches to avoid memory issues
       const batchSize = 5;
-      let processed = 0;
 
       for (let i = 0; i < audioFiles.length; i += batchSize) {
         const batch = audioFiles.slice(i, i + batchSize);
 
-        await Promise.all(batch.map(async (file) => {
+        for (const file of batch) {
           try {
             const arrayBuffer = await file.arrayBuffer();
-
-            // Create audio context to decode and get metadata
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-            audioCtx.close();
+            const audioBuffer = await decoderCtx.decodeAudioData(arrayBuffer.slice(0));
 
             await storeSample({
               name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
@@ -202,12 +217,10 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
               channels: audioBuffer.numberOfChannels,
               sourcePath: file.webkitRelativePath || file.name
             });
-
-            processed++;
           } catch (err) {
             console.warn(`Failed to import ${file.name}:`, err);
           }
-        }));
+        }
       }
 
       // Reload samples list
@@ -222,6 +235,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       setError('Failed to import samples');
     } finally {
       setImporting(false);
+      await closeDecoderContext(decoderCtx);
       if (folderInputRef.current) {
         folderInputRef.current.value = '';
       }
@@ -236,11 +250,11 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     setImporting(true);
     setError(null);
 
+    let decoderCtx = null;
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
-      audioCtx.close();
+      decoderCtx = createDecoderContext();
+      const audioBuffer = await decoderCtx.decodeAudioData(arrayBuffer.slice(0));
 
       await storeSample({
         name: file.name.replace(/\.[^/.]+$/, ''),
@@ -260,6 +274,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       setError('Failed to import sample');
     } finally {
       setImporting(false);
+      await closeDecoderContext(decoderCtx);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
