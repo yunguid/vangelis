@@ -410,8 +410,9 @@ describe('useMidiPlayback layering', () => {
         duration: 1,
         bpm: 120,
         notes: [
-          { midi: 60, time: 0.1, duration: 0.1, velocity: 0.9 },
+          { midi: 59.6, time: 0.1, duration: 0.1, velocity: 1.7 },
           { midi: 'bad', time: 0, duration: 0.2, velocity: 0.8 },
+          { midi: 130, time: 0, duration: 0.2, velocity: 0.8 },
           { midi: 62, time: -0.2, duration: 0, velocity: 0.7 }
         ]
       });
@@ -425,7 +426,7 @@ describe('useMidiPlayback layering', () => {
 
     expect(result.current.currentMidi?.notes).toHaveLength(1);
     expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(60);
-    expect(result.current.currentMidi?.notes?.[0]?.velocity).toBe(0.9);
+    expect(result.current.currentMidi?.notes?.[0]?.velocity).toBe(1);
   });
 
   it('warns and does not start when all notes are invalid', async () => {

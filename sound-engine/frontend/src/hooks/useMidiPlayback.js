@@ -77,6 +77,11 @@ function normalizeMidiNotes(notes) {
         return null;
       }
 
+      const normalizedMidi = Math.round(midi);
+      if (!Number.isInteger(normalizedMidi) || normalizedMidi < 0 || normalizedMidi > 127) {
+        return null;
+      }
+
       const normalizedDuration = Math.max(0, duration);
       if (normalizedDuration <= 0) {
         return null;
@@ -84,7 +89,7 @@ function normalizeMidiNotes(notes) {
 
       return {
         ...note,
-        midi,
+        midi: normalizedMidi,
         time: Math.max(0, time),
         duration: normalizedDuration,
         velocity: Number.isFinite(velocityRaw)
