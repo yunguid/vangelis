@@ -21,10 +21,12 @@ vi.mock('../utils/instrumentSamples.js', () => ({
 describe('useMidiPlayback layering', () => {
   const originalRequestAnimationFrame = global.requestAnimationFrame;
   const originalCancelAnimationFrame = global.cancelAnimationFrame;
+  let consoleWarnSpy;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     audioEngine.context = { currentTime: 0 };
     audioEngine.ensureAudioContext.mockResolvedValue(audioEngine.context);
     audioEngine.playBufferedSample.mockImplementation(({ noteId }) => ({ voiceId: noteId }));
@@ -35,6 +37,7 @@ describe('useMidiPlayback layering', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    consoleWarnSpy.mockRestore();
     global.requestAnimationFrame = originalRequestAnimationFrame;
     global.cancelAnimationFrame = originalCancelAnimationFrame;
   });
@@ -243,5 +246,44 @@ describe('useMidiPlayback layering', () => {
     expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
     expect(result.current.isPlaying).toBe(false);
     expect(result.current.currentMidi).toBeNull();
+  });
+
+  it('logs and preserves paused state when resume cannot initialize audio context', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 1 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.runAllTimers();
+    });
+
+    await act(async () => {
+      result.current.pause();
+    });
+
+    audioEngine.ensureAudioContext.mockRejectedValueOnce(new Error('resume blocked'));
+
+    await act(async () => {
+      result.current.resume();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.isPlaying).toBe(false);
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      'Failed to resume MIDI playback:',
+      expect.any(Error)
+    );
   });
 });

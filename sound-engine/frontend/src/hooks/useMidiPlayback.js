@@ -573,6 +573,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
       // Restart progress loop
       startProgressLoop(pb.midiData.duration);
+    }).catch((error) => {
+      console.warn('Failed to resume MIDI playback:', error);
     });
   }, [isPaused, scheduleNotes, startProgressLoop]);
 
