@@ -367,4 +367,30 @@ describe('useMidiPlayback layering', () => {
     expect(audioEngine.playFrequency).not.toHaveBeenCalled();
     expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
   });
+
+  it('derives playback duration from notes when midi duration is missing', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        bpm: 120,
+        notes: [{ midi: 62, time: 0, duration: 0.15, velocity: 1 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
+    expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(62);
+  });
 });

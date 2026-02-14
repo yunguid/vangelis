@@ -41,6 +41,28 @@ function toLayerToken(value, fallback = 'layer') {
   return normalized || fallback;
 }
 
+function resolveMidiDuration(midiData) {
+  const declaredDuration = Number(midiData?.duration);
+  const hasDeclaredDuration = Number.isFinite(declaredDuration) && declaredDuration > 0;
+  if (hasDeclaredDuration) {
+    return declaredDuration;
+  }
+
+  const notes = Array.isArray(midiData?.notes) ? midiData.notes : [];
+  let derivedDuration = 0;
+  notes.forEach((note) => {
+    const noteStart = Number(note?.time);
+    const noteDuration = Number(note?.duration);
+    if (!Number.isFinite(noteStart) || !Number.isFinite(noteDuration)) return;
+    const noteEnd = noteStart + Math.max(0, noteDuration);
+    if (noteEnd > derivedDuration) {
+      derivedDuration = noteEnd;
+    }
+  });
+
+  return derivedDuration > 0 ? derivedDuration : 1;
+}
+
 /**
  * @typedef {Object} MidiPlaybackOptions
  * @property {string} waveformType - Current waveform type (sine, saw, square, etc.)
@@ -510,6 +532,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       playbackRef.current.startTime = startTime;
       playbackRef.current.pauseOriginalTime = 0;
       playbackRef.current.elapsedOriginalAtStart = 0;
+      const midiDuration = resolveMidiDuration(midiData);
 
       setCurrentMidi(midiData);
       setIsPlaying(true);
@@ -520,7 +543,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       scheduleNotes(midiData.notes, 0, startTime);
 
       // Start progress update loop
-      startProgressLoop(midiData.duration);
+      startProgressLoop(midiDuration);
     }).catch((error) => {
       if (playRequestSeq !== playRequestSeqRef.current) return;
       console.warn('Failed to start MIDI playback:', error);
@@ -576,7 +599,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       scheduleNotes(pb.midiData.notes, elapsedOriginal, newStartTime);
 
       // Restart progress loop
-      startProgressLoop(pb.midiData.duration);
+      startProgressLoop(resolveMidiDuration(pb.midiData));
     }).catch((error) => {
       console.warn('Failed to resume MIDI playback:', error);
     });
