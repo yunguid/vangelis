@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import path from 'node:path';
-import { resolveSafeOutputPath, validateStarterSoundManifest } from '../../scripts/starter_sound_sync_utils.mjs';
+import os from 'node:os';
+import fs from 'node:fs/promises';
+import {
+  computeGitBlobSha,
+  computeGitBlobShaFromFile,
+  resolveSafeOutputPath,
+  validateStarterSoundManifest
+} from '../../scripts/starter_sound_sync_utils.mjs';
 
 const validManifest = {
   version: 1,
@@ -53,5 +60,22 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/Unsafe relative path/i);
     expect(() => resolveSafeOutputPath(root, '../outside', 'sample.wav'))
       .toThrow(/Unsafe targetDir/i);
+  });
+
+  it('computes identical git-blob sha for buffer and file stream', async () => {
+    const tmpFilePath = path.join(
+      os.tmpdir(),
+      `vangelis-sync-utils-${process.pid}-${Date.now()}.wav`
+    );
+    const payload = Buffer.from('starter-pack-hash-test-payload', 'utf8');
+
+    try {
+      await fs.writeFile(tmpFilePath, payload);
+      const fromBuffer = computeGitBlobSha(payload);
+      const fromFile = await computeGitBlobShaFromFile(tmpFilePath);
+      expect(fromFile).toBe(fromBuffer);
+    } finally {
+      await fs.unlink(tmpFilePath).catch(() => {});
+    }
   });
 });

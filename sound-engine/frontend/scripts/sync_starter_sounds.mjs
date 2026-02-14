@@ -1,8 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
-import { resolveSafeOutputPath, validateStarterSoundManifest } from './starter_sound_sync_utils.mjs';
+import {
+  computeGitBlobSha,
+  computeGitBlobShaFromFile,
+  resolveSafeOutputPath,
+  validateStarterSoundManifest
+} from './starter_sound_sync_utils.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -76,8 +80,7 @@ for (const pack of manifest.packs || []) {
       let localBlobSha = null;
       let sourceBlobSha = entry.sha || null;
       if (verifyExisting) {
-        const existingBuffer = await fs.readFile(targetPath);
-        localBlobSha = computeGitBlobSha(existingBuffer);
+        localBlobSha = await computeGitBlobShaFromFile(targetPath);
         integrity = sourceBlobSha && localBlobSha === sourceBlobSha ? 'verified' : 'mismatch';
         if (integrity === 'mismatch') {
           failed += 1;
@@ -193,14 +196,6 @@ async function fetchRepoTree(repo, ref) {
     throw new Error(`Invalid tree response for ${repo}@${ref}`);
   }
   return payload.tree;
-}
-
-function computeGitBlobSha(buffer) {
-  const header = Buffer.from(`blob ${buffer.length}\0`, 'utf8');
-  return createHash('sha1')
-    .update(header)
-    .update(buffer)
-    .digest('hex');
 }
 
 function toRawFileUrl(repo, ref, filePath) {

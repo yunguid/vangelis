@@ -1,4 +1,7 @@
 import path from 'node:path';
+import fs from 'node:fs';
+import fsp from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 
 const SHA_REGEX = /^[0-9a-f]{40}$/;
 const REPO_REGEX = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -37,6 +40,31 @@ export function resolveSafeOutputPath(outputRoot, targetDir, relativePath) {
   assert(resolved.startsWith(rootWithSep), `Resolved path escapes output root: ${resolved}`);
 
   return resolved;
+}
+
+export function computeGitBlobSha(buffer) {
+  const header = Buffer.from(`blob ${buffer.length}\0`, 'utf8');
+  return createHash('sha1')
+    .update(header)
+    .update(buffer)
+    .digest('hex');
+}
+
+export async function computeGitBlobShaFromFile(filePath) {
+  const fileStat = await fsp.stat(filePath);
+  const hash = createHash('sha1');
+  hash.update(Buffer.from(`blob ${fileStat.size}\0`, 'utf8'));
+
+  await new Promise((resolve, reject) => {
+    const stream = fs.createReadStream(filePath);
+    stream.on('data', (chunk) => {
+      hash.update(chunk);
+    });
+    stream.on('error', reject);
+    stream.on('end', resolve);
+  });
+
+  return hash.digest('hex');
 }
 
 export function validateStarterSoundManifest(value) {

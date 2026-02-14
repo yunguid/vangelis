@@ -43,6 +43,7 @@ The sync script writes inventory metadata to:
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures
 - bounded request timeouts per fetch
+- existing-file checksum verification uses streamed hashing to avoid loading entire files into memory
 
 ## Security
 
