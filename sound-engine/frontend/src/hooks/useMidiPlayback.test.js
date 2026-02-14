@@ -481,4 +481,31 @@ describe('useMidiPlayback layering', () => {
     expect(result.current.isPlaying).toBe(false);
     expect(consoleWarnSpy).toHaveBeenCalledWith('No MIDI data to play');
   });
+
+  it('normalizes instrument family casing for waveform fallback mapping', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 0.8, instrumentFamily: '  PIANO  ' }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('triangle');
+    expect(result.current.currentMidi?.notes?.[0]?.instrumentFamily).toBe('piano');
+  });
 });

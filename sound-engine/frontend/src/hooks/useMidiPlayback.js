@@ -112,7 +112,13 @@ function normalizeMidiNotes(notes) {
         duration: normalizedDuration,
         velocity: Number.isFinite(velocityRaw)
           ? Math.min(1, Math.max(0, velocityRaw))
-          : 1
+          : 1,
+        instrumentFamily: typeof note?.instrumentFamily === 'string'
+          ? note.instrumentFamily.trim().toLowerCase()
+          : note?.instrumentFamily,
+        instrumentName: typeof note?.instrumentName === 'string'
+          ? note.instrumentName.trim()
+          : note?.instrumentName
       };
     })
     .filter(Boolean)
