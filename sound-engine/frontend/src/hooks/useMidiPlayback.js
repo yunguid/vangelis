@@ -138,6 +138,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      playRequestSeqRef.current += 1;
       clearAllTimeouts();
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);

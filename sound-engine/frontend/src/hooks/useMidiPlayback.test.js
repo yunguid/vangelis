@@ -336,4 +336,35 @@ describe('useMidiPlayback layering', () => {
     expect(result.current.currentMidi).toBeNull();
     expect(audioEngine.playFrequency.mock.calls.length).toBe(playCallsBeforeResume);
   });
+
+  it('ignores pending async play initialization after hook unmount', async () => {
+    const deferredContext = createDeferred();
+    audioEngine.ensureAudioContext.mockImplementationOnce(() => deferredContext.promise);
+
+    const { result, unmount } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1 }]
+      });
+      await Promise.resolve();
+    });
+
+    unmount();
+
+    await act(async () => {
+      deferredContext.resolve(audioEngine.context);
+      await Promise.resolve();
+      await Promise.resolve();
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
+  });
 });
