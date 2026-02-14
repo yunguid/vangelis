@@ -76,6 +76,26 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/must be lowercase kebab-case/i);
   });
 
+  it('rejects unsorted pack id ordering', () => {
+    const unsortedPackIds = structuredClone(validManifest);
+    unsortedPackIds.packs = [
+      {
+        ...unsortedPackIds.packs[0],
+        id: 'zz-pack',
+        sourcePathPrefix: 'Strings/Viola Section/susvib',
+        targetDir: 'starter-pack/strings/viola'
+      },
+      {
+        ...unsortedPackIds.packs[0],
+        id: 'aa-pack',
+        sourcePathPrefix: 'Strings/Violin Section/susVib',
+        targetDir: 'starter-pack/strings/violin'
+      }
+    ];
+    expect(() => validateStarterSoundManifest(unsortedPackIds))
+      .toThrow(/pack ids must be sorted lexicographically/i);
+  });
+
   it('rejects duplicate or overlapping source prefixes per repo ref', () => {
     const duplicateSourcePrefix = structuredClone(validManifest);
     duplicateSourcePrefix.packs.push({

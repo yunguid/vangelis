@@ -155,6 +155,7 @@ export function validateStarterSoundManifest(value) {
   );
 
   const ids = new Set();
+  const packIdsInOrder = [];
   const normalizedTargetDirs = new Set();
   const sourcePrefixesByRepoRef = new Map();
   value.packs.forEach((pack) => {
@@ -163,6 +164,7 @@ export function validateStarterSoundManifest(value) {
     assert(PACK_ID_REGEX.test(pack.id), `Pack id "${pack.id}" must be lowercase kebab-case`);
     assert(!ids.has(pack.id), `Duplicate pack id "${pack.id}"`);
     ids.add(pack.id);
+    packIdsInOrder.push(pack.id);
 
     assert(typeof pack.repo === 'string' && REPO_REGEX.test(pack.repo), `Pack "${pack.id}" repo must match owner/name`);
     assert(SHA_REGEX.test(pack.ref || ''), `Pack "${pack.id}" must pin an immutable 40-char commit SHA`);
@@ -211,4 +213,10 @@ export function validateStarterSoundManifest(value) {
     assert(ALLOWED_BIT_DEPTHS.has(pack.quality?.bitDepth),
       `Pack "${pack.id}" quality.bitDepth must be one of ${Array.from(ALLOWED_BIT_DEPTHS).join(', ')}`);
   });
+
+  const sortedPackIds = [...packIdsInOrder].sort((a, b) => a.localeCompare(b));
+  assert(
+    packIdsInOrder.every((id, index) => id === sortedPackIds[index]),
+    'Pack ids must be sorted lexicographically'
+  );
 }
