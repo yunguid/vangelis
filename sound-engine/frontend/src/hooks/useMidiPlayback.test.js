@@ -169,6 +169,36 @@ describe('useMidiPlayback layering', () => {
     expect(waveforms).toContain('saw');
   });
 
+  it('dedupes and filters unknown layer families before waveform stacking', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 0.8, instrumentFamily: 'piano' }],
+        layerFamilies: ['Piano', 'piano', 'unknown-family']
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.layeringMode).toBe('wave-layered');
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('triangle');
+  });
+
   it('ignores stale play request that resolves after a newer play starts', async () => {
     const firstLoad = createDeferred();
     ensureSoundSetLoaded

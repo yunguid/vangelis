@@ -31,6 +31,7 @@ const FAMILY_WAVEFORMS = {
   percussive: null,       // Skip or use sample
   'sound effects': null
 };
+const KNOWN_LAYER_FAMILIES = new Set(Object.keys(FAMILY_WAVEFORMS));
 
 function toLayerToken(value, fallback = 'layer') {
   if (typeof value !== 'string') return fallback;
@@ -61,6 +62,23 @@ function resolveMidiDuration(midiData) {
   });
 
   return derivedDuration > 0 ? derivedDuration : 1;
+}
+
+function normalizeLayerFamilies(layerFamilies) {
+  if (!Array.isArray(layerFamilies)) return [];
+
+  const deduped = [];
+  const seen = new Set();
+
+  layerFamilies.forEach((family) => {
+    if (typeof family !== 'string') return;
+    const normalized = family.trim().toLowerCase();
+    if (!KNOWN_LAYER_FAMILIES.has(normalized) || seen.has(normalized)) return;
+    seen.add(normalized);
+    deduped.push(normalized);
+  });
+
+  return deduped;
 }
 
 function normalizeMidiNotes(notes) {
@@ -549,12 +567,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
       soundSetRef.current = loadedSoundSet;
       setActiveSoundSetName(loadedSoundSet?.name || null);
-      const requestedLayerFamilies = Array.isArray(effectiveMidiData.layerFamilies)
-        ? effectiveMidiData.layerFamilies.filter(Boolean)
-        : [];
-      const soundSetLayerFamilies = Array.isArray(loadedSoundSet?.layerFamilies)
-        ? loadedSoundSet.layerFamilies.filter(Boolean)
-        : [];
+      const requestedLayerFamilies = normalizeLayerFamilies(effectiveMidiData.layerFamilies);
+      const soundSetLayerFamilies = normalizeLayerFamilies(loadedSoundSet?.layerFamilies);
       layerFamiliesRef.current = requestedLayerFamilies.length > 0
         ? requestedLayerFamilies
         : soundSetLayerFamilies;
