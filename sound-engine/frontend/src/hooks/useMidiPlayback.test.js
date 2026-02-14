@@ -494,7 +494,7 @@ describe('useMidiPlayback layering', () => {
       result.current.play({
         duration: 1,
         bpm: 120,
-        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 0.8, instrumentFamily: '  PIANO  ' }]
+        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 0.8, instrumentFamily: '  PIANO  ', instrumentName: '   ' }]
       });
       await Promise.resolve();
       await Promise.resolve();
@@ -507,6 +507,7 @@ describe('useMidiPlayback layering', () => {
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
     expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('triangle');
     expect(result.current.currentMidi?.notes?.[0]?.instrumentFamily).toBe('piano');
+    expect(result.current.currentMidi?.notes?.[0]?.instrumentName).toBeUndefined();
   });
 
   it('ignores invalid tempo inputs that are not finite numbers', async () => {
@@ -525,5 +526,30 @@ describe('useMidiPlayback layering', () => {
     });
 
     expect(result.current.tempoFactor).toBe(1);
+  });
+
+  it('sorts normalized notes by time and midi for deterministic scheduling', async () => {
+    ensureSoundSetLoaded.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [
+          { midi: 67, time: 0.05, duration: 0.1, velocity: 0.9 },
+          { midi: 60, time: 0.05, duration: 0.1, velocity: 0.9 },
+          { midi: 72, time: 0.01, duration: 0.1, velocity: 0.9 }
+        ]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.currentMidi?.notes?.map((note) => note.midi)).toEqual([72, 60, 67]);
   });
 });

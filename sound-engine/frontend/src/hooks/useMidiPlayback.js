@@ -104,6 +104,12 @@ function normalizeMidiNotes(notes) {
       if (normalizedDuration <= 0) {
         return null;
       }
+      const normalizedInstrumentFamily = typeof note?.instrumentFamily === 'string'
+        ? note.instrumentFamily.trim().toLowerCase()
+        : '';
+      const normalizedInstrumentName = typeof note?.instrumentName === 'string'
+        ? note.instrumentName.trim()
+        : '';
 
       return {
         ...note,
@@ -113,16 +119,12 @@ function normalizeMidiNotes(notes) {
         velocity: Number.isFinite(velocityRaw)
           ? Math.min(1, Math.max(0, velocityRaw))
           : 1,
-        instrumentFamily: typeof note?.instrumentFamily === 'string'
-          ? note.instrumentFamily.trim().toLowerCase()
-          : note?.instrumentFamily,
-        instrumentName: typeof note?.instrumentName === 'string'
-          ? note.instrumentName.trim()
-          : note?.instrumentName
+        instrumentFamily: normalizedInstrumentFamily || undefined,
+        instrumentName: normalizedInstrumentName || undefined
       };
     })
     .filter(Boolean)
-    .sort((a, b) => a.time - b.time);
+    .sort((a, b) => (a.time - b.time) || (a.midi - b.midi) || (a.duration - b.duration));
 }
 
 /**
