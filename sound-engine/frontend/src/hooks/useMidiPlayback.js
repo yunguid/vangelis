@@ -94,6 +94,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const [activeNotes, setActiveNotes] = useState(new Set());
   const [currentMidi, setCurrentMidi] = useState(null);
   const [tempoFactor, setTempoFactorState] = useState(1.0);
+  const [activeSoundSetName, setActiveSoundSetName] = useState(null);
+  const [layeringMode, setLayeringMode] = useState('waveform');
 
   // Use refs to avoid stale closures in setTimeout callbacks
   const waveformRef = useRef(waveformType);
@@ -308,6 +310,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     soundSetRef.current = null;
     layerFamiliesRef.current = [];
     scheduledVoiceMapRef.current.clear();
+    setActiveSoundSetName(null);
+    setLayeringMode('waveform');
 
     setIsPlaying(false);
     setIsPaused(false);
@@ -470,6 +474,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
         }
       }
       soundSetRef.current = loadedSoundSet;
+      setActiveSoundSetName(loadedSoundSet?.name || null);
       const requestedLayerFamilies = Array.isArray(midiData.layerFamilies)
         ? midiData.layerFamilies.filter(Boolean)
         : [];
@@ -479,6 +484,15 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       layerFamiliesRef.current = requestedLayerFamilies.length > 0
         ? requestedLayerFamilies
         : soundSetLayerFamilies;
+      const resolvedLayerCount = layerFamiliesRef.current.length;
+      const hasSampleLayers = Array.isArray(loadedSoundSet?.instruments) && loadedSoundSet.instruments.length > 0;
+      if (hasSampleLayers && resolvedLayerCount > 0) {
+        setLayeringMode('sample-layered');
+      } else if (resolvedLayerCount > 0) {
+        setLayeringMode('wave-layered');
+      } else {
+        setLayeringMode('waveform');
+      }
 
       const ctx = audioEngine.context;
       const startTime = ctx?.currentTime || 0;
@@ -568,6 +582,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     activeNotes,
     currentMidi,
     tempoFactor,
+    activeSoundSetName,
+    layeringMode,
     play,
     pause,
     resume,

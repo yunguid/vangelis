@@ -42,6 +42,8 @@ describe('useMidiPlayback layering', () => {
   it('plays stacked sample layers when a sound set is available', async () => {
     ensureSoundSetLoaded.mockResolvedValue({
       id: 'rachmaninoff-orchestral-lite',
+      name: 'Rachmaninoff Concerto No. 2 (Starter Pack)',
+      instruments: [{ id: 'piano' }, { id: 'violin' }],
       pickInstruments: () => [
         { id: 'piano', buffer: {}, baseFrequency: 261.63 },
         { id: 'violin', buffer: {}, baseFrequency: 196.0 }
@@ -64,6 +66,9 @@ describe('useMidiPlayback layering', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+
+    expect(result.current.layeringMode).toBe('sample-layered');
+    expect(result.current.activeSoundSetName).toBe('Rachmaninoff Concerto No. 2 (Starter Pack)');
 
     expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
 
@@ -96,6 +101,9 @@ describe('useMidiPlayback layering', () => {
       await Promise.resolve();
     });
 
+    expect(result.current.layeringMode).toBe('wave-layered');
+    expect(result.current.activeSoundSetName).toBeNull();
+
     expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
 
     await act(async () => {
@@ -113,7 +121,9 @@ describe('useMidiPlayback layering', () => {
   it('uses soundset layer families when midi metadata does not provide them', async () => {
     ensureSoundSetLoaded.mockResolvedValue({
       id: 'cinematic-starter-pack',
+      name: 'Cinematic Starter Pack',
       layerFamilies: ['piano', 'strings'],
+      instruments: [],
       pickInstruments: () => []
     });
 
@@ -132,6 +142,9 @@ describe('useMidiPlayback layering', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+
+    expect(result.current.layeringMode).toBe('wave-layered');
+    expect(result.current.activeSoundSetName).toBe('Cinematic Starter Pack');
 
     await act(async () => {
       vi.runAllTimers();

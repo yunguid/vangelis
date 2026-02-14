@@ -1,5 +1,5 @@
 export const DEFAULT_SAMPLE_RATE = 44100;
-export const SAMPLE_VOICE_POOL = 16;
+export const SAMPLE_VOICE_POOL = 64;
 export const MINIMUM_GAIN = 0.0001;
 
 export const WORKLET_PROCESSOR = 'vangelis-synth';

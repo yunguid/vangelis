@@ -11,6 +11,8 @@ const MidiTab = ({
   progress,
   currentMidi,
   tempoFactor,
+  activeSoundSetName,
+  layeringMode,
   onPlay,
   onPause,
   onResume,
@@ -102,6 +104,8 @@ const MidiTab = ({
           progress={progress}
           currentMidi={currentMidi}
           tempoFactor={tempoFactor}
+          activeSoundSetName={activeSoundSetName}
+          layeringMode={layeringMode}
           onPlay={handlePlayCurrent}
           onPause={onPause}
           onResume={onResume}

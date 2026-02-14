@@ -364,6 +364,8 @@ const App = () => {
           progress={midiPlayback.progress}
           currentMidi={midiPlayback.currentMidi}
           tempoFactor={midiPlayback.tempoFactor}
+          activeSoundSetName={midiPlayback.activeSoundSetName}
+          layeringMode={midiPlayback.layeringMode}
           onPlay={midiPlayback.play}
           onPause={midiPlayback.pause}
           onResume={midiPlayback.resume}
