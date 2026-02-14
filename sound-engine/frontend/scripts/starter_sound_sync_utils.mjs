@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 const SHA_REGEX = /^[0-9a-f]{40}$/;
 const REPO_REGEX = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const HOSTNAME_REGEX = /^[A-Za-z0-9.-]+$/;
+const PACK_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ALLOWED_EXTENSIONS = new Set(['.wav', '.flac', '.aif', '.aiff', '.ogg', '.mp3']);
 const ALLOWED_BIT_DEPTHS = new Set([16, 24, 32]);
 
@@ -152,6 +153,7 @@ export function validateStarterSoundManifest(value) {
   value.packs.forEach((pack) => {
     assert(typeof pack.id === 'string' && pack.id.length > 0, 'Each pack must define a non-empty id');
     assert(pack.id.trim() === pack.id, `Pack id has invalid whitespace: "${pack.id}"`);
+    assert(PACK_ID_REGEX.test(pack.id), `Pack id "${pack.id}" must be lowercase kebab-case`);
     assert(!ids.has(pack.id), `Duplicate pack id "${pack.id}"`);
     ids.add(pack.id);
 

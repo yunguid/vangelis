@@ -69,6 +69,13 @@ describe('starter_sound_sync_utils', () => {
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
   });
 
+  it('rejects non-kebab-case pack ids', () => {
+    const badPackId = structuredClone(validManifest);
+    badPackId.packs[0].id = 'Bad_Pack';
+    expect(() => validateStarterSoundManifest(badPackId))
+      .toThrow(/must be lowercase kebab-case/i);
+  });
+
   it('rejects duplicate or overlapping source prefixes per repo ref', () => {
     const duplicateSourcePrefix = structuredClone(validManifest);
     duplicateSourcePrefix.packs.push({
