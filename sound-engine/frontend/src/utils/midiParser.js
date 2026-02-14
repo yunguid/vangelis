@@ -153,31 +153,41 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
       id: 'bach-wtc-prelude',
       name: 'WTC Book I - Prelude in C',
       path: toBuiltInPath('bach-wtc-prelude-c.mid'),
-      composer: 'J.S. Bach'
+      composer: 'J.S. Bach',
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano']
     },
     {
       id: 'satie-gnossienne',
       name: 'Gnossienne No. 1',
       path: toBuiltInPath('satie-gnossienne-1.mid'),
-      composer: 'Erik Satie'
+      composer: 'Erik Satie',
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano', 'strings']
     },
     {
       id: 'satie-gymnopedie',
       name: 'Gymnopedie No. 1',
       path: toBuiltInPath('satie-gymnopedie-1.mid'),
-      composer: 'Erik Satie'
+      composer: 'Erik Satie',
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano', 'strings']
     },
     {
       id: 'bach-cello-prelude',
       name: 'Cello Suite No. 1 - Prelude',
       path: toBuiltInPath('bach-prelude-cello.mid'),
-      composer: 'J.S. Bach'
+      composer: 'J.S. Bach',
+      soundSetId: 'cinematic-starter-pack',
+      layerFamilies: ['strings']
     },
     {
       id: 'rachmaninoff-vocalise',
       name: 'Vocalise Op. 34',
       path: toBuiltInPath('rachmaninoff-vocalise.mid'),
-      composer: 'Sergei Rachmaninoff'
+      composer: 'Sergei Rachmaninoff',
+      soundSetId: 'cinematic-starter-pack',
+      layerFamilies: ['piano', 'strings', 'brass']
     }
   ];
 }

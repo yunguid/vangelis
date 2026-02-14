@@ -5,6 +5,7 @@
         "dev": "vite",
         "build": "vite build",
         "sync:midis": "node scripts/sync_russian_midis.mjs",
+        "sync:starter-sounds": "node scripts/sync_starter_sounds.mjs",
         "preview": "vite preview",
         "test": "vitest run",
         "test:watch": "vitest",

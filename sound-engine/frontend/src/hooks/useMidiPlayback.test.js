@@ -109,4 +109,37 @@ describe('useMidiPlayback layering', () => {
     expect(waveforms).toContain('triangle');
     expect(waveforms).toContain('saw');
   });
+
+  it('uses soundset layer families when midi metadata does not provide them', async () => {
+    ensureSoundSetLoaded.mockResolvedValue({
+      id: 'cinematic-starter-pack',
+      layerFamilies: ['piano', 'strings'],
+      pickInstruments: () => []
+    });
+
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 67, time: 0, duration: 0.12, velocity: 0.8, instrumentFamily: 'strings' }],
+        soundSetId: 'cinematic-starter-pack'
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+    const waveforms = audioEngine.playFrequency.mock.calls.map((call) => call[0].waveformType);
+    expect(waveforms).toContain('triangle');
+    expect(waveforms).toContain('saw');
+  });
 });

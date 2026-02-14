@@ -5,6 +5,7 @@
 
 import { audioEngine } from './audioEngine.js';
 import { withBase } from './baseUrl.js';
+import { getAllSoundSetManifests, getSoundSetManifest } from '../data/soundSets.js';
 
 const NOTE_OFFSETS = {
   C: -9,
@@ -24,40 +25,19 @@ const NOTE_OFFSETS = {
 const toSamplePath = (relativePath, base = import.meta.env.BASE_URL) =>
   withBase(`samples/${relativePath}`, base);
 
-const BUILT_IN_SOUNDSETS = {
-  'rachmaninoff-orchestral-lite': {
-    id: 'rachmaninoff-orchestral-lite',
-    name: 'Rachmaninoff Concerto No. 2 (Chamber Samples)',
-    layerFamilies: ['piano', 'strings'],
-    instruments: [
-      {
-        id: 'piano',
-        label: 'Piano',
-        families: ['piano'],
-        sampleUrl: toSamplePath('rachmaninoff/piano-c4.wav'),
-        baseNote: 'C4'
-      },
-      {
-        id: 'violin',
-        label: 'Violin',
-        families: ['strings', 'ensemble'],
-        sampleUrl: toSamplePath('rachmaninoff/violin-g3.wav'),
-        baseNote: 'G3',
-        minMidi: 60
-      },
-      {
-        id: 'cello',
-        label: 'Cello',
-        families: ['strings', 'ensemble'],
-        sampleUrl: toSamplePath('rachmaninoff/cello-c2.wav'),
-        baseNote: 'C2',
-        maxMidi: 59
-      }
-    ]
-  }
-};
-
 const soundSetCache = new Map();
+
+function materializeSoundSet(definition, base = import.meta.env.BASE_URL) {
+  if (!definition) return null;
+
+  return {
+    ...definition,
+    instruments: (definition.instruments || []).map((instrument) => ({
+      ...instrument,
+      sampleUrl: instrument.sampleUrl || (instrument.samplePath ? toSamplePath(instrument.samplePath, base) : null)
+    }))
+  };
+}
 
 function noteIdToFrequency(noteId) {
   const match = /^([A-G]#?)(-?\d+)$/.exec(noteId);
@@ -145,6 +125,9 @@ function pickInstrumentsForNote(lookup, note = {}, layerFamilies = []) {
 }
 
 async function loadInstrumentBuffer(ctx, instrument) {
+  if (!instrument.sampleUrl) {
+    throw new Error(`Missing sample URL for instrument "${instrument.id || instrument.label || 'unknown'}"`);
+  }
   const response = await fetch(instrument.sampleUrl);
   if (!response.ok) {
     throw new Error(`Failed to load sample ${instrument.sampleUrl}`);
@@ -165,7 +148,15 @@ async function loadInstrumentBuffer(ctx, instrument) {
  * @param {string} id
  */
 export function getBuiltInSoundSet(id) {
-  return BUILT_IN_SOUNDSETS[id] || null;
+  return materializeSoundSet(getSoundSetManifest(id));
+}
+
+/**
+ * List all built-in sound set definitions (without decoded buffers).
+ * @returns {Array}
+ */
+export function listBuiltInSoundSets() {
+  return getAllSoundSetManifests().map((entry) => materializeSoundSet(entry)).filter(Boolean);
 }
 
 /**
@@ -177,12 +168,18 @@ export async function ensureSoundSetLoaded(id) {
   if (!id) return null;
   if (soundSetCache.has(id)) return soundSetCache.get(id);
 
-  const soundSet = BUILT_IN_SOUNDSETS[id];
+  const soundSet = materializeSoundSet(getSoundSetManifest(id));
   if (!soundSet) return null;
 
   const ctx = await audioEngine.ensureAudioContext();
+  const instrumentsWithUrls = (soundSet.instruments || []).filter((instrument) => Boolean(instrument.sampleUrl));
+  if (instrumentsWithUrls.length === 0) {
+    soundSetCache.set(id, null);
+    return null;
+  }
+
   const settledInstruments = await Promise.allSettled(
-    soundSet.instruments.map((instrument) => loadInstrumentBuffer(ctx, instrument))
+    instrumentsWithUrls.map((instrument) => loadInstrumentBuffer(ctx, instrument))
   );
   const loadedInstruments = settledInstruments
     .filter((result) => result.status === 'fulfilled')

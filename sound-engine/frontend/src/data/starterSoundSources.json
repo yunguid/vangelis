@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "description": "Curated legal source manifest for bundled high-quality starter sounds.",
+  "allowlistedDomains": [
+    "raw.githubusercontent.com",
+    "api.github.com"
+  ],
+  "licenseNotice": "VSCO 2 Community Edition is distributed under CC0/public-domain dedication according to upstream project docs.",
+  "packs": [
+    {
+      "id": "vsco-upright-piano",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Keys/Upright Nr1",
+      "targetDir": "starter-pack/piano",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-violin-section-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Violin Section/susVib",
+      "targetDir": "starter-pack/strings/violin",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-viola-section-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Viola Section/susvib",
+      "targetDir": "starter-pack/strings/viola",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-cello-section-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Cello Section/susvib",
+      "targetDir": "starter-pack/strings/cello",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-contrabass-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Solo Contrabass/SusVib",
+      "targetDir": "starter-pack/strings/contrabass",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    },
+    {
+      "id": "vsco-horn-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Brass/F Horn/sus",
+      "targetDir": "starter-pack/brass/horn",
+      "includeExtensions": [
+        ".wav"
+      ],
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      }
+    }
+  ]
+}

@@ -1,0 +1,1357 @@
+{
+  "generatedAt": "2026-02-14T21:40:31.420Z",
+  "sourceManifestVersion": 1,
+  "packs": [
+    {
+      "id": "vsco-upright-piano",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Keys/Upright Nr1",
+      "targetDir": "starter-pack/piano",
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      },
+      "files": [
+        {
+          "path": "starter-pack/piano/UR1_C1_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_f_RR1.wav",
+          "bytes": 3130978,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C1_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_mf_RR2.wav",
+          "bytes": 3392398,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C1_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_pp_RR1.wav",
+          "bytes": 1331494,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C1_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_f_RR2.wav",
+          "bytes": 3915528,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C1_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C1_pp_RR2.wav",
+          "bytes": 2038540,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C2_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_f_RR1.wav",
+          "bytes": 3811820,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C2_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_f_RR2.wav",
+          "bytes": 3751096,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C2_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_mf_RR1.wav",
+          "bytes": 2384234,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C2_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_mf_RR2.wav",
+          "bytes": 3334902,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C2_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C2_pp_RR1.wav",
+          "bytes": 1866674,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_f_RR1.wav",
+          "bytes": 3518256,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_f_RR2.wav",
+          "bytes": 3604186,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_mf_RR1.wav",
+          "bytes": 2150126,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_mf_RR2.wav",
+          "bytes": 3308386,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_pp_RR1.wav",
+          "bytes": 1252962,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C3_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C3_pp_RR2.wav",
+          "bytes": 1978814,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_f_RR1.wav",
+          "bytes": 3262386,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_f_RR2.wav",
+          "bytes": 3104238,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_mf_RR1.wav",
+          "bytes": 2495426,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_mf_RR2.wav",
+          "bytes": 2601474,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_pp_RR1.wav",
+          "bytes": 1948154,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C4_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C4_pp_RR2.wav",
+          "bytes": 1175854,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_f_RR1.wav",
+          "bytes": 1910466,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_f_RR2.wav",
+          "bytes": 2461478,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_mf_RR1.wav",
+          "bytes": 1905930,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_mf_RR2.wav",
+          "bytes": 1917910,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_pp_RR1.wav",
+          "bytes": 1573878,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C5_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C5_pp_RR2.wav",
+          "bytes": 1680558,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_f_RR1.wav",
+          "bytes": 1184214,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_f_RR2.wav",
+          "bytes": 1239644,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_mf_RR1.wav",
+          "bytes": 1018802,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_mf_RR2.wav",
+          "bytes": 1152126,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_pp_RR1.wav",
+          "bytes": 1019544,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C6_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C6_pp_RR2.wav",
+          "bytes": 987228,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_f_RR1.wav",
+          "bytes": 670740,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_f_RR2.wav",
+          "bytes": 712028,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_mf_RR1.wav",
+          "bytes": 469466,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_mf_RR2.wav",
+          "bytes": 577034,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_pp_RR1.wav",
+          "bytes": 502340,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_C7_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_C7_pp_RR2.wav",
+          "bytes": 544560,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G1_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G1_f_RR2.wav",
+          "bytes": 3626534,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G1_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G1_mf_RR1.wav",
+          "bytes": 3191510,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G1_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G1_mf_RR2.wav",
+          "bytes": 3117554,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G1_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G1_pp_RR1.wav",
+          "bytes": 1363468,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G2_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G2_f_RR1.wav",
+          "bytes": 3562426,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G2_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G2_f_RR2.wav",
+          "bytes": 4121650,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G2_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G2_mf_RR1.wav",
+          "bytes": 2429878,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G2_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G2_mf_RR2.wav",
+          "bytes": 3614038,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G2_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G2_pp_RR1.wav",
+          "bytes": 2302416,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G3_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_f_RR1.wav",
+          "bytes": 3996466,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G3_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_f_RR2.wav",
+          "bytes": 3890306,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G3_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_mf_RR1.wav",
+          "bytes": 2602206,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G3_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_mf_RR2.wav",
+          "bytes": 3785062,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G3_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_pp_RR1.wav",
+          "bytes": 1805230,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G3_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G3_pp_RR2.wav",
+          "bytes": 2436286,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G4_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_f_RR1.wav",
+          "bytes": 2362410,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G4_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_f_RR2.wav",
+          "bytes": 2355630,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G4_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_mf_RR1.wav",
+          "bytes": 2240934,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G4_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_mf_RR2.wav",
+          "bytes": 1854386,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G4_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_pp_RR1.wav",
+          "bytes": 1840722,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G4_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G4_pp_RR2.wav",
+          "bytes": 1680314,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G5_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_f_RR1.wav",
+          "bytes": 1538602,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G5_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_f_RR2.wav",
+          "bytes": 1496310,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G5_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_mf_RR1.wav",
+          "bytes": 1665486,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G5_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_mf_RR2.wav",
+          "bytes": 1468242,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G5_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_pp_RR1.wav",
+          "bytes": 1531990,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G5_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G5_pp_RR2.wav",
+          "bytes": 1181794,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_f_RR1.wav",
+          "bytes": 810946,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_mf_RR1.wav",
+          "bytes": 860698,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_f_RR2.wav",
+          "bytes": 786374,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_mf_RR2.wav",
+          "bytes": 930886,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_pp_RR1.wav",
+          "bytes": 623248,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G6_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G6_pp_RR2.wav",
+          "bytes": 547342,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_f_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_f_RR1.wav",
+          "bytes": 502066,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_f_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_f_RR2.wav",
+          "bytes": 450206,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_mf_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_mf_RR1.wav",
+          "bytes": 369990,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_mf_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_mf_RR2.wav",
+          "bytes": 446034,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_pp_RR1.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_pp_RR1.wav",
+          "bytes": 297872,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/piano/UR1_G7_pp_RR2.wav",
+          "sourcePath": "Keys/Upright Nr1/UR1_G7_pp_RR2.wav",
+          "bytes": 500414,
+          "status": "skipped"
+        }
+      ]
+    },
+    {
+      "id": "vsco-violin-section-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Violin Section/susVib",
+      "targetDir": "starter-pack/strings/violin",
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      },
+      "files": [
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_A2_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A2_v1.wav",
+          "bytes": 1979216,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_A3_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A3_v1.wav",
+          "bytes": 1890316,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_A2_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A2_v2.wav",
+          "bytes": 2231504,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_A3_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_A3_v2.wav",
+          "bytes": 1671704,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_B2_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_B2_v1.wav",
+          "bytes": 2314360,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_B2_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_B2_v2.wav",
+          "bytes": 2373380,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_B4_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_B4_v1.wav",
+          "bytes": 2056964,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_B4_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_B4_v2.wav",
+          "bytes": 1923744,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_C4_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_C4_v1.wav",
+          "bytes": 2063320,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_C4_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_C4_v2.wav",
+          "bytes": 2017512,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_D3_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_D3_v1.wav",
+          "bytes": 2061808,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_D3_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_D3_v2.wav",
+          "bytes": 2457908,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_D5_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_D5_v1.wav",
+          "bytes": 2116352,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_D5_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_D5_v2.wav",
+          "bytes": 1976276,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_E4_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_E4_v1.wav",
+          "bytes": 2315540,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_E4_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_E4_v2.wav",
+          "bytes": 1702620,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_F#3_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_F#3_v1.wav",
+          "bytes": 1585612,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_F#3_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_F#3_v2.wav",
+          "bytes": 1720800,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_G2_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G2_v1.wav",
+          "bytes": 2341712,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_G2_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G2_v2.wav",
+          "bytes": 2681324,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_G4_v1.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G4_v1.wav",
+          "bytes": 2330236,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/violin/VlnEns_susVib_G4_v2.wav",
+          "sourcePath": "Strings/Violin Section/susVib/VlnEns_susVib_G4_v2.wav",
+          "bytes": 2150136,
+          "status": "skipped"
+        }
+      ]
+    },
+    {
+      "id": "vsco-viola-section-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Viola Section/susvib",
+      "targetDir": "starter-pack/strings/viola",
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      },
+      "files": [
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_A3_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_A3_v1_1.wav",
+          "bytes": 2491352,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_A3_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_A3_v2_1.wav",
+          "bytes": 2861282,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_B2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_B2_v1_1.wav",
+          "bytes": 2861510,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_B2_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_B2_v2_1.wav",
+          "bytes": 3268364,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_B4_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_B4_v1_1.wav",
+          "bytes": 2203118,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_B4_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_B4_v2_1.wav",
+          "bytes": 2893766,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_C2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C2_v1_1.wav",
+          "bytes": 2642360,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_C2_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C2_v2_1.wav",
+          "bytes": 3318188,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_C4_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C4_v1_1.wav",
+          "bytes": 2289656,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_C4_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_C4_v2_1.wav",
+          "bytes": 2954936,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D2_v1_1.wav",
+          "bytes": 2359898,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D2_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D2_v2_1.wav",
+          "bytes": 3049772,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D3_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D3_v1_1.wav",
+          "bytes": 2789648,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D3_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D3_v2_1.wav",
+          "bytes": 3596756,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D5_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D5_v1_1.wav",
+          "bytes": 2087798,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_D5_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_D5_v2_1.wav",
+          "bytes": 2638244,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_E2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_E2_v1_1.wav",
+          "bytes": 2520044,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_E2_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_E2_v2_1.wav",
+          "bytes": 3027656,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_E4_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_E4_v1_1.wav",
+          "bytes": 2044358,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_E4_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_E4_v2_1.wav",
+          "bytes": 2559086,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_F3_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_F3_v1_1.wav",
+          "bytes": 2487818,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_F3_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_F3_v2_1.wav",
+          "bytes": 3471944,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_G2_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_G2_v1_1.wav",
+          "bytes": 2001644,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_G2_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_G2_v2_1.wav",
+          "bytes": 3637364,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_G4_v1_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_G4_v1_1.wav",
+          "bytes": 2542586,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/viola/ViolaEns_susvib_G4_v2_1.wav",
+          "sourcePath": "Strings/Viola Section/susvib/ViolaEns_susvib_G4_v2_1.wav",
+          "bytes": 3103628,
+          "status": "skipped"
+        }
+      ]
+    },
+    {
+      "id": "vsco-cello-section-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Cello Section/susvib",
+      "targetDir": "starter-pack/strings/cello",
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      },
+      "files": [
+        {
+          "path": "starter-pack/strings/cello/susvib_A2_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_A2_v1_1.wav",
+          "bytes": 2336738,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_A2_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_A2_v3_1.wav",
+          "bytes": 3082676,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_B1_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_B1_v1_1.wav",
+          "bytes": 2372492,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_B3_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_B3_v1_1.wav",
+          "bytes": 1690082,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_B1_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_B1_v3_1.wav",
+          "bytes": 3372962,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_B3_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_B3_v3_1.wav",
+          "bytes": 2865086,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_C1_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_C1_v1_1.wav",
+          "bytes": 2347376,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_C1_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_C1_v3_1.wav",
+          "bytes": 3335948,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_C3_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_C3_v1_1.wav",
+          "bytes": 2444174,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_C3_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_C3_v3_1.wav",
+          "bytes": 3019394,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_D2_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_D2_v1_1.wav",
+          "bytes": 2550956,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_D2_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_D2_v3_1.wav",
+          "bytes": 3291368,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_D4_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_D4_v1_1.wav",
+          "bytes": 2153228,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_D4_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_D4_v3_1.wav",
+          "bytes": 2801210,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_E1_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_E1_v1_1.wav",
+          "bytes": 2468348,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_E1_v1_2.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_E1_v1_2.wav",
+          "bytes": 2439512,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_E1_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_E1_v3_1.wav",
+          "bytes": 3080426,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_E3_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_E3_v1_1.wav",
+          "bytes": 2456672,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_E3_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_E3_v3_1.wav",
+          "bytes": 3278270,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_F2_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_F2_v1_1.wav",
+          "bytes": 2186012,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_F2_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_F2_v3_1.wav",
+          "bytes": 3062696,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_F4_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_F4_v1_1.wav",
+          "bytes": 1922948,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_F4_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_F4_v3_1.wav",
+          "bytes": 2726342,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_G1_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_G1_v1_1.wav",
+          "bytes": 2161700,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_G1_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_G1_v3_1.wav",
+          "bytes": 3370496,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_G3_v1_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_G3_v1_1.wav",
+          "bytes": 2431598,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/cello/susvib_G3_v3_1.wav",
+          "sourcePath": "Strings/Cello Section/susvib/susvib_G3_v3_1.wav",
+          "bytes": 3335768,
+          "status": "skipped"
+        }
+      ]
+    },
+    {
+      "id": "vsco-contrabass-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Strings/Solo Contrabass/SusVib",
+      "targetDir": "starter-pack/strings/contrabass",
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      },
+      "files": [
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A#0_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_A#0_v1_rr1.wav",
+          "bytes": 1336820,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A#0_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_A#0_v3_rr1.wav",
+          "bytes": 2193316,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_A1_v1_rr1.wav",
+          "bytes": 2131692,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_A1_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_A1_v3_rr1.wav",
+          "bytes": 1975160,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_B2_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_B2_v1_rr1.wav",
+          "bytes": 1246160,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_B2_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_B2_v3_rr1.wav",
+          "bytes": 1633420,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C#2_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_C#2_v1_rr1.wav",
+          "bytes": 1349416,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C#2_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_C#2_v3_rr1.wav",
+          "bytes": 1860096,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_C1_v1_rr1.wav",
+          "bytes": 1835940,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_C1_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_C1_v3_rr1.wav",
+          "bytes": 2479908,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_D1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_D1_v1_rr1.wav",
+          "bytes": 3057536,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_D1_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_D1_v3_rr1.wav",
+          "bytes": 2450408,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_E1_v1_rr1.wav",
+          "bytes": 2429548,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E1_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_E1_v3_rr1.wav",
+          "bytes": 2051084,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E2_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_E2_v1_rr1.wav",
+          "bytes": 1533524,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_E2_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_E2_v3_rr1.wav",
+          "bytes": 1874324,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#0_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_F#0_v1_rr1.wav",
+          "bytes": 1597380,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#0_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_F#0_v3_rr1.wav",
+          "bytes": 2177272,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_F#1_v1_rr1.wav",
+          "bytes": 1153568,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_F#1_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_F#1_v3_rr1.wav",
+          "bytes": 1710912,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#1_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G#1_v1_rr1.wav",
+          "bytes": 1256636,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#1_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G#1_v3_rr1.wav",
+          "bytes": 1874712,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#2_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G#2_v1_rr1.wav",
+          "bytes": 1352760,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G#2_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G#2_v3_rr1.wav",
+          "bytes": 1821888,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G0_v1_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G0_v1_rr1.wav",
+          "bytes": 1583696,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/strings/contrabass/BKCtbss_SusVib_G0_v3_rr1.wav",
+          "sourcePath": "Strings/Solo Contrabass/SusVib/BKCtbss_SusVib_G0_v3_rr1.wav",
+          "bytes": 1990464,
+          "status": "skipped"
+        }
+      ]
+    },
+    {
+      "id": "vsco-horn-sustain",
+      "repo": "sgossner/VSCO-2-CE",
+      "ref": "master",
+      "sourcePathPrefix": "Brass/F Horn/sus",
+      "targetDir": "starter-pack/brass/horn",
+      "license": "CC0-1.0",
+      "attribution": "Versilian Studios Community Edition",
+      "quality": {
+        "sampleRate": 44100,
+        "bitDepth": 24
+      },
+      "files": [
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_A#1_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A#1_v1_1.wav",
+          "bytes": 2417592,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_A#1_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A#1_v2_1.wav",
+          "bytes": 2740036,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_A#1_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A#1_v3_1.wav",
+          "bytes": 1829064,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_A0_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A0_v1_1.wav",
+          "bytes": 947196,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_A2_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A2_v1_1.wav",
+          "bytes": 2672192,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_A2_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A2_v2_1.wav",
+          "bytes": 2542000,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_A2_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_A2_v3_1.wav",
+          "bytes": 1305440,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C1_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C1_v1_1.wav",
+          "bytes": 1093856,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C1_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C1_v2_1.wav",
+          "bytes": 807756,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C1_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C1_v3_1.wav",
+          "bytes": 704216,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v1_1.wav",
+          "bytes": 2519448,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v2_1.wav",
+          "bytes": 2240888,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v3_1.wav",
+          "bytes": 2114316,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_C3_v4_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_C3_v4_1.wav",
+          "bytes": 1761688,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D#1_v1_1.wav",
+          "bytes": 1425196,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D#1_v2_1.wav",
+          "bytes": 970468,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D#1_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D#1_v3_1.wav",
+          "bytes": 927292,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v1_1.wav",
+          "bytes": 2500360,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v2_1.wav",
+          "bytes": 2583372,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v3_1.wav",
+          "bytes": 1746204,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D2_v4_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D2_v4_1.wav",
+          "bytes": 1166236,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_D4_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_D4_v1_1.wav",
+          "bytes": 1445100,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_F2_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F2_v1_1.wav",
+          "bytes": 2163124,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_F2_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F2_v2_1.wav",
+          "bytes": 2558276,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_F2_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F2_v3_1.wav",
+          "bytes": 1692688,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_F4_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_F4_v1_1.wav",
+          "bytes": 1477536,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_G1_v1_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_G1_v1_1.wav",
+          "bytes": 2038728,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_G1_v2_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_G1_v2_1.wav",
+          "bytes": 1300556,
+          "status": "skipped"
+        },
+        {
+          "path": "starter-pack/brass/horn/MOHorn_sus_G1_v3_1.wav",
+          "sourcePath": "Brass/F Horn/sus/MOHorn_sus_G1_v3_1.wav",
+          "bytes": 941656,
+          "status": "skipped"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "downloaded": 0,
+    "skipped": 209,
+    "failed": 0,
+    "totalBytes": 443913516,
+    "totalMB": 423.35
+  }
+}

@@ -20,9 +20,15 @@ const MidiTab = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef(null);
 
   const builtInFiles = getBuiltInMidiFiles();
+  const filteredFiles = builtInFiles.filter((file) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return `${file.name} ${file.composer}`.toLowerCase().includes(query);
+  });
 
   const loadMidiWithFallback = useCallback(async (file) => {
     try {
@@ -106,8 +112,16 @@ const MidiTab = ({
 
       <div className="midi-tab__section">
         <h3 className="midi-tab__heading">Library</h3>
+        <input
+          type="search"
+          className="midi-tab__search"
+          placeholder="Filter by title or composer"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          aria-label="Filter MIDI library"
+        />
         <ul className="midi-tab__list">
-          {builtInFiles.map((file) => (
+          {filteredFiles.map((file) => (
             <li key={file.id} className="midi-tab__item">
               <button
                 type="button"
@@ -121,6 +135,11 @@ const MidiTab = ({
             </li>
           ))}
         </ul>
+        {filteredFiles.length === 0 && (
+          <div className="midi-tab__empty">
+            No matches for “{searchQuery.trim()}”.
+          </div>
+        )}
       </div>
 
       <div className="midi-tab__section">

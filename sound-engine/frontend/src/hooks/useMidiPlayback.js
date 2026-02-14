@@ -470,9 +470,15 @@ export function useMidiPlayback({ waveformType, audioParams }) {
         }
       }
       soundSetRef.current = loadedSoundSet;
-      layerFamiliesRef.current = Array.isArray(midiData.layerFamilies)
+      const requestedLayerFamilies = Array.isArray(midiData.layerFamilies)
         ? midiData.layerFamilies.filter(Boolean)
         : [];
+      const soundSetLayerFamilies = Array.isArray(loadedSoundSet?.layerFamilies)
+        ? loadedSoundSet.layerFamilies.filter(Boolean)
+        : [];
+      layerFamiliesRef.current = requestedLayerFamilies.length > 0
+        ? requestedLayerFamilies
+        : soundSetLayerFamilies;
 
       const ctx = audioEngine.context;
       const startTime = ctx?.currentTime || 0;
