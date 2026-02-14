@@ -31,6 +31,7 @@ npm run sync:starter-sounds
 Options:
 - `--force` re-download existing files
 - `--quiet` minimal logs
+- `--verify-existing` verify checksums for already-downloaded files
 
 The sync script writes inventory metadata to:
 
@@ -41,6 +42,7 @@ The sync script writes inventory metadata to:
 The sync pipeline enforces:
 - strict domain allowlist (`raw.githubusercontent.com`, `api.github.com`)
 - deterministic source manifest
+- git-blob checksum verification against upstream tree SHA
 - no free-form crawl targets
 
 ## Git Storage

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +13,7 @@ const inventoryPath = path.join(frontendRoot, 'src/data/starterSoundInventory.js
 const args = new Set(process.argv.slice(2));
 const forceDownload = args.has('--force');
 const quiet = args.has('--quiet');
+const verifyExisting = args.has('--verify-existing');
 const maxConcurrent = 6;
 const REQUEST_TIMEOUT_MS = 25000;
 
@@ -65,13 +67,29 @@ for (const pack of manifest.packs || []) {
     const exists = await fileExists(targetPath);
 
     if (exists && !forceDownload) {
+      let integrity = 'skipped';
+      let localBlobSha = null;
+      let sourceBlobSha = entry.sha || null;
+      if (verifyExisting) {
+        const existingBuffer = await fs.readFile(targetPath);
+        localBlobSha = computeGitBlobSha(existingBuffer);
+        integrity = sourceBlobSha && localBlobSha === sourceBlobSha ? 'verified' : 'mismatch';
+        if (integrity === 'mismatch') {
+          failed += 1;
+          console.error(`[error] integrity mismatch (existing) ${pack.id}/${relativePath}`);
+        }
+      }
+
       skipped += 1;
       totalBytes += Number(entry.size) || 0;
       packInventory.files.push({
         path: normalizeToPosix(path.relative(outputRoot, targetPath)),
         sourcePath: entry.path,
         bytes: Number(entry.size) || null,
-        status: 'skipped'
+        status: 'skipped',
+        sourceBlobSha,
+        localBlobSha,
+        integrity
       });
       return;
     }
@@ -81,6 +99,12 @@ for (const pack of manifest.packs || []) {
       enforceAllowlist(rawUrl, manifest.allowlistedDomains || []);
 
       const data = await fetchBuffer(rawUrl);
+      const sourceBlobSha = entry.sha || null;
+      const localBlobSha = computeGitBlobSha(data);
+      if (sourceBlobSha && localBlobSha !== sourceBlobSha) {
+        throw new Error(`Checksum mismatch for ${relativePath}`);
+      }
+
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
       await fs.writeFile(targetPath, data);
 
@@ -91,7 +115,10 @@ for (const pack of manifest.packs || []) {
         path: normalizeToPosix(path.relative(outputRoot, targetPath)),
         sourcePath: entry.path,
         bytes: data.length,
-        status: 'downloaded'
+        status: 'downloaded',
+        sourceBlobSha,
+        localBlobSha,
+        integrity: sourceBlobSha ? 'verified' : 'unverified'
       });
       log(`[download] ${pack.id}: ${relativePath}`);
     } catch (error) {
@@ -152,6 +179,14 @@ async function fetchRepoTree(repo, ref) {
     throw new Error(`Invalid tree response for ${repo}@${ref}`);
   }
   return payload.tree;
+}
+
+function computeGitBlobSha(buffer) {
+  const header = Buffer.from(`blob ${buffer.length}\0`, 'utf8');
+  return createHash('sha1')
+    .update(header)
+    .update(buffer)
+    .digest('hex');
 }
 
 function toRawFileUrl(repo, ref, filePath) {
