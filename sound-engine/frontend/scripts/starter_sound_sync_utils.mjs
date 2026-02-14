@@ -89,6 +89,19 @@ export function getBlobIntegrityStatus(sourceBlobSha, localBlobSha) {
   return sourceBlobSha === localBlobSha ? 'verified' : 'mismatch';
 }
 
+export function isLikelyGitLfsPointer(content) {
+  const text = typeof content === 'string'
+    ? content
+    : Buffer.isBuffer(content)
+      ? content.toString('utf8')
+      : '';
+
+  if (!text) return false;
+  return text.startsWith('version https://git-lfs.github.com/spec/v1\n')
+    && /oid sha256:[0-9a-f]{64}/i.test(text)
+    && /size \d+/i.test(text);
+}
+
 export function summarizeInventoryPacks(packs = []) {
   const allEntries = packs.flatMap((pack) => pack.files || []);
   const downloaded = allEntries.filter((entry) => entry.status === 'downloaded').length;

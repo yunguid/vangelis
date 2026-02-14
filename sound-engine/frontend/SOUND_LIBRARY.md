@@ -46,6 +46,7 @@ Network behavior:
 - existing-file checksum verification uses streamed hashing to avoid loading entire files into memory
 - validates expected byte sizes from upstream tree metadata before hash verification
 - marks assets as `unverified` (not failed) when upstream SHA metadata is unavailable
+- treats local Git LFS pointer files as `unverified` during `--verify-existing` (run `git lfs pull` for full verification)
 
 ## Security
 

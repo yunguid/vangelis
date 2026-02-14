@@ -6,6 +6,7 @@ import {
   computeGitBlobShaFromFile,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
+  isLikelyGitLfsPointer,
   resolveSafeOutputPath,
   summarizeInventoryPacks,
   toPathCollisionKey,
@@ -74,6 +75,7 @@ for (const pack of manifest.packs || []) {
     quality: pack.quality || null,
     files: []
   };
+  let lfsPointerCount = 0;
 
   const tasks = filtered.map((entry) => async () => {
     const relativePath = path.relative(pack.sourcePathPrefix, entry.path);
@@ -107,8 +109,23 @@ for (const pack of manifest.packs || []) {
         const localBytes = Number(localStats.size) || 0;
         const expectedBytes = Number(entry.size);
         if (!hasMatchingByteSize(localBytes, expectedBytes)) {
-          integrity = 'mismatch';
-          console.error(`[error] size mismatch (existing) ${pack.id}/${relativePath}`);
+          let treatedAsPointer = false;
+          if (localBytes > 0 && localBytes <= 1024) {
+            try {
+              const maybePointer = await fs.readFile(targetPath, 'utf8');
+              if (isLikelyGitLfsPointer(maybePointer)) {
+                integrity = 'unverified';
+                treatedAsPointer = true;
+                lfsPointerCount += 1;
+              }
+            } catch {
+              // fall through to mismatch handling
+            }
+          }
+          if (!treatedAsPointer) {
+            integrity = 'mismatch';
+            console.error(`[error] size mismatch (existing) ${pack.id}/${relativePath}`);
+          }
         } else {
           localBlobSha = await computeGitBlobShaFromFile(targetPath);
           integrity = getBlobIntegrityStatus(sourceBlobSha, localBlobSha);
@@ -187,6 +204,9 @@ for (const pack of manifest.packs || []) {
   });
 
   await runConcurrent(tasks, maxConcurrent);
+  if (lfsPointerCount > 0) {
+    console.warn(`[warn] ${pack.id}: detected ${lfsPointerCount} Git LFS pointer file(s); run git lfs pull for full verification.`);
+  }
   packInventory.files.sort((a, b) => a.path.localeCompare(b.path));
   inventory.packs.push(packInventory);
 }

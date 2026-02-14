@@ -7,6 +7,7 @@ import {
   computeGitBlobShaFromFile,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
+  isLikelyGitLfsPointer,
   normalizeExpectedSize,
   resolveSafeOutputPath,
   summarizeInventoryPacks,
@@ -239,6 +240,17 @@ describe('starter_sound_sync_utils', () => {
     expect(getBlobIntegrityStatus(validSha, null)).toBe('mismatch');
     expect(getBlobIntegrityStatus(null, validSha)).toBe('unverified');
     expect(getBlobIntegrityStatus('invalid-sha', validSha)).toBe('unverified');
+  });
+
+  it('detects git lfs pointer payloads', () => {
+    const lfsPointer = [
+      'version https://git-lfs.github.com/spec/v1',
+      'oid sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      'size 123456'
+    ].join('\n');
+    expect(isLikelyGitLfsPointer(lfsPointer)).toBe(true);
+    expect(isLikelyGitLfsPointer(Buffer.from(lfsPointer, 'utf8'))).toBe(true);
+    expect(isLikelyGitLfsPointer('not-a-pointer')).toBe(false);
   });
 
   it('normalizes path collision keys case-insensitively', () => {
