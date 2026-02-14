@@ -53,6 +53,7 @@ The sync pipeline enforces:
 - strict domain allowlist (`raw.githubusercontent.com`, `api.github.com`)
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
 - output-path confinement (prevents write traversal outside `public/samples`)
+- target-path collision detection (prevents multiple sources writing same local asset path)
 - deterministic source manifest
 - git-blob checksum verification against upstream tree SHA
 - no free-form crawl targets

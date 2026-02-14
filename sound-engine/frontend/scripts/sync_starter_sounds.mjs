@@ -27,6 +27,7 @@ const MAX_FETCH_ATTEMPTS = 4;
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 
 const treeCache = new Map();
+const targetPathOwners = new Map();
 
 const log = (...values) => {
   if (!quiet) console.log(...values);
@@ -75,6 +76,23 @@ for (const pack of manifest.packs || []) {
   const tasks = filtered.map((entry) => async () => {
     const relativePath = path.relative(pack.sourcePathPrefix, entry.path);
     const targetPath = resolveSafeOutputPath(outputRoot, pack.targetDir, relativePath);
+    const normalizedTargetPath = normalizeToPosix(path.relative(outputRoot, targetPath));
+    const targetOwner = `${pack.id}:${entry.path}`;
+    const existingOwner = targetPathOwners.get(normalizedTargetPath);
+    if (existingOwner && existingOwner !== targetOwner) {
+      failed += 1;
+      mismatched += 1;
+      packInventory.files.push({
+        path: normalizedTargetPath,
+        sourcePath: entry.path,
+        bytes: null,
+        status: 'failed',
+        error: `Target path collision with ${existingOwner}`
+      });
+      console.error(`[error] target path collision ${pack.id}/${relativePath} -> ${normalizedTargetPath} (owner: ${existingOwner})`);
+      return;
+    }
+    targetPathOwners.set(normalizedTargetPath, targetOwner);
     const exists = await fileExists(targetPath);
 
     if (exists && !forceDownload) {
@@ -106,7 +124,7 @@ for (const pack of manifest.packs || []) {
       skipped += 1;
       totalBytes += Number(entry.size) || 0;
       packInventory.files.push({
-        path: normalizeToPosix(path.relative(outputRoot, targetPath)),
+        path: normalizedTargetPath,
         sourcePath: entry.path,
         bytes: Number(entry.size) || null,
         status: 'skipped',
@@ -143,7 +161,7 @@ for (const pack of manifest.packs || []) {
       totalBytes += data.length;
 
       packInventory.files.push({
-        path: normalizeToPosix(path.relative(outputRoot, targetPath)),
+        path: normalizedTargetPath,
         sourcePath: entry.path,
         bytes: data.length,
         status: 'downloaded',

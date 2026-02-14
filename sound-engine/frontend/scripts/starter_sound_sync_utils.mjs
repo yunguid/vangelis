@@ -30,6 +30,12 @@ function isSafeRelativePath(value) {
     && !hasPathTraversal(value);
 }
 
+function normalizeManifestPath(value) {
+  return String(value || '')
+    .replaceAll('\\', '/')
+    .replace(/\/+$/g, '');
+}
+
 export function resolveSafeOutputPath(outputRoot, targetDir, relativePath) {
   assert(isSafeRelativePath(targetDir), `Unsafe targetDir "${targetDir}"`);
   assert(isSafeRelativePath(relativePath), `Unsafe relative path "${relativePath}"`);
@@ -111,6 +117,7 @@ export function validateStarterSoundManifest(value) {
   });
 
   const ids = new Set();
+  const normalizedTargetDirs = new Set();
   value.packs.forEach((pack) => {
     assert(typeof pack.id === 'string' && pack.id.length > 0, 'Each pack must define a non-empty id');
     assert(pack.id.trim() === pack.id, `Pack id has invalid whitespace: "${pack.id}"`);
@@ -122,6 +129,10 @@ export function validateStarterSoundManifest(value) {
     assert(isSafeRelativePath(pack.sourcePathPrefix), `Pack "${pack.id}" sourcePathPrefix is unsafe`);
     assert(isSafeRelativePath(pack.targetDir), `Pack "${pack.id}" targetDir is unsafe`);
     assert(pack.targetDir.startsWith('starter-pack/'), `Pack "${pack.id}" targetDir must stay within starter-pack/`);
+    const normalizedTargetDir = normalizeManifestPath(pack.targetDir);
+    assert(!normalizedTargetDirs.has(normalizedTargetDir),
+      `Pack "${pack.id}" targetDir duplicates existing targetDir "${normalizedTargetDir}"`);
+    normalizedTargetDirs.add(normalizedTargetDir);
     assert(typeof pack.license === 'string' && pack.license.length > 0, `Pack "${pack.id}" missing license`);
     assert(typeof pack.attribution === 'string' && pack.attribution.length > 0, `Pack "${pack.id}" missing attribution`);
 

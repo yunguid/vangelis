@@ -39,6 +39,13 @@ describe('starter_sound_sync_utils', () => {
     duplicate.packs.push({ ...duplicate.packs[0] });
     expect(() => validateStarterSoundManifest(duplicate)).toThrow(/Duplicate pack id/i);
 
+    const duplicateTarget = structuredClone(validManifest);
+    duplicateTarget.packs.push({
+      ...duplicateTarget.packs[0],
+      id: 'other-pack'
+    });
+    expect(() => validateStarterSoundManifest(duplicateTarget)).toThrow(/targetDir duplicates existing targetDir/i);
+
     const unsafe = structuredClone(validManifest);
     unsafe.packs[0].targetDir = '../outside';
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
