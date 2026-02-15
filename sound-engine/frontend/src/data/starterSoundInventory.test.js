@@ -12,6 +12,7 @@ describe('starter sound inventory integrity', () => {
     const inventoryPath = path.join(testDir, 'starterSoundInventory.json');
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const inventory = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
+    const manifestPackById = new Map((manifest.packs || []).map((pack) => [pack.id, pack]));
 
     expect(Array.isArray(inventory.packs)).toBe(true);
     expect(inventory.packs.length).toBeGreaterThan(0);
@@ -40,6 +41,16 @@ describe('starter sound inventory integrity', () => {
     expect(inventory.sourcePackIds).toEqual(packIds);
 
     inventory.packs.forEach((pack) => {
+      const manifestPack = manifestPackById.get(pack.id);
+      expect(manifestPack).toBeTruthy();
+      expect(pack.repo).toBe(manifestPack.repo);
+      expect(pack.ref).toBe(manifestPack.ref);
+      expect(pack.sourcePathPrefix).toBe(manifestPack.sourcePathPrefix);
+      expect(pack.targetDir).toBe(manifestPack.targetDir);
+      expect(pack.license).toBe(manifestPack.license);
+      expect(pack.attribution).toBe(manifestPack.attribution);
+      expect(pack.quality).toEqual(manifestPack.quality);
+
       const paths = pack.files.map((entry) => entry.path);
       const sorted = [...paths].sort((a, b) => a.localeCompare(b));
       expect(paths).toEqual(sorted);
