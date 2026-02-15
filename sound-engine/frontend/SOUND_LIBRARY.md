@@ -43,6 +43,7 @@ The sync script writes inventory metadata to:
 - manifest fingerprinting uses canonicalized JSON key ordering (stable across object key reorderings)
 - fingerprint value is persisted as 64-char lowercase SHA-256 hex
 - inventory also records `sourcePackCount` for manifest-to-inventory pack cardinality checks
+- inventory also records `sourcePackIds` for exact manifest-pack identity checks
 
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures

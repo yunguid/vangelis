@@ -24,6 +24,7 @@ describe('starter sound inventory integrity', () => {
     expect(inventory.sourcePackCount).toBe(manifest.packs.length);
     expect(Number.isInteger(inventory.sourcePackCount)).toBe(true);
     expect(inventory.sourcePackCount).toBeGreaterThan(0);
+    expect(inventory.sourcePackIds).toEqual(manifest.packs.map((pack) => pack.id));
     const packIds = inventory.packs.map((pack) => pack.id);
     expect(packIds).toEqual([...packIds].sort((a, b) => a.localeCompare(b)));
     expect(new Set(packIds).size).toBe(packIds.length);
