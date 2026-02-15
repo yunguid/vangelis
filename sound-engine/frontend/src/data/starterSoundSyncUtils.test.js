@@ -133,6 +133,16 @@ describe('starter_sound_sync_utils', () => {
     nonNormalizedSourcePrefix.packs[0].sourcePathPrefix = 'Strings//Violin Section/susVib/';
     expect(() => validateStarterSoundManifest(nonNormalizedSourcePrefix))
       .toThrow(/sourcePathPrefix must be normalized/i);
+
+    const overlappingTargetDir = structuredClone(validManifest);
+    overlappingTargetDir.packs.push({
+      ...overlappingTargetDir.packs[0],
+      id: 'overlap-pack',
+      sourcePathPrefix: 'Strings/Viola Section/susvib',
+      targetDir: 'starter-pack/strings'
+    });
+    expect(() => validateStarterSoundManifest(overlappingTargetDir))
+      .toThrow(/overlaps targetDir/i);
   });
 
   it('rejects non-kebab-case pack ids', () => {

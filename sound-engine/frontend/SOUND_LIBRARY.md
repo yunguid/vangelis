@@ -68,6 +68,7 @@ The sync pipeline enforces:
 - license + attribution metadata must be non-empty and whitespace-clean
 - output-path confinement (prevents write traversal outside `public/samples`)
 - target-path collision detection (prevents multiple sources writing same local asset path)
+- duplicate/overlapping `targetDir` definitions are rejected at manifest-validation time
 - duplicate/overlapping source-prefix detection per repo ref (case-insensitive, prevents duplicate upstream slices)
 - deterministic source manifest
 - deterministic inventory ordering (packs + files sorted for stable diffs)

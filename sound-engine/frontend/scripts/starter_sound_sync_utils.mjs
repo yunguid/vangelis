@@ -275,6 +275,7 @@ export function validateStarterSoundManifest(value) {
   const ids = new Set();
   const packIdsInOrder = [];
   const normalizedTargetDirs = new Set();
+  const targetDirMappings = [];
   const sourcePrefixesByRepoRef = new Map();
   value.packs.forEach((pack) => {
     assertNoUnexpectedKeys(pack, ALLOWED_PACK_KEYS, `Pack "${pack?.id || 'unknown'}"`);
@@ -303,7 +304,14 @@ export function validateStarterSoundManifest(value) {
     const targetDirCollisionKey = toPathCollisionKey(pack.targetDir);
     assert(!normalizedTargetDirs.has(targetDirCollisionKey),
       `Pack "${pack.id}" targetDir duplicates existing targetDir "${normalizedTargetDir}"`);
+    const overlappingTargetDir = targetDirMappings.find((candidate) =>
+      targetDirCollisionKey.startsWith(`${candidate.dir}/`)
+      || candidate.dir.startsWith(`${targetDirCollisionKey}/`)
+    );
+    assert(!overlappingTargetDir,
+      `Pack "${pack.id}" overlaps targetDir with pack "${overlappingTargetDir?.id}"`);
     normalizedTargetDirs.add(targetDirCollisionKey);
+    targetDirMappings.push({ id: pack.id, dir: targetDirCollisionKey });
 
     const normalizedSourcePrefix = normalizeManifestPath(pack.sourcePathPrefix);
     const sourcePrefixCollisionKey = toPathCollisionKey(pack.sourcePathPrefix);
