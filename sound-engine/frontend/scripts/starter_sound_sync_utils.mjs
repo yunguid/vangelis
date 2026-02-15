@@ -212,6 +212,40 @@ export function assertExpectedContentLength(
   );
 }
 
+export function assertBufferMatchesAudioExtension(buffer, filePath, contextLabel = 'payload') {
+  assert(Buffer.isBuffer(buffer), `${contextLabel} for "${filePath}" must be a Buffer`);
+  const ext = path.extname(String(filePath || '')).toLowerCase();
+  assert(ext.length > 0, `${contextLabel} is missing file extension for "${filePath}"`);
+
+  const startsWithAscii = (value, offset = 0) => {
+    const marker = Buffer.from(value, 'ascii');
+    return buffer.length >= offset + marker.length
+      && buffer.subarray(offset, offset + marker.length).equals(marker);
+  };
+
+  const isLikelyMp3 = () => {
+    if (startsWithAscii('ID3', 0)) return true;
+    if (buffer.length < 2) return false;
+    return buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0;
+  };
+
+  const signatureMatchesByExtension = {
+    '.wav': () => (startsWithAscii('RIFF', 0) || startsWithAscii('RF64', 0)) && startsWithAscii('WAVE', 8),
+    '.flac': () => startsWithAscii('fLaC', 0),
+    '.ogg': () => startsWithAscii('OggS', 0),
+    '.mp3': () => isLikelyMp3(),
+    '.aif': () => startsWithAscii('FORM', 0) && (startsWithAscii('AIFF', 8) || startsWithAscii('AIFC', 8)),
+    '.aiff': () => startsWithAscii('FORM', 0) && (startsWithAscii('AIFF', 8) || startsWithAscii('AIFC', 8))
+  };
+
+  const matcher = signatureMatchesByExtension[ext];
+  assert(typeof matcher === 'function', `${contextLabel} extension "${ext}" is not supported for signature validation`);
+  assert(
+    matcher(),
+    `${contextLabel} for "${filePath}" does not match expected ${ext} signature`
+  );
+}
+
 export function computeGitBlobSha(buffer) {
   const header = Buffer.from(`blob ${buffer.length}\0`, 'utf8');
   return createHash('sha1')

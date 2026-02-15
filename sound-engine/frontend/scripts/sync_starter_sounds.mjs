@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assertAllowlistedUrl,
+  assertBufferMatchesAudioExtension,
   assertExpectedContentLength,
   assertLikelyAudioContentType,
   assertLikelyJsonContentType,
@@ -197,6 +198,7 @@ for (const pack of manifest.packs || []) {
 
       const data = await fetchBuffer(rawUrl, expectedBytes);
       assertNotGitLfsPointer(data, `Downloaded asset ${pack.id}/${relativePath}`);
+      assertBufferMatchesAudioExtension(data, entry.path, `Downloaded asset ${pack.id}/${relativePath}`);
       if (!hasMatchingByteSize(data.length, expectedBytes)) {
         throw new Error(`Size mismatch for ${relativePath}`);
       }

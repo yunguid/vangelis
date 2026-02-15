@@ -4,6 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
   assertAllowlistedUrl,
+  assertBufferMatchesAudioExtension,
   assertExpectedContentLength,
   assertLikelyAudioContentType,
   assertLikelyJsonContentType,
@@ -511,6 +512,27 @@ describe('starter_sound_sync_utils', () => {
     }, 'tree-d')).toThrow(/duplicates an existing path/i);
     expect(() => validateGitHubTreePayload({ tree: [{ path: 'Strings//Violin', type: 'tree' }] }, 'tree-e'))
       .toThrow(/path must be normalized/i);
+  });
+
+  it('validates audio buffer signatures against file extensions', () => {
+    const wavBuffer = Buffer.from('524946460000000057415645', 'hex'); // RIFF....WAVE
+    const flacBuffer = Buffer.from('664c6143', 'hex'); // fLaC
+    const oggBuffer = Buffer.from('4f676753', 'hex'); // OggS
+    const mp3Id3Buffer = Buffer.from('49443304000000000000', 'hex'); // ID3
+    const mp3FrameBuffer = Buffer.from([0xff, 0xfb, 0x90, 0x64]); // frame sync
+    const aiffBuffer = Buffer.from('464f524d0000000041494646', 'hex'); // FORM....AIFF
+
+    expect(() => assertBufferMatchesAudioExtension(wavBuffer, 'sample.wav', 'sig-a')).not.toThrow();
+    expect(() => assertBufferMatchesAudioExtension(flacBuffer, 'sample.flac', 'sig-b')).not.toThrow();
+    expect(() => assertBufferMatchesAudioExtension(oggBuffer, 'sample.ogg', 'sig-c')).not.toThrow();
+    expect(() => assertBufferMatchesAudioExtension(mp3Id3Buffer, 'sample.mp3', 'sig-d')).not.toThrow();
+    expect(() => assertBufferMatchesAudioExtension(mp3FrameBuffer, 'sample.mp3', 'sig-e')).not.toThrow();
+    expect(() => assertBufferMatchesAudioExtension(aiffBuffer, 'sample.aiff', 'sig-f')).not.toThrow();
+
+    expect(() => assertBufferMatchesAudioExtension(Buffer.from('not-audio', 'utf8'), 'sample.wav', 'sig-g'))
+      .toThrow(/does not match expected \.wav signature/i);
+    expect(() => assertBufferMatchesAudioExtension(wavBuffer, 'sample.unknown', 'sig-h'))
+      .toThrow(/not supported for signature validation/i);
   });
 
   it('computes identical git-blob sha for buffer and file stream', async () => {
