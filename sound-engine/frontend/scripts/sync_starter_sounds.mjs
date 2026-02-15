@@ -7,6 +7,7 @@ import {
   classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  computePackMetadataSignature,
   getRequiredExpectedSize,
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
@@ -266,26 +267,8 @@ inventory.packs.forEach((pack) => {
     throw new Error(`Generated inventory pack missing from manifest: ${pack.id}`);
   }
 
-  const sourceSignature = JSON.stringify({
-    repo: sourcePack.repo,
-    ref: sourcePack.ref,
-    sourcePathPrefix: sourcePack.sourcePathPrefix,
-    targetDir: sourcePack.targetDir,
-    includeExtensions: sourcePack.includeExtensions,
-    license: sourcePack.license,
-    attribution: sourcePack.attribution,
-    quality: sourcePack.quality
-  });
-  const inventorySignature = JSON.stringify({
-    repo: pack.repo,
-    ref: pack.ref,
-    sourcePathPrefix: pack.sourcePathPrefix,
-    targetDir: pack.targetDir,
-    includeExtensions: pack.includeExtensions,
-    license: pack.license,
-    attribution: pack.attribution,
-    quality: pack.quality
-  });
+  const sourceSignature = computePackMetadataSignature(sourcePack);
+  const inventorySignature = computePackMetadataSignature(pack);
 
   if (sourceSignature !== inventorySignature) {
     throw new Error(`Generated inventory pack metadata drifted from manifest for pack "${pack.id}"`);

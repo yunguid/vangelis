@@ -130,10 +130,27 @@ function toCanonicalJson(value) {
   return value;
 }
 
-export function computeManifestFingerprint(manifest) {
+function computeCanonicalSha256(value) {
   return createHash('sha256')
-    .update(JSON.stringify(toCanonicalJson(manifest)), 'utf8')
+    .update(JSON.stringify(toCanonicalJson(value)), 'utf8')
     .digest('hex');
+}
+
+export function computeManifestFingerprint(manifest) {
+  return computeCanonicalSha256(manifest);
+}
+
+export function computePackMetadataSignature(pack = {}) {
+  return computeCanonicalSha256({
+    repo: pack.repo,
+    ref: pack.ref,
+    sourcePathPrefix: pack.sourcePathPrefix,
+    targetDir: pack.targetDir,
+    includeExtensions: pack.includeExtensions,
+    license: pack.license,
+    attribution: pack.attribution,
+    quality: pack.quality
+  });
 }
 
 export function buildManifestSnapshot(manifest) {

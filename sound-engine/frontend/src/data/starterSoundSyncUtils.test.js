@@ -7,6 +7,7 @@ import {
   buildManifestSnapshot,
   classifyExistingFileIntegrity,
   computeManifestFingerprint,
+  computePackMetadataSignature,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
   getRequiredExpectedSize,
@@ -690,5 +691,22 @@ describe('starter_sound_sync_utils', () => {
       sourcePackCount: validManifest.packs.length,
       sourcePackIds: validManifest.packs.map((pack) => pack.id)
     });
+  });
+
+  it('computes deterministic pack metadata signatures', () => {
+    const basePack = validManifest.packs[0];
+    const signatureA = computePackMetadataSignature(basePack);
+    const signatureB = computePackMetadataSignature({
+      ...basePack,
+      quality: { ...basePack.quality }
+    });
+    const signatureC = computePackMetadataSignature({
+      ...basePack,
+      targetDir: 'starter-pack/strings/viola'
+    });
+
+    expect(signatureA).toMatch(/^[0-9a-f]{64}$/);
+    expect(signatureA).toBe(signatureB);
+    expect(signatureA).not.toBe(signatureC);
   });
 });
