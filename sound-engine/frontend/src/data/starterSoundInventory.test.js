@@ -58,6 +58,8 @@ describe('starter sound inventory integrity', () => {
       0
     );
 
+    expect(inventory.summary?.totalPacks).toBe(inventory.packs.length);
+    expect(inventory.summary?.totalFiles).toBe(allEntries.length);
     expect(inventory.summary?.downloaded).toBe(downloadedCount);
     expect(inventory.summary?.skipped).toBe(skippedCount);
     expect(inventory.summary?.failed).toBe(failedCount);
@@ -67,6 +69,8 @@ describe('starter sound inventory integrity', () => {
     expect(inventory.summary?.totalBytes).toBe(computedTotalBytes);
     expect(inventory.summary?.totalMB).toBe(Number((computedTotalBytes / (1024 * 1024)).toFixed(2)));
 
+    expect(typeof inventory.summary?.totalPacks).toBe('number');
+    expect(typeof inventory.summary?.totalFiles).toBe('number');
     expect(typeof inventory.summary?.verified).toBe('number');
     expect(typeof inventory.summary?.unverified).toBe('number');
     expect(typeof inventory.summary?.mismatched).toBe('number');

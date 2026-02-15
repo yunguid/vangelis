@@ -241,9 +241,21 @@ for (const pack of manifest.packs || []) {
 inventory.packs.sort((a, b) => a.id.localeCompare(b.id));
 
 const derivedSummary = summarizeInventoryPacks(inventory.packs);
-const trackedSummary = { downloaded, skipped, failed, verified, unverified, mismatched, totalBytes };
+const trackedSummary = {
+  totalPacks: inventory.packs.length,
+  totalFiles: downloaded + skipped + failed,
+  downloaded,
+  skipped,
+  failed,
+  verified,
+  unverified,
+  mismatched,
+  totalBytes
+};
 if (
-  trackedSummary.downloaded !== derivedSummary.downloaded
+  trackedSummary.totalPacks !== derivedSummary.totalPacks
+  || trackedSummary.totalFiles !== derivedSummary.totalFiles
+  || trackedSummary.downloaded !== derivedSummary.downloaded
   || trackedSummary.skipped !== derivedSummary.skipped
   || trackedSummary.failed !== derivedSummary.failed
   || trackedSummary.verified !== derivedSummary.verified

@@ -3239,6 +3239,8 @@
     }
   ],
   "summary": {
+    "totalPacks": 11,
+    "totalFiles": 341,
     "downloaded": 0,
     "skipped": 341,
     "failed": 0,

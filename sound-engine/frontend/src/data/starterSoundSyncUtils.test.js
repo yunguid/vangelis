@@ -509,6 +509,8 @@ describe('starter_sound_sync_utils', () => {
     ]);
 
     expect(summary).toEqual({
+      totalPacks: 2,
+      totalFiles: 5,
       downloaded: 2,
       skipped: 2,
       failed: 1,

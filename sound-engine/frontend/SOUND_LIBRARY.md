@@ -78,7 +78,7 @@ The sync pipeline enforces:
 - duplicate/overlapping source-prefix detection per repo ref (case-insensitive, prevents duplicate upstream slices)
 - deterministic source manifest
 - deterministic inventory ordering (packs + files sorted for stable diffs)
-- inventory summary counters (including `verified` / `unverified` / `mismatched`) are derived from entry data (prevents counter drift)
+- inventory summary counters (including `totalPacks` / `totalFiles` / `verified` / `unverified` / `mismatched`) are derived from entry data (prevents counter drift)
 - git-blob checksum verification against upstream tree SHA
 - no free-form crawl targets
 

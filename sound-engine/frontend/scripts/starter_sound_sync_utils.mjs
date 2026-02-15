@@ -207,6 +207,8 @@ export function assertNotGitLfsPointer(content, contextLabel = 'payload') {
 
 export function summarizeInventoryPacks(packs = []) {
   const allEntries = packs.flatMap((pack) => pack.files || []);
+  const totalPacks = packs.length;
+  const totalFiles = allEntries.length;
   const downloaded = allEntries.filter((entry) => entry.status === 'downloaded').length;
   const skipped = allEntries.filter((entry) => entry.status === 'skipped').length;
   const failed = allEntries.filter((entry) => entry.status === 'failed').length;
@@ -219,6 +221,8 @@ export function summarizeInventoryPacks(packs = []) {
   );
 
   return {
+    totalPacks,
+    totalFiles,
     downloaded,
     skipped,
     failed,
