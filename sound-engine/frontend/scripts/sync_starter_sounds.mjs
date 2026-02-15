@@ -45,6 +45,7 @@ let skipped = 0;
 let failed = 0;
 let totalBytes = 0;
 let verified = 0;
+let unverified = 0;
 let mismatched = 0;
 
 const inventory = {
@@ -144,6 +145,8 @@ for (const pack of manifest.packs || []) {
           mismatched += 1;
         } else if (integrity === 'verified') {
           verified += 1;
+        } else if (integrity === 'unverified') {
+          unverified += 1;
         }
       }
 
@@ -178,6 +181,8 @@ for (const pack of manifest.packs || []) {
       }
       if (integrity === 'verified') {
         verified += 1;
+      } else if (integrity === 'unverified') {
+        unverified += 1;
       }
 
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
@@ -220,12 +225,13 @@ for (const pack of manifest.packs || []) {
 inventory.packs.sort((a, b) => a.id.localeCompare(b.id));
 
 const derivedSummary = summarizeInventoryPacks(inventory.packs);
-const trackedSummary = { downloaded, skipped, failed, verified, mismatched, totalBytes };
+const trackedSummary = { downloaded, skipped, failed, verified, unverified, mismatched, totalBytes };
 if (
   trackedSummary.downloaded !== derivedSummary.downloaded
   || trackedSummary.skipped !== derivedSummary.skipped
   || trackedSummary.failed !== derivedSummary.failed
   || trackedSummary.verified !== derivedSummary.verified
+  || trackedSummary.unverified !== derivedSummary.unverified
   || trackedSummary.mismatched !== derivedSummary.mismatched
   || trackedSummary.totalBytes !== derivedSummary.totalBytes
 ) {

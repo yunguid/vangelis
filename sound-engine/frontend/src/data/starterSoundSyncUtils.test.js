@@ -383,6 +383,7 @@ describe('starter_sound_sync_utils', () => {
       skipped: 2,
       failed: 1,
       verified: 2,
+      unverified: 1,
       mismatched: 1,
       totalBytes: 3536,
       totalMB: Number((3536 / (1024 * 1024)).toFixed(2))

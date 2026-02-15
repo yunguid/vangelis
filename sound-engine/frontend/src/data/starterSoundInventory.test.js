@@ -38,6 +38,7 @@ describe('starter sound inventory integrity', () => {
     const skippedCount = allEntries.filter((entry) => entry.status === 'skipped').length;
     const failedCount = allEntries.filter((entry) => entry.status === 'failed').length;
     const verifiedCount = allEntries.filter((entry) => entry.integrity === 'verified').length;
+    const unverifiedCount = allEntries.filter((entry) => entry.integrity === 'unverified').length;
     const mismatchedCount = allEntries.filter((entry) => entry.integrity === 'mismatch').length;
     const computedTotalBytes = allEntries.reduce(
       (sum, entry) => sum + (Number.isFinite(entry.bytes) ? entry.bytes : 0),
@@ -48,11 +49,13 @@ describe('starter sound inventory integrity', () => {
     expect(inventory.summary?.skipped).toBe(skippedCount);
     expect(inventory.summary?.failed).toBe(failedCount);
     expect(inventory.summary?.verified).toBe(verifiedCount);
+    expect(inventory.summary?.unverified).toBe(unverifiedCount);
     expect(inventory.summary?.mismatched).toBe(mismatchedCount);
     expect(inventory.summary?.totalBytes).toBe(computedTotalBytes);
     expect(inventory.summary?.totalMB).toBe(Number((computedTotalBytes / (1024 * 1024)).toFixed(2)));
 
     expect(typeof inventory.summary?.verified).toBe('number');
+    expect(typeof inventory.summary?.unverified).toBe('number');
     expect(typeof inventory.summary?.mismatched).toBe('number');
   });
 });

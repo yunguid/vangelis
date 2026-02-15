@@ -134,6 +134,7 @@ export function summarizeInventoryPacks(packs = []) {
   const skipped = allEntries.filter((entry) => entry.status === 'skipped').length;
   const failed = allEntries.filter((entry) => entry.status === 'failed').length;
   const verified = allEntries.filter((entry) => entry.integrity === 'verified').length;
+  const unverified = allEntries.filter((entry) => entry.integrity === 'unverified').length;
   const mismatched = allEntries.filter((entry) => entry.integrity === 'mismatch').length;
   const totalBytes = allEntries.reduce(
     (sum, entry) => sum + (Number.isFinite(entry.bytes) ? entry.bytes : 0),
@@ -145,6 +146,7 @@ export function summarizeInventoryPacks(packs = []) {
     skipped,
     failed,
     verified,
+    unverified,
     mismatched,
     totalBytes,
     totalMB: Number((totalBytes / (1024 * 1024)).toFixed(2))
