@@ -51,6 +51,8 @@ describe('starter sound source manifest', () => {
       expect(typeof pack.sourcePathPrefix).toBe('string');
       expect(typeof pack.targetDir).toBe('string');
       expect(pack.targetDir.startsWith('starter-pack/')).toBe(true);
+      expect(pack.targetDir).toBe(pack.targetDir.toLowerCase());
+      expect(pack.targetDir).toMatch(/^starter-pack\/[a-z0-9][a-z0-9/_-]*$/);
       expect(typeof pack.license).toBe('string');
       expect(typeof pack.attribution).toBe('string');
       expect(Array.isArray(pack.includeExtensions)).toBe(true);

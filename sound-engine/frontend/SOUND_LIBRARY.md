@@ -55,6 +55,7 @@ The sync pipeline enforces:
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
 - manifest-level metadata (`version`, `description`, `licenseNotice`) must be present, trimmed, and canonical
 - manifest paths must be canonicalized (no duplicate/trailing slashes)
+- `targetDir` must stay lowercase and match `starter-pack/<slug-segments>`
 - `includeExtensions` must be lexicographically sorted for deterministic manifests
 - pack IDs are enforced as lowercase kebab-case for stable manifests
 - license + attribution metadata must be non-empty and whitespace-clean

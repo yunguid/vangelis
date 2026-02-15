@@ -80,7 +80,8 @@ describe('starter_sound_sync_utils', () => {
       id: 'other-pack',
       targetDir: 'starter-pack/strings/VIOLIN'
     });
-    expect(() => validateStarterSoundManifest(caseVariantTarget)).toThrow(/targetDir duplicates existing targetDir/i);
+    expect(() => validateStarterSoundManifest(caseVariantTarget))
+      .toThrow(/targetDir must be lowercase kebab\/segment path/i);
 
     const slashVariantTarget = structuredClone(validManifest);
     slashVariantTarget.packs.push({
@@ -93,6 +94,16 @@ describe('starter_sound_sync_utils', () => {
     const unsafe = structuredClone(validManifest);
     unsafe.packs[0].targetDir = '../outside';
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
+
+    const uppercaseTargetDir = structuredClone(validManifest);
+    uppercaseTargetDir.packs[0].targetDir = 'starter-pack/Strings/violin';
+    expect(() => validateStarterSoundManifest(uppercaseTargetDir))
+      .toThrow(/targetDir must be lowercase kebab\/segment path/i);
+
+    const spacedTargetDir = structuredClone(validManifest);
+    spacedTargetDir.packs[0].targetDir = 'starter-pack/strings/solo violin';
+    expect(() => validateStarterSoundManifest(spacedTargetDir))
+      .toThrow(/targetDir must be lowercase kebab\/segment path/i);
 
     const nonNormalizedTargetDir = structuredClone(validManifest);
     nonNormalizedTargetDir.packs[0].targetDir = 'starter-pack//strings/violin/';

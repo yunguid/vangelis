@@ -7,6 +7,7 @@ const SHA_REGEX = /^[0-9a-f]{40}$/;
 const REPO_REGEX = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const HOSTNAME_REGEX = /^[A-Za-z0-9.-]+$/;
 const PACK_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const TARGET_DIR_REGEX = /^starter-pack\/[a-z0-9][a-z0-9/_-]*$/;
 const ALLOWED_EXTENSIONS = new Set(['.wav', '.flac', '.aif', '.aiff', '.ogg', '.mp3']);
 const ALLOWED_BIT_DEPTHS = new Set([16, 24, 32]);
 
@@ -225,6 +226,7 @@ export function validateStarterSoundManifest(value) {
       normalizeManifestPath(pack.targetDir) === pack.targetDir,
       `Pack "${pack.id}" targetDir must be normalized (no duplicate/trailing slashes)`
     );
+    assert(TARGET_DIR_REGEX.test(pack.targetDir), `Pack "${pack.id}" targetDir must be lowercase kebab/segment path within starter-pack/`);
     assert(pack.targetDir.startsWith('starter-pack/'), `Pack "${pack.id}" targetDir must stay within starter-pack/`);
     const normalizedTargetDir = normalizeManifestPath(pack.targetDir);
     const targetDirCollisionKey = toPathCollisionKey(pack.targetDir);
