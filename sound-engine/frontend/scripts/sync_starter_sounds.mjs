@@ -91,6 +91,7 @@ for (const pack of manifest.packs || []) {
     ref: pack.ref,
     sourcePathPrefix: pack.sourcePathPrefix,
     targetDir: pack.targetDir,
+    includeExtensions: [...(pack.includeExtensions || [])],
     license: pack.license,
     attribution: pack.attribution,
     quality: pack.quality || null,
@@ -276,6 +277,7 @@ inventory.packs.forEach((pack) => {
     ref: sourcePack.ref,
     sourcePathPrefix: sourcePack.sourcePathPrefix,
     targetDir: sourcePack.targetDir,
+    includeExtensions: sourcePack.includeExtensions,
     license: sourcePack.license,
     attribution: sourcePack.attribution,
     quality: sourcePack.quality
@@ -285,6 +287,7 @@ inventory.packs.forEach((pack) => {
     ref: pack.ref,
     sourcePathPrefix: pack.sourcePathPrefix,
     targetDir: pack.targetDir,
+    includeExtensions: pack.includeExtensions,
     license: pack.license,
     attribution: pack.attribution,
     quality: pack.quality

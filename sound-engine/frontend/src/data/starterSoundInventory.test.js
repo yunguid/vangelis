@@ -47,6 +47,10 @@ describe('starter sound inventory integrity', () => {
       expect(pack.ref).toBe(manifestPack.ref);
       expect(pack.sourcePathPrefix).toBe(manifestPack.sourcePathPrefix);
       expect(pack.targetDir).toBe(manifestPack.targetDir);
+      expect(pack.includeExtensions).toEqual(manifestPack.includeExtensions);
+      expect(pack.includeExtensions).toEqual(
+        [...pack.includeExtensions].sort((a, b) => a.localeCompare(b))
+      );
       expect(pack.license).toBe(manifestPack.license);
       expect(pack.attribution).toBe(manifestPack.attribution);
       expect(pack.quality).toEqual(manifestPack.quality);

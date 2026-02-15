@@ -28,6 +28,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Woodwinds/Bassoon/sus",
       "targetDir": "starter-pack/woodwinds/bassoon",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -279,6 +282,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Strings/Cello Section/susvib",
       "targetDir": "starter-pack/strings/cello",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -548,6 +554,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Woodwinds/Clarinet/susLong",
       "targetDir": "starter-pack/woodwinds/clarinet",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -871,6 +880,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Strings/Solo Contrabass/SusVib",
       "targetDir": "starter-pack/strings/contrabass",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -1131,6 +1143,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Strings/Harp",
       "targetDir": "starter-pack/strings/harp",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -1364,6 +1379,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Brass/F Horn/sus",
       "targetDir": "starter-pack/brass/horn",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -1651,6 +1669,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Brass/Tenor Trombone/sus",
       "targetDir": "starter-pack/brass/trombone",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -1956,6 +1977,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Brass/Trumpet/sus",
       "targetDir": "starter-pack/brass/trumpet",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -2162,6 +2186,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Keys/Upright Nr1",
       "targetDir": "starter-pack/piano",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -2899,6 +2926,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Strings/Viola Section/susvib",
       "targetDir": "starter-pack/strings/viola",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
@@ -3159,6 +3189,9 @@
       "ref": "440300901dfe9275fd84e0b7763af1f8443ae62e",
       "sourcePathPrefix": "Strings/Violin Section/susVib",
       "targetDir": "starter-pack/strings/violin",
+      "includeExtensions": [
+        ".wav"
+      ],
       "license": "CC0-1.0",
       "attribution": "Versilian Studios Community Edition",
       "quality": {
