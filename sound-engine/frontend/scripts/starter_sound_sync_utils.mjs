@@ -65,6 +65,10 @@ function normalizeManifestPath(value) {
     .replace(/\/+$/g, '');
 }
 
+export function isValidGitSha(value) {
+  return typeof value === 'string' && SHA_REGEX.test(value);
+}
+
 export function getSafeSourceRelativePath(sourcePathPrefix, sourcePath) {
   const normalizedPrefix = normalizeManifestPath(sourcePathPrefix);
   const normalizedSourcePath = normalizeManifestPath(sourcePath);
@@ -142,10 +146,10 @@ export function hasMatchingByteSize(actualBytes, expectedSize) {
 }
 
 export function getBlobIntegrityStatus(sourceBlobSha, localBlobSha) {
-  if (!sourceBlobSha || !SHA_REGEX.test(sourceBlobSha)) {
+  if (!isValidGitSha(sourceBlobSha)) {
     return 'unverified';
   }
-  if (!localBlobSha || !SHA_REGEX.test(localBlobSha)) {
+  if (!isValidGitSha(localBlobSha)) {
     return 'mismatch';
   }
   return sourceBlobSha === localBlobSha ? 'verified' : 'mismatch';
@@ -287,7 +291,7 @@ export function validateStarterSoundManifest(value) {
     packIdsInOrder.push(pack.id);
 
     assert(typeof pack.repo === 'string' && REPO_REGEX.test(pack.repo), `Pack "${pack.id}" repo must match owner/name`);
-    assert(SHA_REGEX.test(pack.ref || ''), `Pack "${pack.id}" must pin an immutable 40-char commit SHA`);
+    assert(isValidGitSha(pack.ref), `Pack "${pack.id}" must pin an immutable 40-char commit SHA`);
     assert(isSafeRelativePath(pack.sourcePathPrefix), `Pack "${pack.id}" sourcePathPrefix is unsafe`);
     assert(
       normalizeManifestPath(pack.sourcePathPrefix) === pack.sourcePathPrefix,

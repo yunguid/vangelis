@@ -9,6 +9,7 @@ import {
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
+  isValidGitSha,
   isLikelyGitLfsPointer,
   resolveSafeOutputPath,
   summarizeInventoryPacks,
@@ -117,6 +118,7 @@ for (const pack of manifest.packs || []) {
         const localStats = await fs.stat(targetPath);
         const localBytes = Number(localStats.size) || 0;
         const expectedBytes = Number(entry.size);
+        const shouldVerifyChecksum = isValidGitSha(sourceBlobSha);
         let isLfsPointer = false;
         if (localBytes > 0 && localBytes <= 1024) {
           try {
@@ -130,7 +132,7 @@ for (const pack of manifest.packs || []) {
           }
         }
 
-        if (!isLfsPointer && hasMatchingByteSize(localBytes, expectedBytes)) {
+        if (!isLfsPointer && shouldVerifyChecksum && hasMatchingByteSize(localBytes, expectedBytes)) {
           localBlobSha = await computeGitBlobShaFromFile(targetPath);
         }
         integrity = classifyExistingFileIntegrity({
@@ -181,7 +183,7 @@ for (const pack of manifest.packs || []) {
         throw new Error(`Size mismatch for ${relativePath}`);
       }
       const sourceBlobSha = entry.sha || null;
-      const localBlobSha = computeGitBlobSha(data);
+      const localBlobSha = isValidGitSha(sourceBlobSha) ? computeGitBlobSha(data) : null;
       const integrity = getBlobIntegrityStatus(sourceBlobSha, localBlobSha);
       if (integrity === 'mismatch') {
         throw new Error(`Checksum mismatch for ${relativePath}`);

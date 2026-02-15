@@ -10,6 +10,7 @@ import {
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
+  isValidGitSha,
   isLikelyGitLfsPointer,
   normalizeExpectedSize,
   resolveSafeOutputPath,
@@ -375,6 +376,13 @@ describe('starter_sound_sync_utils', () => {
     expect(getBlobIntegrityStatus(validSha, null)).toBe('mismatch');
     expect(getBlobIntegrityStatus(null, validSha)).toBe('unverified');
     expect(getBlobIntegrityStatus('invalid-sha', validSha)).toBe('unverified');
+  });
+
+  it('validates git sha strings', () => {
+    expect(isValidGitSha('440300901dfe9275fd84e0b7763af1f8443ae62e')).toBe(true);
+    expect(isValidGitSha('440300901DFE9275FD84E0B7763AF1F8443AE62E')).toBe(false);
+    expect(isValidGitSha('short')).toBe(false);
+    expect(isValidGitSha(null)).toBe(false);
   });
 
   it('classifies existing files with pointer precedence', () => {
