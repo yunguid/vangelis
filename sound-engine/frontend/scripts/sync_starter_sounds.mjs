@@ -5,6 +5,7 @@ import {
   classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
   isLikelyGitLfsPointer,
@@ -84,7 +85,7 @@ for (const pack of manifest.packs || []) {
   let lfsPointerCount = 0;
 
   const tasks = filtered.map((entry) => async () => {
-    const relativePath = path.relative(pack.sourcePathPrefix, entry.path);
+    const relativePath = getSafeSourceRelativePath(pack.sourcePathPrefix, entry.path);
     const targetPath = resolveSafeOutputPath(outputRoot, pack.targetDir, relativePath);
     const normalizedTargetPath = normalizeToPosix(path.relative(outputRoot, targetPath));
     const targetCollisionKey = toPathCollisionKey(normalizedTargetPath);

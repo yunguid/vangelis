@@ -6,6 +6,7 @@ import {
   classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
   isLikelyGitLfsPointer,
@@ -268,6 +269,36 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/Unsafe relative path/i);
     expect(() => resolveSafeOutputPath(root, '../outside', 'sample.wav'))
       .toThrow(/Unsafe targetDir/i);
+  });
+
+  it('derives safe relative source paths from manifest prefixes', () => {
+    expect(
+      getSafeSourceRelativePath(
+        'Strings/Violin Section/susVib',
+        'Strings/Violin Section/susVib/legato/sample.wav'
+      )
+    ).toBe('legato/sample.wav');
+
+    expect(
+      getSafeSourceRelativePath(
+        'Strings/Violin Section/susVib',
+        'Strings//Violin Section/susVib//legato/sample.wav'
+      )
+    ).toBe('legato/sample.wav');
+
+    expect(() =>
+      getSafeSourceRelativePath(
+        'Strings/Violin Section/susVib',
+        'Strings/Viola Section/susVib/sample.wav'
+      )
+    ).toThrow(/does not match sourcePathPrefix/i);
+
+    expect(() =>
+      getSafeSourceRelativePath(
+        'Strings/Violin Section/susVib',
+        'Strings/Violin Section/susVib/../../outside.wav'
+      )
+    ).toThrow(/Unsafe source relative path/i);
   });
 
   it('computes identical git-blob sha for buffer and file stream', async () => {

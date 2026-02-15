@@ -64,6 +64,20 @@ function normalizeManifestPath(value) {
     .replace(/\/+$/g, '');
 }
 
+export function getSafeSourceRelativePath(sourcePathPrefix, sourcePath) {
+  const normalizedPrefix = normalizeManifestPath(sourcePathPrefix);
+  const normalizedSourcePath = normalizeManifestPath(sourcePath);
+  const prefixWithSlash = `${normalizedPrefix}/`;
+  assert(
+    normalizedSourcePath.startsWith(prefixWithSlash),
+    `Source path "${sourcePath}" does not match sourcePathPrefix "${sourcePathPrefix}"`
+  );
+
+  const relativePath = normalizedSourcePath.slice(prefixWithSlash.length);
+  assert(isSafeRelativePath(relativePath), `Unsafe source relative path "${relativePath}"`);
+  return relativePath;
+}
+
 export function toPathCollisionKey(value) {
   return normalizeManifestPath(value).toLowerCase();
 }
