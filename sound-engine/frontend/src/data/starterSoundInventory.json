@@ -260,7 +260,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 25,
+        "downloaded": 0,
+        "skipped": 25,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 25,
+        "mismatched": 0,
+        "totalBytes": 35210204,
+        "totalMB": 33.58
+      }
     },
     {
       "id": "vsco-cello-section-sustain",
@@ -518,7 +529,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 27,
+        "downloaded": 0,
+        "skipped": 27,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 27,
+        "mismatched": 0,
+        "totalBytes": 72584478,
+        "totalMB": 69.22
+      }
     },
     {
       "id": "vsco-clarinet-sustain",
@@ -830,7 +852,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 33,
+        "downloaded": 0,
+        "skipped": 33,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 33,
+        "mismatched": 0,
+        "totalBytes": 59347828,
+        "totalMB": 56.6
+      }
     },
     {
       "id": "vsco-contrabass-sustain",
@@ -1079,7 +1112,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 26,
+        "downloaded": 0,
+        "skipped": 26,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 26,
+        "mismatched": 0,
+        "totalBytes": 47957640,
+        "totalMB": 45.74
+      }
     },
     {
       "id": "vsco-harp",
@@ -1301,7 +1345,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 23,
+        "downloaded": 0,
+        "skipped": 23,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 23,
+        "mismatched": 0,
+        "totalBytes": 35312492,
+        "totalMB": 33.68
+      }
     },
     {
       "id": "vsco-horn-sustain",
@@ -1577,7 +1632,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 29,
+        "downloaded": 0,
+        "skipped": 29,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 29,
+        "mismatched": 0,
+        "totalBytes": 50632480,
+        "totalMB": 48.29
+      }
     },
     {
       "id": "vsco-tenor-trombone-sustain",
@@ -1871,7 +1937,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 31,
+        "downloaded": 0,
+        "skipped": 31,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 31,
+        "mismatched": 0,
+        "totalBytes": 60140376,
+        "totalMB": 57.35
+      }
     },
     {
       "id": "vsco-trumpet-sustain",
@@ -2066,7 +2143,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 20,
+        "downloaded": 0,
+        "skipped": 20,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 20,
+        "mismatched": 0,
+        "totalBytes": 40543376,
+        "totalMB": 38.67
+      }
     },
     {
       "id": "vsco-upright-piano",
@@ -2792,7 +2880,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 79,
+        "downloaded": 0,
+        "skipped": 79,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 79,
+        "mismatched": 0,
+        "totalBytes": 155073798,
+        "totalMB": 147.89
+      }
     },
     {
       "id": "vsco-viola-section-sustain",
@@ -3041,7 +3140,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 26,
+        "downloaded": 0,
+        "skipped": 26,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 26,
+        "mismatched": 0,
+        "totalBytes": 71702776,
+        "totalMB": 68.38
+      }
     },
     {
       "id": "vsco-violin-section-sustain",
@@ -3254,7 +3364,18 @@
           "localBlobSha": null,
           "integrity": "unverified"
         }
-      ]
+      ],
+      "summary": {
+        "totalFiles": 22,
+        "downloaded": 0,
+        "skipped": 22,
+        "failed": 0,
+        "verified": 0,
+        "unverified": 22,
+        "mismatched": 0,
+        "totalBytes": 45962344,
+        "totalMB": 43.83
+      }
     }
   ],
   "summary": {

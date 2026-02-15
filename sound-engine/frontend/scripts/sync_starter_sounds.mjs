@@ -15,6 +15,7 @@ import {
   isValidGitSha,
   isLikelyGitLfsPointer,
   resolveSafeOutputPath,
+  summarizeInventoryEntries,
   summarizeInventoryPacks,
   toPathCollisionKey,
   validateStarterSoundManifest
@@ -241,6 +242,7 @@ for (const pack of manifest.packs || []) {
     console.warn(`[warn] ${pack.id}: detected ${lfsPointerCount} Git LFS pointer file(s); run git lfs pull for full verification.`);
   }
   packInventory.files.sort((a, b) => a.path.localeCompare(b.path));
+  packInventory.summary = summarizeInventoryEntries(packInventory.files);
   inventory.packs.push(packInventory);
 }
 

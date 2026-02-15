@@ -211,23 +211,20 @@ export function assertNotGitLfsPointer(content, contextLabel = 'payload') {
   assert(!isLikelyGitLfsPointer(content), `${contextLabel} resolved to Git LFS pointer content`);
 }
 
-export function summarizeInventoryPacks(packs = []) {
-  const allEntries = packs.flatMap((pack) => pack.files || []);
-  const totalPacks = packs.length;
-  const totalFiles = allEntries.length;
-  const downloaded = allEntries.filter((entry) => entry.status === 'downloaded').length;
-  const skipped = allEntries.filter((entry) => entry.status === 'skipped').length;
-  const failed = allEntries.filter((entry) => entry.status === 'failed').length;
-  const verified = allEntries.filter((entry) => entry.integrity === 'verified').length;
-  const unverified = allEntries.filter((entry) => entry.integrity === 'unverified').length;
-  const mismatched = allEntries.filter((entry) => entry.integrity === 'mismatch').length;
-  const totalBytes = allEntries.reduce(
+export function summarizeInventoryEntries(entries = []) {
+  const totalFiles = entries.length;
+  const downloaded = entries.filter((entry) => entry.status === 'downloaded').length;
+  const skipped = entries.filter((entry) => entry.status === 'skipped').length;
+  const failed = entries.filter((entry) => entry.status === 'failed').length;
+  const verified = entries.filter((entry) => entry.integrity === 'verified').length;
+  const unverified = entries.filter((entry) => entry.integrity === 'unverified').length;
+  const mismatched = entries.filter((entry) => entry.integrity === 'mismatch').length;
+  const totalBytes = entries.reduce(
     (sum, entry) => sum + (Number.isFinite(entry.bytes) ? entry.bytes : 0),
     0
   );
 
   return {
-    totalPacks,
     totalFiles,
     downloaded,
     skipped,
@@ -237,6 +234,17 @@ export function summarizeInventoryPacks(packs = []) {
     mismatched,
     totalBytes,
     totalMB: Number((totalBytes / (1024 * 1024)).toFixed(2))
+  };
+}
+
+export function summarizeInventoryPacks(packs = []) {
+  const allEntries = packs.flatMap((pack) => pack.files || []);
+  const entrySummary = summarizeInventoryEntries(allEntries);
+  const totalPacks = packs.length;
+
+  return {
+    totalPacks,
+    ...entrySummary
   };
 }
 

@@ -17,6 +17,7 @@ import {
   isLikelyGitLfsPointer,
   normalizeExpectedSize,
   resolveSafeOutputPath,
+  summarizeInventoryEntries,
   summarizeInventoryPacks,
   toPathCollisionKey,
   validateStarterSoundManifest
@@ -517,6 +518,26 @@ describe('starter_sound_sync_utils', () => {
   });
 
   it('derives stable summary counters from inventory entries', () => {
+    const entries = [
+      { status: 'downloaded', integrity: 'verified', bytes: 1200 },
+      { status: 'skipped', integrity: 'verified', bytes: 800 },
+      { status: 'failed', integrity: 'mismatch', bytes: null },
+      { status: 'downloaded', integrity: 'unverified', bytes: 1024 },
+      { status: 'skipped', integrity: 'skipped', bytes: 512 }
+    ];
+
+    expect(summarizeInventoryEntries(entries)).toEqual({
+      totalFiles: 5,
+      downloaded: 2,
+      skipped: 2,
+      failed: 1,
+      verified: 2,
+      unverified: 1,
+      mismatched: 1,
+      totalBytes: 3536,
+      totalMB: Number((3536 / (1024 * 1024)).toFixed(2))
+    });
+
     const summary = summarizeInventoryPacks([
       {
         id: 'pack-a',

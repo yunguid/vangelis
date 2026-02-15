@@ -55,6 +55,25 @@ describe('starter sound inventory integrity', () => {
       const sorted = [...paths].sort((a, b) => a.localeCompare(b));
       expect(paths).toEqual(sorted);
       expect(new Set(paths).size).toBe(paths.length);
+      const packDownloaded = pack.files.filter((entry) => entry.status === 'downloaded').length;
+      const packSkipped = pack.files.filter((entry) => entry.status === 'skipped').length;
+      const packFailed = pack.files.filter((entry) => entry.status === 'failed').length;
+      const packVerified = pack.files.filter((entry) => entry.integrity === 'verified').length;
+      const packUnverified = pack.files.filter((entry) => entry.integrity === 'unverified').length;
+      const packMismatched = pack.files.filter((entry) => entry.integrity === 'mismatch').length;
+      const packTotalBytes = pack.files.reduce(
+        (sum, entry) => sum + (Number.isFinite(entry.bytes) ? entry.bytes : 0),
+        0
+      );
+      expect(pack.summary?.totalFiles).toBe(pack.files.length);
+      expect(pack.summary?.downloaded).toBe(packDownloaded);
+      expect(pack.summary?.skipped).toBe(packSkipped);
+      expect(pack.summary?.failed).toBe(packFailed);
+      expect(pack.summary?.verified).toBe(packVerified);
+      expect(pack.summary?.unverified).toBe(packUnverified);
+      expect(pack.summary?.mismatched).toBe(packMismatched);
+      expect(pack.summary?.totalBytes).toBe(packTotalBytes);
+      expect(pack.summary?.totalMB).toBe(Number((packTotalBytes / (1024 * 1024)).toFixed(2)));
 
       pack.files.forEach((entry) => {
         expect(entry.path.startsWith('starter-pack/')).toBe(true);
