@@ -66,6 +66,7 @@ Network behavior:
 - all fetch targets must be strict HTTPS allowlisted URLs (no embedded credentials, no custom ports)
 - redirect targets are revalidated against the same allowlist/URL-safety constraints before response use
 - raw-download responses reject clearly non-audio content types (`text/html`, JSON, XML)
+- when `content-length` header is present (and unencoded), sync enforces exact match with expected upstream byte size before reading payload
 - existing-file checksum verification uses streamed hashing to avoid loading entire files into memory
 - validates expected byte sizes from upstream tree metadata before hash verification
 - requires valid upstream byte-size metadata for every synced file entry

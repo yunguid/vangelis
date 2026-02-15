@@ -4,6 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
   assertAllowlistedUrl,
+  assertExpectedContentLength,
   assertLikelyAudioContentType,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
@@ -392,6 +393,18 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/does not look like audio\/binary payload/i);
     expect(() => assertLikelyAudioContentType('application/xml', 'sample'))
       .toThrow(/does not look like audio\/binary payload/i);
+  });
+
+  it('validates response content-length headers when present', () => {
+    expect(() => assertExpectedContentLength(null, 2048, '', 'sample')).not.toThrow();
+    expect(() => assertExpectedContentLength('2048', 2048, '', 'sample')).not.toThrow();
+    expect(() => assertExpectedContentLength('2048', 2048, 'identity', 'sample')).not.toThrow();
+    expect(() => assertExpectedContentLength('1024', 2048, 'gzip', 'sample')).not.toThrow();
+
+    expect(() => assertExpectedContentLength('invalid', 2048, '', 'sample'))
+      .toThrow(/content-length header "invalid" is invalid/i);
+    expect(() => assertExpectedContentLength('1024', 2048, '', 'sample'))
+      .toThrow(/content-length 1024 does not match expected size 2048/i);
   });
 
   it('derives safe relative source paths from manifest prefixes', () => {

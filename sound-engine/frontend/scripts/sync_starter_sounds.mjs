@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assertAllowlistedUrl,
+  assertExpectedContentLength,
   assertLikelyAudioContentType,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
@@ -189,10 +190,10 @@ for (const pack of manifest.packs || []) {
     try {
       const rawUrl = toRawFileUrl(pack.repo, pack.ref, entry.path);
       assertAllowlistedUrl(rawUrl, manifest.allowlistedDomains || []);
-
-      const data = await fetchBuffer(rawUrl);
-      assertNotGitLfsPointer(data, `Downloaded asset ${pack.id}/${relativePath}`);
       const expectedBytes = getRequiredExpectedSize(entry.size, `${pack.id}/${relativePath}`);
+
+      const data = await fetchBuffer(rawUrl, expectedBytes);
+      assertNotGitLfsPointer(data, `Downloaded asset ${pack.id}/${relativePath}`);
       if (!hasMatchingByteSize(data.length, expectedBytes)) {
         throw new Error(`Size mismatch for ${relativePath}`);
       }
@@ -382,7 +383,7 @@ function githubHeaders() {
   return headers;
 }
 
-async function fetchBuffer(url) {
+async function fetchBuffer(url, expectedBytes) {
   const allowlistedDomains = manifest.allowlistedDomains || [];
   assertAllowlistedUrl(url, allowlistedDomains);
   const response = await fetchWithRetry(url, {}, allowlistedDomains);
@@ -390,6 +391,12 @@ async function fetchBuffer(url) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
   assertLikelyAudioContentType(response.headers.get('content-type'), `Download ${url}`);
+  assertExpectedContentLength(
+    response.headers.get('content-length'),
+    expectedBytes,
+    response.headers.get('content-encoding'),
+    `Download ${url}`
+  );
   return Buffer.from(await response.arrayBuffer());
 }
 

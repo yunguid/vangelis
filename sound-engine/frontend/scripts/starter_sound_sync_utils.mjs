@@ -132,6 +132,38 @@ export function assertLikelyAudioContentType(contentType, contextLabel = 'respon
   assert(!blocked, `${contextLabel} content-type "${contentType}" does not look like audio/binary payload`);
 }
 
+export function assertExpectedContentLength(
+  contentLengthHeader,
+  expectedBytes,
+  contentEncoding = '',
+  contextLabel = 'response'
+) {
+  const normalizedExpected = normalizeExpectedSize(expectedBytes);
+  if (normalizedExpected == null) {
+    return;
+  }
+
+  if (typeof contentLengthHeader !== 'string' || contentLengthHeader.trim().length === 0) {
+    return;
+  }
+
+  if (typeof contentEncoding === 'string'
+    && contentEncoding.trim().length > 0
+    && contentEncoding.toLowerCase() !== 'identity') {
+    return;
+  }
+
+  const normalizedContentLength = normalizeExpectedSize(contentLengthHeader);
+  assert(
+    normalizedContentLength != null,
+    `${contextLabel} content-length header "${contentLengthHeader}" is invalid`
+  );
+  assert(
+    normalizedContentLength === normalizedExpected,
+    `${contextLabel} content-length ${normalizedContentLength} does not match expected size ${normalizedExpected}`
+  );
+}
+
 export function computeGitBlobSha(buffer) {
   const header = Buffer.from(`blob ${buffer.length}\0`, 'utf8');
   return createHash('sha1')
