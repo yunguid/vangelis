@@ -157,6 +157,29 @@ export function validateTreeBlobEntry(entry, contextLabel = 'tree entry') {
   };
 }
 
+export function validateGitHubTreePayload(payload, contextLabel = 'tree payload') {
+  assert(payload && typeof payload === 'object' && !Array.isArray(payload), `${contextLabel} must be an object`);
+  assert(Array.isArray(payload.tree), `${contextLabel} tree must be an array`);
+  assert(payload.truncated !== true, `${contextLabel} is truncated; reduce sourcePathPrefix scope`);
+
+  const seenPathKeys = new Set();
+  payload.tree.forEach((entry, index) => {
+    const entryLabel = `${contextLabel} entry #${index}`;
+    assert(entry && typeof entry === 'object' && !Array.isArray(entry), `${entryLabel} must be an object`);
+    assert(typeof entry.path === 'string' && entry.path.length > 0, `${entryLabel} path is missing`);
+    assert(isSafeRelativePath(entry.path), `${entryLabel} path is unsafe`);
+    assert(
+      normalizeManifestPath(entry.path) === entry.path,
+      `${entryLabel} path must be normalized (no duplicate/trailing slashes)`
+    );
+    const pathCollisionKey = toPathCollisionKey(entry.path);
+    assert(!seenPathKeys.has(pathCollisionKey), `${entryLabel} duplicates an existing path "${entry.path}"`);
+    seenPathKeys.add(pathCollisionKey);
+  });
+
+  return payload;
+}
+
 export function assertExpectedContentLength(
   contentLengthHeader,
   expectedBytes,

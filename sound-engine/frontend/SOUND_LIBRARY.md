@@ -67,6 +67,7 @@ Network behavior:
 - redirect targets are revalidated against the same allowlist/URL-safety constraints before response use
 - GitHub tree API responses must advertise JSON content-types before parsing
 - tree blob entries are schema-validated (safe normalized path + valid blob SHA + integer size metadata) before sync processing
+- tree API payloads fail fast on truncation and case-insensitive duplicate/unsafe paths
 - raw-download responses reject clearly non-audio content types (`text/html`, JSON, XML)
 - when `content-length` header is present (and unencoded), sync enforces exact match with expected upstream byte size before reading payload
 - existing-file checksum verification uses streamed hashing to avoid loading entire files into memory

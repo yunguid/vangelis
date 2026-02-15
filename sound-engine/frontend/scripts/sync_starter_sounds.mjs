@@ -24,6 +24,7 @@ import {
   summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
   toPathCollisionKey,
+  validateGitHubTreePayload,
   validateTreeBlobEntry,
   validateInventorySummary,
   validateStarterSoundManifest
@@ -364,10 +365,8 @@ async function fetchRepoTree(repo, ref) {
   assertLikelyJsonContentType(response.headers.get('content-type'), `Tree API ${repo}@${ref}`);
 
   const payload = await response.json();
-  if (!Array.isArray(payload.tree)) {
-    throw new Error(`Invalid tree response for ${repo}@${ref}`);
-  }
-  return payload.tree;
+  const validatedPayload = validateGitHubTreePayload(payload, `Tree API ${repo}@${ref}`);
+  return validatedPayload.tree;
 }
 
 function toRawFileUrl(repo, ref, filePath) {

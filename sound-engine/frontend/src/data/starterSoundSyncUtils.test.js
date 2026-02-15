@@ -27,6 +27,7 @@ import {
   summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
   toPathCollisionKey,
+  validateGitHubTreePayload,
   validateInventorySummary,
   validateStarterSoundManifest,
   validateTreeBlobEntry
@@ -474,6 +475,42 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/must include valid blob SHA/i);
     expect(() => validateTreeBlobEntry({ ...validEntry, size: null }, 'entry-f'))
       .toThrow(/size is missing valid expected size metadata/i);
+  });
+
+  it('validates GitHub tree API payload shape and safety', () => {
+    const validPayload = {
+      tree: [
+        {
+          path: 'Strings/Violin Section',
+          mode: '040000',
+          type: 'tree',
+          sha: '89b48dcadf37658091a64abf48c5d8f017e790e0'
+        },
+        {
+          path: 'Strings/Violin Section/susVib/C4.wav',
+          mode: '100644',
+          type: 'blob',
+          sha: '440300901dfe9275fd84e0b7763af1f8443ae62e',
+          size: 2048
+        }
+      ],
+      truncated: false
+    };
+
+    expect(validateGitHubTreePayload(validPayload, 'tree-a')).toBe(validPayload);
+
+    expect(() => validateGitHubTreePayload({ tree: [] , truncated: true }, 'tree-b'))
+      .toThrow(/is truncated/i);
+    expect(() => validateGitHubTreePayload({ tree: [{ path: '../escape', type: 'tree' }] }, 'tree-c'))
+      .toThrow(/path is unsafe/i);
+    expect(() => validateGitHubTreePayload({
+      tree: [
+        { path: 'Strings/Violin', type: 'tree' },
+        { path: 'strings/violin', type: 'tree' }
+      ]
+    }, 'tree-d')).toThrow(/duplicates an existing path/i);
+    expect(() => validateGitHubTreePayload({ tree: [{ path: 'Strings//Violin', type: 'tree' }] }, 'tree-e'))
+      .toThrow(/path must be normalized/i);
   });
 
   it('computes identical git-blob sha for buffer and file stream', async () => {
