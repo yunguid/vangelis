@@ -3,10 +3,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assertNotGitLfsPointer,
+  buildManifestSnapshot,
   classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
-  computeManifestFingerprint,
   getRequiredExpectedSize,
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
@@ -58,13 +58,7 @@ let unverified = 0;
 let mismatched = 0;
 
 const inventory = {
-  sourceManifestVersion: manifest.version || 1,
-  sourceManifestSha256: computeManifestFingerprint(manifest),
-  sourceManifestDescription: manifest.description,
-  sourceManifestLicenseNotice: manifest.licenseNotice,
-  sourceAllowlistedDomains: [...(manifest.allowlistedDomains || [])],
-  sourcePackCount: 0,
-  sourcePackIds: [],
+  ...buildManifestSnapshot(manifest),
   packs: []
 };
 

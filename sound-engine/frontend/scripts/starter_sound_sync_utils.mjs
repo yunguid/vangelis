@@ -136,6 +136,21 @@ export function computeManifestFingerprint(manifest) {
     .digest('hex');
 }
 
+export function buildManifestSnapshot(manifest) {
+  const packIds = Array.isArray(manifest?.packs)
+    ? manifest.packs.map((pack) => pack.id)
+    : [];
+  return {
+    sourceManifestVersion: manifest?.version,
+    sourceManifestSha256: computeManifestFingerprint(manifest),
+    sourceManifestDescription: manifest?.description,
+    sourceManifestLicenseNotice: manifest?.licenseNotice,
+    sourceAllowlistedDomains: [...(manifest?.allowlistedDomains || [])],
+    sourcePackCount: packIds.length,
+    sourcePackIds: packIds
+  };
+}
+
 export function normalizeExpectedSize(value) {
   if (value == null) return null;
   const numberValue = Number(value);

@@ -4,6 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
   assertNotGitLfsPointer,
+  buildManifestSnapshot,
   classifyExistingFileIntegrity,
   computeManifestFingerprint,
   computeGitBlobSha,
@@ -676,5 +677,18 @@ describe('starter_sound_sync_utils', () => {
     expect(fingerprintA).toBe(fingerprintB);
     expect(fingerprintA).toBe(fingerprintReordered);
     expect(fingerprintA).not.toBe(fingerprintC);
+  });
+
+  it('builds deterministic manifest snapshot metadata', () => {
+    const snapshot = buildManifestSnapshot(validManifest);
+    expect(snapshot).toEqual({
+      sourceManifestVersion: validManifest.version,
+      sourceManifestSha256: computeManifestFingerprint(validManifest),
+      sourceManifestDescription: validManifest.description,
+      sourceManifestLicenseNotice: validManifest.licenseNotice,
+      sourceAllowlistedDomains: validManifest.allowlistedDomains,
+      sourcePackCount: validManifest.packs.length,
+      sourcePackIds: validManifest.packs.map((pack) => pack.id)
+    });
   });
 });
