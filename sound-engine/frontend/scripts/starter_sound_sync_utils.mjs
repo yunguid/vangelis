@@ -8,6 +8,7 @@ const REPO_REGEX = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const HOSTNAME_REGEX = /^[A-Za-z0-9.-]+$/;
 const PACK_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_DIR_REGEX = /^starter-pack\/[a-z0-9][a-z0-9/_-]*$/;
+const REQUIRED_ALLOWLISTED_DOMAINS = ['api.github.com', 'raw.githubusercontent.com'];
 const ALLOWED_EXTENSIONS = new Set(['.wav', '.flac', '.aif', '.aiff', '.ogg', '.mp3']);
 const ALLOWED_BIT_DEPTHS = new Set([16, 24, 32]);
 const ALLOWED_MANIFEST_KEYS = new Set([
@@ -264,6 +265,12 @@ export function validateStarterSoundManifest(value) {
     normalizedDomains.every((domain, index) => domain === sortedDomains[index]),
     'Allowlisted domains must be sorted lexicographically'
   );
+  REQUIRED_ALLOWLISTED_DOMAINS.forEach((requiredDomain) => {
+    assert(
+      domainSet.has(requiredDomain),
+      `Allowlisted domains must include required domain "${requiredDomain}"`
+    );
+  });
 
   const ids = new Set();
   const packIdsInOrder = [];

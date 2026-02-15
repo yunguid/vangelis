@@ -56,6 +56,7 @@ Network behavior:
 
 The sync pipeline enforces:
 - strict lowercase domain allowlist (`raw.githubusercontent.com`, `api.github.com`)
+- required baseline source domains are enforced (`api.github.com` and `raw.githubusercontent.com`)
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
 - unknown top-level, pack, and quality keys are rejected to prevent silent manifest drift
 - manifest-level metadata (`version`, `description`, `licenseNotice`) must be present, trimmed, and canonical

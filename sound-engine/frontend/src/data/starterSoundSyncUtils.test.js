@@ -261,6 +261,18 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/must be sorted lexicographically/i);
   });
 
+  it('requires core github allowlisted domains', () => {
+    const missingApiDomain = structuredClone(validManifest);
+    missingApiDomain.allowlistedDomains = ['raw.githubusercontent.com'];
+    expect(() => validateStarterSoundManifest(missingApiDomain))
+      .toThrow(/must include required domain "api\.github\.com"/i);
+
+    const missingRawDomain = structuredClone(validManifest);
+    missingRawDomain.allowlistedDomains = ['api.github.com'];
+    expect(() => validateStarterSoundManifest(missingRawDomain))
+      .toThrow(/must include required domain "raw\.githubusercontent\.com"/i);
+  });
+
   it('resolves safe output paths and blocks traversal', () => {
     const root = '/tmp/vangelis-samples';
     const safe = resolveSafeOutputPath(root, 'starter-pack/strings', 'violin/sample.wav');
