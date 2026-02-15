@@ -301,7 +301,8 @@ export function validateStarterSoundManifest(value) {
   const normalizedTargetDirs = new Set();
   const targetDirMappings = [];
   const sourcePrefixesByRepoRef = new Map();
-  value.packs.forEach((pack) => {
+  value.packs.forEach((pack, packIndex) => {
+    assert(pack && typeof pack === 'object' && !Array.isArray(pack), `Pack at index ${packIndex} must be an object`);
     assertNoUnexpectedKeys(pack, ALLOWED_PACK_KEYS, `Pack "${pack?.id || 'unknown'}"`);
     assert(typeof pack.id === 'string' && pack.id.length > 0, 'Each pack must define a non-empty id');
     assert(pack.id.trim() === pack.id, `Pack id has invalid whitespace: "${pack.id}"`);
@@ -376,7 +377,9 @@ export function validateStarterSoundManifest(value) {
       `Pack "${pack.id}" includeExtensions must be sorted lexicographically`
     );
 
-    assert(Number.isInteger(pack.quality?.sampleRate), `Pack "${pack.id}" quality.sampleRate must be an integer`);
+    assert(pack.quality && typeof pack.quality === 'object' && !Array.isArray(pack.quality),
+      `Pack "${pack.id}" quality must be an object`);
+    assert(Number.isInteger(pack.quality.sampleRate), `Pack "${pack.id}" quality.sampleRate must be an integer`);
     assert(pack.quality.sampleRate >= 8000 && pack.quality.sampleRate <= 384000,
       `Pack "${pack.id}" quality.sampleRate is out of expected range`);
     assert(ALLOWED_BIT_DEPTHS.has(pack.quality?.bitDepth),

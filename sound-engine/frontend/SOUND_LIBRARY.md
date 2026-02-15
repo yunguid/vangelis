@@ -65,6 +65,7 @@ The sync pipeline enforces:
 - required baseline source domains are enforced (`api.github.com` and `raw.githubusercontent.com`)
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
 - unknown top-level, pack, and quality keys are rejected to prevent silent manifest drift
+- each pack and `quality` block must be an object (no null/array coercion)
 - repository matching is canonicalized case-insensitively for overlap/collision protection
 - manifest-level metadata (`version`, `description`, `licenseNotice`) must be present, trimmed, and canonical
 - top-level `description` and `licenseNotice` fields must be single-line

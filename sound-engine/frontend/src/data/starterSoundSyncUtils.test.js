@@ -62,6 +62,18 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/quality contains unexpected key/i);
   });
 
+  it('rejects non-object packs and quality payloads', () => {
+    const nonObjectPack = structuredClone(validManifest);
+    nonObjectPack.packs = [null];
+    expect(() => validateStarterSoundManifest(nonObjectPack))
+      .toThrow(/Pack at index 0 must be an object/i);
+
+    const arrayQuality = structuredClone(validManifest);
+    arrayQuality.packs[0].quality = [];
+    expect(() => validateStarterSoundManifest(arrayQuality))
+      .toThrow(/quality must be an object/i);
+  });
+
   it('rejects invalid manifest metadata fields', () => {
     const badVersion = structuredClone(validManifest);
     badVersion.version = 0;
