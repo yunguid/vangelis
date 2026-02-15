@@ -307,7 +307,7 @@ export function validateStarterSoundManifest(value) {
 
     const normalizedSourcePrefix = normalizeManifestPath(pack.sourcePathPrefix);
     const sourcePrefixCollisionKey = toPathCollisionKey(pack.sourcePathPrefix);
-    const repoRefKey = `${pack.repo}@${pack.ref}`;
+    const repoRefKey = `${pack.repo.toLowerCase()}@${pack.ref}`;
     const existingPrefixes = sourcePrefixesByRepoRef.get(repoRefKey) || [];
     const overlapping = existingPrefixes.find((candidate) =>
       sourcePrefixCollisionKey === candidate.prefix

@@ -254,7 +254,7 @@ if (inventory.summary.failed > 0) {
 }
 
 async function listPackFiles(pack) {
-  const cacheKey = `${pack.repo}@${pack.ref}`;
+  const cacheKey = `${String(pack.repo || '').toLowerCase()}@${pack.ref}`;
   if (!treeCache.has(cacheKey)) {
     treeCache.set(cacheKey, fetchRepoTree(pack.repo, pack.ref));
   }

@@ -195,6 +195,17 @@ describe('starter_sound_sync_utils', () => {
     expect(() => validateStarterSoundManifest(caseVariantSourcePrefix))
       .toThrow(/overlaps sourcePathPrefix/i);
 
+    const caseVariantRepo = structuredClone(validManifest);
+    caseVariantRepo.packs.push({
+      ...caseVariantRepo.packs[0],
+      id: 'repo-case-pack',
+      repo: 'OWNER/REPO',
+      targetDir: 'starter-pack/strings/violin-case-repo'
+    });
+
+    expect(() => validateStarterSoundManifest(caseVariantRepo))
+      .toThrow(/overlaps sourcePathPrefix/i);
+
     const slashVariantSourcePrefix = structuredClone(validManifest);
     slashVariantSourcePrefix.packs.push({
       ...slashVariantSourcePrefix.packs[0],
