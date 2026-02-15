@@ -16,6 +16,7 @@ import {
   isLikelyGitLfsPointer,
   resolveSafeOutputPath,
   summarizeInventoryEntries,
+  summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
   toPathCollisionKey,
   validateStarterSoundManifest
@@ -257,6 +258,7 @@ if (!packIdParityMatches) {
 }
 
 const derivedSummary = summarizeInventoryPacks(inventory.packs);
+const derivedPackSummary = summarizeInventoryPackSummaries(inventory.packs);
 const trackedSummary = {
   totalPacks: inventory.packs.length,
   totalFiles: downloaded + skipped + failed,
@@ -280,6 +282,19 @@ if (
   || trackedSummary.totalBytes !== derivedSummary.totalBytes
 ) {
   console.warn('[warn] summary counters drift detected; using derived inventory summary');
+}
+if (
+  derivedPackSummary.totalPacks !== derivedSummary.totalPacks
+  || derivedPackSummary.totalFiles !== derivedSummary.totalFiles
+  || derivedPackSummary.downloaded !== derivedSummary.downloaded
+  || derivedPackSummary.skipped !== derivedSummary.skipped
+  || derivedPackSummary.failed !== derivedSummary.failed
+  || derivedPackSummary.verified !== derivedSummary.verified
+  || derivedPackSummary.unverified !== derivedSummary.unverified
+  || derivedPackSummary.mismatched !== derivedSummary.mismatched
+  || derivedPackSummary.totalBytes !== derivedSummary.totalBytes
+) {
+  console.warn('[warn] pack-summary counters drift detected; using entry-derived inventory summary');
 }
 inventory.summary = derivedSummary;
 

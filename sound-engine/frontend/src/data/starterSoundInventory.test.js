@@ -94,6 +94,7 @@ describe('starter sound inventory integrity', () => {
     });
 
     const allEntries = inventory.packs.flatMap((pack) => pack.files);
+    const allPackSummaries = inventory.packs.map((pack) => pack.summary || {});
     const downloadedCount = allEntries.filter((entry) => entry.status === 'downloaded').length;
     const skippedCount = allEntries.filter((entry) => entry.status === 'skipped').length;
     const failedCount = allEntries.filter((entry) => entry.status === 'failed').length;
@@ -104,6 +105,17 @@ describe('starter sound inventory integrity', () => {
       (sum, entry) => sum + (Number.isFinite(entry.bytes) ? entry.bytes : 0),
       0
     );
+    const summedFromPackSummaries = {
+      totalPacks: inventory.packs.length,
+      totalFiles: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.totalFiles) || 0), 0),
+      downloaded: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.downloaded) || 0), 0),
+      skipped: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.skipped) || 0), 0),
+      failed: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.failed) || 0), 0),
+      verified: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.verified) || 0), 0),
+      unverified: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.unverified) || 0), 0),
+      mismatched: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.mismatched) || 0), 0),
+      totalBytes: allPackSummaries.reduce((sum, summary) => sum + (Number(summary.totalBytes) || 0), 0)
+    };
 
     expect(inventory.summary?.totalPacks).toBe(inventory.packs.length);
     expect(inventory.summary?.totalFiles).toBe(allEntries.length);
@@ -115,6 +127,15 @@ describe('starter sound inventory integrity', () => {
     expect(inventory.summary?.mismatched).toBe(mismatchedCount);
     expect(inventory.summary?.totalBytes).toBe(computedTotalBytes);
     expect(inventory.summary?.totalMB).toBe(Number((computedTotalBytes / (1024 * 1024)).toFixed(2)));
+    expect(inventory.summary?.totalPacks).toBe(summedFromPackSummaries.totalPacks);
+    expect(inventory.summary?.totalFiles).toBe(summedFromPackSummaries.totalFiles);
+    expect(inventory.summary?.downloaded).toBe(summedFromPackSummaries.downloaded);
+    expect(inventory.summary?.skipped).toBe(summedFromPackSummaries.skipped);
+    expect(inventory.summary?.failed).toBe(summedFromPackSummaries.failed);
+    expect(inventory.summary?.verified).toBe(summedFromPackSummaries.verified);
+    expect(inventory.summary?.unverified).toBe(summedFromPackSummaries.unverified);
+    expect(inventory.summary?.mismatched).toBe(summedFromPackSummaries.mismatched);
+    expect(inventory.summary?.totalBytes).toBe(summedFromPackSummaries.totalBytes);
 
     expect(typeof inventory.summary?.totalPacks).toBe('number');
     expect(typeof inventory.summary?.totalFiles).toBe('number');

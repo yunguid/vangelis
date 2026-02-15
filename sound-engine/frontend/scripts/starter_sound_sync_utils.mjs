@@ -248,6 +248,38 @@ export function summarizeInventoryPacks(packs = []) {
   };
 }
 
+export function summarizeInventoryPackSummaries(packs = []) {
+  const totalPacks = packs.length;
+  const summary = {
+    totalPacks,
+    totalFiles: 0,
+    downloaded: 0,
+    skipped: 0,
+    failed: 0,
+    verified: 0,
+    unverified: 0,
+    mismatched: 0,
+    totalBytes: 0
+  };
+
+  packs.forEach((pack) => {
+    const packSummary = pack?.summary || {};
+    summary.totalFiles += Number(packSummary.totalFiles) || 0;
+    summary.downloaded += Number(packSummary.downloaded) || 0;
+    summary.skipped += Number(packSummary.skipped) || 0;
+    summary.failed += Number(packSummary.failed) || 0;
+    summary.verified += Number(packSummary.verified) || 0;
+    summary.unverified += Number(packSummary.unverified) || 0;
+    summary.mismatched += Number(packSummary.mismatched) || 0;
+    summary.totalBytes += Number(packSummary.totalBytes) || 0;
+  });
+
+  return {
+    ...summary,
+    totalMB: Number((summary.totalBytes / (1024 * 1024)).toFixed(2))
+  };
+}
+
 export async function computeGitBlobShaFromFile(filePath) {
   const fileStat = await fsp.stat(filePath);
   const hash = createHash('sha1');

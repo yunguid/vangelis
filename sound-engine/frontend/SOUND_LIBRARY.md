@@ -54,6 +54,7 @@ The sync script writes inventory metadata to:
 - `sourcePackIds` / `sourcePackCount` are derived from sorted generated inventory packs for deterministic parity
 - sync run fails if generated inventory pack IDs ever drift from manifest pack IDs
 - each inventory pack includes a derived summary block (counts/bytes/integrity tallies) for local auditability
+- global inventory summary is cross-checked against aggregated pack summaries to catch drift
 
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures

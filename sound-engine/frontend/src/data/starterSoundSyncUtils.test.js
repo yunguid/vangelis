@@ -18,6 +18,7 @@ import {
   normalizeExpectedSize,
   resolveSafeOutputPath,
   summarizeInventoryEntries,
+  summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
   toPathCollisionKey,
   validateStarterSoundManifest
@@ -567,6 +568,50 @@ describe('starter_sound_sync_utils', () => {
       mismatched: 1,
       totalBytes: 3536,
       totalMB: Number((3536 / (1024 * 1024)).toFixed(2))
+    });
+  });
+
+  it('derives stable summary counters from pack summaries', () => {
+    const summary = summarizeInventoryPackSummaries([
+      {
+        id: 'pack-a',
+        summary: {
+          totalFiles: 2,
+          downloaded: 1,
+          skipped: 1,
+          failed: 0,
+          verified: 1,
+          unverified: 1,
+          mismatched: 0,
+          totalBytes: 2048
+        }
+      },
+      {
+        id: 'pack-b',
+        summary: {
+          totalFiles: 3,
+          downloaded: 2,
+          skipped: 0,
+          failed: 1,
+          verified: 1,
+          unverified: 1,
+          mismatched: 1,
+          totalBytes: 1024
+        }
+      }
+    ]);
+
+    expect(summary).toEqual({
+      totalPacks: 2,
+      totalFiles: 5,
+      downloaded: 3,
+      skipped: 1,
+      failed: 1,
+      verified: 2,
+      unverified: 2,
+      mismatched: 1,
+      totalBytes: 3072,
+      totalMB: Number((3072 / (1024 * 1024)).toFixed(2))
     });
   });
 
