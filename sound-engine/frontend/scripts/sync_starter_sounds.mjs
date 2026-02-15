@@ -264,6 +264,36 @@ const packIdParityMatches = manifestPackIds.length === inventory.sourcePackIds.l
 if (!packIdParityMatches) {
   throw new Error('Generated inventory pack IDs drifted from source manifest pack IDs');
 }
+const manifestPackById = new Map((manifest.packs || []).map((pack) => [pack.id, pack]));
+inventory.packs.forEach((pack) => {
+  const sourcePack = manifestPackById.get(pack.id);
+  if (!sourcePack) {
+    throw new Error(`Generated inventory pack missing from manifest: ${pack.id}`);
+  }
+
+  const sourceSignature = JSON.stringify({
+    repo: sourcePack.repo,
+    ref: sourcePack.ref,
+    sourcePathPrefix: sourcePack.sourcePathPrefix,
+    targetDir: sourcePack.targetDir,
+    license: sourcePack.license,
+    attribution: sourcePack.attribution,
+    quality: sourcePack.quality
+  });
+  const inventorySignature = JSON.stringify({
+    repo: pack.repo,
+    ref: pack.ref,
+    sourcePathPrefix: pack.sourcePathPrefix,
+    targetDir: pack.targetDir,
+    license: pack.license,
+    attribution: pack.attribution,
+    quality: pack.quality
+  });
+
+  if (sourceSignature !== inventorySignature) {
+    throw new Error(`Generated inventory pack metadata drifted from manifest for pack "${pack.id}"`);
+  }
+});
 
 const derivedSummary = summarizeInventoryPacks(inventory.packs);
 const derivedPackSummary = summarizeInventoryPackSummaries(inventory.packs);
