@@ -51,6 +51,7 @@ The sync script writes inventory metadata to:
 - inventory stores manifest snapshot metadata (`description`, `licenseNotice`, `allowlistedDomains`) for auditability
 - inventory also records `sourcePackCount` for manifest-to-inventory pack cardinality checks
 - inventory also records `sourcePackIds` for exact manifest-pack identity checks
+- `sourcePackIds` / `sourcePackCount` are derived from sorted generated inventory packs for deterministic parity
 
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures

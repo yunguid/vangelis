@@ -59,8 +59,8 @@ const inventory = {
   sourceManifestDescription: manifest.description,
   sourceManifestLicenseNotice: manifest.licenseNotice,
   sourceAllowlistedDomains: [...(manifest.allowlistedDomains || [])],
-  sourcePackCount: Array.isArray(manifest.packs) ? manifest.packs.length : 0,
-  sourcePackIds: Array.isArray(manifest.packs) ? manifest.packs.map((pack) => pack.id) : [],
+  sourcePackCount: 0,
+  sourcePackIds: [],
   packs: []
 };
 
@@ -243,6 +243,8 @@ for (const pack of manifest.packs || []) {
 }
 
 inventory.packs.sort((a, b) => a.id.localeCompare(b.id));
+inventory.sourcePackIds = inventory.packs.map((pack) => pack.id);
+inventory.sourcePackCount = inventory.sourcePackIds.length;
 
 const derivedSummary = summarizeInventoryPacks(inventory.packs);
 const trackedSummary = {
