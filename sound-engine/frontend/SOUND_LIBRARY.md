@@ -58,6 +58,7 @@ Network behavior:
 - bounded request timeouts per fetch
 - existing-file checksum verification uses streamed hashing to avoid loading entire files into memory
 - validates expected byte sizes from upstream tree metadata before hash verification
+- requires valid upstream byte-size metadata for every synced file entry
 - marks assets as `unverified` (not failed) when upstream SHA metadata is unavailable
 - skips local checksum hashing when upstream SHA metadata is unavailable (records `unverified` instead)
 - treats local Git LFS pointer files as `unverified` during `--verify-existing` (run `git lfs pull` for full verification)

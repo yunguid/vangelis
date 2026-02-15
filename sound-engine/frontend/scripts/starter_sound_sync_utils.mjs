@@ -145,6 +145,12 @@ export function normalizeExpectedSize(value) {
   return Math.trunc(numberValue);
 }
 
+export function getRequiredExpectedSize(value, contextLabel = 'entry') {
+  const normalized = normalizeExpectedSize(value);
+  assert(normalized != null, `${contextLabel} is missing valid expected size metadata`);
+  return normalized;
+}
+
 export function hasMatchingByteSize(actualBytes, expectedSize) {
   const normalizedExpected = normalizeExpectedSize(expectedSize);
   if (normalizedExpected == null) {

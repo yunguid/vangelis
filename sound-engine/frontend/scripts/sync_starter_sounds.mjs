@@ -7,6 +7,7 @@ import {
   computeGitBlobSha,
   computeGitBlobShaFromFile,
   computeManifestFingerprint,
+  getRequiredExpectedSize,
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
@@ -127,7 +128,7 @@ for (const pack of manifest.packs || []) {
       if (verifyExisting) {
         const localStats = await fs.stat(targetPath);
         const localBytes = Number(localStats.size) || 0;
-        const expectedBytes = Number(entry.size);
+        const expectedBytes = getRequiredExpectedSize(entry.size, `${pack.id}/${relativePath}`);
         const shouldVerifyChecksum = isValidGitSha(sourceBlobSha);
         let isLfsPointer = false;
         if (localBytes > 0 && localBytes <= 1024) {
@@ -170,11 +171,12 @@ for (const pack of manifest.packs || []) {
       }
 
       skipped += 1;
-      totalBytes += Number(entry.size) || 0;
+      const expectedBytes = getRequiredExpectedSize(entry.size, `${pack.id}/${relativePath}`);
+      totalBytes += expectedBytes;
       packInventory.files.push({
         path: normalizedTargetPath,
         sourcePath: entry.path,
-        bytes: Number(entry.size) || null,
+        bytes: expectedBytes,
         status: 'skipped',
         sourceBlobSha,
         localBlobSha,
@@ -189,7 +191,7 @@ for (const pack of manifest.packs || []) {
 
       const data = await fetchBuffer(rawUrl);
       assertNotGitLfsPointer(data, `Downloaded asset ${pack.id}/${relativePath}`);
-      const expectedBytes = Number(entry.size);
+      const expectedBytes = getRequiredExpectedSize(entry.size, `${pack.id}/${relativePath}`);
       if (!hasMatchingByteSize(data.length, expectedBytes)) {
         throw new Error(`Size mismatch for ${relativePath}`);
       }

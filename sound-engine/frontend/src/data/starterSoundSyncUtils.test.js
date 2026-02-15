@@ -8,6 +8,7 @@ import {
   computeManifestFingerprint,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  getRequiredExpectedSize,
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
@@ -399,6 +400,15 @@ describe('starter_sound_sync_utils', () => {
     expect(hasMatchingByteSize(121, 120)).toBe(false);
     expect(hasMatchingByteSize(120, null)).toBe(true);
     expect(hasMatchingByteSize(120, 'bad')).toBe(true);
+  });
+
+  it('requires valid expected size metadata when requested', () => {
+    expect(getRequiredExpectedSize(120, 'entry-1')).toBe(120);
+    expect(getRequiredExpectedSize('120', 'entry-2')).toBe(120);
+    expect(() => getRequiredExpectedSize(null, 'entry-3'))
+      .toThrow(/entry-3 is missing valid expected size metadata/i);
+    expect(() => getRequiredExpectedSize('oops', 'entry-4'))
+      .toThrow(/entry-4 is missing valid expected size metadata/i);
   });
 
   it('classifies blob integrity status deterministically', () => {
