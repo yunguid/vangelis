@@ -10,11 +10,36 @@ const PACK_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_DIR_REGEX = /^starter-pack\/[a-z0-9][a-z0-9/_-]*$/;
 const ALLOWED_EXTENSIONS = new Set(['.wav', '.flac', '.aif', '.aiff', '.ogg', '.mp3']);
 const ALLOWED_BIT_DEPTHS = new Set([16, 24, 32]);
+const ALLOWED_MANIFEST_KEYS = new Set([
+  'version',
+  'description',
+  'allowlistedDomains',
+  'licenseNotice',
+  'packs'
+]);
+const ALLOWED_PACK_KEYS = new Set([
+  'id',
+  'repo',
+  'ref',
+  'sourcePathPrefix',
+  'targetDir',
+  'includeExtensions',
+  'license',
+  'attribution',
+  'quality'
+]);
+const ALLOWED_QUALITY_KEYS = new Set(['sampleRate', 'bitDepth']);
 
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
   }
+}
+
+function assertNoUnexpectedKeys(value, allowedKeys, context) {
+  const keys = Object.keys(value || {});
+  const unexpected = keys.filter((key) => !allowedKeys.has(key));
+  assert(unexpected.length === 0, `${context} contains unexpected key(s): ${unexpected.join(', ')}`);
 }
 
 function hasPathTraversal(value) {
@@ -172,6 +197,7 @@ export async function computeGitBlobShaFromFile(filePath) {
 
 export function validateStarterSoundManifest(value) {
   assert(value && typeof value === 'object', 'Starter sound manifest is invalid');
+  assertNoUnexpectedKeys(value, ALLOWED_MANIFEST_KEYS, 'Starter sound manifest');
   assert(Number.isInteger(value.version) && value.version >= 1, 'Starter sound manifest version must be a positive integer');
   assert(typeof value.description === 'string' && value.description.trim().length > 0,
     'Starter sound manifest description must be a non-empty string');
@@ -209,6 +235,7 @@ export function validateStarterSoundManifest(value) {
   const normalizedTargetDirs = new Set();
   const sourcePrefixesByRepoRef = new Map();
   value.packs.forEach((pack) => {
+    assertNoUnexpectedKeys(pack, ALLOWED_PACK_KEYS, `Pack "${pack?.id || 'unknown'}"`);
     assert(typeof pack.id === 'string' && pack.id.length > 0, 'Each pack must define a non-empty id');
     assert(pack.id.trim() === pack.id, `Pack id has invalid whitespace: "${pack.id}"`);
     assert(PACK_ID_REGEX.test(pack.id), `Pack id "${pack.id}" must be lowercase kebab-case`);
@@ -278,6 +305,7 @@ export function validateStarterSoundManifest(value) {
       `Pack "${pack.id}" quality.sampleRate is out of expected range`);
     assert(ALLOWED_BIT_DEPTHS.has(pack.quality?.bitDepth),
       `Pack "${pack.id}" quality.bitDepth must be one of ${Array.from(ALLOWED_BIT_DEPTHS).join(', ')}`);
+    assertNoUnexpectedKeys(pack.quality, ALLOWED_QUALITY_KEYS, `Pack "${pack.id}" quality`);
   });
 
   const sortedPackIds = [...packIdsInOrder].sort((a, b) => a.localeCompare(b));

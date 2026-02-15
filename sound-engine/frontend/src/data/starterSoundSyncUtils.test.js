@@ -40,6 +40,23 @@ const validManifest = {
 };
 
 describe('starter_sound_sync_utils', () => {
+  it('rejects unexpected top-level and pack keys', () => {
+    const extraTopLevel = structuredClone(validManifest);
+    extraTopLevel.extraFlag = true;
+    expect(() => validateStarterSoundManifest(extraTopLevel))
+      .toThrow(/manifest contains unexpected key/i);
+
+    const extraPackKey = structuredClone(validManifest);
+    extraPackKey.packs[0].extraField = 'oops';
+    expect(() => validateStarterSoundManifest(extraPackKey))
+      .toThrow(/contains unexpected key/i);
+
+    const extraQualityKey = structuredClone(validManifest);
+    extraQualityKey.packs[0].quality.channels = 2;
+    expect(() => validateStarterSoundManifest(extraQualityKey))
+      .toThrow(/quality contains unexpected key/i);
+  });
+
   it('rejects invalid manifest metadata fields', () => {
     const badVersion = structuredClone(validManifest);
     badVersion.version = 0;

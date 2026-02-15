@@ -15,6 +15,32 @@ describe('starter sound source manifest', () => {
     expect(() => validateStarterSoundManifest(manifest)).not.toThrow();
   });
 
+  it('contains only expected manifest and pack keys', () => {
+    const manifest = readManifest();
+    expect(Object.keys(manifest).sort()).toEqual([
+      'allowlistedDomains',
+      'description',
+      'licenseNotice',
+      'packs',
+      'version'
+    ]);
+
+    manifest.packs.forEach((pack) => {
+      expect(Object.keys(pack).sort()).toEqual([
+        'attribution',
+        'id',
+        'includeExtensions',
+        'license',
+        'quality',
+        'ref',
+        'repo',
+        'sourcePathPrefix',
+        'targetDir'
+      ]);
+      expect(Object.keys(pack.quality || {}).sort()).toEqual(['bitDepth', 'sampleRate']);
+    });
+  });
+
   it('enforces secure allowlisted source domains', () => {
     const manifest = readManifest();
 
