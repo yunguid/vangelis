@@ -57,6 +57,7 @@ The sync script writes inventory metadata to:
 - inventory pack snapshots include `includeExtensions` for manifest parity auditing
 - each inventory pack includes a derived summary block (counts/bytes/integrity tallies) for local auditability
 - global inventory summary is cross-checked against aggregated pack summaries to catch drift
+- sync exits with error if runtime counters/pack summaries drift from entry-derived summary totals
 
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures

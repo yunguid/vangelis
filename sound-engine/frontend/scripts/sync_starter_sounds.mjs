@@ -317,7 +317,7 @@ if (
   || trackedSummary.mismatched !== derivedSummary.mismatched
   || trackedSummary.totalBytes !== derivedSummary.totalBytes
 ) {
-  console.warn('[warn] summary counters drift detected; using derived inventory summary');
+  throw new Error('Summary counters drift detected between runtime counters and derived entries');
 }
 if (
   derivedPackSummary.totalPacks !== derivedSummary.totalPacks
@@ -330,7 +330,13 @@ if (
   || derivedPackSummary.mismatched !== derivedSummary.mismatched
   || derivedPackSummary.totalBytes !== derivedSummary.totalBytes
 ) {
-  console.warn('[warn] pack-summary counters drift detected; using entry-derived inventory summary');
+  throw new Error('Pack-summary counters drift detected against derived entry summary');
+}
+if (inventory.sourcePackCount !== derivedSummary.totalPacks) {
+  throw new Error('sourcePackCount does not match generated inventory pack count');
+}
+if (inventory.sourcePackIds.length !== inventory.sourcePackCount) {
+  throw new Error('sourcePackIds length does not match sourcePackCount');
 }
 validateInventorySummary(derivedSummary, 'derived inventory summary');
 inventory.summary = derivedSummary;
