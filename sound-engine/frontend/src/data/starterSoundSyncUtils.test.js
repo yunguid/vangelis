@@ -28,7 +28,8 @@ import {
   summarizeInventoryPacks,
   toPathCollisionKey,
   validateInventorySummary,
-  validateStarterSoundManifest
+  validateStarterSoundManifest,
+  validateTreeBlobEntry
 } from '../../scripts/starter_sound_sync_utils.mjs';
 
 const validManifest = {
@@ -448,6 +449,31 @@ describe('starter_sound_sync_utils', () => {
         'Strings/Violin Section/susVib/../../outside.wav'
       )
     ).toThrow(/Unsafe source relative path/i);
+  });
+
+  it('validates GitHub tree blob entry shape and metadata', () => {
+    const validEntry = {
+      path: 'Strings/Violin Section/susVib/C4.wav',
+      mode: '100644',
+      type: 'blob',
+      sha: '440300901dfe9275fd84e0b7763af1f8443ae62e',
+      size: '2048'
+    };
+    expect(validateTreeBlobEntry(validEntry, 'entry-a')).toEqual({
+      ...validEntry,
+      size: 2048
+    });
+
+    expect(() => validateTreeBlobEntry({ ...validEntry, type: 'tree' }, 'entry-b'))
+      .toThrow(/must have type "blob"/i);
+    expect(() => validateTreeBlobEntry({ ...validEntry, path: '../escape.wav' }, 'entry-c'))
+      .toThrow(/path is unsafe/i);
+    expect(() => validateTreeBlobEntry({ ...validEntry, path: 'Strings//Violin/C4.wav' }, 'entry-d'))
+      .toThrow(/path must be normalized/i);
+    expect(() => validateTreeBlobEntry({ ...validEntry, sha: 'invalid' }, 'entry-e'))
+      .toThrow(/must include valid blob SHA/i);
+    expect(() => validateTreeBlobEntry({ ...validEntry, size: null }, 'entry-f'))
+      .toThrow(/size is missing valid expected size metadata/i);
   });
 
   it('computes identical git-blob sha for buffer and file stream', async () => {

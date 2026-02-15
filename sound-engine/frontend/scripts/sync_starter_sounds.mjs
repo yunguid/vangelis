@@ -24,6 +24,7 @@ import {
   summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
   toPathCollisionKey,
+  validateTreeBlobEntry,
   validateInventorySummary,
   validateStarterSoundManifest
 } from './starter_sound_sync_utils.mjs';
@@ -342,10 +343,14 @@ async function listPackFiles(pack) {
   }
 
   const tree = await treeCache.get(cacheKey);
-  return tree.filter((entry) =>
-    entry.type === 'blob' &&
-    entry.path.startsWith(`${pack.sourcePathPrefix}/`)
-  );
+  const prefix = `${pack.sourcePathPrefix}/`;
+  return tree.flatMap((entry, index) => {
+    if (entry?.type !== 'blob' || typeof entry?.path !== 'string' || !entry.path.startsWith(prefix)) {
+      return [];
+    }
+    const validatedEntry = validateTreeBlobEntry(entry, `Pack "${pack.id}" tree entry #${index}`);
+    return [validatedEntry];
+  });
 }
 
 async function fetchRepoTree(repo, ref) {

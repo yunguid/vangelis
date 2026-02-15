@@ -140,6 +140,23 @@ export function assertLikelyJsonContentType(contentType, contextLabel = 'respons
   );
 }
 
+export function validateTreeBlobEntry(entry, contextLabel = 'tree entry') {
+  assert(entry && typeof entry === 'object' && !Array.isArray(entry), `${contextLabel} must be an object`);
+  assert(entry.type === 'blob', `${contextLabel} must have type "blob"`);
+  assert(typeof entry.path === 'string' && entry.path.length > 0, `${contextLabel} path is missing`);
+  assert(isSafeRelativePath(entry.path), `${contextLabel} path is unsafe`);
+  assert(
+    normalizeManifestPath(entry.path) === entry.path,
+    `${contextLabel} path must be normalized (no duplicate/trailing slashes)`
+  );
+  assert(isValidGitSha(entry.sha), `${contextLabel} must include valid blob SHA`);
+  const size = getRequiredExpectedSize(entry.size, `${contextLabel} size`);
+  return {
+    ...entry,
+    size
+  };
+}
+
 export function assertExpectedContentLength(
   contentLengthHeader,
   expectedBytes,
