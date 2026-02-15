@@ -102,9 +102,24 @@ export function computeGitBlobSha(buffer) {
     .digest('hex');
 }
 
+function toCanonicalJson(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => toCanonicalJson(entry));
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort((a, b) => a.localeCompare(b))
+      .reduce((acc, key) => {
+        acc[key] = toCanonicalJson(value[key]);
+        return acc;
+      }, {});
+  }
+  return value;
+}
+
 export function computeManifestFingerprint(manifest) {
   return createHash('sha256')
-    .update(JSON.stringify(manifest), 'utf8')
+    .update(JSON.stringify(toCanonicalJson(manifest)), 'utf8')
     .digest('hex');
 }
 

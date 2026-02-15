@@ -442,6 +442,13 @@ describe('starter_sound_sync_utils', () => {
   it('computes deterministic manifest fingerprint', () => {
     const fingerprintA = computeManifestFingerprint(validManifest);
     const fingerprintB = computeManifestFingerprint(structuredClone(validManifest));
+    const fingerprintReordered = computeManifestFingerprint({
+      packs: structuredClone(validManifest.packs),
+      allowlistedDomains: structuredClone(validManifest.allowlistedDomains),
+      licenseNotice: validManifest.licenseNotice,
+      description: validManifest.description,
+      version: validManifest.version
+    });
     const fingerprintC = computeManifestFingerprint({
       ...validManifest,
       description: `${validManifest.description} changed`
@@ -449,6 +456,7 @@ describe('starter_sound_sync_utils', () => {
 
     expect(fingerprintA).toMatch(/^[0-9a-f]{64}$/);
     expect(fingerprintA).toBe(fingerprintB);
+    expect(fingerprintA).toBe(fingerprintReordered);
     expect(fingerprintA).not.toBe(fingerprintC);
   });
 });
