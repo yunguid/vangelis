@@ -247,6 +247,12 @@ for (const pack of manifest.packs || []) {
 inventory.packs.sort((a, b) => a.id.localeCompare(b.id));
 inventory.sourcePackIds = inventory.packs.map((pack) => pack.id);
 inventory.sourcePackCount = inventory.sourcePackIds.length;
+const manifestPackIds = (manifest.packs || []).map((pack) => pack.id);
+const packIdParityMatches = manifestPackIds.length === inventory.sourcePackIds.length
+  && manifestPackIds.every((id, index) => id === inventory.sourcePackIds[index]);
+if (!packIdParityMatches) {
+  throw new Error('Generated inventory pack IDs drifted from source manifest pack IDs');
+}
 
 const derivedSummary = summarizeInventoryPacks(inventory.packs);
 const trackedSummary = {

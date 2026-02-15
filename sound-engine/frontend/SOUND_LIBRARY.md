@@ -52,6 +52,7 @@ The sync script writes inventory metadata to:
 - inventory also records `sourcePackCount` for manifest-to-inventory pack cardinality checks
 - inventory also records `sourcePackIds` for exact manifest-pack identity checks
 - `sourcePackIds` / `sourcePackCount` are derived from sorted generated inventory packs for deterministic parity
+- sync run fails if generated inventory pack IDs ever drift from manifest pack IDs
 
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures
