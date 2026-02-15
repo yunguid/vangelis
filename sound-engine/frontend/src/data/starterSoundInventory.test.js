@@ -21,6 +21,9 @@ describe('starter sound inventory integrity', () => {
     expect(inventory.sourceManifestVersion).toBeGreaterThan(0);
     expect(inventory.sourceManifestSha256).toBe(computeManifestFingerprint(manifest));
     expect(inventory.sourceManifestSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(inventory.sourceManifestDescription).toBe(manifest.description);
+    expect(inventory.sourceManifestLicenseNotice).toBe(manifest.licenseNotice);
+    expect(inventory.sourceAllowlistedDomains).toEqual(manifest.allowlistedDomains);
     expect(inventory.sourcePackCount).toBe(manifest.packs.length);
     expect(Number.isInteger(inventory.sourcePackCount)).toBe(true);
     expect(inventory.sourcePackCount).toBeGreaterThan(0);

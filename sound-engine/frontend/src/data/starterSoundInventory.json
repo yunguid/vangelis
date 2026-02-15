@@ -1,6 +1,12 @@
 {
   "sourceManifestVersion": 1,
   "sourceManifestSha256": "7a4d4d146feb0816358c2a334001e0b2cc3fec35f877169758e4c841a80968f7",
+  "sourceManifestDescription": "Curated legal source manifest for bundled high-quality starter sounds.",
+  "sourceManifestLicenseNotice": "VSCO 2 Community Edition is distributed under CC0/public-domain dedication according to upstream project docs.",
+  "sourceAllowlistedDomains": [
+    "api.github.com",
+    "raw.githubusercontent.com"
+  ],
   "sourcePackCount": 11,
   "sourcePackIds": [
     "vsco-bassoon-sustain",

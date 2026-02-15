@@ -48,6 +48,7 @@ The sync script writes inventory metadata to:
 - inventory includes `sourceManifestSha256` so stale inventory files can be detected against the current manifest
 - manifest fingerprinting uses canonicalized JSON key ordering (stable across object key reorderings)
 - fingerprint value is persisted as 64-char lowercase SHA-256 hex
+- inventory stores manifest snapshot metadata (`description`, `licenseNotice`, `allowlistedDomains`) for auditability
 - inventory also records `sourcePackCount` for manifest-to-inventory pack cardinality checks
 - inventory also records `sourcePackIds` for exact manifest-pack identity checks
 
