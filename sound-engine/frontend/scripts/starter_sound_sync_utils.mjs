@@ -10,6 +10,12 @@ const PACK_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_DIR_REGEX = /^starter-pack\/[a-z0-9][a-z0-9/_-]*$/;
 const LICENSE_TOKEN_REGEX = /^[A-Za-z0-9.+-]+$/;
 const REQUIRED_ALLOWLISTED_DOMAINS = ['api.github.com', 'raw.githubusercontent.com'];
+const BLOCKED_RESPONSE_CONTENT_TYPE_SNIPPETS = [
+  'text/html',
+  'application/json',
+  'text/xml',
+  'application/xml'
+];
 const ALLOWED_EXTENSIONS = new Set(['.wav', '.flac', '.aif', '.aiff', '.ogg', '.mp3']);
 const ALLOWED_BIT_DEPTHS = new Set([16, 24, 32]);
 const ALLOWED_MANIFEST_KEYS = new Set([
@@ -115,6 +121,15 @@ export function assertAllowlistedUrl(url, allowlist = []) {
   assert(Array.isArray(allowlist) && allowlist.includes(parsed.hostname),
     `Blocked host "${parsed.hostname}" (not in allowlist)`);
   return parsed;
+}
+
+export function assertLikelyAudioContentType(contentType, contextLabel = 'response') {
+  if (typeof contentType !== 'string' || contentType.trim().length === 0) {
+    return;
+  }
+  const normalized = contentType.toLowerCase();
+  const blocked = BLOCKED_RESPONSE_CONTENT_TYPE_SNIPPETS.some((snippet) => normalized.includes(snippet));
+  assert(!blocked, `${contextLabel} content-type "${contentType}" does not look like audio/binary payload`);
 }
 
 export function computeGitBlobSha(buffer) {

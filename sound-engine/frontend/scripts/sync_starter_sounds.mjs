@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assertAllowlistedUrl,
+  assertLikelyAudioContentType,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
   classifyExistingFileIntegrity,
@@ -388,6 +389,7 @@ async function fetchBuffer(url) {
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
+  assertLikelyAudioContentType(response.headers.get('content-type'), `Download ${url}`);
   return Buffer.from(await response.arrayBuffer());
 }
 

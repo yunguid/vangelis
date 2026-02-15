@@ -4,6 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
   assertAllowlistedUrl,
+  assertLikelyAudioContentType,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
   classifyExistingFileIntegrity,
@@ -377,6 +378,20 @@ describe('starter_sound_sync_utils', () => {
       'https://example.com/owner/repo/main/sample.wav',
       validManifest.allowlistedDomains
     )).toThrow(/not in allowlist/i);
+  });
+
+  it('rejects clearly non-audio response content types', () => {
+    expect(() => assertLikelyAudioContentType('audio/wav', 'sample')).not.toThrow();
+    expect(() => assertLikelyAudioContentType('application/octet-stream', 'sample')).not.toThrow();
+    expect(() => assertLikelyAudioContentType('', 'sample')).not.toThrow();
+    expect(() => assertLikelyAudioContentType(null, 'sample')).not.toThrow();
+
+    expect(() => assertLikelyAudioContentType('text/html; charset=utf-8', 'sample'))
+      .toThrow(/does not look like audio\/binary payload/i);
+    expect(() => assertLikelyAudioContentType('application/json', 'sample'))
+      .toThrow(/does not look like audio\/binary payload/i);
+    expect(() => assertLikelyAudioContentType('application/xml', 'sample'))
+      .toThrow(/does not look like audio\/binary payload/i);
   });
 
   it('derives safe relative source paths from manifest prefixes', () => {
