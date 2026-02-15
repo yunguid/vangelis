@@ -60,8 +60,14 @@ describe('starter sound inventory integrity', () => {
         expect(entry.path.startsWith('starter-pack/')).toBe(true);
         expect(entry.path.startsWith(`${pack.targetDir}/`)).toBe(true);
         expect(entry.sourcePath.startsWith(`${pack.sourcePathPrefix}/`)).toBe(true);
+        const entryExt = path.extname(entry.path).toLowerCase();
+        const sourceExt = path.extname(entry.sourcePath).toLowerCase();
+        expect(manifestPack.includeExtensions).toContain(entryExt);
+        expect(sourceExt).toBe(entryExt);
         expect(['skipped', 'downloaded']).toContain(entry.status);
         expect(['verified', 'unverified', 'skipped']).toContain(entry.integrity);
+        expect(Number.isFinite(entry.bytes)).toBe(true);
+        expect(entry.bytes).toBeGreaterThan(0);
         if (entry.integrity === 'verified') {
           expect(entry.sourceBlobSha).toBe(entry.localBlobSha);
         }
