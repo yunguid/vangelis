@@ -53,6 +53,8 @@ Network behavior:
 The sync pipeline enforces:
 - strict lowercase domain allowlist (`raw.githubusercontent.com`, `api.github.com`)
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
+- manifest paths must be canonicalized (no duplicate/trailing slashes)
+- `includeExtensions` must be lexicographically sorted for deterministic manifests
 - pack IDs are enforced as lowercase kebab-case for stable manifests
 - license + attribution metadata must be non-empty and whitespace-clean
 - output-path confinement (prevents write traversal outside `public/samples`)

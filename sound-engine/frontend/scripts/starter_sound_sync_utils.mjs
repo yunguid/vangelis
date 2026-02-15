@@ -207,7 +207,15 @@ export function validateStarterSoundManifest(value) {
     assert(typeof pack.repo === 'string' && REPO_REGEX.test(pack.repo), `Pack "${pack.id}" repo must match owner/name`);
     assert(SHA_REGEX.test(pack.ref || ''), `Pack "${pack.id}" must pin an immutable 40-char commit SHA`);
     assert(isSafeRelativePath(pack.sourcePathPrefix), `Pack "${pack.id}" sourcePathPrefix is unsafe`);
+    assert(
+      normalizeManifestPath(pack.sourcePathPrefix) === pack.sourcePathPrefix,
+      `Pack "${pack.id}" sourcePathPrefix must be normalized (no duplicate/trailing slashes)`
+    );
     assert(isSafeRelativePath(pack.targetDir), `Pack "${pack.id}" targetDir is unsafe`);
+    assert(
+      normalizeManifestPath(pack.targetDir) === pack.targetDir,
+      `Pack "${pack.id}" targetDir must be normalized (no duplicate/trailing slashes)`
+    );
     assert(pack.targetDir.startsWith('starter-pack/'), `Pack "${pack.id}" targetDir must stay within starter-pack/`);
     const normalizedTargetDir = normalizeManifestPath(pack.targetDir);
     const targetDirCollisionKey = toPathCollisionKey(pack.targetDir);
@@ -237,13 +245,20 @@ export function validateStarterSoundManifest(value) {
     assert(Array.isArray(pack.includeExtensions), `Pack "${pack.id}" includeExtensions must be an array`);
     assert(pack.includeExtensions.length > 0, `Pack "${pack.id}" includeExtensions cannot be empty`);
     const extensionSet = new Set();
+    const extensionsInOrder = [];
     pack.includeExtensions.forEach((ext) => {
       assert(typeof ext === 'string', `Pack "${pack.id}" extension must be a string`);
       assert(ext === ext.toLowerCase(), `Pack "${pack.id}" extension must be lowercase: "${ext}"`);
       assert(ALLOWED_EXTENSIONS.has(ext), `Pack "${pack.id}" extension "${ext}" is not allowlisted`);
       assert(!extensionSet.has(ext), `Pack "${pack.id}" has duplicate extension "${ext}"`);
       extensionSet.add(ext);
+      extensionsInOrder.push(ext);
     });
+    const sortedExtensions = [...extensionsInOrder].sort((a, b) => a.localeCompare(b));
+    assert(
+      extensionsInOrder.every((ext, index) => ext === sortedExtensions[index]),
+      `Pack "${pack.id}" includeExtensions must be sorted lexicographically`
+    );
 
     assert(Number.isInteger(pack.quality?.sampleRate), `Pack "${pack.id}" quality.sampleRate must be an integer`);
     assert(pack.quality.sampleRate >= 8000 && pack.quality.sampleRate <= 384000,

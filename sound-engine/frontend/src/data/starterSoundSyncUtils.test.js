@@ -64,11 +64,21 @@ describe('starter_sound_sync_utils', () => {
       id: 'other-pack',
       targetDir: 'starter-pack//strings/violin/'
     });
-    expect(() => validateStarterSoundManifest(slashVariantTarget)).toThrow(/targetDir duplicates existing targetDir/i);
+    expect(() => validateStarterSoundManifest(slashVariantTarget)).toThrow(/targetDir must be normalized/i);
 
     const unsafe = structuredClone(validManifest);
     unsafe.packs[0].targetDir = '../outside';
     expect(() => validateStarterSoundManifest(unsafe)).toThrow(/targetDir is unsafe/i);
+
+    const nonNormalizedTargetDir = structuredClone(validManifest);
+    nonNormalizedTargetDir.packs[0].targetDir = 'starter-pack//strings/violin/';
+    expect(() => validateStarterSoundManifest(nonNormalizedTargetDir))
+      .toThrow(/targetDir must be normalized/i);
+
+    const nonNormalizedSourcePrefix = structuredClone(validManifest);
+    nonNormalizedSourcePrefix.packs[0].sourcePathPrefix = 'Strings//Violin Section/susVib/';
+    expect(() => validateStarterSoundManifest(nonNormalizedSourcePrefix))
+      .toThrow(/sourcePathPrefix must be normalized/i);
   });
 
   it('rejects non-kebab-case pack ids', () => {
@@ -140,7 +150,7 @@ describe('starter_sound_sync_utils', () => {
     });
 
     expect(() => validateStarterSoundManifest(slashVariantSourcePrefix))
-      .toThrow(/overlaps sourcePathPrefix/i);
+      .toThrow(/sourcePathPrefix must be normalized/i);
 
     const uniqueSourcePrefix = structuredClone(validManifest);
     uniqueSourcePrefix.packs.push({
@@ -162,6 +172,13 @@ describe('starter_sound_sync_utils', () => {
     const badRef = structuredClone(validManifest);
     badRef.packs[0].ref = 'main';
     expect(() => validateStarterSoundManifest(badRef)).toThrow(/40-char commit SHA/i);
+  });
+
+  it('rejects unsorted includeExtensions ordering', () => {
+    const unsortedExtensions = structuredClone(validManifest);
+    unsortedExtensions.packs[0].includeExtensions = ['.wav', '.aiff', '.aif'];
+    expect(() => validateStarterSoundManifest(unsortedExtensions))
+      .toThrow(/includeExtensions must be sorted lexicographically/i);
   });
 
   it('rejects license or attribution values with surrounding whitespace', () => {

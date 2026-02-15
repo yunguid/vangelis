@@ -48,6 +48,9 @@ describe('starter sound source manifest', () => {
       expect(Array.isArray(pack.includeExtensions)).toBe(true);
       expect(pack.includeExtensions.length).toBeGreaterThan(0);
       expect(pack.includeExtensions.every((ext) => ext === ext.toLowerCase())).toBe(true);
+      expect(pack.includeExtensions).toEqual(
+        [...pack.includeExtensions].sort((a, b) => a.localeCompare(b))
+      );
       expect(typeof pack.quality?.sampleRate).toBe('number');
       expect(typeof pack.quality?.bitDepth).toBe('number');
     });
