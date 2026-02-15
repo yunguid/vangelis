@@ -89,6 +89,22 @@ export function getBlobIntegrityStatus(sourceBlobSha, localBlobSha) {
   return sourceBlobSha === localBlobSha ? 'verified' : 'mismatch';
 }
 
+export function classifyExistingFileIntegrity({
+  localBytes,
+  expectedSize,
+  sourceBlobSha,
+  localBlobSha,
+  isLfsPointer = false
+}) {
+  if (isLfsPointer) {
+    return 'unverified';
+  }
+  if (!hasMatchingByteSize(localBytes, expectedSize)) {
+    return 'mismatch';
+  }
+  return getBlobIntegrityStatus(sourceBlobSha, localBlobSha);
+}
+
 export function isLikelyGitLfsPointer(content) {
   const text = typeof content === 'string'
     ? content

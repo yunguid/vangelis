@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
   getBlobIntegrityStatus,
@@ -108,28 +109,33 @@ for (const pack of manifest.packs || []) {
         const localStats = await fs.stat(targetPath);
         const localBytes = Number(localStats.size) || 0;
         const expectedBytes = Number(entry.size);
-        if (!hasMatchingByteSize(localBytes, expectedBytes)) {
-          let treatedAsPointer = false;
-          if (localBytes > 0 && localBytes <= 1024) {
-            try {
-              const maybePointer = await fs.readFile(targetPath, 'utf8');
-              if (isLikelyGitLfsPointer(maybePointer)) {
-                integrity = 'unverified';
-                treatedAsPointer = true;
-                lfsPointerCount += 1;
-              }
-            } catch {
-              // fall through to mismatch handling
+        let isLfsPointer = false;
+        if (localBytes > 0 && localBytes <= 1024) {
+          try {
+            const maybePointer = await fs.readFile(targetPath, 'utf8');
+            isLfsPointer = isLikelyGitLfsPointer(maybePointer);
+            if (isLfsPointer) {
+              lfsPointerCount += 1;
             }
+          } catch {
+            isLfsPointer = false;
           }
-          if (!treatedAsPointer) {
-            integrity = 'mismatch';
-            console.error(`[error] size mismatch (existing) ${pack.id}/${relativePath}`);
-          }
-        } else {
+        }
+
+        if (!isLfsPointer && hasMatchingByteSize(localBytes, expectedBytes)) {
           localBlobSha = await computeGitBlobShaFromFile(targetPath);
-          integrity = getBlobIntegrityStatus(sourceBlobSha, localBlobSha);
-          if (integrity === 'mismatch') {
+        }
+        integrity = classifyExistingFileIntegrity({
+          localBytes,
+          expectedSize: expectedBytes,
+          sourceBlobSha,
+          localBlobSha,
+          isLfsPointer
+        });
+        if (integrity === 'mismatch') {
+          if (!hasMatchingByteSize(localBytes, expectedBytes)) {
+            console.error(`[error] size mismatch (existing) ${pack.id}/${relativePath}`);
+          } else {
             console.error(`[error] integrity mismatch (existing) ${pack.id}/${relativePath}`);
           }
         }

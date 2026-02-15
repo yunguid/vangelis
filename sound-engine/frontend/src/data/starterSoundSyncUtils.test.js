@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
+  classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
   getBlobIntegrityStatus,
@@ -240,6 +241,43 @@ describe('starter_sound_sync_utils', () => {
     expect(getBlobIntegrityStatus(validSha, null)).toBe('mismatch');
     expect(getBlobIntegrityStatus(null, validSha)).toBe('unverified');
     expect(getBlobIntegrityStatus('invalid-sha', validSha)).toBe('unverified');
+  });
+
+  it('classifies existing files with pointer precedence', () => {
+    const validSha = '440300901dfe9275fd84e0b7763af1f8443ae62e';
+    const otherSha = '7d225b9b9fcd9f4f1d1144c4da4fb5a94832c8e2';
+
+    expect(classifyExistingFileIntegrity({
+      localBytes: 128,
+      expectedSize: 4096,
+      sourceBlobSha: validSha,
+      localBlobSha: otherSha,
+      isLfsPointer: true
+    })).toBe('unverified');
+
+    expect(classifyExistingFileIntegrity({
+      localBytes: 128,
+      expectedSize: 4096,
+      sourceBlobSha: validSha,
+      localBlobSha: validSha,
+      isLfsPointer: false
+    })).toBe('mismatch');
+
+    expect(classifyExistingFileIntegrity({
+      localBytes: 4096,
+      expectedSize: 4096,
+      sourceBlobSha: validSha,
+      localBlobSha: validSha,
+      isLfsPointer: false
+    })).toBe('verified');
+
+    expect(classifyExistingFileIntegrity({
+      localBytes: 4096,
+      expectedSize: null,
+      sourceBlobSha: validSha,
+      localBlobSha: otherSha,
+      isLfsPointer: false
+    })).toBe('mismatch');
   });
 
   it('detects git lfs pointer payloads', () => {
