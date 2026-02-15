@@ -77,10 +77,20 @@ describe('starter_sound_sync_utils', () => {
     expect(() => validateStarterSoundManifest(paddedDescription))
       .toThrow(/description has invalid surrounding whitespace/i);
 
+    const multilineDescription = structuredClone(validManifest);
+    multilineDescription.description = 'Line 1\nLine 2';
+    expect(() => validateStarterSoundManifest(multilineDescription))
+      .toThrow(/description must be single-line/i);
+
     const blankLicenseNotice = structuredClone(validManifest);
     blankLicenseNotice.licenseNotice = '';
     expect(() => validateStarterSoundManifest(blankLicenseNotice))
       .toThrow(/licenseNotice must be a non-empty string/i);
+
+    const multilineLicenseNotice = structuredClone(validManifest);
+    multilineLicenseNotice.licenseNotice = 'Line 1\nLine 2';
+    expect(() => validateStarterSoundManifest(multilineLicenseNotice))
+      .toThrow(/licenseNotice must be single-line/i);
   });
 
   it('rejects duplicate pack ids and unsafe target directories', () => {

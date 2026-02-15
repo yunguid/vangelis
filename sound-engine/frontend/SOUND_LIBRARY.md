@@ -63,6 +63,7 @@ The sync pipeline enforces:
 - unknown top-level, pack, and quality keys are rejected to prevent silent manifest drift
 - repository matching is canonicalized case-insensitively for overlap/collision protection
 - manifest-level metadata (`version`, `description`, `licenseNotice`) must be present, trimmed, and canonical
+- top-level `description` and `licenseNotice` fields must be single-line
 - manifest paths must be canonicalized (no duplicate/trailing slashes)
 - `targetDir` must stay lowercase and match `starter-pack/<slug-segments>`
 - `includeExtensions` must be lexicographically sorted for deterministic manifests

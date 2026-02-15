@@ -51,9 +51,11 @@ describe('starter sound source manifest', () => {
     expect(typeof manifest.description).toBe('string');
     expect(manifest.description.trim()).toBe(manifest.description);
     expect(manifest.description.length).toBeGreaterThan(0);
+    expect(manifest.description).not.toMatch(/[\r\n]/);
     expect(typeof manifest.licenseNotice).toBe('string');
     expect(manifest.licenseNotice.trim()).toBe(manifest.licenseNotice);
     expect(manifest.licenseNotice.length).toBeGreaterThan(0);
+    expect(manifest.licenseNotice).not.toMatch(/[\r\n]/);
     expect(Array.isArray(manifest.allowlistedDomains)).toBe(true);
     expect(manifest.allowlistedDomains.length).toBeGreaterThan(0);
     expect(manifest.allowlistedDomains.every((domain) => typeof domain === 'string' && domain.length > 0)).toBe(true);

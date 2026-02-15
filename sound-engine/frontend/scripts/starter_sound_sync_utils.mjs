@@ -248,10 +248,14 @@ export function validateStarterSoundManifest(value) {
     'Starter sound manifest description must be a non-empty string');
   assert(value.description === value.description.trim(),
     'Starter sound manifest description has invalid surrounding whitespace');
+  assert(!/[\r\n]/.test(value.description),
+    'Starter sound manifest description must be single-line');
   assert(typeof value.licenseNotice === 'string' && value.licenseNotice.trim().length > 0,
     'Starter sound manifest licenseNotice must be a non-empty string');
   assert(value.licenseNotice === value.licenseNotice.trim(),
     'Starter sound manifest licenseNotice has invalid surrounding whitespace');
+  assert(!/[\r\n]/.test(value.licenseNotice),
+    'Starter sound manifest licenseNotice must be single-line');
   assert(Array.isArray(value.allowlistedDomains), 'Starter sound manifest must define allowlisted domains');
   assert(value.allowlistedDomains.length > 0, 'Starter sound manifest allowlist cannot be empty');
   assert(Array.isArray(value.packs), 'Starter sound manifest must contain packs');
