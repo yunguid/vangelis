@@ -5,6 +5,7 @@ import {
   classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
+  computeManifestFingerprint,
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
@@ -51,6 +52,7 @@ let mismatched = 0;
 
 const inventory = {
   sourceManifestVersion: manifest.version || 1,
+  sourceManifestSha256: computeManifestFingerprint(manifest),
   packs: []
 };
 

@@ -4,6 +4,7 @@ import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
   classifyExistingFileIntegrity,
+  computeManifestFingerprint,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
   getSafeSourceRelativePath,
@@ -436,5 +437,18 @@ describe('starter_sound_sync_utils', () => {
       totalBytes: 3536,
       totalMB: Number((3536 / (1024 * 1024)).toFixed(2))
     });
+  });
+
+  it('computes deterministic manifest fingerprint', () => {
+    const fingerprintA = computeManifestFingerprint(validManifest);
+    const fingerprintB = computeManifestFingerprint(structuredClone(validManifest));
+    const fingerprintC = computeManifestFingerprint({
+      ...validManifest,
+      description: `${validManifest.description} changed`
+    });
+
+    expect(fingerprintA).toMatch(/^[0-9a-f]{64}$/);
+    expect(fingerprintA).toBe(fingerprintB);
+    expect(fingerprintA).not.toBe(fingerprintC);
   });
 });

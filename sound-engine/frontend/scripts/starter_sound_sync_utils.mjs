@@ -102,6 +102,12 @@ export function computeGitBlobSha(buffer) {
     .digest('hex');
 }
 
+export function computeManifestFingerprint(manifest) {
+  return createHash('sha256')
+    .update(JSON.stringify(manifest), 'utf8')
+    .digest('hex');
+}
+
 export function normalizeExpectedSize(value) {
   if (value == null) return null;
   const numberValue = Number(value);

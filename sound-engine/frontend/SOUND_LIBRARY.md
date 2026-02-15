@@ -39,6 +39,7 @@ Options:
 The sync script writes inventory metadata to:
 
 - `src/data/starterSoundInventory.json`
+- inventory includes `sourceManifestSha256` so stale inventory files can be detected against the current manifest
 
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures

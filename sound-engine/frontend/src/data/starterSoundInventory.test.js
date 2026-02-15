@@ -2,17 +2,22 @@ import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { computeManifestFingerprint } from '../../scripts/starter_sound_sync_utils.mjs';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('starter sound inventory integrity', () => {
   it('contains only verified or downloaded starter assets', () => {
+    const manifestPath = path.join(testDir, 'starterSoundSources.json');
     const inventoryPath = path.join(testDir, 'starterSoundInventory.json');
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     const inventory = JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
 
     expect(Array.isArray(inventory.packs)).toBe(true);
     expect(inventory.packs.length).toBeGreaterThan(0);
     expect(inventory.summary?.failed).toBe(0);
+    expect(inventory.sourceManifestVersion).toBe(manifest.version);
+    expect(inventory.sourceManifestSha256).toBe(computeManifestFingerprint(manifest));
     const packIds = inventory.packs.map((pack) => pack.id);
     expect(packIds).toEqual([...packIds].sort((a, b) => a.localeCompare(b)));
     expect(new Set(packIds).size).toBe(packIds.length);
