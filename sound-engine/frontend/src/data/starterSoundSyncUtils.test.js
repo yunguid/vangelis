@@ -248,8 +248,15 @@ describe('starter_sound_sync_utils', () => {
       'oid sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
       'size 123456'
     ].join('\n');
+    const lfsPointerWithCrLf = lfsPointer.replaceAll('\n', '\r\n');
+    const invalidPointerMissingVersion = [
+      'oid sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      'size 123456'
+    ].join('\n');
     expect(isLikelyGitLfsPointer(lfsPointer)).toBe(true);
+    expect(isLikelyGitLfsPointer(lfsPointerWithCrLf)).toBe(true);
     expect(isLikelyGitLfsPointer(Buffer.from(lfsPointer, 'utf8'))).toBe(true);
+    expect(isLikelyGitLfsPointer(invalidPointerMissingVersion)).toBe(false);
     expect(isLikelyGitLfsPointer('not-a-pointer')).toBe(false);
   });
 

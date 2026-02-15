@@ -97,9 +97,18 @@ export function isLikelyGitLfsPointer(content) {
       : '';
 
   if (!text) return false;
-  return text.startsWith('version https://git-lfs.github.com/spec/v1\n')
-    && /oid sha256:[0-9a-f]{64}/i.test(text)
-    && /size \d+/i.test(text);
+  const lines = text
+    .split(/\r?\n/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines[0] !== 'version https://git-lfs.github.com/spec/v1') {
+    return false;
+  }
+
+  const hasOid = lines.some((line) => /^oid sha256:[0-9a-f]{64}$/i.test(line));
+  const hasSize = lines.some((line) => /^size \d+$/i.test(line));
+  return hasOid && hasSize;
 }
 
 export function summarizeInventoryPacks(packs = []) {
