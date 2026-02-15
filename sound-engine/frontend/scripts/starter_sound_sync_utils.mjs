@@ -132,6 +132,14 @@ export function assertLikelyAudioContentType(contentType, contextLabel = 'respon
   assert(!blocked, `${contextLabel} content-type "${contentType}" does not look like audio/binary payload`);
 }
 
+export function assertLikelyJsonContentType(contentType, contextLabel = 'response') {
+  const normalized = typeof contentType === 'string' ? contentType.toLowerCase() : '';
+  assert(
+    normalized.includes('json'),
+    `${contextLabel} content-type "${contentType}" does not look like JSON payload`
+  );
+}
+
 export function assertExpectedContentLength(
   contentLengthHeader,
   expectedBytes,

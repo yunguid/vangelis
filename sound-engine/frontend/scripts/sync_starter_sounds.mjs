@@ -5,6 +5,7 @@ import {
   assertAllowlistedUrl,
   assertExpectedContentLength,
   assertLikelyAudioContentType,
+  assertLikelyJsonContentType,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
   classifyExistingFileIntegrity,
@@ -355,6 +356,7 @@ async function fetchRepoTree(repo, ref) {
   if (!response.ok) {
     throw new Error(`Failed to fetch repository tree for ${repo}@${ref}: ${response.status} ${response.statusText}`);
   }
+  assertLikelyJsonContentType(response.headers.get('content-type'), `Tree API ${repo}@${ref}`);
 
   const payload = await response.json();
   if (!Array.isArray(payload.tree)) {

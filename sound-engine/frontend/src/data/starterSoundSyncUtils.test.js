@@ -6,6 +6,7 @@ import {
   assertAllowlistedUrl,
   assertExpectedContentLength,
   assertLikelyAudioContentType,
+  assertLikelyJsonContentType,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
   classifyExistingFileIntegrity,
@@ -393,6 +394,16 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/does not look like audio\/binary payload/i);
     expect(() => assertLikelyAudioContentType('application/xml', 'sample'))
       .toThrow(/does not look like audio\/binary payload/i);
+  });
+
+  it('requires json-like content type for API payloads', () => {
+    expect(() => assertLikelyJsonContentType('application/json', 'api')).not.toThrow();
+    expect(() => assertLikelyJsonContentType('application/vnd.github+json; charset=utf-8', 'api')).not.toThrow();
+
+    expect(() => assertLikelyJsonContentType('', 'api'))
+      .toThrow(/does not look like JSON payload/i);
+    expect(() => assertLikelyJsonContentType('text/html', 'api'))
+      .toThrow(/does not look like JSON payload/i);
   });
 
   it('validates response content-length headers when present', () => {
