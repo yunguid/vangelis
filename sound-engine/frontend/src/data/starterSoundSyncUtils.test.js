@@ -403,6 +403,8 @@ describe('starter_sound_sync_utils', () => {
 
     expect(() => assertExpectedContentLength('invalid', 2048, '', 'sample'))
       .toThrow(/content-length header "invalid" is invalid/i);
+    expect(() => assertExpectedContentLength('2048.5', 2048, '', 'sample'))
+      .toThrow(/content-length header "2048\.5" is invalid/i);
     expect(() => assertExpectedContentLength('1024', 2048, '', 'sample'))
       .toThrow(/content-length 1024 does not match expected size 2048/i);
   });
@@ -457,7 +459,9 @@ describe('starter_sound_sync_utils', () => {
   it('normalizes expected sizes and validates byte-size matches', () => {
     expect(normalizeExpectedSize(120)).toBe(120);
     expect(normalizeExpectedSize('120')).toBe(120);
-    expect(normalizeExpectedSize(120.9)).toBe(120);
+    expect(normalizeExpectedSize(' 120 ')).toBe(120);
+    expect(normalizeExpectedSize(120.9)).toBeNull();
+    expect(normalizeExpectedSize('120.9')).toBeNull();
     expect(normalizeExpectedSize(-1)).toBeNull();
     expect(normalizeExpectedSize('abc')).toBeNull();
 
@@ -471,6 +475,8 @@ describe('starter_sound_sync_utils', () => {
   it('requires valid expected size metadata when requested', () => {
     expect(getRequiredExpectedSize(120, 'entry-1')).toBe(120);
     expect(getRequiredExpectedSize('120', 'entry-2')).toBe(120);
+    expect(() => getRequiredExpectedSize(120.1, 'entry-2b'))
+      .toThrow(/entry-2b is missing valid expected size metadata/i);
     expect(() => getRequiredExpectedSize(null, 'entry-3'))
       .toThrow(/entry-3 is missing valid expected size metadata/i);
     expect(() => getRequiredExpectedSize('oops', 'entry-4'))

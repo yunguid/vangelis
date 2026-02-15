@@ -227,11 +227,24 @@ export function buildManifestSnapshot(manifest) {
 
 export function normalizeExpectedSize(value) {
   if (value == null) return null;
-  const numberValue = Number(value);
-  if (!Number.isFinite(numberValue) || numberValue < 0) {
-    return null;
+  if (typeof value === 'number') {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      return null;
+    }
+    return value;
   }
-  return Math.trunc(numberValue);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!/^\d+$/.test(trimmed)) {
+      return null;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isSafeInteger(parsed) || parsed < 0) {
+      return null;
+    }
+    return parsed;
+  }
+  return null;
 }
 
 export function getRequiredExpectedSize(value, contextLabel = 'entry') {
