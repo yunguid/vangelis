@@ -328,6 +328,11 @@ describe('starter_sound_sync_utils', () => {
     missingRawDomain.allowlistedDomains = ['api.github.com'];
     expect(() => validateStarterSoundManifest(missingRawDomain))
       .toThrow(/must include required domain "raw\.githubusercontent\.com"/i);
+
+    const extraDomain = structuredClone(validManifest);
+    extraDomain.allowlistedDomains = ['api.github.com', 'example.com', 'raw.githubusercontent.com'];
+    expect(() => validateStarterSoundManifest(extraDomain))
+      .toThrow(/must only include required domains/i);
   });
 
   it('resolves safe output paths and blocks traversal', () => {

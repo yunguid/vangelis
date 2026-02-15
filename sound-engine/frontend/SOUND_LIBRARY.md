@@ -72,7 +72,7 @@ Network behavior:
 
 The sync pipeline enforces:
 - strict lowercase domain allowlist (`raw.githubusercontent.com`, `api.github.com`)
-- required baseline source domains are enforced (`api.github.com` and `raw.githubusercontent.com`)
+- allowlisted domains are fixed to required baseline hosts only (`api.github.com` and `raw.githubusercontent.com`)
 - strict manifest schema validation (immutable refs, safe paths, allowlisted extensions)
 - unknown top-level, pack, and quality keys are rejected to prevent silent manifest drift
 - each pack and `quality` block must be an object (no null/array coercion)

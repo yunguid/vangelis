@@ -301,6 +301,10 @@ export function validateStarterSoundManifest(value) {
       `Allowlisted domains must include required domain "${requiredDomain}"`
     );
   });
+  assert(
+    normalizedDomains.length === REQUIRED_ALLOWLISTED_DOMAINS.length,
+    `Allowlisted domains must only include required domains: ${REQUIRED_ALLOWLISTED_DOMAINS.join(', ')}`
+  );
 
   const ids = new Set();
   const packIdsInOrder = [];
