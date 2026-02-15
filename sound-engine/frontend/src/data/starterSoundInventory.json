@@ -1,6 +1,7 @@
 {
   "sourceManifestVersion": 1,
   "sourceManifestSha256": "7a4d4d146feb0816358c2a334001e0b2cc3fec35f877169758e4c841a80968f7",
+  "sourcePackCount": 11,
   "packs": [
     {
       "id": "vsco-bassoon-sustain",
