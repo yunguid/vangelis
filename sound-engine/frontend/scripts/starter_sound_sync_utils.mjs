@@ -16,6 +16,7 @@ const BLOCKED_RESPONSE_CONTENT_TYPE_SNIPPETS = [
   'text/xml',
   'application/xml'
 ];
+const MAX_GITHUB_TREE_ENTRIES = 100000;
 const ALLOWED_EXTENSIONS = new Set(['.wav', '.flac', '.aif', '.aiff', '.ogg', '.mp3']);
 const ALLOWED_BIT_DEPTHS = new Set([16, 24, 32]);
 const ALLOWED_MANIFEST_KEYS = new Set([
@@ -157,10 +158,18 @@ export function validateTreeBlobEntry(entry, contextLabel = 'tree entry') {
   };
 }
 
-export function validateGitHubTreePayload(payload, contextLabel = 'tree payload') {
+export function validateGitHubTreePayload(
+  payload,
+  contextLabel = 'tree payload',
+  options = {}
+) {
+  const maxEntries = Number.isInteger(options.maxEntries) && options.maxEntries > 0
+    ? options.maxEntries
+    : MAX_GITHUB_TREE_ENTRIES;
   assert(payload && typeof payload === 'object' && !Array.isArray(payload), `${contextLabel} must be an object`);
   assert(Array.isArray(payload.tree), `${contextLabel} tree must be an array`);
   assert(payload.truncated !== true, `${contextLabel} is truncated; reduce sourcePathPrefix scope`);
+  assert(payload.tree.length <= maxEntries, `${contextLabel} exceeded max entry limit (${maxEntries})`);
 
   const seenPathKeys = new Set();
   payload.tree.forEach((entry, index) => {

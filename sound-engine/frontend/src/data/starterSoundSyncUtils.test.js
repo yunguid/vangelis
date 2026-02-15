@@ -502,6 +502,11 @@ describe('starter_sound_sync_utils', () => {
 
     expect(() => validateGitHubTreePayload({ tree: [] , truncated: true }, 'tree-b'))
       .toThrow(/is truncated/i);
+    expect(() => validateGitHubTreePayload({ tree: [] }, 'tree-b2', { maxEntries: 0 }))
+      .not.toThrow();
+    expect(() => validateGitHubTreePayload({
+      tree: [{ path: 'Strings/Violin', type: 'tree' }, { path: 'Strings/Viola', type: 'tree' }]
+    }, 'tree-b3', { maxEntries: 1 })).toThrow(/exceeded max entry limit/i);
     expect(() => validateGitHubTreePayload({ tree: [{ path: '../escape', type: 'tree' }] }, 'tree-c'))
       .toThrow(/path is unsafe/i);
     expect(() => validateGitHubTreePayload({

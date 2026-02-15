@@ -68,6 +68,7 @@ Network behavior:
 - GitHub tree API responses must advertise JSON content-types before parsing
 - tree blob entries are schema-validated (safe normalized path + valid blob SHA + integer size metadata) before sync processing
 - tree API payloads fail fast on truncation and case-insensitive duplicate/unsafe paths
+- tree API payloads are bounded by maximum entry count to avoid runaway processing
 - raw-download responses reject clearly non-audio content types (`text/html`, JSON, XML)
 - downloaded audio blobs are validated against extension-specific magic-byte signatures before write
 - when `content-length` header is present (and unencoded), sync enforces exact match with expected upstream byte size before reading payload
