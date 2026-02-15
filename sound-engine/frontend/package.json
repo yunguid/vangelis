@@ -6,6 +6,7 @@
         "build": "vite build",
         "sync:midis": "node scripts/sync_russian_midis.mjs",
         "sync:starter-sounds": "node scripts/sync_starter_sounds.mjs",
+        "verify:starter-sounds": "npm test -- starterSoundSources starterSoundSyncUtils starterSoundInventory && npm run sync:starter-sounds -- --verify-existing --quiet",
         "preview": "vite preview",
         "test": "vitest run",
         "test:watch": "vitest",

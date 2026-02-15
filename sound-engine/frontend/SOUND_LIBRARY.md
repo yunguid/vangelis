@@ -31,6 +31,12 @@ cd sound-engine/frontend
 npm run sync:starter-sounds
 ```
 
+Validation shortcut (tests + verify-existing sync):
+
+```bash
+npm run verify:starter-sounds
+```
+
 Options:
 - `--force` re-download existing files
 - `--quiet` minimal logs
