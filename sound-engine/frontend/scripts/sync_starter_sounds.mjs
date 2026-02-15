@@ -64,6 +64,10 @@ for (const pack of manifest.packs || []) {
     return includeExtensions.has(ext);
   });
 
+  if (filtered.length === 0) {
+    throw new Error(`Pack "${pack.id}" resolved zero files from "${pack.sourcePathPrefix}" with extensions [${[...includeExtensions].join(', ')}]`);
+  }
+
   log(`[pack] ${pack.id} -> ${filtered.length} files`);
 
   const packInventory = {

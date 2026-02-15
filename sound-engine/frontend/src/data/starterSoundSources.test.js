@@ -8,7 +8,9 @@ const testDir = path.dirname(fileURLToPath(import.meta.url));
 
 describe('starter sound source manifest', () => {
   const manifestPath = path.join(testDir, 'starterSoundSources.json');
+  const inventoryPath = path.join(testDir, 'starterSoundInventory.json');
   const readManifest = () => JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const readInventory = () => JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
 
   it('passes strict sync-manifest validation', () => {
     const manifest = readManifest();
@@ -89,6 +91,19 @@ describe('starter sound source manifest', () => {
       );
       expect(typeof pack.quality?.sampleRate).toBe('number');
       expect(typeof pack.quality?.bitDepth).toBe('number');
+    });
+  });
+
+  it('keeps source packs aligned with non-empty inventory packs', () => {
+    const manifest = readManifest();
+    const inventory = readInventory();
+    const inventoryById = new Map((inventory.packs || []).map((pack) => [pack.id, pack]));
+
+    manifest.packs.forEach((pack) => {
+      const inventoryPack = inventoryById.get(pack.id);
+      expect(inventoryPack).toBeTruthy();
+      expect(Array.isArray(inventoryPack.files)).toBe(true);
+      expect(inventoryPack.files.length).toBeGreaterThan(0);
     });
   });
 });
