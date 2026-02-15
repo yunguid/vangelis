@@ -10,6 +10,7 @@ import {
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
+  isPathWithinPrefix,
   isValidGitSha,
   isLikelyGitLfsPointer,
   resolveSafeOutputPath,
@@ -93,6 +94,9 @@ for (const pack of manifest.packs || []) {
     const relativePath = getSafeSourceRelativePath(pack.sourcePathPrefix, entry.path);
     const targetPath = resolveSafeOutputPath(outputRoot, pack.targetDir, relativePath);
     const normalizedTargetPath = normalizeToPosix(path.relative(outputRoot, targetPath));
+    if (!isPathWithinPrefix(pack.targetDir, normalizedTargetPath)) {
+      throw new Error(`Target path escaped pack targetDir: ${normalizedTargetPath}`);
+    }
     const targetCollisionKey = toPathCollisionKey(normalizedTargetPath);
     const targetOwner = `${pack.id}:${entry.path}`;
     const existingOwner = targetPathOwners.get(targetCollisionKey);

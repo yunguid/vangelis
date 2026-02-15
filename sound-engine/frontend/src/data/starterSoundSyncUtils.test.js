@@ -11,6 +11,7 @@ import {
   getSafeSourceRelativePath,
   getBlobIntegrityStatus,
   hasMatchingByteSize,
+  isPathWithinPrefix,
   isValidGitSha,
   isLikelyGitLfsPointer,
   normalizeExpectedSize,
@@ -479,6 +480,13 @@ describe('starter_sound_sync_utils', () => {
       .toBe('starter-pack/strings/violin');
     expect(toPathCollisionKey('starter-pack//Strings///Violin/'))
       .toBe('starter-pack/strings/violin');
+  });
+
+  it('checks whether candidate paths remain within prefix', () => {
+    expect(isPathWithinPrefix('starter-pack/strings', 'starter-pack/strings/violin/a.wav')).toBe(true);
+    expect(isPathWithinPrefix('starter-pack/strings', 'starter-pack/strings')).toBe(true);
+    expect(isPathWithinPrefix('starter-pack/strings', 'starter-pack/brass/horn.wav')).toBe(false);
+    expect(isPathWithinPrefix('starter-pack/strings', 'starter-pack/string')).toBe(false);
   });
 
   it('derives stable summary counters from inventory entries', () => {

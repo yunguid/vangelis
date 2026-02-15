@@ -55,6 +55,7 @@ Network behavior:
 - rejects downloaded upstream payloads that resolve to Git LFS pointer text instead of audio content
 - fails fast if any configured pack resolves zero upstream files (prevents silent source-path drift)
 - derives pack-relative source paths with strict prefix checks before writing output paths
+- validates generated inventory entry paths stay inside each pack’s `targetDir` / `sourcePathPrefix`
 
 ## Security
 

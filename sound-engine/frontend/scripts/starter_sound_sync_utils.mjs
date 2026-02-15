@@ -88,6 +88,13 @@ export function toPathCollisionKey(value) {
   return normalizeManifestPath(value).toLowerCase();
 }
 
+export function isPathWithinPrefix(prefix, candidatePath) {
+  const normalizedPrefix = normalizeManifestPath(prefix);
+  const normalizedCandidate = normalizeManifestPath(candidatePath);
+  return normalizedCandidate === normalizedPrefix
+    || normalizedCandidate.startsWith(`${normalizedPrefix}/`);
+}
+
 export function resolveSafeOutputPath(outputRoot, targetDir, relativePath) {
   assert(isSafeRelativePath(targetDir), `Unsafe targetDir "${targetDir}"`);
   assert(isSafeRelativePath(relativePath), `Unsafe relative path "${relativePath}"`);
