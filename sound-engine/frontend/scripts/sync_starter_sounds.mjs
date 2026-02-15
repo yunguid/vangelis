@@ -347,8 +347,9 @@ async function listPackFiles(pack) {
 
 async function fetchRepoTree(repo, ref) {
   const treeUrl = `https://api.github.com/repos/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
-  assertAllowlistedUrl(treeUrl, manifest.allowlistedDomains || []);
-  const response = await fetchWithRetry(treeUrl, { headers: githubHeaders() });
+  const allowlistedDomains = manifest.allowlistedDomains || [];
+  assertAllowlistedUrl(treeUrl, allowlistedDomains);
+  const response = await fetchWithRetry(treeUrl, { headers: githubHeaders() }, allowlistedDomains);
   if (!response.ok) {
     throw new Error(`Failed to fetch repository tree for ${repo}@${ref}: ${response.status} ${response.statusText}`);
   }
@@ -381,20 +382,22 @@ function githubHeaders() {
 }
 
 async function fetchBuffer(url) {
-  assertAllowlistedUrl(url, manifest.allowlistedDomains || []);
-  const response = await fetchWithRetry(url);
+  const allowlistedDomains = manifest.allowlistedDomains || [];
+  assertAllowlistedUrl(url, allowlistedDomains);
+  const response = await fetchWithRetry(url, {}, allowlistedDomains);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function fetchWithRetry(url, options = {}) {
+async function fetchWithRetry(url, options = {}, allowlist = []) {
   let attempt = 0;
   while (attempt < MAX_FETCH_ATTEMPTS) {
     attempt += 1;
     try {
       const response = await fetchWithTimeout(url, options);
+      assertAllowlistedUrl(response.url || url, allowlist);
       if (response.ok || !RETRYABLE_STATUS.has(response.status) || attempt >= MAX_FETCH_ATTEMPTS) {
         return response;
       }
