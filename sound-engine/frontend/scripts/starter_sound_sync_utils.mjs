@@ -169,6 +169,15 @@ export async function computeGitBlobShaFromFile(filePath) {
 
 export function validateStarterSoundManifest(value) {
   assert(value && typeof value === 'object', 'Starter sound manifest is invalid');
+  assert(Number.isInteger(value.version) && value.version >= 1, 'Starter sound manifest version must be a positive integer');
+  assert(typeof value.description === 'string' && value.description.trim().length > 0,
+    'Starter sound manifest description must be a non-empty string');
+  assert(value.description === value.description.trim(),
+    'Starter sound manifest description has invalid surrounding whitespace');
+  assert(typeof value.licenseNotice === 'string' && value.licenseNotice.trim().length > 0,
+    'Starter sound manifest licenseNotice must be a non-empty string');
+  assert(value.licenseNotice === value.licenseNotice.trim(),
+    'Starter sound manifest licenseNotice has invalid surrounding whitespace');
   assert(Array.isArray(value.allowlistedDomains), 'Starter sound manifest must define allowlisted domains');
   assert(value.allowlistedDomains.length > 0, 'Starter sound manifest allowlist cannot be empty');
   assert(Array.isArray(value.packs), 'Starter sound manifest must contain packs');

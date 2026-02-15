@@ -18,6 +18,14 @@ describe('starter sound source manifest', () => {
   it('enforces secure allowlisted source domains', () => {
     const manifest = readManifest();
 
+    expect(Number.isInteger(manifest.version)).toBe(true);
+    expect(manifest.version).toBeGreaterThan(0);
+    expect(typeof manifest.description).toBe('string');
+    expect(manifest.description.trim()).toBe(manifest.description);
+    expect(manifest.description.length).toBeGreaterThan(0);
+    expect(typeof manifest.licenseNotice).toBe('string');
+    expect(manifest.licenseNotice.trim()).toBe(manifest.licenseNotice);
+    expect(manifest.licenseNotice.length).toBeGreaterThan(0);
     expect(Array.isArray(manifest.allowlistedDomains)).toBe(true);
     expect(manifest.allowlistedDomains.length).toBeGreaterThan(0);
     expect(manifest.allowlistedDomains.every((domain) => typeof domain === 'string' && domain.length > 0)).toBe(true);

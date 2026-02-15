@@ -18,6 +18,8 @@ import {
 
 const validManifest = {
   version: 1,
+  description: 'Curated legal source manifest for starter sounds',
+  licenseNotice: 'VSCO CE content uses CC0 per upstream docs',
   allowlistedDomains: ['api.github.com', 'raw.githubusercontent.com'],
   packs: [
     {
@@ -38,6 +40,28 @@ const validManifest = {
 };
 
 describe('starter_sound_sync_utils', () => {
+  it('rejects invalid manifest metadata fields', () => {
+    const badVersion = structuredClone(validManifest);
+    badVersion.version = 0;
+    expect(() => validateStarterSoundManifest(badVersion))
+      .toThrow(/version must be a positive integer/i);
+
+    const blankDescription = structuredClone(validManifest);
+    blankDescription.description = '   ';
+    expect(() => validateStarterSoundManifest(blankDescription))
+      .toThrow(/description must be a non-empty string/i);
+
+    const paddedDescription = structuredClone(validManifest);
+    paddedDescription.description = ' Example description';
+    expect(() => validateStarterSoundManifest(paddedDescription))
+      .toThrow(/description has invalid surrounding whitespace/i);
+
+    const blankLicenseNotice = structuredClone(validManifest);
+    blankLicenseNotice.licenseNotice = '';
+    expect(() => validateStarterSoundManifest(blankLicenseNotice))
+      .toThrow(/licenseNotice must be a non-empty string/i);
+  });
+
   it('rejects duplicate pack ids and unsafe target directories', () => {
     const duplicate = structuredClone(validManifest);
     duplicate.packs.push({ ...duplicate.packs[0] });
