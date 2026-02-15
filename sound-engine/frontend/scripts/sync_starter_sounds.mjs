@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  assertNotGitLfsPointer,
   classifyExistingFileIntegrity,
   computeGitBlobSha,
   computeGitBlobShaFromFile,
@@ -178,6 +179,7 @@ for (const pack of manifest.packs || []) {
       enforceAllowlist(rawUrl, manifest.allowlistedDomains || []);
 
       const data = await fetchBuffer(rawUrl);
+      assertNotGitLfsPointer(data, `Downloaded asset ${pack.id}/${relativePath}`);
       const expectedBytes = Number(entry.size);
       if (!hasMatchingByteSize(data.length, expectedBytes)) {
         throw new Error(`Size mismatch for ${relativePath}`);

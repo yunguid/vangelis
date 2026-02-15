@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
+  assertNotGitLfsPointer,
   classifyExistingFileIntegrity,
   computeManifestFingerprint,
   computeGitBlobSha,
@@ -448,6 +449,17 @@ describe('starter_sound_sync_utils', () => {
     expect(isLikelyGitLfsPointer(Buffer.from(lfsPointer, 'utf8'))).toBe(true);
     expect(isLikelyGitLfsPointer(invalidPointerMissingVersion)).toBe(false);
     expect(isLikelyGitLfsPointer('not-a-pointer')).toBe(false);
+  });
+
+  it('throws when payload resolves to git lfs pointer', () => {
+    const lfsPointer = [
+      'version https://git-lfs.github.com/spec/v1',
+      'oid sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+      'size 123456'
+    ].join('\n');
+    expect(() => assertNotGitLfsPointer(Buffer.from('RIFF....WAVE', 'utf8'), 'audio')).not.toThrow();
+    expect(() => assertNotGitLfsPointer(lfsPointer, 'audio'))
+      .toThrow(/audio resolved to Git LFS pointer content/i);
   });
 
   it('normalizes path collision keys case-insensitively', () => {

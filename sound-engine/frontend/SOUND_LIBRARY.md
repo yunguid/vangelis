@@ -50,6 +50,7 @@ Network behavior:
 - marks assets as `unverified` (not failed) when upstream SHA metadata is unavailable
 - skips local checksum hashing when upstream SHA metadata is unavailable (records `unverified` instead)
 - treats local Git LFS pointer files as `unverified` during `--verify-existing` (run `git lfs pull` for full verification)
+- rejects downloaded upstream payloads that resolve to Git LFS pointer text instead of audio content
 - fails fast if any configured pack resolves zero upstream files (prevents silent source-path drift)
 - derives pack-relative source paths with strict prefix checks before writing output paths
 

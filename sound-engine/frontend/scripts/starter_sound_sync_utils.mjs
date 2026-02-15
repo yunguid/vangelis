@@ -194,6 +194,10 @@ export function isLikelyGitLfsPointer(content) {
   return hasOid && hasSize;
 }
 
+export function assertNotGitLfsPointer(content, contextLabel = 'payload') {
+  assert(!isLikelyGitLfsPointer(content), `${contextLabel} resolved to Git LFS pointer content`);
+}
+
 export function summarizeInventoryPacks(packs = []) {
   const allEntries = packs.flatMap((pack) => pack.files || []);
   const downloaded = allEntries.filter((entry) => entry.status === 'downloaded').length;
