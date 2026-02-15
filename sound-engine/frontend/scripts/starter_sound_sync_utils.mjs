@@ -8,6 +8,7 @@ const REPO_REGEX = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const HOSTNAME_REGEX = /^[A-Za-z0-9.-]+$/;
 const PACK_ID_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const TARGET_DIR_REGEX = /^starter-pack\/[a-z0-9][a-z0-9/_-]*$/;
+const LICENSE_TOKEN_REGEX = /^[A-Za-z0-9.+-]+$/;
 const REQUIRED_ALLOWLISTED_DOMAINS = ['api.github.com', 'raw.githubusercontent.com'];
 const ALLOWED_EXTENSIONS = new Set(['.wav', '.flac', '.aif', '.aiff', '.ogg', '.mp3']);
 const ALLOWED_BIT_DEPTHS = new Set([16, 24, 32]);
@@ -333,8 +334,10 @@ export function validateStarterSoundManifest(value) {
 
     assert(typeof pack.license === 'string' && pack.license.trim().length > 0, `Pack "${pack.id}" missing license`);
     assert(pack.license === pack.license.trim(), `Pack "${pack.id}" license has invalid surrounding whitespace`);
+    assert(LICENSE_TOKEN_REGEX.test(pack.license), `Pack "${pack.id}" license must be SPDX-like token format`);
     assert(typeof pack.attribution === 'string' && pack.attribution.trim().length > 0, `Pack "${pack.id}" missing attribution`);
     assert(pack.attribution === pack.attribution.trim(), `Pack "${pack.id}" attribution has invalid surrounding whitespace`);
+    assert(!/[\r\n]/.test(pack.attribution), `Pack "${pack.id}" attribution must be single-line`);
 
     assert(Array.isArray(pack.includeExtensions), `Pack "${pack.id}" includeExtensions must be an array`);
     assert(pack.includeExtensions.length > 0, `Pack "${pack.id}" includeExtensions cannot be empty`);

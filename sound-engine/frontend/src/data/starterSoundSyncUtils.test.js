@@ -267,6 +267,16 @@ describe('starter_sound_sync_utils', () => {
     paddedAttribution.packs[0].attribution = 'Example attribution ';
     expect(() => validateStarterSoundManifest(paddedAttribution))
       .toThrow(/attribution has invalid surrounding whitespace/i);
+
+    const nonTokenLicense = structuredClone(validManifest);
+    nonTokenLicense.packs[0].license = 'CC BY 4.0';
+    expect(() => validateStarterSoundManifest(nonTokenLicense))
+      .toThrow(/license must be SPDX-like token format/i);
+
+    const multilineAttribution = structuredClone(validManifest);
+    multilineAttribution.packs[0].attribution = 'Line 1\nLine 2';
+    expect(() => validateStarterSoundManifest(multilineAttribution))
+      .toThrow(/attribution must be single-line/i);
   });
 
   it('rejects uppercase allowlisted domain entries', () => {

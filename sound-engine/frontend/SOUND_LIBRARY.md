@@ -66,7 +66,7 @@ The sync pipeline enforces:
 - `targetDir` must stay lowercase and match `starter-pack/<slug-segments>`
 - `includeExtensions` must be lexicographically sorted for deterministic manifests
 - pack IDs are enforced as lowercase kebab-case for stable manifests
-- license + attribution metadata must be non-empty and whitespace-clean
+- license metadata must be SPDX-like token format; attribution must be non-empty, trimmed, and single-line
 - output-path confinement (prevents write traversal outside `public/samples`)
 - target-path collision detection (prevents multiple sources writing same local asset path)
 - duplicate/overlapping `targetDir` definitions are rejected at manifest-validation time

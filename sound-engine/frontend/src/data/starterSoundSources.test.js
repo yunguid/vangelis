@@ -82,7 +82,9 @@ describe('starter sound source manifest', () => {
       expect(pack.targetDir).toBe(pack.targetDir.toLowerCase());
       expect(pack.targetDir).toMatch(/^starter-pack\/[a-z0-9][a-z0-9/_-]*$/);
       expect(typeof pack.license).toBe('string');
+      expect(pack.license).toMatch(/^[A-Za-z0-9.+-]+$/);
       expect(typeof pack.attribution).toBe('string');
+      expect(pack.attribution).not.toMatch(/[\r\n]/);
       expect(Array.isArray(pack.includeExtensions)).toBe(true);
       expect(pack.includeExtensions.length).toBeGreaterThan(0);
       expect(pack.includeExtensions.every((ext) => ext === ext.toLowerCase())).toBe(true);
