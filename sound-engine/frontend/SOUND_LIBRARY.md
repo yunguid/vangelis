@@ -94,6 +94,7 @@ The sync pipeline enforces:
 - deterministic source manifest
 - deterministic inventory ordering (packs + files sorted for stable diffs)
 - inventory summary counters (including `totalPacks` / `totalFiles` / `verified` / `unverified` / `mismatched`) are derived from entry data (prevents counter drift)
+- summary arithmetic is validated (`totalFiles = downloaded + skipped + failed`, size/MB parity)
 - git-blob checksum verification against upstream tree SHA
 - no free-form crawl targets
 

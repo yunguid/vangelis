@@ -21,6 +21,7 @@ import {
   summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
   toPathCollisionKey,
+  validateInventorySummary,
   validateStarterSoundManifest
 } from '../../scripts/starter_sound_sync_utils.mjs';
 
@@ -613,6 +614,47 @@ describe('starter_sound_sync_utils', () => {
       totalBytes: 3072,
       totalMB: Number((3072 / (1024 * 1024)).toFixed(2))
     });
+  });
+
+  it('validates summary arithmetic and numeric fields', () => {
+    expect(() => validateInventorySummary({
+      totalPacks: 2,
+      totalFiles: 3,
+      downloaded: 1,
+      skipped: 1,
+      failed: 1,
+      verified: 1,
+      unverified: 1,
+      mismatched: 1,
+      totalBytes: 2048,
+      totalMB: Number((2048 / (1024 * 1024)).toFixed(2))
+    }, 'summary-a')).not.toThrow();
+
+    expect(() => validateInventorySummary({
+      totalPacks: 1,
+      totalFiles: 2,
+      downloaded: 1,
+      skipped: 0,
+      failed: 0,
+      verified: 0,
+      unverified: 0,
+      mismatched: 0,
+      totalBytes: 1024,
+      totalMB: Number((1024 / (1024 * 1024)).toFixed(2))
+    }, 'summary-b')).toThrow(/totalFiles must equal downloaded \+ skipped \+ failed/i);
+
+    expect(() => validateInventorySummary({
+      totalPacks: 1,
+      totalFiles: 1,
+      downloaded: 1,
+      skipped: 0,
+      failed: 0,
+      verified: 1,
+      unverified: 1,
+      mismatched: 1,
+      totalBytes: 1024,
+      totalMB: Number((1024 / (1024 * 1024)).toFixed(2))
+    }, 'summary-c')).toThrow(/integrity totals exceed totalFiles/i);
   });
 
   it('computes deterministic manifest fingerprint', () => {

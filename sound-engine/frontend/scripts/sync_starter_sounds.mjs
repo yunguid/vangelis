@@ -19,6 +19,7 @@ import {
   summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
   toPathCollisionKey,
+  validateInventorySummary,
   validateStarterSoundManifest
 } from './starter_sound_sync_utils.mjs';
 
@@ -244,6 +245,13 @@ for (const pack of manifest.packs || []) {
   }
   packInventory.files.sort((a, b) => a.path.localeCompare(b.path));
   packInventory.summary = summarizeInventoryEntries(packInventory.files);
+  validateInventorySummary(
+    {
+      totalPacks: 1,
+      ...packInventory.summary
+    },
+    `pack "${pack.id}" summary`
+  );
   inventory.packs.push(packInventory);
 }
 
@@ -259,6 +267,7 @@ if (!packIdParityMatches) {
 
 const derivedSummary = summarizeInventoryPacks(inventory.packs);
 const derivedPackSummary = summarizeInventoryPackSummaries(inventory.packs);
+validateInventorySummary(derivedPackSummary, 'aggregated pack summaries');
 const trackedSummary = {
   totalPacks: inventory.packs.length,
   totalFiles: downloaded + skipped + failed,
@@ -296,6 +305,7 @@ if (
 ) {
   console.warn('[warn] pack-summary counters drift detected; using entry-derived inventory summary');
 }
+validateInventorySummary(derivedSummary, 'derived inventory summary');
 inventory.summary = derivedSummary;
 
 await fs.writeFile(inventoryPath, JSON.stringify(inventory, null, 2));

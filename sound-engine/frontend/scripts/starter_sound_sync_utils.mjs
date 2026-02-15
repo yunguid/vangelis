@@ -237,6 +237,40 @@ export function summarizeInventoryEntries(entries = []) {
   };
 }
 
+export function validateInventorySummary(summary = {}, contextLabel = 'inventory summary') {
+  const countFields = [
+    'totalPacks',
+    'totalFiles',
+    'downloaded',
+    'skipped',
+    'failed',
+    'verified',
+    'unverified',
+    'mismatched',
+    'totalBytes'
+  ];
+
+  countFields.forEach((field) => {
+    const value = summary[field];
+    assert(Number.isInteger(value) && value >= 0, `${contextLabel} field "${field}" must be a non-negative integer`);
+  });
+
+  const expectedTotalFiles = summary.downloaded + summary.skipped + summary.failed;
+  assert(
+    summary.totalFiles === expectedTotalFiles,
+    `${contextLabel} totalFiles must equal downloaded + skipped + failed`
+  );
+
+  const trackedIntegrityTotal = summary.verified + summary.unverified + summary.mismatched;
+  assert(
+    trackedIntegrityTotal <= summary.totalFiles,
+    `${contextLabel} integrity totals exceed totalFiles`
+  );
+
+  const expectedTotalMB = Number((summary.totalBytes / (1024 * 1024)).toFixed(2));
+  assert(summary.totalMB === expectedTotalMB, `${contextLabel} totalMB does not match totalBytes`);
+}
+
 export function summarizeInventoryPacks(packs = []) {
   const allEntries = packs.flatMap((pack) => pack.files || []);
   const entrySummary = summarizeInventoryEntries(allEntries);
