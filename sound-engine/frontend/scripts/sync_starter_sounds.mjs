@@ -21,6 +21,7 @@ import {
   isValidGitSha,
   isLikelyGitLfsPointer,
   resolveSafeOutputPath,
+  readStreamToBufferWithByteLimit,
   summarizeInventoryEntries,
   summarizeInventoryPackSummaries,
   summarizeInventoryPacks,
@@ -405,6 +406,15 @@ async function fetchBuffer(url, expectedBytes) {
     response.headers.get('content-encoding'),
     `Download ${url}`
   );
+
+  if (response.body) {
+    return readStreamToBufferWithByteLimit(
+      response.body,
+      expectedBytes,
+      `Download ${url}`
+    );
+  }
+
   return Buffer.from(await response.arrayBuffer());
 }
 

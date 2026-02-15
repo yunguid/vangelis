@@ -72,6 +72,7 @@ Network behavior:
 - raw-download responses reject clearly non-audio content types (`text/html`, JSON, XML)
 - downloaded audio blobs are validated against extension-specific magic-byte signatures before write
 - when `content-length` header is present (and unencoded), sync enforces exact match with expected upstream byte size before reading payload
+- downloads are streamed with strict expected-byte upper bounds to abort oversized payloads early
 - existing-file checksum verification uses streamed hashing to avoid loading entire files into memory
 - validates expected byte sizes from upstream tree metadata before hash verification
 - requires valid upstream **integer** byte-size metadata for every synced file entry

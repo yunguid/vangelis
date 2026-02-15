@@ -255,6 +255,37 @@ export function assertBufferMatchesAudioExtension(buffer, filePath, contextLabel
   );
 }
 
+export async function readStreamToBufferWithByteLimit(stream, byteLimit, contextLabel = 'stream') {
+  const normalizedLimit = normalizeExpectedSize(byteLimit);
+  assert(normalizedLimit != null, `${contextLabel} byte limit is invalid`);
+  assert(stream && typeof stream.getReader === 'function', `${contextLabel} is not a readable stream`);
+
+  const reader = stream.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      // eslint-disable-next-line no-await-in-loop
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      const chunkBuffer = Buffer.from(value);
+      totalBytes += chunkBuffer.length;
+      if (totalBytes > normalizedLimit) {
+        await reader.cancel(`${contextLabel} exceeded byte limit`);
+        throw new Error(`${contextLabel} exceeded expected size limit ${normalizedLimit}`);
+      }
+      chunks.push(chunkBuffer);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return Buffer.concat(chunks, totalBytes);
+}
+
 export function computeGitBlobSha(buffer) {
   const header = Buffer.from(`blob ${buffer.length}\0`, 'utf8');
   return createHash('sha1')

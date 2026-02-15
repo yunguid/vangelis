@@ -23,6 +23,7 @@ import {
   isValidGitSha,
   isLikelyGitLfsPointer,
   normalizeExpectedSize,
+  readStreamToBufferWithByteLimit,
   resolveSafeOutputPath,
   summarizeInventoryEntries,
   summarizeInventoryPackSummaries,
@@ -538,6 +539,33 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/does not match expected \.wav signature/i);
     expect(() => assertBufferMatchesAudioExtension(wavBuffer, 'sample.unknown', 'sig-h'))
       .toThrow(/not supported for signature validation/i);
+  });
+
+  it('reads stream payloads with strict byte limits', async () => {
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(Uint8Array.from([1, 2]));
+        controller.enqueue(Uint8Array.from([3, 4]));
+        controller.close();
+      }
+    });
+
+    const buffer = await readStreamToBufferWithByteLimit(stream, 4, 'stream-a');
+    expect(buffer.equals(Buffer.from([1, 2, 3, 4]))).toBe(true);
+
+    const oversizedStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(Uint8Array.from([1, 2, 3]));
+        controller.enqueue(Uint8Array.from([4, 5]));
+        controller.close();
+      }
+    });
+
+    await expect(readStreamToBufferWithByteLimit(oversizedStream, 4, 'stream-b'))
+      .rejects.toThrow(/stream-b exceeded expected size limit 4/i);
+
+    await expect(readStreamToBufferWithByteLimit({}, 4, 'stream-c'))
+      .rejects.toThrow(/stream-c is not a readable stream/i);
   });
 
   it('computes identical git-blob sha for buffer and file stream', async () => {
