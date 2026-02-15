@@ -63,6 +63,7 @@ The sync script writes inventory metadata to:
 Network behavior:
 - automatic retries with exponential backoff + jitter for transient HTTP/network failures
 - bounded request timeouts per fetch
+- all fetch targets must be strict HTTPS allowlisted URLs (no embedded credentials, no custom ports)
 - existing-file checksum verification uses streamed hashing to avoid loading entire files into memory
 - validates expected byte sizes from upstream tree metadata before hash verification
 - requires valid upstream byte-size metadata for every synced file entry

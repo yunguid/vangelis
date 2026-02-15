@@ -107,6 +107,16 @@ export function resolveSafeOutputPath(outputRoot, targetDir, relativePath) {
   return resolved;
 }
 
+export function assertAllowlistedUrl(url, allowlist = []) {
+  const parsed = new URL(url);
+  assert(parsed.protocol === 'https:', `Blocked protocol "${parsed.protocol}" for URL "${url}"`);
+  assert(!parsed.username && !parsed.password, `Blocked URL credentials for host "${parsed.hostname}"`);
+  assert(!parsed.port, `Blocked non-default port "${parsed.port}" for host "${parsed.hostname}"`);
+  assert(Array.isArray(allowlist) && allowlist.includes(parsed.hostname),
+    `Blocked host "${parsed.hostname}" (not in allowlist)`);
+  return parsed;
+}
+
 export function computeGitBlobSha(buffer) {
   const header = Buffer.from(`blob ${buffer.length}\0`, 'utf8');
   return createHash('sha1')

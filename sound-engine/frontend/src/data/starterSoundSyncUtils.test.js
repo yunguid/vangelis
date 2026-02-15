@@ -3,6 +3,7 @@ import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs/promises';
 import {
+  assertAllowlistedUrl,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
   classifyExistingFileIntegrity,
@@ -349,6 +350,33 @@ describe('starter_sound_sync_utils', () => {
       .toThrow(/Unsafe relative path/i);
     expect(() => resolveSafeOutputPath(root, '../outside', 'sample.wav'))
       .toThrow(/Unsafe targetDir/i);
+  });
+
+  it('enforces strict allowlisted https urls', () => {
+    expect(assertAllowlistedUrl(
+      'https://raw.githubusercontent.com/owner/repo/main/sample.wav',
+      validManifest.allowlistedDomains
+    )).toBeInstanceOf(URL);
+
+    expect(() => assertAllowlistedUrl(
+      'http://raw.githubusercontent.com/owner/repo/main/sample.wav',
+      validManifest.allowlistedDomains
+    )).toThrow(/Blocked protocol/i);
+
+    expect(() => assertAllowlistedUrl(
+      'https://token@raw.githubusercontent.com/owner/repo/main/sample.wav',
+      validManifest.allowlistedDomains
+    )).toThrow(/Blocked URL credentials/i);
+
+    expect(() => assertAllowlistedUrl(
+      'https://raw.githubusercontent.com:444/owner/repo/main/sample.wav',
+      validManifest.allowlistedDomains
+    )).toThrow(/Blocked non-default port/i);
+
+    expect(() => assertAllowlistedUrl(
+      'https://example.com/owner/repo/main/sample.wav',
+      validManifest.allowlistedDomains
+    )).toThrow(/not in allowlist/i);
   });
 
   it('derives safe relative source paths from manifest prefixes', () => {

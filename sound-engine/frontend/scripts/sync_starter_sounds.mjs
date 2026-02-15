@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  assertAllowlistedUrl,
   assertNotGitLfsPointer,
   buildManifestSnapshot,
   classifyExistingFileIntegrity,
@@ -186,7 +187,7 @@ for (const pack of manifest.packs || []) {
 
     try {
       const rawUrl = toRawFileUrl(pack.repo, pack.ref, entry.path);
-      enforceAllowlist(rawUrl, manifest.allowlistedDomains || []);
+      assertAllowlistedUrl(rawUrl, manifest.allowlistedDomains || []);
 
       const data = await fetchBuffer(rawUrl);
       assertNotGitLfsPointer(data, `Downloaded asset ${pack.id}/${relativePath}`);
@@ -346,7 +347,7 @@ async function listPackFiles(pack) {
 
 async function fetchRepoTree(repo, ref) {
   const treeUrl = `https://api.github.com/repos/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`;
-  enforceAllowlist(treeUrl, manifest.allowlistedDomains || []);
+  assertAllowlistedUrl(treeUrl, manifest.allowlistedDomains || []);
   const response = await fetchWithRetry(treeUrl, { headers: githubHeaders() });
   if (!response.ok) {
     throw new Error(`Failed to fetch repository tree for ${repo}@${ref}: ${response.status} ${response.statusText}`);
@@ -379,14 +380,8 @@ function githubHeaders() {
   return headers;
 }
 
-function enforceAllowlist(url, allowlist) {
-  const parsed = new URL(url);
-  if (!allowlist.includes(parsed.hostname)) {
-    throw new Error(`Blocked host "${parsed.hostname}" (not in allowlist)`);
-  }
-}
-
 async function fetchBuffer(url) {
+  assertAllowlistedUrl(url, manifest.allowlistedDomains || []);
   const response = await fetchWithRetry(url);
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
