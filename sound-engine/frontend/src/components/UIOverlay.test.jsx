@@ -47,6 +47,14 @@ describe('UIOverlay', () => {
     expect(screen.getByRole('radiogroup')).toBeInTheDocument();
   });
 
+  it('supports synth selector dropdown changes', () => {
+    const handleChange = vi.fn();
+    render(<UIOverlay currentWaveform="Sine" onWaveformChange={handleChange} />);
+    const select = screen.getByLabelText('Synth selector');
+    fireEvent.change(select, { target: { value: 'Triangle' } });
+    expect(handleChange).toHaveBeenCalledWith('Triangle');
+  });
+
   it('shows description text', () => {
     render(<UIOverlay currentWaveform="Sine" onWaveformChange={() => {}} />);
     expect(screen.getByText(/harmonic profile/)).toBeInTheDocument();

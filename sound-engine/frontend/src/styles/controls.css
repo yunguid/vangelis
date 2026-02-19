@@ -88,6 +88,31 @@
   gap: var(--space-sm);
 }
 
+.waveform-mobile-select {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.waveform-mobile-select__label {
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.waveform-mobile-select__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(18, 30, 43, 0.68);
+  color: var(--color-text-primary);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .waveform-button {
   min-height: 118px;
   text-align: left;

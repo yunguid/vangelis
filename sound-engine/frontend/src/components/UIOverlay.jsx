@@ -2,6 +2,8 @@ import React from 'react';
 import { WAVEFORM_OPTIONS } from '../utils/audioParams.js';
 
 const UIOverlay = ({ currentWaveform, onWaveformChange }) => {
+  const mobileSelectId = 'waveform-mobile-select';
+
   return (
     <div className="panel elevated waveform-panel">
       <div className="label-stack">
@@ -11,6 +13,22 @@ const UIOverlay = ({ currentWaveform, onWaveformChange }) => {
       <p className="panel-subtitle">
         Choose the harmonic profile for the instrument. Changes update instantly.
       </p>
+      <div className="waveform-mobile-select">
+        <label htmlFor={mobileSelectId} className="waveform-mobile-select__label">
+          Synth selector
+        </label>
+        <select
+          id={mobileSelectId}
+          className="waveform-mobile-select__input"
+          value={currentWaveform}
+          onChange={(event) => onWaveformChange(event.target.value)}
+          aria-label="Synth selector"
+        >
+          {WAVEFORM_OPTIONS.map((wave) => (
+            <option key={wave} value={wave}>{wave}</option>
+          ))}
+        </select>
+      </div>
       <div className="waveform-grid" role="radiogroup" aria-label="Waveform selection">
         {WAVEFORM_OPTIONS.map((wave) => {
           const isActive = currentWaveform === wave;

@@ -230,10 +230,14 @@
     gap: 8px;
   }
 
+  .waveform-mobile-select {
+    display: flex;
+  }
+
   .waveform-button {
-    min-height: 72px;
+    min-height: 64px;
     padding: 12px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     letter-spacing: 0.1em;
   }
 
@@ -279,10 +283,6 @@
 
   .keyboard-hints {
     display: none;
-  }
-
-  .waveform-grid {
-    grid-template-columns: 1fr;
   }
 }
 
