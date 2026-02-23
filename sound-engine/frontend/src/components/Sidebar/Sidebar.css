@@ -662,27 +662,6 @@
   gap: 8px;
 }
 
-.samples-tab__starter-search {
-  width: 100%;
-  min-height: 34px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(245, 250, 255, 0.88);
-  padding: 8px 10px;
-  font-size: 0.62rem;
-  letter-spacing: 0.04em;
-}
-
-.samples-tab__starter-search::placeholder {
-  color: rgba(196, 212, 229, 0.45);
-}
-
-.samples-tab__starter-search:focus-visible {
-  outline: 2px solid rgba(255, 136, 91, 0.45);
-  outline-offset: 1px;
-}
-
 .samples-tab__starter-families {
   display: flex;
   flex-wrap: wrap;
