@@ -45,7 +45,7 @@ describe('SamplesTab starter pack integration', () => {
     }));
   });
 
-  it('filters starter quick-access list by family and search', async () => {
+  it('filters starter quick-access list by family', async () => {
     render(<SamplesTab onSampleSelect={vi.fn()} activeSampleId={null} />);
 
     await waitFor(() => {
@@ -55,9 +55,6 @@ describe('SamplesTab starter pack integration', () => {
     fireEvent.click(screen.getByRole('button', { name: /^reed$/i }));
     expect(screen.getByRole('button', { name: /Bassoon Low/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /French Horn Low/i })).not.toBeInTheDocument();
-
-    const searchInput = screen.getByLabelText('Filter starter samples');
-    fireEvent.change(searchInput, { target: { value: 'zzz-does-not-exist' } });
-    expect(screen.getByText('No starter samples match this filter.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Filter starter samples')).not.toBeInTheDocument();
   });
 });

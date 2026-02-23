@@ -131,7 +131,7 @@ const Sidebar = ({
             <p className="sidebar-panel__subtitle">
               {activeTab === 'midi'
                 ? (currentMidi?.name || 'Library + transport')
-                : (activeSampleId ? 'Sample armed' : 'Select or import a source')
+                : (activeSampleId ? 'Source selected' : 'Select or import a source')
               }
             </p>
           </div>

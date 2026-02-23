@@ -103,7 +103,6 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [importing, setImporting] = useState(false);
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
-  const [starterSearchQuery, setStarterSearchQuery] = useState('');
   const [starterFamilyFilter, setStarterFamilyFilter] = useState('all');
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -119,15 +118,13 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
     return ['all', ...ordered, ...extras];
   }, [starterCatalog]);
   const filteredStarterCatalog = useMemo(() => {
-    const normalizedQuery = starterSearchQuery.trim().toLowerCase();
     return featuredStarterCatalog.filter((item) => {
       if (starterFamilyFilter !== 'all' && item.family !== starterFamilyFilter) {
         return false;
       }
-      if (!normalizedQuery) return true;
-      return `${item.name} ${item.family}`.toLowerCase().includes(normalizedQuery);
+      return true;
     });
-  }, [featuredStarterCatalog, starterFamilyFilter, starterSearchQuery]);
+  }, [featuredStarterCatalog, starterFamilyFilter]);
 
   // Load samples on mount
   useEffect(() => {
@@ -385,14 +382,6 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       <div className="samples-tab__section">
         <h3 className="samples-tab__heading">Starter Pack</h3>
         <div className="samples-tab__starter-controls">
-          <input
-            type="search"
-            className="samples-tab__starter-search"
-            placeholder="Find starter sample"
-            value={starterSearchQuery}
-            onChange={(event) => setStarterSearchQuery(event.target.value)}
-            aria-label="Filter starter samples"
-          />
           <div className="samples-tab__starter-families">
             {starterFamilies.map((family) => (
               <button
