@@ -8,9 +8,6 @@ const UIOverlay = ({ currentWaveform, onWaveformChange }) => {
         <h2 className="controls-heading">Waveform</h2>
         <span className="slider-value">{currentWaveform}</span>
       </div>
-      <p className="panel-subtitle">
-        Choose the harmonic profile for the instrument. Changes update instantly.
-      </p>
       <div className="waveform-grid" role="radiogroup" aria-label="Waveform selection">
         {WAVEFORM_OPTIONS.map((wave) => {
           const isActive = currentWaveform === wave;

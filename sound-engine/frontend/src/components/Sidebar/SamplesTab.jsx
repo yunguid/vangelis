@@ -11,6 +11,12 @@ import { withBase } from '../../utils/baseUrl.js';
 
 const STARTER_FAMILY_ORDER = ['piano', 'strings', 'brass', 'reed', 'chromatic percussion'];
 
+const encodeSamplePath = (samplePath = '') =>
+  samplePath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
 const createDecoderContext = () => {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor) {
@@ -42,7 +48,8 @@ const buildStarterCatalog = () => {
         id: `starter-${soundSet.id}-${instrument.id}`,
         name: instrument.label || instrument.id,
         family,
-        sourceUrl: withBase(`samples/${instrument.samplePath}`),
+        baseNote: instrument.baseNote || null,
+        sourceUrl: withBase(`samples/${encodeSamplePath(instrument.samplePath)}`),
         mimeType: 'audio/wav'
       });
     });
@@ -380,7 +387,6 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
 
       {/* Starter pack quick access */}
       <div className="samples-tab__section">
-        <h3 className="samples-tab__heading">Starter Pack</h3>
         <div className="samples-tab__starter-controls">
           <div className="samples-tab__starter-families">
             {starterFamilies.map((family) => (

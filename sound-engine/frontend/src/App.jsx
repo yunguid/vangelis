@@ -11,6 +11,13 @@ import { audioEngine } from './utils/audioEngine.js';
 import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM } from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 
+const parseBaseNote = (value) => {
+  if (typeof value !== 'string') return null;
+  const match = value.trim().toUpperCase().match(/^([A-G]#?)(-?\d+)$/);
+  if (!match) return null;
+  return { noteName: match[1], octave: Number(match[2]) };
+};
+
 const App = () => {
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = useState(DEFAULT_WAVEFORM);
@@ -103,6 +110,10 @@ const App = () => {
       const file = new File([blob], sample.name + '.wav', { type: inferredMimeType });
 
       const info = await audioEngine.loadCustomSample(file);
+      const parsedBase = parseBaseNote(sample.baseNote);
+      if (parsedBase) {
+        audioEngine.setCustomSampleBaseNote(parsedBase.noteName, parsedBase.octave);
+      }
       setSampleInfo({
         name: sample.name,
         duration: info.duration.toFixed(2),
@@ -111,6 +122,7 @@ const App = () => {
       setActiveSampleId(sample.id);
     } catch (err) {
       console.error('Failed to load sample:', err);
+      alert('Failed to load sample. Please try a different sound.');
     } finally {
       setSampleLoading(false);
     }

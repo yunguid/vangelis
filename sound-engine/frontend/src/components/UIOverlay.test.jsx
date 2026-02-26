@@ -47,8 +47,8 @@ describe('UIOverlay', () => {
     expect(screen.getByRole('radiogroup')).toBeInTheDocument();
   });
 
-  it('shows description text', () => {
+  it('omits helper description text', () => {
     render(<UIOverlay currentWaveform="Sine" onWaveformChange={() => {}} />);
-    expect(screen.getByText(/harmonic profile/)).toBeInTheDocument();
+    expect(screen.queryByText(/harmonic profile/i)).not.toBeInTheDocument();
   });
 });

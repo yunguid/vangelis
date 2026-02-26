@@ -18,7 +18,7 @@ describe('SamplesTab starter pack integration', () => {
   it('renders starter pack quick-access buttons', async () => {
     render(<SamplesTab onSampleSelect={vi.fn()} activeSampleId={null} />);
 
-    expect(screen.getByText('Starter Pack')).toBeInTheDocument();
+    expect(screen.queryByText('Starter Pack')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Harp High/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /French Horn Low/i })).toBeInTheDocument();
 

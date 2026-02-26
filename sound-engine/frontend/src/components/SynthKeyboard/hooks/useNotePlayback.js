@@ -42,7 +42,12 @@ export function useNotePlayback({
   }, []);
 
   const startNote = useCallback((noteMeta, { pointerId = null, velocity = 0.85 } = {}) => {
-    if (!wasmReadyRef.current || !noteMeta || !noteMeta.frequency) {
+    if (!noteMeta || !noteMeta.frequency) {
+      return;
+    }
+
+    const status = audioEngine.getStatus();
+    if (!wasmReadyRef.current && !status.hasCustomSample) {
       return;
     }
     if (activeNotesRef.current.has(noteMeta.noteId)) {
