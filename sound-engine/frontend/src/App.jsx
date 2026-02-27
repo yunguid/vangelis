@@ -6,7 +6,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
 import Sidebar from './components/Sidebar';
-import MidiBirdsEyeView from './components/MidiBirdsEyeView';
 import { audioEngine } from './utils/audioEngine.js';
 import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM } from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
@@ -16,6 +15,59 @@ const parseBaseNote = (value) => {
   const match = value.trim().toUpperCase().match(/^([A-G]#?)(-?\d+)$/);
   if (!match) return null;
   return { noteName: match[1], octave: Number(match[2]) };
+};
+
+const buildStarterFetchCandidates = (sourceUrl) => {
+  const candidates = [];
+  const add = (value) => {
+    if (typeof value !== 'string' || value.length === 0) return;
+    if (!candidates.includes(value)) candidates.push(value);
+  };
+
+  add(sourceUrl);
+
+  if (typeof window !== 'undefined') {
+    try {
+      const resolved = new URL(sourceUrl, window.location.href);
+      add(resolved.toString());
+
+      const samplesIndex = resolved.pathname.indexOf('/samples/');
+      if (samplesIndex > -1) {
+        add(`${resolved.origin}${resolved.pathname.slice(samplesIndex)}${resolved.search}`);
+      }
+    } catch (_) {
+      // Ignore invalid URL candidates.
+    }
+  }
+
+  return candidates;
+};
+
+const fetchStarterSampleBlob = async (sourceUrl) => {
+  const candidates = buildStarterFetchCandidates(sourceUrl);
+  let lastError = null;
+
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        lastError = new Error(`HTTP ${response.status} for ${url}`);
+        continue;
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        lastError = new Error(`Unexpected HTML response for ${url}`);
+        continue;
+      }
+
+      return await response.blob();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Failed to fetch starter sample');
 };
 
 const App = () => {
@@ -29,7 +81,6 @@ const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('midi');
   const [activeSampleId, setActiveSampleId] = useState(null);
-  const [performanceView, setPerformanceView] = useState('keys');
   const fileInputRef = useRef(null);
   const scrollRaf = useRef(null);
   const wasmLoaded = engineStatus.wasmReady;
@@ -97,11 +148,7 @@ const App = () => {
       if (sample.audioData) {
         blob = new Blob([sample.audioData], { type: sample.mimeType || 'audio/wav' });
       } else if (sample.sourceUrl) {
-        const response = await fetch(sample.sourceUrl);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch starter sample: ${response.status}`);
-        }
-        blob = await response.blob();
+        blob = await fetchStarterSampleBlob(sample.sourceUrl);
       } else {
         return;
       }
@@ -250,47 +297,18 @@ const App = () => {
           <WaveCandy />
           <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
             <div className="keyboard-header">
-              <div className="keyboard-view-toggle" role="tablist" aria-label="Performance view mode">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={performanceView === 'keys'}
-                  className={`keyboard-view-toggle__btn ${performanceView === 'keys' ? 'keyboard-view-toggle__btn--active' : ''}`}
-                  onClick={() => setPerformanceView('keys')}
-                >
-                  Keys
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={performanceView === 'birdsEye'}
-                  className={`keyboard-view-toggle__btn ${performanceView === 'birdsEye' ? 'keyboard-view-toggle__btn--active' : ''}`}
-                  onClick={() => setPerformanceView('birdsEye')}
-                >
-                  Bird&apos;s-Eye
-                </button>
-              </div>
               <span className="keyboard-legend">
                 {sampleInfo ? `Sample: ${sampleInfo.name}` : `Waveform: ${waveformType}`}
                 {isRecording && <span className="recording-indicator"> [REC]</span>}
               </span>
             </div>
             <div className="keyboard-region">
-              {performanceView === 'keys' ? (
-                <SynthKeyboard
-                  waveformType={waveformType}
-                  audioParams={audioParams}
-                  wasmLoaded={wasmLoaded}
-                  externalActiveNotes={midiPlayback.activeNotes}
-                />
-              ) : (
-                <MidiBirdsEyeView
-                  currentMidi={midiPlayback.currentMidi}
-                  progress={midiPlayback.progress}
-                  activeNotes={midiPlayback.activeNotes}
-                  isPlaying={midiPlayback.isPlaying}
-                />
-              )}
+              <SynthKeyboard
+                waveformType={waveformType}
+                audioParams={audioParams}
+                wasmLoaded={wasmLoaded}
+                externalActiveNotes={midiPlayback.activeNotes}
+              />
               {!isGraphWarm && (
                 <div className="warmup-indicator" aria-live="polite">
                   <span className="warmup-indicator__pulse" aria-hidden="true" />
@@ -298,17 +316,8 @@ const App = () => {
                 </div>
               )}
               <div className="keyboard-hints">
-                {performanceView === 'keys' ? (
-                  <>
-                    <span className="keyboard-hint">Shift + / opens shortcuts </span>
-                    <span className="keyboard-hint">Z / X for octave</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="keyboard-hint">Bird&apos;s-eye shows incoming MIDI notes</span>
-                    <span className="keyboard-hint">Switch to Keys to play manually</span>
-                  </>
-                )}
+                <span className="keyboard-hint">Shift + / opens shortcuts </span>
+                <span className="keyboard-hint">Z / X for octave</span>
               </div>
             </div>
           </div>

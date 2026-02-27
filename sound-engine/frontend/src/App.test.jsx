@@ -44,10 +44,10 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: 'Virtual keyboard' })).toBeInTheDocument();
   });
 
-  it('renders manual performance view toggle', () => {
+  it('does not render birds-eye performance toggle', () => {
     render(<App />);
-    expect(screen.getByRole('tab', { name: 'Keys' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: "Bird's-Eye" })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Keys' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: "Bird's-Eye" })).not.toBeInTheDocument();
   });
 
   it('shows waveform type', () => {
