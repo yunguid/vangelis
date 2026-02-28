@@ -106,3 +106,134 @@
   border-radius: 10px;
   background: rgba(6, 9, 14, 0.9);
 }
+
+/* Bird's-Eye Radar */
+.birds-eye-radar {
+  width: 100%;
+  gap: 10px;
+  padding: 12px;
+}
+
+.birds-eye-radar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.birds-eye-radar__title {
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(220, 230, 240, 0.86);
+}
+
+.birds-eye-radar__status {
+  font-size: 0.58rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(176, 194, 210, 0.72);
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 154, 180, 0.34);
+  background: rgba(10, 17, 24, 0.42);
+}
+
+.birds-eye-radar__status.is-live {
+  color: rgba(255, 216, 176, 0.94);
+  border-color: rgba(255, 164, 120, 0.56);
+  background: rgba(35, 17, 10, 0.46);
+}
+
+.birds-eye-radar__stage {
+  position: relative;
+  min-height: clamp(170px, 27vh, 250px);
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(98, 152, 232, 0.16), transparent 54%),
+    radial-gradient(circle at 82% 76%, rgba(255, 138, 88, 0.14), transparent 52%),
+    rgba(6, 10, 16, 0.92);
+  border: 1px solid rgba(142, 168, 194, 0.2);
+}
+
+.birds-eye-radar__raylib {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.birds-eye-radar__raylib .birds-eye-radar__raylib-viewport {
+  width: 100%;
+  height: 100%;
+}
+
+.birds-eye-radar__raylib .birds-eye-radar__raylib-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  opacity: 0.74;
+  filter: saturate(1.12) contrast(1.04) brightness(0.86);
+}
+
+.birds-eye-radar__overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+}
+
+.birds-eye-radar__hud {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.birds-eye-radar__midi,
+.birds-eye-radar__progress {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(218, 228, 238, 0.82);
+  padding: 4px 7px;
+  border-radius: 8px;
+  background: rgba(7, 12, 19, 0.62);
+  border: 1px solid rgba(152, 178, 204, 0.24);
+  white-space: nowrap;
+}
+
+.birds-eye-radar__midi {
+  max-width: min(70%, 420px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.birds-eye-radar__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  padding: 14px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: rgba(226, 234, 244, 0.7);
+  text-shadow: 0 0 20px rgba(4, 8, 14, 0.85);
+}

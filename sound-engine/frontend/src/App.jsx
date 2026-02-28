@@ -5,6 +5,7 @@ import UIOverlay from './components/UIOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
+import BirdsEyeRadar from './components/BirdsEyeRadar';
 import Sidebar from './components/Sidebar';
 import { audioEngine } from './utils/audioEngine.js';
 import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM } from './utils/audioParams.js';
@@ -335,6 +336,14 @@ const App = () => {
               <AudioControls
                 audioParams={audioParams}
                 onParamChange={handleAudioParamChange}
+              />
+            </div>
+            <div className="controls-panel full" aria-label="Bird's-eye radar">
+              <BirdsEyeRadar
+                currentMidi={midiPlayback.currentMidi}
+                progress={midiPlayback.progress}
+                activeNotes={midiPlayback.activeNotes}
+                isPlaying={midiPlayback.isPlaying}
               />
             </div>
           </div>

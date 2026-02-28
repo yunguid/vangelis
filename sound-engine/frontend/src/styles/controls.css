@@ -42,6 +42,10 @@
   grid-column: 2;
 }
 
+.controls-panel.full {
+  grid-column: 1 / -1;
+}
+
 .controls-heading {
   font-size: clamp(0.9rem, 1.1vw, 1rem);
   font-weight: 300;

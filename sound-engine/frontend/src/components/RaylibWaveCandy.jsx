@@ -98,7 +98,18 @@ const measureViewport = (container) => {
   return { cssWidth, cssHeight };
 };
 
-const RaylibWaveCandy = ({ fallback = null }) => {
+const joinClasses = (...values) => values.filter(Boolean).join(' ');
+
+const RaylibWaveCandy = ({
+  fallback = null,
+  className = 'wave-candy panel elevated wave-candy--raylib',
+  viewportClassName = '',
+  canvasClassName = '',
+  canvasId = 'raylib-wavecandy',
+  showToggle = true,
+  ariaLabel = 'Wave Candy visualizer',
+  children = null
+}) => {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
   const moduleRef = useRef(null);
@@ -383,24 +394,27 @@ const RaylibWaveCandy = ({ fallback = null }) => {
 
   return (
     <section
-      className="wave-candy panel elevated wave-candy--raylib"
-      aria-label="Wave Candy visualizer"
+      className={className}
+      aria-label={ariaLabel}
       data-raylib-ready={ready ? 'true' : 'false'}
       data-raylib-error={error ? 'true' : 'false'}
     >
-      <button
-        type="button"
-        className="wave-candy-gear"
-        onClick={handleToggle}
-        disabled={!ready}
-        aria-pressed={showVector}
-        aria-label="Toggle stereo field"
-        title="Toggle stereo field"
-      >
-        ⚙
-      </button>
-      <div ref={containerRef} className="wave-candy__viewport">
-        <canvas ref={canvasRef} className="wave-candy__canvas" id="raylib-wavecandy" />
+      {showToggle && (
+        <button
+          type="button"
+          className="wave-candy-gear"
+          onClick={handleToggle}
+          disabled={!ready}
+          aria-pressed={showVector}
+          aria-label="Toggle stereo field"
+          title="Toggle stereo field"
+        >
+          ⚙
+        </button>
+      )}
+      <div ref={containerRef} className={joinClasses('wave-candy__viewport', viewportClassName)}>
+        <canvas ref={canvasRef} className={joinClasses('wave-candy__canvas', canvasClassName)} id={canvasId} />
+        {children}
       </div>
     </section>
   );

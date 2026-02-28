@@ -50,6 +50,11 @@ describe('App', () => {
     expect(screen.queryByRole('tab', { name: "Bird's-Eye" })).not.toBeInTheDocument();
   });
 
+  it('renders birds-eye radar in the control surface', () => {
+    render(<App />);
+    expect(screen.getByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
+  });
+
   it('shows waveform type', () => {
     render(<App />);
     expect(screen.getByText(/Waveform:/)).toBeInTheDocument();

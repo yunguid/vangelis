@@ -95,6 +95,34 @@
     font-size: 0.76rem;
   }
 
+  .birds-eye-radar {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .birds-eye-radar__stage {
+    min-height: clamp(150px, 24vh, 210px);
+    border-radius: 12px;
+  }
+
+  .birds-eye-radar__title {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+  }
+
+  .birds-eye-radar__status {
+    font-size: 0.53rem;
+    letter-spacing: 0.12em;
+    padding: 3px 7px;
+  }
+
+  .birds-eye-radar__midi,
+  .birds-eye-radar__progress {
+    font-size: 0.52rem;
+    letter-spacing: 0.1em;
+    padding: 3px 6px;
+  }
+
   .keyboard-surface {
     min-height: 240px;
     max-height: none;
@@ -295,6 +323,14 @@
   .wave-candy--raylib {
     height: clamp(120px, 22vh, 160px);
     min-height: clamp(120px, 22vh, 160px);
+  }
+
+  .birds-eye-radar__stage {
+    min-height: clamp(134px, 24vh, 180px);
+  }
+
+  .birds-eye-radar__title {
+    letter-spacing: 0.14em;
   }
 
   .keyboard-surface {
