@@ -4,6 +4,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "perf:visual": "node scripts/perf_visual_workload.mjs",
         "sync:midis": "node scripts/sync_russian_midis.mjs",
         "sync:starter-sounds": "node scripts/sync_starter_sounds.mjs",
         "preview": "vite preview",

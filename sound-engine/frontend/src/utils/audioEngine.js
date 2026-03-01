@@ -159,6 +159,13 @@ class AudioEngine {
 
     this.isRecording = false;
     this.recordingListeners = new Set();
+    this.activityListeners = new Set();
+    this.activeVoiceIds = new Set();
+    this.audioActivity = {
+      isActive: false,
+      activeVoices: 0,
+      updatedAt: Date.now()
+    };
 
     this.distortionCache = new DistortionCurveCache();
     this.frequencyTable = this.buildFrequencyTable();
@@ -195,6 +202,59 @@ class AudioEngine {
     for (const listener of this.recordingListeners) {
       listener(this.isRecording);
     }
+  }
+
+  subscribeActivity(listener) {
+    this.activityListeners.add(listener);
+    listener(this.getActivity());
+    return () => this.activityListeners.delete(listener);
+  }
+
+  notifyActivity() {
+    const snapshot = this.getActivity();
+    for (const listener of this.activityListeners) {
+      listener(snapshot);
+    }
+  }
+
+  getActivity() {
+    return { ...this.audioActivity };
+  }
+
+  syncActivity() {
+    const activeVoices = this.activeVoiceIds.size;
+    const isActive = activeVoices > 0;
+    if (
+      this.audioActivity.activeVoices === activeVoices &&
+      this.audioActivity.isActive === isActive
+    ) {
+      return;
+    }
+
+    this.audioActivity = {
+      isActive,
+      activeVoices,
+      updatedAt: Date.now()
+    };
+    this.notifyActivity();
+  }
+
+  markVoiceStarted(voiceId) {
+    if (!voiceId) return;
+    this.activeVoiceIds.add(voiceId);
+    this.syncActivity();
+  }
+
+  markVoiceStopped(voiceId) {
+    if (!voiceId) return;
+    this.activeVoiceIds.delete(voiceId);
+    this.syncActivity();
+  }
+
+  clearActiveVoices() {
+    if (this.activeVoiceIds.size === 0) return;
+    this.activeVoiceIds.clear();
+    this.syncActivity();
   }
 
   // ============ Audio Context Setup ============
@@ -445,6 +505,7 @@ class AudioEngine {
       params: sanitized,
       loop
     });
+    this.markVoiceStarted(voiceId);
 
     return {
       voiceId,
@@ -488,6 +549,7 @@ class AudioEngine {
       waveform: waveformType || 'sine',
       velocity
     });
+    this.markVoiceStarted(voiceId);
 
     return {
       voiceId,
@@ -504,6 +566,7 @@ class AudioEngine {
     }
 
     this.worklet.noteOff(noteId);
+    this.markVoiceStopped(noteId);
   }
 
   stopAllNotes() {
@@ -512,6 +575,7 @@ class AudioEngine {
       const releaseTime = this.currentParams?.release ?? AUDIO_PARAM_DEFAULTS.release;
       this.samplePool.releaseAll(releaseTime);
     }
+    this.clearActiveVoices();
   }
 
   getAnalyser() {

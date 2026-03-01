@@ -4,10 +4,11 @@ import { withBase } from '../utils/baseUrl.js';
 
 const RAYLIB_SCRIPT_URL = withBase('raylib/wavecandy.js');
 const RAYLIB_WASM_DIR = withBase('raylib/');
-const TARGET_FPS_INTERVAL = 33;
+const ACTIVE_UPDATE_INTERVAL_MS = 42;
+const IDLE_UPDATE_INTERVAL_MS = 200;
+const AUDIO_ACTIVITY_HOLD_MS = 320;
 const FALLBACK_WIDTH = 1200;
 const FALLBACK_HEIGHT = 220;
-const RESIZE_POLL_INTERVAL_MS = 350;
 const RAYLIB_DPR = 1;
 
 let raylibFactoryPromise = null;
@@ -115,6 +116,9 @@ const RaylibWaveCandy = ({
   const moduleRef = useRef(null);
   const pointersRef = useRef(null);
   const viewsRef = useRef(null);
+  const modulePausedRef = useRef(false);
+  const activityRef = useRef(audioEngine.getActivity());
+  const lastActiveAtRef = useRef(activityRef.current.isActive ? Date.now() : 0);
   const buffersRef = useRef({
     freq: null,
     time: null,
@@ -129,6 +133,18 @@ const RaylibWaveCandy = ({
   const [failed, setFailed] = useState(false);
   const [error, setError] = useState(null);
   const [showVector, setShowVector] = useState(false);
+
+  useEffect(() => audioEngine.subscribeActivity((activity) => {
+    activityRef.current = activity;
+    if (activity.isActive) {
+      lastActiveAtRef.current = Date.now();
+      const module = moduleRef.current;
+      if (modulePausedRef.current && typeof module?.resumeMainLoop === 'function') {
+        module.resumeMainLoop();
+        modulePausedRef.current = false;
+      }
+    }
+  }), []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -275,30 +291,32 @@ const RaylibWaveCandy = ({
       });
     };
 
-    const ensureCanvasSizeSync = () => {
-      const dpr = RAYLIB_DPR;
-      const cssWidth = Math.max(1, Math.round(container.clientWidth || sizeRef.current.width || FALLBACK_WIDTH));
-      const cssHeight = Math.max(1, Math.round(container.clientHeight || sizeRef.current.height || FALLBACK_HEIGHT));
-      const expectedWidth = Math.max(1, Math.round(cssWidth * dpr));
-      const expectedHeight = Math.max(1, Math.round(cssHeight * dpr));
-      if (
-        canvas.width !== expectedWidth ||
-        canvas.height !== expectedHeight ||
-        sizeRef.current.width !== cssWidth ||
-        sizeRef.current.height !== cssHeight ||
-        sizeRef.current.dpr !== dpr
-      ) {
-        queueResize();
+    const setModulePaused = (shouldPause) => {
+      if (modulePausedRef.current === shouldPause) return;
+      if (shouldPause) {
+        if (typeof module.pauseMainLoop === 'function') {
+          module.pauseMainLoop();
+        }
+        modulePausedRef.current = true;
+        return;
       }
+
+      if (typeof module.resumeMainLoop === 'function') {
+        module.resumeMainLoop();
+      }
+      modulePausedRef.current = false;
     };
 
     queueResize();
     let resizeObserver;
-    const resizePollId = window.setInterval(queueResize, RESIZE_POLL_INTERVAL_MS);
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         queueResize();
       }
+      const nowMs = Date.now();
+      const activityIsHot = activityRef.current?.isActive
+        || nowMs - lastActiveAtRef.current < AUDIO_ACTIVITY_HOLD_MS;
+      setModulePaused(document.visibilityState !== 'visible' || !activityIsHot);
     };
 
     if (typeof ResizeObserver !== 'undefined') {
@@ -316,16 +334,24 @@ const RaylibWaveCandy = ({
 
     const tick = (time) => {
       rafId = requestAnimationFrame(tick);
-      ensureCanvasSizeSync();
-      if (time - lastFrame < TARGET_FPS_INTERVAL) return;
+      const nowMs = Date.now();
+      const activityIsHot = activityRef.current?.isActive
+        || nowMs - lastActiveAtRef.current < AUDIO_ACTIVITY_HOLD_MS;
+      const hidden = document.visibilityState !== 'visible';
+      setModulePaused(hidden || !activityIsHot);
+
+      const frameInterval = activityIsHot ? ACTIVE_UPDATE_INTERVAL_MS : IDLE_UPDATE_INTERVAL_MS;
+      if (time - lastFrame < frameInterval) return;
       lastFrame = time;
+      if (hidden || !activityIsHot) return;
 
       const nodes = audioEngine.getAnalysisNodes();
       if (!nodes || !nodes.analyser) return;
 
       const analyser = nodes.analyser;
-      const leftAnalyser = nodes.leftAnalyser || analyser;
-      const rightAnalyser = nodes.rightAnalyser || analyser;
+      const useStereoData = showVector;
+      const leftAnalyser = useStereoData ? (nodes.leftAnalyser || analyser) : null;
+      const rightAnalyser = useStereoData ? (nodes.rightAnalyser || analyser) : null;
 
       if (!buffersRef.current.freq || buffersRef.current.freq.length !== analyser.frequencyBinCount) {
         buffersRef.current.freq = new Uint8Array(analyser.frequencyBinCount);
@@ -334,27 +360,35 @@ const RaylibWaveCandy = ({
         buffersRef.current.time = new Float32Array(analyser.fftSize);
         buffersRef.current.timeByte = new Uint8Array(analyser.fftSize);
       }
-      if (!buffersRef.current.left || buffersRef.current.left.length !== leftAnalyser.fftSize) {
-        buffersRef.current.left = new Float32Array(leftAnalyser.fftSize);
-        buffersRef.current.leftByte = new Uint8Array(leftAnalyser.fftSize);
-      }
-      if (!buffersRef.current.right || buffersRef.current.right.length !== rightAnalyser.fftSize) {
-        buffersRef.current.right = new Float32Array(rightAnalyser.fftSize);
-        buffersRef.current.rightByte = new Uint8Array(rightAnalyser.fftSize);
+      if (useStereoData && leftAnalyser && rightAnalyser) {
+        if (!buffersRef.current.left || buffersRef.current.left.length !== leftAnalyser.fftSize) {
+          buffersRef.current.left = new Float32Array(leftAnalyser.fftSize);
+          buffersRef.current.leftByte = new Uint8Array(leftAnalyser.fftSize);
+        }
+        if (!buffersRef.current.right || buffersRef.current.right.length !== rightAnalyser.fftSize) {
+          buffersRef.current.right = new Float32Array(rightAnalyser.fftSize);
+          buffersRef.current.rightByte = new Uint8Array(rightAnalyser.fftSize);
+        }
       }
 
       analyser.getByteFrequencyData(buffersRef.current.freq);
       const timeData = readTimeDomain(analyser, buffersRef.current.time, buffersRef.current.timeByte);
-      const leftData = readTimeDomain(leftAnalyser, buffersRef.current.left, buffersRef.current.leftByte);
-      const rightData = readTimeDomain(rightAnalyser, buffersRef.current.right, buffersRef.current.rightByte);
+      let leftData = null;
+      let rightData = null;
+      if (useStereoData && leftAnalyser && rightAnalyser) {
+        leftData = readTimeDomain(leftAnalyser, buffersRef.current.left, buffersRef.current.leftByte);
+        rightData = readTimeDomain(rightAnalyser, buffersRef.current.right, buffersRef.current.rightByte);
+      }
 
       const views = syncViews();
       if (!views) return;
 
       resampleByteToFloat(buffersRef.current.freq, views.freq);
       resampleFloat(timeData, views.wave);
-      resampleFloat(leftData, views.left);
-      resampleFloat(rightData, views.right);
+      if (useStereoData && leftData && rightData) {
+        resampleFloat(leftData, views.left);
+        resampleFloat(rightData, views.right);
+      }
     };
 
     rafId = requestAnimationFrame(tick);
@@ -366,14 +400,14 @@ const RaylibWaveCandy = ({
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
-      clearInterval(resizePollId);
       window.removeEventListener('resize', queueResize);
       window.removeEventListener('orientationchange', queueResize);
       window.removeEventListener('pageshow', queueResize);
       document.removeEventListener('visibilitychange', handleVisibility);
       window.visualViewport?.removeEventListener('resize', queueResize);
+      setModulePaused(true);
     };
-  }, [ready, failed]);
+  }, [ready, failed, showVector, error]);
 
   if (typeof window === 'undefined') {
     return fallback;
