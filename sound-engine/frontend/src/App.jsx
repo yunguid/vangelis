@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import SynthKeyboard from './components/SynthKeyboard';
 import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
@@ -7,9 +7,22 @@ import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
 import BirdsEyeRadar from './components/BirdsEyeRadar';
 import Sidebar from './components/Sidebar';
+import CommandPalette from './components/CommandPalette';
+import BrandKitModal from './components/BrandKitModal';
 import { audioEngine } from './utils/audioEngine.js';
-import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM } from './utils/audioParams.js';
+import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM, sanitizeAudioParams } from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
+import { parseMidiFile } from './utils/midiParser.js';
+import { loadAppSession, saveAppSession } from './utils/appSession.js';
+import { getSample } from './utils/sampleStorage.js';
+
+const NOTICE_TIMEOUT_MS = 2200;
+
+const isTextInputTarget = (target) => {
+  const tagName = target?.tagName;
+  if (tagName === 'INPUT' || tagName === 'TEXTAREA') return true;
+  return !!target?.isContentEditable;
+};
 
 const parseBaseNote = (value) => {
   if (typeof value !== 'string') return null;
@@ -71,24 +84,79 @@ const fetchStarterSampleBlob = async (sourceUrl) => {
   throw lastError || new Error('Failed to fetch starter sample');
 };
 
+const getSampleSelection = (sample) => {
+  if (!sample || typeof sample !== 'object') return null;
+
+  if (sample.sourceUrl && sample.id) {
+    return {
+      type: 'starter',
+      id: sample.id,
+      name: sample.name,
+      sourceUrl: sample.sourceUrl,
+      mimeType: sample.mimeType || 'audio/wav',
+      baseNote: sample.baseNote || null
+    };
+  }
+
+  if (sample.id) {
+    return {
+      type: 'stored',
+      id: sample.id,
+      name: sample.name
+    };
+  }
+
+  return null;
+};
+
 const App = () => {
+  const initialSessionRef = useRef(loadAppSession());
+  const initialSession = initialSessionRef.current;
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
-  const [waveformType, setWaveformType] = useState(DEFAULT_WAVEFORM);
-  const [audioParams, setAudioParams] = useState(() => ({ ...AUDIO_PARAM_DEFAULTS }));
-  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [waveformType, setWaveformType] = useState(() => initialSession.waveformType || DEFAULT_WAVEFORM);
+  const [audioParams, setAudioParams] = useState(() => {
+    if (initialSession.audioParams) return initialSession.audioParams;
+    return { ...AUDIO_PARAM_DEFAULTS };
+  });
+  const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showBrandKit, setShowBrandKit] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
   const [sampleLoading, setSampleLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState('midi');
-  const [activeSampleId, setActiveSampleId] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(() => initialSession.sidebarOpen || false);
+  const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'midi');
+  const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
+  const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
+  const [resumeSnapshot, setResumeSnapshot] = useState(() => initialSession.resume || null);
+  const [isResumingSession, setIsResumingSession] = useState(false);
+  const [notice, setNotice] = useState('');
   const fileInputRef = useRef(null);
   const scrollRaf = useRef(null);
+  const noticeTimeoutRef = useRef(null);
   const wasmLoaded = engineStatus.wasmReady;
   const isGraphWarm = engineStatus.graphWarmed;
+  const hasResumeSnapshot = !!(resumeSnapshot?.midiPath || resumeSnapshot?.sampleSelection);
 
   // MIDI playback hook
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
+
+  const pushNotice = useCallback((message) => {
+    setNotice(message);
+    if (noticeTimeoutRef.current) {
+      clearTimeout(noticeTimeoutRef.current);
+    }
+    noticeTimeoutRef.current = setTimeout(() => {
+      setNotice('');
+      noticeTimeoutRef.current = null;
+    }, NOTICE_TIMEOUT_MS);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (noticeTimeoutRef.current) clearTimeout(noticeTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     audioEngine.setGlobalParams(audioParams);
@@ -109,9 +177,12 @@ const App = () => {
     };
   }, []);
 
-  // Handle sample file upload
-  const handleFileSelect = useCallback(async (event) => {
-    const file = event.target.files?.[0];
+  useEffect(() => {
+    if (Math.abs(initialSession.tempoFactor - 1) < 0.001) return;
+    midiPlayback.setTempo(initialSession.tempoFactor);
+  }, [initialSession.tempoFactor, midiPlayback.setTempo]);
+
+  const handleAudioFileImport = useCallback(async (file, selection = null) => {
     if (!file) return;
 
     setSampleLoading(true);
@@ -122,22 +193,34 @@ const App = () => {
         duration: info.duration.toFixed(2),
         channels: info.channels
       });
+      setActiveSampleId(selection?.id || null);
+      setSampleSelection(selection);
+      pushNotice('Sample is ready.');
     } catch (err) {
       console.error('Failed to load sample:', err);
-      alert('Failed to load audio file. Please try a different file.');
+      pushNotice('Sample load failed.');
     } finally {
       setSampleLoading(false);
     }
-  }, []);
+  }, [pushNotice]);
+
+  // Handle sample file upload
+  const handleFileSelect = useCallback(async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await handleAudioFileImport(file, null);
+  }, [handleAudioFileImport]);
 
   const handleClearSample = useCallback(() => {
     audioEngine.clearCustomSample();
     setSampleInfo(null);
     setActiveSampleId(null);
+    setSampleSelection(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, []);
+    pushNotice('Sample cleared.');
+  }, [pushNotice]);
 
   // Handle sample selection from sidebar
   const handleSampleSelect = useCallback(async (sample) => {
@@ -168,39 +251,288 @@ const App = () => {
         channels: info.channels
       });
       setActiveSampleId(sample.id);
+      setSampleSelection(getSampleSelection(sample));
+      pushNotice('Sample changed.');
     } catch (err) {
       console.error('Failed to load sample:', err);
-      alert('Failed to load sample. Please try a different sound.');
+      pushNotice('Sample load failed.');
     } finally {
       setSampleLoading(false);
     }
-  }, []);
+  }, [pushNotice]);
 
   const handleRecordToggle = useCallback(() => {
     audioEngine.toggleRecording();
+    pushNotice(isRecording ? 'Recording stopped.' : 'Recording started.');
+  }, [isRecording, pushNotice]);
+
+  const copySettingsToClipboard = useCallback(async () => {
+    const payload = {
+      waveformType,
+      audioParams,
+      tempoFactor: midiPlayback.tempoFactor
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      pushNotice('Settings copied.');
+    } catch {
+      pushNotice('Clipboard blocked.');
+    }
+  }, [audioParams, midiPlayback.tempoFactor, pushNotice, waveformType]);
+
+  const pasteSettingsFromClipboard = useCallback(async () => {
+    try {
+      const raw = await navigator.clipboard.readText();
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') {
+        pushNotice('Clipboard is not JSON.');
+        return;
+      }
+
+      if (typeof parsed.waveformType === 'string') {
+        setWaveformType(parsed.waveformType);
+      }
+      setAudioParams(sanitizeAudioParams(parsed.audioParams || undefined));
+      if (typeof parsed.tempoFactor === 'number') {
+        midiPlayback.setTempo(parsed.tempoFactor);
+      }
+      pushNotice('Settings pasted.');
+    } catch {
+      pushNotice('Paste failed.');
+    }
+  }, [midiPlayback.setTempo, pushNotice]);
+
+  const resumeSession = useCallback(async () => {
+    if (!resumeSnapshot || isResumingSession) return;
+
+    setIsResumingSession(true);
+    try {
+      if (resumeSnapshot.sampleSelection) {
+        if (resumeSnapshot.sampleSelection.type === 'starter') {
+          await handleSampleSelect(resumeSnapshot.sampleSelection);
+        } else if (resumeSnapshot.sampleSelection.type === 'stored') {
+          const storedSample = await getSample(resumeSnapshot.sampleSelection.id);
+          if (storedSample) {
+            await handleSampleSelect(storedSample);
+          }
+        }
+      }
+
+      if (resumeSnapshot.midiPath) {
+        let midiData;
+        try {
+          midiData = await parseMidiFile(resumeSnapshot.midiPath);
+        } catch (midiError) {
+          if (!resumeSnapshot.midiSourceUrl) throw midiError;
+          midiData = await parseMidiFile(resumeSnapshot.midiSourceUrl);
+        }
+
+        midiPlayback.play({
+          ...midiData,
+          name: resumeSnapshot.midiName || midiData.name,
+          sourcePath: resumeSnapshot.midiPath,
+          sourceFileId: resumeSnapshot.midiSourceFileId || null,
+          sourceUrl: resumeSnapshot.midiSourceUrl || null
+        });
+      }
+
+      if (typeof resumeSnapshot.tempoFactor === 'number') {
+        midiPlayback.setTempo(resumeSnapshot.tempoFactor);
+      }
+
+      setSidebarTab('midi');
+      setSidebarOpen(true);
+      pushNotice('Session resumed.');
+    } catch (error) {
+      console.error('Failed to resume session:', error);
+      pushNotice('Resume failed.');
+    } finally {
+      setIsResumingSession(false);
+    }
+  }, [handleSampleSelect, isResumingSession, midiPlayback.play, midiPlayback.setTempo, pushNotice, resumeSnapshot]);
+
+  const commandActions = useMemo(() => ([
+    {
+      id: 'open-midi',
+      label: 'Open MIDI browser',
+      keywords: ['midi', 'library'],
+      shortcut: 'M',
+      run: () => {
+        setSidebarTab('midi');
+        setSidebarOpen(true);
+      }
+    },
+    {
+      id: 'open-samples',
+      label: 'Open sample browser',
+      keywords: ['sample', 'library'],
+      shortcut: 'S',
+      run: () => {
+        setSidebarTab('samples');
+        setSidebarOpen(true);
+      }
+    },
+    {
+      id: 'toggle-record',
+      label: isRecording ? 'Stop recording' : 'Start recording',
+      keywords: ['record'],
+      run: handleRecordToggle
+    },
+    {
+      id: 'toggle-shortcuts',
+      label: showShortcuts ? 'Hide shortcuts' : 'Show shortcuts',
+      keywords: ['help', 'keys'],
+      run: () => setShowShortcuts((prev) => !prev)
+    },
+    {
+      id: 'copy-settings',
+      label: 'Copy synth settings',
+      keywords: ['copy', 'clipboard', 'json'],
+      run: copySettingsToClipboard
+    },
+    {
+      id: 'paste-settings',
+      label: 'Paste synth settings',
+      keywords: ['paste', 'clipboard', 'json'],
+      run: pasteSettingsFromClipboard
+    },
+    {
+      id: 'show-brandkit',
+      label: 'Open brand kit',
+      keywords: ['brand', 'logo', 'svg', 'colors'],
+      run: () => setShowBrandKit(true)
+    },
+    {
+      id: 'clear-sample',
+      label: 'Clear active sample',
+      keywords: ['sample', 'reset'],
+      run: handleClearSample
+    },
+    {
+      id: 'stop-midi',
+      label: 'Stop MIDI playback',
+      keywords: ['midi', 'stop', 'cancel'],
+      run: midiPlayback.stop
+    },
+    ...(hasResumeSnapshot
+      ? [{
+        id: 'resume-session',
+        label: 'Resume last session',
+        keywords: ['resume', 'restore'],
+        run: resumeSession
+      }]
+      : [])
+  ]), [
+    copySettingsToClipboard,
+    handleClearSample,
+    handleRecordToggle,
+    hasResumeSnapshot,
+    isRecording,
+    midiPlayback.stop,
+    pasteSettingsFromClipboard,
+    resumeSession,
+    showShortcuts
+  ]);
+
+  const handleCommandSelect = useCallback((action) => {
+    action?.run?.();
   }, []);
 
   useEffect(() => {
     const handleKeyboardShortcuts = (event) => {
+      const key = event.key.toLowerCase();
+      const textInputActive = isTextInputTarget(event.target);
+
+      if ((event.metaKey || event.ctrlKey) && key === 'k') {
+        event.preventDefault();
+        setShowCommandPalette((prev) => !prev);
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === 'c') {
+        event.preventDefault();
+        copySettingsToClipboard();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === 'v') {
+        event.preventDefault();
+        pasteSettingsFromClipboard();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === 'b') {
+        event.preventDefault();
+        setShowBrandKit(true);
+        return;
+      }
+
+      if (textInputActive) {
+        if (event.key === 'Escape') {
+          setShowCommandPalette(false);
+          setShowBrandKit(false);
+          setShowShortcuts(false);
+        }
+        return;
+      }
+
       if (event.key === '?' || (event.key === '/' && event.shiftKey)) {
         event.preventDefault();
-        setShowShortcuts(prev => !prev);
+        setShowShortcuts((prev) => !prev);
       }
 
       if (event.key === 'Escape') {
         setShowShortcuts(false);
+        setShowCommandPalette(false);
+        setShowBrandKit(false);
       }
 
       // Space bar toggles recording (only if not focused on input)
-      if (event.key === ' ' && event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') {
+      if (event.key === ' ' && event.target.tagName !== 'BUTTON') {
         event.preventDefault();
-        audioEngine.toggleRecording();
+        handleRecordToggle();
       }
     };
 
     window.addEventListener('keydown', handleKeyboardShortcuts);
     return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
-  }, []);
+  }, [copySettingsToClipboard, handleRecordToggle, pasteSettingsFromClipboard]);
+
+  useEffect(() => {
+    const onPaste = async (event) => {
+      const files = Array.from(event.clipboardData?.files || []);
+      if (files.length === 0) return;
+
+      const midiFile = files.find((file) => /\.(mid|midi)$/i.test(file.name));
+      if (midiFile) {
+        event.preventDefault();
+        try {
+          const midiData = await parseMidiFile(midiFile);
+          midiPlayback.play(midiData);
+          setSidebarTab('midi');
+          setSidebarOpen(true);
+          pushNotice('MIDI pasted.');
+        } catch (error) {
+          console.error('Failed to paste MIDI:', error);
+          pushNotice('MIDI paste failed.');
+        }
+        return;
+      }
+
+      const audioFile = files.find((file) => (
+        file.type.startsWith('audio/') || /\.(wav|mp3|ogg|flac|aiff|m4a)$/i.test(file.name)
+      ));
+
+      if (audioFile) {
+        event.preventDefault();
+        await handleAudioFileImport(audioFile, null);
+      }
+    };
+
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, [handleAudioFileImport, midiPlayback.play, pushNotice]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -228,8 +560,60 @@ const App = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const currentMidi = midiPlayback.currentMidi;
+    if (!currentMidi || (!currentMidi.sourcePath && !currentMidi.sourceUrl)) return;
+
+    setResumeSnapshot((prev) => ({
+      ...(prev || {}),
+      midiPath: currentMidi.sourcePath || null,
+      midiSourceUrl: currentMidi.sourceUrl || null,
+      midiSourceFileId: currentMidi.sourceFileId || null,
+      midiName: currentMidi.name || null,
+      tempoFactor: midiPlayback.tempoFactor,
+      sampleSelection: sampleSelection || prev?.sampleSelection || null,
+      updatedAt: Date.now()
+    }));
+  }, [midiPlayback.currentMidi, midiPlayback.tempoFactor, sampleSelection]);
+
+  useEffect(() => {
+    if (!sampleSelection) return;
+    setResumeSnapshot((prev) => {
+      const base = prev || {};
+      return {
+        ...base,
+        sampleSelection,
+        updatedAt: Date.now()
+      };
+    });
+  }, [sampleSelection]);
+
+  useEffect(() => {
+    saveAppSession({
+      waveformType,
+      audioParams,
+      sidebarTab,
+      sidebarOpen,
+      activeSampleId,
+      sampleSelection,
+      showShortcuts,
+      tempoFactor: midiPlayback.tempoFactor,
+      resume: resumeSnapshot
+    });
+  }, [
+    activeSampleId,
+    audioParams,
+    midiPlayback.tempoFactor,
+    resumeSnapshot,
+    sampleSelection,
+    showShortcuts,
+    sidebarOpen,
+    sidebarTab,
+    waveformType
+  ]);
+
   const handleAudioParamChange = (paramName, value) => {
-    setAudioParams(prev => ({
+    setAudioParams((prev) => ({
       ...prev,
       [paramName]: value
     }));
@@ -242,7 +626,20 @@ const App = () => {
         
         <div className="app-shell">
         <header className="zone-top tier-subtle content-tertiary" aria-label="Branding and quick actions">
-          <div className="brand-title">Vangelis</div>
+          <div className="brand-block">
+            <div className="brand-title">Vangelis</div>
+            <p className="session-note">State saves on this device.</p>
+            {hasResumeSnapshot && (
+              <button
+                type="button"
+                className="button-link session-resume"
+                onClick={resumeSession}
+                disabled={isResumingSession}
+              >
+                {isResumingSession ? 'Resuming...' : 'Resume last session'}
+              </button>
+            )}
+          </div>
           <div className="header-controls">
             {/* Sample Upload */}
             <input
@@ -256,7 +653,7 @@ const App = () => {
             <label
               htmlFor="sample-upload"
               className={`button-icon ${sampleLoading ? 'loading' : ''}`}
-              title={sampleInfo ? `Sample: ${sampleInfo.name}` : 'Upload custom sample'}
+              aria-label={sampleInfo ? `Loaded sample ${sampleInfo.name}` : 'Upload sample'}
             >
               <span aria-hidden="true">{sampleInfo ? '!' : '+'}</span>
             </label>
@@ -265,7 +662,6 @@ const App = () => {
                 type="button"
                 className="button-icon"
                 onClick={handleClearSample}
-                title="Clear sample"
                 aria-label="Clear custom sample"
               >
                 <span aria-hidden="true">x</span>
@@ -277,7 +673,6 @@ const App = () => {
               type="button"
               className={`button-icon record-button ${isRecording ? 'recording' : ''}`}
               onClick={handleRecordToggle}
-              title={isRecording ? 'Stop recording (Space)' : 'Start recording (Space)'}
               aria-label={isRecording ? 'Stop recording' : 'Start recording'}
             >
               <span aria-hidden="true">{isRecording ? '||' : 'O'}</span>
@@ -290,6 +685,22 @@ const App = () => {
               onClick={() => setShowShortcuts(true)}
             >
               <span aria-hidden="true">?</span>
+            </button>
+            <button
+              type="button"
+              className="button-icon"
+              aria-label="Open commands"
+              onClick={() => setShowCommandPalette(true)}
+            >
+              <span aria-hidden="true">K</span>
+            </button>
+            <button
+              type="button"
+              className="button-icon"
+              aria-label="Open brand kit"
+              onClick={() => setShowBrandKit(true)}
+            >
+              <span aria-hidden="true">B</span>
             </button>
           </div>
         </header>
@@ -313,12 +724,12 @@ const App = () => {
               {!isGraphWarm && (
                 <div className="warmup-indicator" aria-live="polite">
                   <span className="warmup-indicator__pulse" aria-hidden="true" />
-                  <span>Warming up audio engine…</span>
+                  <span>Audio engine warms now.</span>
                 </div>
               )}
               <div className="keyboard-hints">
-                <span className="keyboard-hint">Shift + / opens shortcuts </span>
-                <span className="keyboard-hint">Z / X for octave</span>
+                <span className="keyboard-hint">Press Shift + / for keys.</span>
+                <span className="keyboard-hint">Press Cmd + K for commands.</span>
               </div>
             </div>
           </div>
@@ -338,14 +749,16 @@ const App = () => {
                 onParamChange={handleAudioParamChange}
               />
             </div>
-            <div className="controls-panel full" aria-label="Bird's-eye radar">
-              <BirdsEyeRadar
-                currentMidi={midiPlayback.currentMidi}
-                progress={midiPlayback.progress}
-                activeNotes={midiPlayback.activeNotes}
-                isPlaying={midiPlayback.isPlaying}
-              />
-            </div>
+            {midiPlayback.isPlaying && (
+              <div className="controls-panel full" aria-label="Bird's-eye radar">
+                <BirdsEyeRadar
+                  currentMidi={midiPlayback.currentMidi}
+                  progress={midiPlayback.progress}
+                  activeNotes={midiPlayback.activeNotes}
+                  isPlaying={midiPlayback.isPlaying}
+                />
+              </div>
+            )}
           </div>
         </section>
 
@@ -366,30 +779,40 @@ const App = () => {
               <dl className="shortcuts-grid">
                 <div>
                   <dt>A – ;</dt>
-                  <dd>Play white keys across the active octave</dd>
+                  <dd>Play white keys in octave.</dd>
                 </div>
                 <div>
                   <dt>W – P</dt>
-                  <dd>Play black keys across the active octave</dd>
+                  <dd>Play black keys in octave.</dd>
                 </div>
                 <div>
                   <dt>Z / X</dt>
-                  <dd>Shift octave down or up</dd>
+                  <dd>Move octave down or up.</dd>
                 </div>
                 <div>
                   <dt>C / V</dt>
-                  <dd>Adjust key velocity</dd>
+                  <dd>Change key velocity.</dd>
                 </div>
                 <div>
                   <dt>Shift + / (?)</dt>
-                  <dd>Toggle this overlay</dd>
+                  <dd>Toggle shortcut list.</dd>
+                </div>
+                <div>
+                  <dt>Cmd/Ctrl + K</dt>
+                  <dd>Open command palette.</dd>
                 </div>
                 <div>
                   <dt>Escape</dt>
-                  <dd>Close overlays</dd>
+                  <dd>Close active panels.</dd>
                 </div>
               </dl>
             </div>
+          </div>
+        )}
+
+        {notice && (
+          <div className="app-notice" role="status" aria-live="polite">
+            {notice}
           </div>
         )}
 
@@ -415,6 +838,18 @@ const App = () => {
           onTempoChange={midiPlayback.setTempo}
           onSampleSelect={handleSampleSelect}
           activeSampleId={activeSampleId}
+        />
+
+        <CommandPalette
+          open={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+          actions={commandActions}
+          onSelect={handleCommandSelect}
+        />
+        <BrandKitModal
+          open={showBrandKit}
+          onClose={() => setShowBrandKit(false)}
+          onNotice={pushNotice}
         />
       </div>
     </ErrorBoundary>

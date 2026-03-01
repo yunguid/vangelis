@@ -34,6 +34,7 @@ vi.mock('./components/SynthKeyboard', () => ({
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
   });
 
   it('renders the app title', () => {
@@ -52,9 +53,9 @@ describe('App', () => {
     expect(screen.queryByRole('tab', { name: "Bird's-Eye" })).not.toBeInTheDocument();
   });
 
-  it('renders birds-eye radar in the control surface', () => {
+  it('does not render birds-eye radar when midi is not playing', () => {
     render(<App />);
-    expect(screen.getByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument();
   });
 
   it('shows waveform type', () => {
@@ -90,6 +91,18 @@ describe('App', () => {
 
   it('shows keyboard hints', () => {
     render(<App />);
-    expect(screen.getByText(/Z \/ X for octave/)).toBeInTheDocument();
+    expect(screen.getByText(/Press Shift \+ \/ for keys\./)).toBeInTheDocument();
+    expect(screen.getByText(/Press Cmd \+ K for commands\./)).toBeInTheDocument();
+  });
+
+  it('opens command palette from header button', () => {
+    render(<App />);
+    fireEvent.click(screen.getByLabelText('Open commands'));
+    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeInTheDocument();
+  });
+
+  it('shows local save reassurance copy', () => {
+    render(<App />);
+    expect(screen.getByText('State saves on this device.')).toBeInTheDocument();
   });
 });

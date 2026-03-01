@@ -77,7 +77,7 @@
 
 /* Zone - Top (Header) */
 .zone-top {
-  width: min(520px, 100%);
+  width: min(780px, 100%);
   position: relative;
   display: flex;
   flex-direction: row;
@@ -113,14 +113,39 @@
 }
 
 /* Branding */
+.brand-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
 .brand-title {
-  font-weight: 400;
+  font-weight: 600;
   font-size: 1.2rem;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--color-glimmer-one);
   text-shadow: none;
   margin: 0;
+  padding-left: 1px;
+}
+
+.session-note {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.session-resume {
+  padding: 0;
+  letter-spacing: 0.05em;
+  text-transform: none;
+  font-size: 0.75rem;
+  min-height: 28px;
 }
 
 .brand-subtitle {
@@ -136,13 +161,16 @@
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  max-width: 360px;
 }
 
 .header-controls .button-icon {
-  width: 36px;
-  height: 36px;
-  font-size: 0.9rem;
+  width: 48px;
+  height: 48px;
+  font-size: 0.95rem;
 }
 
 .header-controls label.button-icon {
@@ -171,5 +199,21 @@
 
 .panel.elevated {
   box-shadow: var(--shadow-floating);
-  background: linear-gradient(200deg, var(--color-surface) 0%, rgba(184, 198, 219, 0.18) 100%);
+  background: linear-gradient(200deg, var(--color-surface) 0%, rgba(244, 241, 232, 0.08) 100%);
+}
+
+.app-notice {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 130;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(16, 21, 31, 0.9);
+  border: 1px solid rgba(255, 122, 61, 0.4);
+  color: var(--color-text-primary);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-floating);
 }

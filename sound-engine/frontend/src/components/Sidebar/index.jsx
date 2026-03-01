@@ -104,7 +104,6 @@ const Sidebar = ({
             type="button"
             className={`sidebar-rail__btn ${isOpen && activeTab === tab.id ? 'sidebar-rail__btn--active' : ''} ${tab.isActive ? 'sidebar-rail__btn--playing' : ''}`}
             onClick={() => handleRailClick(tab.id)}
-            title={isOpen && activeTab === tab.id ? `Close ${tab.label}` : `Open ${tab.label}`}
             aria-label={isOpen && activeTab === tab.id ? `Close ${tab.label} browser` : `Open ${tab.label} browser`}
             aria-expanded={isOpen && activeTab === tab.id}
           >
@@ -126,12 +125,12 @@ const Sidebar = ({
         <div className="sidebar-panel__header">
           <div className="sidebar-panel__heading-group">
             <h2 className="sidebar-panel__title">
-              {activeTab === 'midi' ? 'MIDI Studio' : 'Sample Vault'}
+              {activeTab === 'midi' ? 'MIDI Library' : 'Sample Library'}
             </h2>
             <p className="sidebar-panel__subtitle">
               {activeTab === 'midi'
-                ? (currentMidi?.name || 'Library + transport')
-                : (activeSampleId ? 'Source selected' : 'Select or import a source')
+                ? (currentMidi?.name || 'Pick a file, then play')
+                : (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
               }
             </p>
           </div>

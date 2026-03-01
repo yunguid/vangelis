@@ -45,7 +45,7 @@ const ESSENTIAL_SLIDERS = [
   makePercentSlider('volume', {
     id: 'volume',
     label: 'Volume',
-    helpText: 'Set the output level. Designed for quick sweeps and precise control.'
+    helpText: 'Set output level.'
   }),
   makePercentSlider('pan', {
     id: 'pan',

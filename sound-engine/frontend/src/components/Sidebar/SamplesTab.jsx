@@ -108,11 +108,13 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [importNotice, setImportNotice] = useState('');
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [starterFamilyFilter, setStarterFamilyFilter] = useState('all');
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const cancelImportRef = useRef(false);
   const starterCatalog = useMemo(() => buildStarterCatalog(), []);
   const featuredStarterCatalog = useMemo(
     () => selectFeaturedStarterItems(starterCatalog),
@@ -143,12 +145,13 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       setLoading(true);
       const grouped = await getSamplesByCategory();
       setSamples(grouped);
+      setImportNotice('');
 
       const storageStats = await getStorageStats();
       setStats(storageStats);
     } catch (err) {
       console.error('Failed to load samples:', err);
-      setError('Failed to load samples');
+      setError('Could not load samples.');
     } finally {
       setLoading(false);
     }
@@ -173,6 +176,8 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
 
     setImporting(true);
     setError(null);
+    setImportNotice('');
+    cancelImportRef.current = false;
 
     let decoderCtx = null;
     try {
@@ -183,7 +188,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       );
 
       if (audioFiles.length === 0) {
-        setError('No audio files found in selection');
+        setError('No audio files found.');
         return;
       }
 
@@ -204,9 +209,11 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       const batchSize = 5;
 
       for (let i = 0; i < audioFiles.length; i += batchSize) {
+        if (cancelImportRef.current) break;
         const batch = audioFiles.slice(i, i + batchSize);
 
         for (const file of batch) {
+          if (cancelImportRef.current) break;
           try {
             const arrayBuffer = await file.arrayBuffer();
             const audioBuffer = await decoderCtx.decodeAudioData(arrayBuffer.slice(0));
@@ -227,6 +234,12 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
         }
       }
 
+      if (cancelImportRef.current) {
+        setImportNotice('Import canceled.');
+      } else {
+        setImportNotice('Import complete.');
+      }
+
       // Reload samples list
       await loadSamples();
 
@@ -236,9 +249,10 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
 
     } catch (err) {
       console.error('Import failed:', err);
-      setError('Failed to import samples');
+      setError('Import failed.');
     } finally {
       setImporting(false);
+      cancelImportRef.current = false;
       await closeDecoderContext(decoderCtx);
       if (folderInputRef.current) {
         folderInputRef.current.value = '';
@@ -253,12 +267,22 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
 
     setImporting(true);
     setError(null);
+    setImportNotice('');
+    cancelImportRef.current = false;
 
     let decoderCtx = null;
     try {
       const arrayBuffer = await file.arrayBuffer();
+      if (cancelImportRef.current) {
+        setImportNotice('Import canceled.');
+        return;
+      }
       decoderCtx = createDecoderContext();
       const audioBuffer = await decoderCtx.decodeAudioData(arrayBuffer.slice(0));
+      if (cancelImportRef.current) {
+        setImportNotice('Import canceled.');
+        return;
+      }
 
       await storeSample({
         name: file.name.replace(/\.[^/.]+$/, ''),
@@ -272,12 +296,14 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
 
       await loadSamples();
       setExpandedCategories(prev => new Set([...prev, 'Imported']));
+      setImportNotice('Import complete.');
 
     } catch (err) {
       console.error('Import failed:', err);
-      setError('Failed to import sample');
+      setError('Import failed.');
     } finally {
       setImporting(false);
+      cancelImportRef.current = false;
       await closeDecoderContext(decoderCtx);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -294,7 +320,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       }
     } catch (err) {
       console.error('Failed to load sample:', err);
-      setError('Failed to load sample');
+      setError('Sample load failed.');
     }
   }, [onSampleSelect]);
 
@@ -313,6 +339,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
       await loadSamples();
     } catch (err) {
       console.error('Failed to delete category:', err);
+      setError('Delete failed.');
     }
   }, []);
 
@@ -358,7 +385,7 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
             <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
               <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
             </svg>
-            {importing ? 'Importing...' : 'Import Folder'}
+            {importing ? 'Importing...' : 'Import folder'}
           </label>
 
           <label
@@ -370,12 +397,26 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
             </svg>
             File
           </label>
+          {importing && (
+            <button
+              type="button"
+              className="samples-tab__import-btn samples-tab__import-btn--secondary"
+              onClick={() => {
+                cancelImportRef.current = true;
+              }}
+            >
+              Cancel
+            </button>
+          )}
         </div>
       </div>
 
       {/* Error */}
       {error && (
         <div className="samples-tab__error">{error}</div>
+      )}
+      {importNotice && (
+        <div className="samples-tab__stats">{importNotice}</div>
       )}
 
       {/* Storage Stats */}
@@ -426,10 +467,14 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
         <h3 className="samples-tab__heading">Library</h3>
 
         {loading ? (
-          <div className="samples-tab__loading">Loading...</div>
+          <div className="samples-tab__loading" aria-hidden="true">
+            <div className="samples-tab__skeleton-row" />
+            <div className="samples-tab__skeleton-row" />
+            <div className="samples-tab__skeleton-row" />
+          </div>
         ) : categories.length === 0 ? (
           <div className="samples-tab__empty">
-            No samples yet. Import a folder to get started.
+            No samples yet. Import one now.
           </div>
         ) : (
           <div className="samples-tab__categories">
@@ -457,7 +502,6 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
                     type="button"
                     className="samples-tab__category-delete"
                     onClick={(e) => handleDeleteCategory(e, category)}
-                    title={`Delete ${category} category`}
                     aria-label={`Delete ${category} category`}
                   >
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">

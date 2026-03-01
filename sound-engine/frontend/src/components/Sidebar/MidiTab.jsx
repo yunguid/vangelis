@@ -54,6 +54,8 @@ const MidiTab = ({
         ...midiData,
         name: file.name || midiData.name,
         sourceFileId: file.id,
+        sourcePath: file.path,
+        sourceUrl: file.sourceUrl || null,
         composer: file.composer,
         soundSetId: file.soundSetId || null,
         layerFamilies: Array.isArray(file.layerFamilies) ? file.layerFamilies : []
@@ -61,8 +63,8 @@ const MidiTab = ({
     } catch (err) {
       console.error('Failed to load MIDI file:', err);
       setError(file.sourceUrl
-        ? 'Failed to load MIDI file. The library may need to be synced.'
-        : 'Failed to load MIDI file. Please try again.'
+        ? 'MIDI load failed. Run sync scripts.'
+        : 'MIDI load failed. Try again.'
       );
     } finally {
       setIsLoading(false);
@@ -82,7 +84,7 @@ const MidiTab = ({
       onPlay(midiData);
     } catch (err) {
       console.error('Failed to parse MIDI file:', err);
-      setError('Failed to parse MIDI file. Make sure it\'s a valid .mid file.');
+      setError('MIDI parse failed. Use .mid only.');
     } finally {
       setIsLoading(false);
     }
@@ -119,40 +121,48 @@ const MidiTab = ({
         <input
           type="search"
           className="midi-tab__search"
-          placeholder="Filter by title or composer"
+          placeholder="Find title or composer"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           aria-label="Filter MIDI library"
         />
-        <ul className="midi-tab__list">
-          {filteredFiles.map((file) => (
-            <li key={file.id} className="midi-tab__item">
-              <button
-                type="button"
-                className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
-                onClick={() => handleLoadBuiltIn(file)}
-                disabled={isLoading}
-              >
-                <span className="midi-tab__file-name">{file.name}</span>
-                <span className="midi-tab__file-composer">{file.composer}</span>
-                {(file.soundSetId || (Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0)) && (
-                  <span className="midi-tab__file-tags">
-                    {file.soundSetId && (
-                      <span className="midi-tab__file-tag midi-tab__file-tag--set">
-                        {file.soundSetId}
-                      </span>
-                    )}
-                    {Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0 && (
-                      <span className="midi-tab__file-tag midi-tab__file-tag--layers">
-                        {file.layerFamilies.join(' + ')}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
+        {isLoading ? (
+          <div className="midi-tab__skeleton" aria-hidden="true">
+            <div className="midi-tab__skeleton-row" />
+            <div className="midi-tab__skeleton-row" />
+            <div className="midi-tab__skeleton-row" />
+          </div>
+        ) : (
+          <ul className="midi-tab__list">
+            {filteredFiles.map((file) => (
+              <li key={file.id} className="midi-tab__item">
+                <button
+                  type="button"
+                  className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
+                  onClick={() => handleLoadBuiltIn(file)}
+                  disabled={isLoading}
+                >
+                  <span className="midi-tab__file-name">{file.name}</span>
+                  <span className="midi-tab__file-composer">{file.composer}</span>
+                  {(file.soundSetId || (Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0)) && (
+                    <span className="midi-tab__file-tags">
+                      {file.soundSetId && (
+                        <span className="midi-tab__file-tag midi-tab__file-tag--set">
+                          {file.soundSetId}
+                        </span>
+                      )}
+                      {Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0 && (
+                        <span className="midi-tab__file-tag midi-tab__file-tag--layers">
+                          {file.layerFamilies.join(' + ')}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {filteredFiles.length === 0 && (
           <div className="midi-tab__empty">
             No matches for “{searchQuery.trim()}”.
@@ -174,7 +184,7 @@ const MidiTab = ({
           htmlFor="midi-upload"
           className={`midi-tab__upload-btn ${isLoading ? 'midi-tab__upload-btn--loading' : ''}`}
         >
-          {isLoading ? 'Loading...' : 'Choose MIDI File'}
+          {isLoading ? 'Loading...' : 'Choose MIDI file'}
         </label>
       </div>
 

@@ -32,7 +32,7 @@
   color: rgba(210, 220, 230, 0.85);
   background: rgba(8, 12, 18, 0.6);
   text-shadow: 0 0 8px rgba(10, 18, 28, 0.6);
-  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: color 100ms ease, border-color 100ms ease, background 100ms ease;
 }
 
 .wave-candy-gear:hover:not(:disabled) {
