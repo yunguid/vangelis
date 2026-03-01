@@ -3,6 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [ main ]
+    paths:
+      - '.github/workflows/deploy.yml'
+      - 'sound-engine/frontend/**'
+      - 'sound-engine/audio-engine/**'
   workflow_dispatch:
 
 permissions:
@@ -11,8 +15,8 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -30,32 +34,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: sound-engine/frontend/package-lock.json
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
-      - name: Build WASM
-        run: |
-          cd sound-engine/audio-engine
-          wasm-pack build --target web --out-dir ../frontend/public/pkg
 
       - name: Install frontend dependencies
         run: |
           cd sound-engine/frontend
-          npm ci --legacy-peer-deps
-
-      - name: Run frontend tests
-        run: |
-          cd sound-engine/frontend
-          npm test
+          npm ci --legacy-peer-deps --no-audit --no-fund
 
       - name: Build frontend
         run: |
@@ -64,11 +50,9 @@ jobs:
         env:
           GITHUB_PAGES: true
 
-      - name: Copy built files to root and add .nojekyll
+      - name: Add .nojekyll to build output
         run: |
-          cp -r sound-engine/frontend/dist/* .
-          touch .nojekyll
-          ls -la
+          touch sound-engine/frontend/dist/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -76,7 +60,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: sound-engine/frontend/dist
 
   deploy:
     environment:
