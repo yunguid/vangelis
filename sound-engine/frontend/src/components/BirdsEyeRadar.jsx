@@ -19,7 +19,7 @@ const createParticles = (count) => Array.from({ length: count }, () => ({
   depth: Math.random(),
   speed: 0.05 + Math.random() * 0.11,
   phase: Math.random(),
-  size: 0.5 + Math.random() * 1.6
+  size: 0.5 + Math.random() * 1.2
 }));
 
 const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES, isPlaying = false }) => {
@@ -164,7 +164,7 @@ const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES
         const spread = 0.16 + flow * 0.84;
         const laneX = SIDE_PADDING + p.lane * playfieldWidth;
         const x = centerX + (laneX - centerX) * spread;
-        const alpha = 0.06 + (1 - flow) * 0.28;
+        const alpha = 0.02 + (1 - flow) * 0.1;
         ctx.fillStyle = `rgba(255, 164, 88, ${alpha.toFixed(3)})`;
         ctx.beginPath();
         ctx.arc(x, y, p.size, 0, Math.PI * 2);
@@ -179,6 +179,7 @@ const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES
       const midiSpan = Math.max(1, midiRange.max - midiRange.min);
       const laneWidth = playfieldWidth / (midiSpan + 1);
       const nowTime = clamp(playbackProgress, 0, 1) * midi.duration;
+      const activeLabels = [];
       const { startIndex, endIndex, windowStart, windowEnd } = getVisibleNoteRange({
         startTimes: renderWindow.startTimes,
         nowTime,
@@ -207,38 +208,63 @@ const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES
         const perspectiveSpread = 0.18 + nearRatio * 0.82;
         const x = centerX + (laneX - centerX) * perspectiveSpread;
 
-        const noteWidth = Math.max(2.5, laneWidth * (0.18 + nearRatio * 0.64));
-        const bodyLen = clamp(12 + note.duration * 78 * (0.44 + nearRatio * 0.82), 10, trackHeight * 0.72);
-        const tailLen = clamp(bodyLen * (0.9 + nearRatio * 2.3), 12, trackHeight * 0.92);
+        const noteWidth = Math.max(2.2, laneWidth * (0.16 + nearRatio * 0.56));
+        const bodyLen = clamp(11 + note.duration * 64 * (0.38 + nearRatio * 0.66), 10, trackHeight * 0.58);
+        const tailLen = clamp(bodyLen * (0.28 + nearRatio * 0.82), 8, trackHeight * 0.48);
         const bodyTop = yHead - bodyLen;
         const tailTop = bodyTop - tailLen;
 
         const noteId = getNoteId(note.midi);
         const isActive = activeNoteSet?.has(noteId);
-        const glowColor = isActive ? 'rgba(255, 195, 132, 0.86)' : 'rgba(255, 150, 86, 0.58)';
-        const coreColor = isActive ? 'rgba(255, 226, 168, 0.97)' : 'rgba(255, 172, 108, 0.92)';
-        const edgeColor = isActive ? 'rgba(255, 246, 222, 0.96)' : 'rgba(255, 214, 166, 0.78)';
+        const glowColor = isActive ? 'rgba(255, 214, 160, 0.84)' : 'rgba(255, 146, 84, 0.36)';
+        const coreColor = isActive ? 'rgba(255, 242, 208, 0.98)' : 'rgba(255, 178, 114, 0.88)';
+        const edgeColor = isActive ? 'rgba(255, 255, 244, 0.98)' : 'rgba(255, 228, 196, 0.56)';
 
         const trail = ctx.createLinearGradient(x, tailTop, x, yHead + 2);
         trail.addColorStop(0, 'rgba(255, 138, 72, 0)');
-        trail.addColorStop(0.38, isActive ? 'rgba(255, 184, 124, 0.2)' : 'rgba(255, 146, 88, 0.16)');
-        trail.addColorStop(1, isActive ? 'rgba(255, 206, 152, 0.48)' : 'rgba(255, 164, 102, 0.34)');
+        trail.addColorStop(0.52, isActive ? 'rgba(255, 188, 128, 0.14)' : 'rgba(255, 146, 88, 0.08)');
+        trail.addColorStop(1, isActive ? 'rgba(255, 216, 168, 0.28)' : 'rgba(255, 166, 108, 0.2)');
         ctx.fillStyle = trail;
-        ctx.fillRect(x - noteWidth, tailTop, noteWidth * 2, yHead - tailTop + 2);
+        ctx.fillRect(x - noteWidth * 0.62, tailTop, noteWidth * 1.24, yHead - tailTop + 2);
 
         ctx.shadowColor = glowColor;
-        ctx.shadowBlur = isActive ? 24 : 14;
+        ctx.shadowBlur = isActive ? 8 : 0;
 
         const body = ctx.createLinearGradient(x, bodyTop, x, yHead);
-        body.addColorStop(0, 'rgba(255, 154, 92, 0.38)');
+        body.addColorStop(0, isActive ? 'rgba(255, 182, 124, 0.4)' : 'rgba(255, 154, 92, 0.28)');
         body.addColorStop(0.7, coreColor);
         body.addColorStop(1, edgeColor);
         ctx.fillStyle = body;
         ctx.fillRect(x - noteWidth * 0.5, bodyTop, noteWidth, bodyLen);
 
-        ctx.strokeStyle = isActive ? 'rgba(255, 244, 214, 0.8)' : 'rgba(255, 220, 182, 0.5)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isActive ? 'rgba(255, 250, 232, 0.96)' : 'rgba(255, 220, 182, 0.42)';
+        ctx.lineWidth = isActive ? 1.2 : 0.8;
         ctx.strokeRect(x - noteWidth * 0.5, bodyTop, noteWidth, bodyLen);
+
+        if (isActive) {
+          ctx.fillStyle = 'rgba(255, 238, 196, 0.92)';
+          ctx.beginPath();
+          ctx.arc(x, trackBottom - 1.2, 2.1, 0, Math.PI * 2);
+          ctx.fill();
+
+          const canPlaceLabel = activeLabels.every((placedX) => Math.abs(placedX - x) > 22);
+          if (canPlaceLabel) {
+            activeLabels.push(x);
+            const labelY = trackBottom - 8;
+            ctx.font = '600 10px "JetBrains Mono", monospace';
+            const labelW = ctx.measureText(noteId).width;
+            const chipX = x - (labelW * 0.5) - 5;
+            const chipY = labelY - 11;
+
+            ctx.fillStyle = 'rgba(8, 14, 22, 0.82)';
+            ctx.fillRect(chipX, chipY, labelW + 10, 12);
+            ctx.strokeStyle = 'rgba(255, 192, 132, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(chipX + 0.5, chipY + 0.5, labelW + 9, 11);
+            ctx.fillStyle = 'rgba(255, 236, 198, 0.96)';
+            ctx.fillText(noteId, x - (labelW * 0.5), labelY - 2);
+          }
+        }
       }
 
       ctx.shadowBlur = 0;
