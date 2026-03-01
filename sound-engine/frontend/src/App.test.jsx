@@ -12,6 +12,8 @@ vi.mock('./utils/audioEngine.js', () => ({
     ensureWasm: vi.fn(() => Promise.resolve()),
     ensureAudioContext: vi.fn(() => Promise.resolve()),
     warmGraph: vi.fn(),
+    getActivity: vi.fn(() => ({ isActive: false, lastEventTime: 0 })),
+    subscribeActivity: vi.fn(() => () => {}),
     getAnalysisNodes: vi.fn(() => null),
     loadCustomSample: vi.fn(() => Promise.resolve({ duration: 1, channels: 2 })),
     clearCustomSample: vi.fn(),

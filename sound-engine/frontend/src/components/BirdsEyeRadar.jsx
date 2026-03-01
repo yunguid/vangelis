@@ -1,20 +1,31 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import RaylibWaveCandy from './RaylibWaveCandy.jsx';
 import { clamp, midiNoteToName } from '../utils/math.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 
 const DEFAULT_MIN_MIDI = 21;
 const DEFAULT_MAX_MIDI = 108;
 const LOOKAHEAD_SECONDS = 12;
-const LOOKBEHIND_SECONDS = 1.8;
+const LOOKBEHIND_SECONDS = 1.6;
+const PLAYING_FRAME_INTERVAL_MS = 50;
+const IDLE_FRAME_INTERVAL_MS = 170;
+const EMPTY_FRAME_INTERVAL_MS = 260;
 const TOP_PADDING = 18;
-const BOTTOM_PADDING = 26;
+const BOTTOM_PADDING = 22;
 const SIDE_PADDING = 18;
 const EMPTY_ACTIVE_NOTES = new Set();
 
-const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES, isPlaying }) => {
+const createParticles = (count) => Array.from({ length: count }, () => ({
+  lane: Math.random(),
+  depth: Math.random(),
+  speed: 0.05 + Math.random() * 0.11,
+  phase: Math.random(),
+  size: 0.5 + Math.random() * 1.6
+}));
+
+const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES, isPlaying = false }) => {
   const canvasRef = useRef(null);
   const noteIdCacheRef = useRef(new Map());
+  const particlesRef = useRef(createParticles(20));
   const noteRenderWindow = useMemo(
     () => buildNoteRenderWindow(currentMidi?.notes || []),
     [currentMidi]
@@ -86,77 +97,88 @@ const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES
       return { width, height };
     };
 
-    const drawGrid = (width, trackTop, trackBottom, centerX, playfieldWidth, nowSeconds) => {
-      ctx.strokeStyle = 'rgba(120, 176, 220, 0.16)';
+    const drawBackdrop = (width, height) => {
+      const base = ctx.createLinearGradient(0, 0, 0, height);
+      base.addColorStop(0, 'rgba(2, 7, 13, 0.98)');
+      base.addColorStop(0.46, 'rgba(4, 11, 20, 0.96)');
+      base.addColorStop(1, 'rgba(2, 7, 12, 0.99)');
+      ctx.fillStyle = base;
+      ctx.fillRect(0, 0, width, height);
+
+      const warmBloom = ctx.createRadialGradient(width * 0.5, height * 0.88, 20, width * 0.5, height * 0.88, width * 0.72);
+      warmBloom.addColorStop(0, 'rgba(255, 126, 52, 0.17)');
+      warmBloom.addColorStop(0.45, 'rgba(255, 118, 46, 0.05)');
+      warmBloom.addColorStop(1, 'rgba(255, 118, 46, 0)');
+      ctx.fillStyle = warmBloom;
+      ctx.fillRect(0, 0, width, height);
+
+      const vignette = ctx.createRadialGradient(width * 0.5, height * 0.58, width * 0.2, width * 0.5, height * 0.58, width * 0.82);
+      vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      vignette.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, width, height);
+    };
+
+    const drawGrid = ({ trackTop, trackBottom, centerX, playfieldWidth, vanishY }) => {
+      const depthSpan = trackBottom - trackTop;
+      ctx.strokeStyle = 'rgba(120, 150, 182, 0.16)';
       ctx.lineWidth = 1;
+
       ctx.beginPath();
-
-      const drift = (Math.sin(nowSeconds * 0.8) * 0.5 + 0.5) * 0.08;
-
-      for (let i = 0; i <= 8; i += 1) {
-        const depth = i / 8;
-        const y = trackTop + depth * (trackBottom - trackTop);
-        const pulse = 1 - depth * (0.52 + drift * 0.08);
-        const halfSpan = (playfieldWidth * pulse) / 2;
+      for (let i = 0; i <= 11; i += 1) {
+        const t = i / 11;
+        const y = trackTop + depthSpan * t;
+        const spread = 0.14 + t * 0.86;
+        const halfSpan = (playfieldWidth * spread) * 0.5;
         ctx.moveTo(centerX - halfSpan, y);
         ctx.lineTo(centerX + halfSpan, y);
       }
+      ctx.stroke();
 
-      for (let i = 0; i <= 10; i += 1) {
-        const laneNorm = i / 10;
-        const baseX = SIDE_PADDING + laneNorm * playfieldWidth;
-        const pull = (centerX - baseX) * 0.24;
-        ctx.moveTo(baseX + pull, trackTop);
-        ctx.lineTo(baseX, trackBottom);
+      ctx.beginPath();
+      for (let i = 0; i <= 18; i += 1) {
+        const laneNorm = i / 18;
+        const xBottom = SIDE_PADDING + laneNorm * playfieldWidth;
+        const xTop = centerX + (xBottom - centerX) * 0.18;
+        ctx.moveTo(xTop, vanishY);
+        ctx.lineTo(xBottom, trackBottom);
       }
+      ctx.stroke();
 
+      const runway = ctx.createLinearGradient(0, trackBottom - 1, 0, trackBottom + 10);
+      runway.addColorStop(0, 'rgba(255, 144, 74, 0.96)');
+      runway.addColorStop(1, 'rgba(255, 116, 48, 0.34)');
+      ctx.strokeStyle = runway;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(SIDE_PADDING, trackBottom);
+      ctx.lineTo(SIDE_PADDING + playfieldWidth, trackBottom);
       ctx.stroke();
     };
 
-    const draw = (now) => {
-      const {
-        currentMidi: midi,
-        progress: playbackProgress,
-        activeNotes: activeNoteSet,
-        noteRenderWindow: renderWindow
-      } = propsRef.current;
-      const { width, height } = syncCanvasSize();
-
-      ctx.clearRect(0, 0, width, height);
-
-      const nowSeconds = now * 0.001;
-      const wash = ctx.createLinearGradient(0, 0, width, height);
-      wash.addColorStop(0, 'rgba(6, 11, 18, 0.40)');
-      wash.addColorStop(0.5, 'rgba(3, 8, 14, 0.26)');
-      wash.addColorStop(1, 'rgba(4, 10, 16, 0.56)');
-      ctx.fillStyle = wash;
-      ctx.fillRect(0, 0, width, height);
-
-      const trackTop = TOP_PADDING;
-      const trackBottom = height - BOTTOM_PADDING;
-      const trackHeight = Math.max(1, trackBottom - trackTop);
-      const playfieldWidth = Math.max(120, width - SIDE_PADDING * 2);
-      const centerX = SIDE_PADDING + playfieldWidth / 2;
-
-      drawGrid(width, trackTop, trackBottom, centerX, playfieldWidth, nowSeconds);
-
-      const runway = ctx.createLinearGradient(0, trackBottom - 2, 0, trackBottom + 8);
-      runway.addColorStop(0, 'rgba(255, 166, 122, 0.98)');
-      runway.addColorStop(1, 'rgba(255, 120, 72, 0.30)');
-      ctx.strokeStyle = runway;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(SIDE_PADDING, trackBottom - 1);
-      ctx.lineTo(width - SIDE_PADDING, trackBottom - 1);
-      ctx.stroke();
-
-      if (!midi?.duration || !renderWindow.notes.length) {
-        return;
+    const drawParticles = ({ nowSeconds, trackTop, trackBottom, centerX, playfieldWidth }) => {
+      const depthSpan = trackBottom - trackTop;
+      for (const p of particlesRef.current) {
+        const flow = (p.depth + nowSeconds * p.speed + p.phase) % 1;
+        const y = trackTop + flow * depthSpan;
+        const spread = 0.16 + flow * 0.84;
+        const laneX = SIDE_PADDING + p.lane * playfieldWidth;
+        const x = centerX + (laneX - centerX) * spread;
+        const alpha = 0.06 + (1 - flow) * 0.28;
+        ctx.fillStyle = `rgba(255, 164, 88, ${alpha.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(x, y, p.size, 0, Math.PI * 2);
+        ctx.fill();
       }
+    };
 
-      const nowTime = clamp(playbackProgress, 0, 1) * midi.duration;
+    const drawNotes = ({ midi, playbackProgress, activeNoteSet, renderWindow, trackTop, trackBottom, centerX, playfieldWidth }) => {
+      if (!midi?.duration || !renderWindow.notes.length) return;
+
+      const trackHeight = Math.max(1, trackBottom - trackTop);
       const midiSpan = Math.max(1, midiRange.max - midiRange.min);
-      const laneBaseWidth = playfieldWidth / (midiSpan + 1);
+      const laneWidth = playfieldWidth / (midiSpan + 1);
+      const nowTime = clamp(playbackProgress, 0, 1) * midi.duration;
       const { startIndex, endIndex, windowStart, windowEnd } = getVisibleNoteRange({
         startTimes: renderWindow.startTimes,
         nowTime,
@@ -176,81 +198,115 @@ const BirdsEyeRadar = ({ currentMidi, progress, activeNotes = EMPTY_ACTIVE_NOTES
           1
         );
 
-        const y = trackBottom - depthNorm * trackHeight;
-        const viewerDepth = clamp((trackBottom - y) / trackHeight, 0, 1);
-        const perspectiveScale = 1 - viewerDepth * 0.5;
+        const yHead = trackBottom - depthNorm * trackHeight;
+        const farRatio = clamp((trackBottom - yHead) / trackHeight, 0, 1);
+        const nearRatio = 1 - farRatio;
 
         const laneNorm = (note.midi - midiRange.min) / midiSpan;
         const laneX = SIDE_PADDING + laneNorm * playfieldWidth;
-        const perspectivePull = (centerX - laneX) * (viewerDepth * 0.24);
-        const x = laneX + perspectivePull;
+        const perspectiveSpread = 0.18 + nearRatio * 0.82;
+        const x = centerX + (laneX - centerX) * perspectiveSpread;
 
-        const noteWidth = Math.max(2.5, laneBaseWidth * perspectiveScale * 0.9);
-        const durationScale = clamp(note.duration / 1.8, 0.06, 0.45);
-        const noteHeight = Math.max(4, durationScale * trackHeight * (1 - viewerDepth * 0.42));
-        const noteTop = y - noteHeight;
+        const noteWidth = Math.max(2.5, laneWidth * (0.18 + nearRatio * 0.64));
+        const bodyLen = clamp(12 + note.duration * 78 * (0.44 + nearRatio * 0.82), 10, trackHeight * 0.72);
+        const tailLen = clamp(bodyLen * (0.9 + nearRatio * 2.3), 12, trackHeight * 0.92);
+        const bodyTop = yHead - bodyLen;
+        const tailTop = bodyTop - tailLen;
 
         const noteId = getNoteId(note.midi);
         const isActive = activeNoteSet?.has(noteId);
+        const glowColor = isActive ? 'rgba(255, 195, 132, 0.86)' : 'rgba(255, 150, 86, 0.58)';
+        const coreColor = isActive ? 'rgba(255, 226, 168, 0.97)' : 'rgba(255, 172, 108, 0.92)';
+        const edgeColor = isActive ? 'rgba(255, 246, 222, 0.96)' : 'rgba(255, 214, 166, 0.78)';
 
-        if (isActive) {
-          ctx.fillStyle = 'rgba(255, 174, 132, 0.98)';
-          ctx.shadowColor = 'rgba(255, 132, 78, 0.94)';
-          ctx.shadowBlur = 14;
-        } else {
-          ctx.fillStyle = 'rgba(132, 214, 255, 0.74)';
-          ctx.shadowColor = 'rgba(92, 182, 248, 0.35)';
-          ctx.shadowBlur = 6;
-        }
+        const trail = ctx.createLinearGradient(x, tailTop, x, yHead + 2);
+        trail.addColorStop(0, 'rgba(255, 138, 72, 0)');
+        trail.addColorStop(0.38, isActive ? 'rgba(255, 184, 124, 0.2)' : 'rgba(255, 146, 88, 0.16)');
+        trail.addColorStop(1, isActive ? 'rgba(255, 206, 152, 0.48)' : 'rgba(255, 164, 102, 0.34)');
+        ctx.fillStyle = trail;
+        ctx.fillRect(x - noteWidth, tailTop, noteWidth * 2, yHead - tailTop + 2);
 
-        ctx.fillRect(x - noteWidth / 2, noteTop, noteWidth, noteHeight);
+        ctx.shadowColor = glowColor;
+        ctx.shadowBlur = isActive ? 24 : 14;
+
+        const body = ctx.createLinearGradient(x, bodyTop, x, yHead);
+        body.addColorStop(0, 'rgba(255, 154, 92, 0.38)');
+        body.addColorStop(0.7, coreColor);
+        body.addColorStop(1, edgeColor);
+        ctx.fillStyle = body;
+        ctx.fillRect(x - noteWidth * 0.5, bodyTop, noteWidth, bodyLen);
+
+        ctx.strokeStyle = isActive ? 'rgba(255, 244, 214, 0.8)' : 'rgba(255, 220, 182, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - noteWidth * 0.5, bodyTop, noteWidth, bodyLen);
       }
 
       ctx.shadowBlur = 0;
     };
 
     let rafId;
+    let lastFrame = 0;
     const loop = (time) => {
-      draw(time);
+      const {
+        currentMidi: midi,
+        progress: playbackProgress,
+        activeNotes: activeNoteSet,
+        isPlaying: nowPlaying,
+        noteRenderWindow: renderWindow
+      } = propsRef.current;
+      if (document.visibilityState !== 'visible') {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+
+      const frameInterval = nowPlaying
+        ? PLAYING_FRAME_INTERVAL_MS
+        : (midi ? IDLE_FRAME_INTERVAL_MS : EMPTY_FRAME_INTERVAL_MS);
+      if (time - lastFrame < frameInterval) {
+        rafId = requestAnimationFrame(loop);
+        return;
+      }
+      lastFrame = time;
+
+      const { width, height } = syncCanvasSize();
+      const nowSeconds = time * 0.001;
+
+      ctx.clearRect(0, 0, width, height);
+      drawBackdrop(width, height);
+
+      const trackTop = TOP_PADDING;
+      const trackBottom = height - BOTTOM_PADDING;
+      const playfieldWidth = Math.max(120, width - SIDE_PADDING * 2);
+      const centerX = SIDE_PADDING + playfieldWidth * 0.5;
+      const vanishY = trackTop - height * 0.24;
+
+      drawGrid({ trackTop, trackBottom, centerX, playfieldWidth, vanishY });
+      drawParticles({ nowSeconds, trackTop, trackBottom, centerX, playfieldWidth });
+      drawNotes({
+        midi,
+        playbackProgress,
+        activeNoteSet,
+        renderWindow,
+        trackTop,
+        trackBottom,
+        centerX,
+        playfieldWidth
+      });
+
       rafId = requestAnimationFrame(loop);
     };
-    rafId = requestAnimationFrame(loop);
 
+    rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
   }, [midiRange.max, midiRange.min]);
 
-  const progressPct = Number.isFinite(progress) ? Math.round(clamp(progress, 0, 1) * 100) : 0;
-
   return (
     <section className="birds-eye-radar panel elevated" aria-label="Bird's-eye MIDI radar">
-      <div className="birds-eye-radar__header">
-        <span className="birds-eye-radar__title">Bird&apos;s-Eye Radar</span>
-        <span className={`birds-eye-radar__status ${isPlaying ? 'is-live' : ''}`}>
-          {isPlaying ? 'Playing' : 'Idle'}
-        </span>
-      </div>
-
       <div className="birds-eye-radar__stage">
-        <RaylibWaveCandy
-          className="birds-eye-radar__raylib"
-          viewportClassName="birds-eye-radar__raylib-viewport"
-          canvasClassName="birds-eye-radar__raylib-canvas"
-          canvasId="raylib-birds-eye"
-          showToggle={false}
-          ariaLabel="Bird's-eye radar background"
-        />
-        <canvas ref={canvasRef} className="birds-eye-radar__overlay" />
-
-        <div className="birds-eye-radar__hud">
-          <span className="birds-eye-radar__midi" title={currentMidi ? currentMidi.name : 'No MIDI loaded'}>
-            {currentMidi ? currentMidi.name : 'No MIDI loaded'}
-          </span>
-          <span className="birds-eye-radar__progress">{progressPct}%</span>
-        </div>
-
+        <canvas ref={canvasRef} className="birds-eye-radar__canvas" />
         {!currentMidi && (
           <div className="birds-eye-radar__empty">
-            Load a MIDI file to preview note traffic.
+            Load a MIDI file to start the radar.
           </div>
         )}
       </div>
