@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import SynthKeyboard from './components/SynthKeyboard';
 import AudioControls from './components/AudioControls';
 import UIOverlay from './components/UIOverlay';
@@ -7,8 +7,6 @@ import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
 import BirdsEyeRadar from './components/BirdsEyeRadar';
 import Sidebar from './components/Sidebar';
-import CommandPalette from './components/CommandPalette';
-import BrandKitModal from './components/BrandKitModal';
 import { audioEngine } from './utils/audioEngine.js';
 import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM, sanitizeAudioParams } from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
@@ -119,8 +117,6 @@ const App = () => {
     return { ...AUDIO_PARAM_DEFAULTS };
   });
   const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
-  const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [showBrandKit, setShowBrandKit] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
   const [sampleLoading, setSampleLoading] = useState(false);
@@ -352,103 +348,10 @@ const App = () => {
     }
   }, [handleSampleSelect, isResumingSession, midiPlayback.play, midiPlayback.setTempo, pushNotice, resumeSnapshot]);
 
-  const commandActions = useMemo(() => ([
-    {
-      id: 'open-midi',
-      label: 'Open MIDI browser',
-      keywords: ['midi', 'library'],
-      shortcut: 'M',
-      run: () => {
-        setSidebarTab('midi');
-        setSidebarOpen(true);
-      }
-    },
-    {
-      id: 'open-samples',
-      label: 'Open sample browser',
-      keywords: ['sample', 'library'],
-      shortcut: 'S',
-      run: () => {
-        setSidebarTab('samples');
-        setSidebarOpen(true);
-      }
-    },
-    {
-      id: 'toggle-record',
-      label: isRecording ? 'Stop recording' : 'Start recording',
-      keywords: ['record'],
-      run: handleRecordToggle
-    },
-    {
-      id: 'toggle-shortcuts',
-      label: showShortcuts ? 'Hide shortcuts' : 'Show shortcuts',
-      keywords: ['help', 'keys'],
-      run: () => setShowShortcuts((prev) => !prev)
-    },
-    {
-      id: 'copy-settings',
-      label: 'Copy synth settings',
-      keywords: ['copy', 'clipboard', 'json'],
-      run: copySettingsToClipboard
-    },
-    {
-      id: 'paste-settings',
-      label: 'Paste synth settings',
-      keywords: ['paste', 'clipboard', 'json'],
-      run: pasteSettingsFromClipboard
-    },
-    {
-      id: 'show-brandkit',
-      label: 'Open brand kit',
-      keywords: ['brand', 'logo', 'svg', 'colors'],
-      run: () => setShowBrandKit(true)
-    },
-    {
-      id: 'clear-sample',
-      label: 'Clear active sample',
-      keywords: ['sample', 'reset'],
-      run: handleClearSample
-    },
-    {
-      id: 'stop-midi',
-      label: 'Stop MIDI playback',
-      keywords: ['midi', 'stop', 'cancel'],
-      run: midiPlayback.stop
-    },
-    ...(hasResumeSnapshot
-      ? [{
-        id: 'resume-session',
-        label: 'Resume last session',
-        keywords: ['resume', 'restore'],
-        run: resumeSession
-      }]
-      : [])
-  ]), [
-    copySettingsToClipboard,
-    handleClearSample,
-    handleRecordToggle,
-    hasResumeSnapshot,
-    isRecording,
-    midiPlayback.stop,
-    pasteSettingsFromClipboard,
-    resumeSession,
-    showShortcuts
-  ]);
-
-  const handleCommandSelect = useCallback((action) => {
-    action?.run?.();
-  }, []);
-
   useEffect(() => {
     const handleKeyboardShortcuts = (event) => {
       const key = event.key.toLowerCase();
       const textInputActive = isTextInputTarget(event.target);
-
-      if ((event.metaKey || event.ctrlKey) && key === 'k') {
-        event.preventDefault();
-        setShowCommandPalette((prev) => !prev);
-        return;
-      }
 
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === 'c') {
         event.preventDefault();
@@ -462,16 +365,8 @@ const App = () => {
         return;
       }
 
-      if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === 'b') {
-        event.preventDefault();
-        setShowBrandKit(true);
-        return;
-      }
-
       if (textInputActive) {
         if (event.key === 'Escape') {
-          setShowCommandPalette(false);
-          setShowBrandKit(false);
           setShowShortcuts(false);
         }
         return;
@@ -484,8 +379,6 @@ const App = () => {
 
       if (event.key === 'Escape') {
         setShowShortcuts(false);
-        setShowCommandPalette(false);
-        setShowBrandKit(false);
       }
 
       // Space bar toggles recording (only if not focused on input)
@@ -628,7 +521,6 @@ const App = () => {
         <header className="zone-top tier-subtle content-tertiary" aria-label="Branding and quick actions">
           <div className="brand-block">
             <div className="brand-title">Vangelis</div>
-            <p className="session-note">State saves on this device.</p>
             {hasResumeSnapshot && (
               <button
                 type="button"
@@ -686,22 +578,6 @@ const App = () => {
             >
               <span aria-hidden="true">?</span>
             </button>
-            <button
-              type="button"
-              className="button-icon"
-              aria-label="Open commands"
-              onClick={() => setShowCommandPalette(true)}
-            >
-              <span aria-hidden="true">K</span>
-            </button>
-            <button
-              type="button"
-              className="button-icon"
-              aria-label="Open brand kit"
-              onClick={() => setShowBrandKit(true)}
-            >
-              <span aria-hidden="true">B</span>
-            </button>
           </div>
         </header>
 
@@ -729,7 +605,6 @@ const App = () => {
               )}
               <div className="keyboard-hints">
                 <span className="keyboard-hint">Press Shift + / for keys.</span>
-                <span className="keyboard-hint">Press Cmd + K for commands.</span>
               </div>
             </div>
           </div>
@@ -798,10 +673,6 @@ const App = () => {
                   <dd>Toggle shortcut list.</dd>
                 </div>
                 <div>
-                  <dt>Cmd/Ctrl + K</dt>
-                  <dd>Open command palette.</dd>
-                </div>
-                <div>
                   <dt>Escape</dt>
                   <dd>Close active panels.</dd>
                 </div>
@@ -840,17 +711,6 @@ const App = () => {
           activeSampleId={activeSampleId}
         />
 
-        <CommandPalette
-          open={showCommandPalette}
-          onClose={() => setShowCommandPalette(false)}
-          actions={commandActions}
-          onSelect={handleCommandSelect}
-        />
-        <BrandKitModal
-          open={showBrandKit}
-          onClose={() => setShowBrandKit(false)}
-          onNotice={pushNotice}
-        />
       </div>
     </ErrorBoundary>
   );

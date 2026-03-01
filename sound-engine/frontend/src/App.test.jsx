@@ -92,17 +92,10 @@ describe('App', () => {
   it('shows keyboard hints', () => {
     render(<App />);
     expect(screen.getByText(/Press Shift \+ \/ for keys\./)).toBeInTheDocument();
-    expect(screen.getByText(/Press Cmd \+ K for commands\./)).toBeInTheDocument();
   });
 
-  it('opens command palette from header button', () => {
+  it('does not show local save reassurance copy', () => {
     render(<App />);
-    fireEvent.click(screen.getByLabelText('Open commands'));
-    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeInTheDocument();
-  });
-
-  it('shows local save reassurance copy', () => {
-    render(<App />);
-    expect(screen.getByText('State saves on this device.')).toBeInTheDocument();
+    expect(screen.queryByText('State saves on this device.')).not.toBeInTheDocument();
   });
 });
