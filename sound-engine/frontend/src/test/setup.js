@@ -78,3 +78,22 @@ global.ResizeObserver = class ResizeObserver {
 // Mock requestAnimationFrame
 global.requestAnimationFrame = (callback) => setTimeout(callback, 16);
 global.cancelAnimationFrame = (id) => clearTimeout(id);
+
+const storageState = new Map();
+const localStorageMock = {
+  getItem: (key) => (storageState.has(key) ? storageState.get(key) : null),
+  setItem: (key, value) => {
+    storageState.set(String(key), String(value));
+  },
+  removeItem: (key) => {
+    storageState.delete(String(key));
+  },
+  clear: () => {
+    storageState.clear();
+  }
+};
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  configurable: true
+});

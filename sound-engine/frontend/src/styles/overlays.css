@@ -298,6 +298,18 @@
   justify-content: flex-start;
 }
 
+.birds-eye-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 3vw, 28px);
+  background: rgba(4, 8, 14, 0.74);
+  backdrop-filter: blur(18px) brightness(0.84);
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }

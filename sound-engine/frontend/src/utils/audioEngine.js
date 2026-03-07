@@ -443,22 +443,44 @@ class AudioEngine {
     const now = ctx.currentTime;
 
     nodes.masterGain.gain.cancelScheduledValues(now);
-    nodes.masterGain.gain.setTargetAtTime(sanitized.volume, now, 0.01);
+    nodes.masterGain.gain.setTargetAtTime(sanitized.volume * 0.94, now, 0.02);
 
     const delayTime = sanitized.delay / 1000;
-    nodes.delayNode.delayTime.cancelScheduledValues(now);
-    nodes.delayNode.delayTime.setTargetAtTime(delayTime, now, 0.05);
+    const leftDelayTime = clamp(delayTime * 0.92, 0, 2.4);
+    const rightDelayTime = clamp(delayTime * 1.28, 0, 2.6);
+    nodes.delayLeft.delayTime.cancelScheduledValues(now);
+    nodes.delayLeft.delayTime.setTargetAtTime(leftDelayTime, now, 0.05);
+    nodes.delayRight.delayTime.cancelScheduledValues(now);
+    nodes.delayRight.delayTime.setTargetAtTime(rightDelayTime, now, 0.05);
 
-    const feedback = clamp(sanitized.delay / 400, 0, 0.7);
-    nodes.delayFeedback.gain.cancelScheduledValues(now);
-    nodes.delayFeedback.gain.setTargetAtTime(feedback, now, 0.1);
+    const feedback = delayTime > 0.015 ? clamp(0.16 + delayTime * 0.9, 0, 0.62) : 0;
+    nodes.delayFeedbackLeft.gain.cancelScheduledValues(now);
+    nodes.delayFeedbackLeft.gain.setTargetAtTime(feedback, now, 0.08);
+    nodes.delayFeedbackRight.gain.cancelScheduledValues(now);
+    nodes.delayFeedbackRight.gain.setTargetAtTime(feedback * 0.96, now, 0.08);
 
-    const delayWetLevel = delayTime > 0.01 ? 0.5 : 0;
+    const delaySend = delayTime > 0.015 ? clamp(0.1 + sanitized.reverb * 0.06 + delayTime * 0.35, 0, 0.38) : 0;
+    nodes.delaySend.gain.cancelScheduledValues(now);
+    nodes.delaySend.gain.setTargetAtTime(delaySend, now, 0.05);
+
+    const delayWetLevel = delayTime > 0.015 ? clamp(0.12 + delayTime * 0.55, 0, 0.42) : 0;
     nodes.delayWet.gain.cancelScheduledValues(now);
     nodes.delayWet.gain.setTargetAtTime(delayWetLevel, now, 0.05);
 
+    const reverbWet = Math.pow(sanitized.reverb, 1.2) * 0.9;
+    nodes.reverbSend.gain.cancelScheduledValues(now);
+    nodes.reverbSend.gain.setTargetAtTime(clamp(0.08 + reverbWet * 0.52, 0, 0.56), now, 0.08);
+    nodes.reverbPreDelay.delayTime.cancelScheduledValues(now);
+    nodes.reverbPreDelay.delayTime.setTargetAtTime(0.012 + reverbWet * 0.032, now, 0.08);
     nodes.reverbGain.gain.cancelScheduledValues(now);
-    nodes.reverbGain.gain.setTargetAtTime(sanitized.reverb, now, 0.1);
+    nodes.reverbGain.gain.setTargetAtTime(reverbWet, now, 0.12);
+
+    nodes.warmthFilter.gain.cancelScheduledValues(now);
+    nodes.warmthFilter.gain.setTargetAtTime(1.2 + sanitized.distortion * 1.6, now, 0.12);
+    nodes.presenceFilter.gain.cancelScheduledValues(now);
+    nodes.presenceFilter.gain.setTargetAtTime(1.5 - sanitized.reverb * 0.7, now, 0.12);
+    nodes.airFilter.gain.cancelScheduledValues(now);
+    nodes.airFilter.gain.setTargetAtTime(1.8 - sanitized.distortion * 0.8, now, 0.12);
 
     nodes.distortion.curve = this.distortionCache.get(sanitized.distortion);
 

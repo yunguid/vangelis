@@ -3,7 +3,7 @@
 use rocket::fs::{FileServer, relative};
 use rocket::serde::json::Json;
 use rocket::serde::{Serialize, Deserialize};
-use rocket::{State, http::Status as HttpStatus};
+use rocket::State;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -25,11 +25,51 @@ struct EffectsValues {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(default, rename_all = "camelCase")]
+struct EngineValues {
+    pan: f32,
+    use_filter: bool,
+    filter_cutoff: f32,
+    filter_resonance: f32,
+    filter_mode: u8,
+    unison_voices: u8,
+    unison_detune: f32,
+    use_fm: bool,
+    fm_ratio: f32,
+    fm_index: f32,
+    lfo_rate: f32,
+    lfo_depth: f32,
+    lfo_target: u8,
+}
+
+impl Default for EngineValues {
+    fn default() -> Self {
+        Self {
+            pan: 0.5,
+            use_filter: false,
+            filter_cutoff: 18_000.0,
+            filter_resonance: 0.7,
+            filter_mode: 0,
+            unison_voices: 1,
+            unison_detune: 0.0,
+            use_fm: false,
+            fm_ratio: 2.0,
+            fm_index: 2.0,
+            lfo_rate: 0.0,
+            lfo_depth: 0.0,
+            lfo_target: 0,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct Preset {
     name: String,
     waveform: String,
     adsr: ADSRValues,
     effects: EffectsValues,
+    #[serde(default)]
+    engine: EngineValues,
     #[serde(default)]
     author: String,
     #[serde(default)]
@@ -49,194 +89,199 @@ struct PresetStore {
     presets: Arc<RwLock<HashMap<String, Preset>>>,
 }
 
+const SYSTEM_PRESET_KEYS: &[&str] = &[
+    "default",
+    "nocturne_piano",
+    "aurora_glass",
+    "cathedral_bloom",
+    "bronze_reed",
+    "ember_pulse",
+    "dusty_tape",
+    "analog_bass",
+];
+
+fn system_preset(
+    name: &str,
+    waveform: &str,
+    adsr: ADSRValues,
+    effects: EffectsValues,
+    engine: EngineValues,
+    description: &str,
+) -> Preset {
+    Preset {
+        name: name.to_string(),
+        waveform: waveform.to_string(),
+        adsr,
+        effects,
+        engine,
+        author: "System".to_string(),
+        description: description.to_string(),
+        created_at: default_timestamp(),
+    }
+}
+
 impl PresetStore {
     fn new() -> Self {
         let mut initial_presets = HashMap::new();
-        
-        // Add some default presets
         initial_presets.insert(
             "default".to_string(),
-            Preset {
-                name: "Default".to_string(),
-                waveform: "Sine".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.05,
-                    decay: 0.1,
-                    sustain: 0.7,
-                    release: 0.3,
+            system_preset(
+                "Default",
+                "Triangle",
+                ADSRValues { attack: 0.012, decay: 0.18, sustain: 0.76, release: 0.42 },
+                EffectsValues { reverb: 0.24, delay: 72.0, distortion: 0.02, volume: 0.68 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 13_200.0,
+                    filter_resonance: 0.82,
+                    unison_voices: 2,
+                    unison_detune: 7.0,
+                    ..EngineValues::default()
                 },
-                effects: EffectsValues {
-                    reverb: 0.0,
-                    delay: 0.0,
-                    distortion: 0.0,
-                    volume: 0.7,
-                },
-                author: "System".to_string(),
-                description: "Clean default sound".to_string(),
-                created_at: default_timestamp(),
-            },
-        );
-        
-        initial_presets.insert(
-            "pad".to_string(),
-            Preset {
-                name: "Ambient Pad".to_string(),
-                waveform: "Triangle".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.8,
-                    decay: 0.3,
-                    sustain: 0.6,
-                    release: 1.2,
-                },
-                effects: EffectsValues {
-                    reverb: 0.7,
-                    delay: 200.0,
-                    distortion: 0.0,
-                    volume: 0.5,
-                },
-                author: "System".to_string(),
-                description: "Lush ambient pad with reverb".to_string(),
-                created_at: default_timestamp(),
-            },
-        );
-        
-        // Curated musical presets
-        initial_presets.insert(
-            "warm_pad".to_string(),
-            Preset {
-                name: "Warm Pad".to_string(),
-                waveform: "Triangle".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.6,
-                    decay: 0.25,
-                    sustain: 0.7,
-                    release: 1.5,
-                },
-                effects: EffectsValues {
-                    reverb: 0.6,
-                    delay: 180.0,
-                    distortion: 0.0,
-                    volume: 0.55,
-                },
-                author: "System".to_string(),
-                description: "Gentle, lush pad with bloom and width".to_string(),
-                created_at: default_timestamp(),
-            },
+                "The new house sound: polished, warm, and wide without becoming cinematic mush.",
+            ),
         );
 
         initial_presets.insert(
-            "glass_keys".to_string(),
-            Preset {
-                name: "Glass Keys".to_string(),
-                waveform: "Sine".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.02,
-                    decay: 0.2,
-                    sustain: 0.5,
-                    release: 0.45,
+            "nocturne_piano".to_string(),
+            system_preset(
+                "Nocturne Piano",
+                "Triangle",
+                ADSRValues { attack: 0.01, decay: 0.2, sustain: 0.64, release: 0.48 },
+                EffectsValues { reverb: 0.32, delay: 44.0, distortion: 0.02, volume: 0.69 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 10_800.0,
+                    filter_resonance: 0.86,
+                    unison_voices: 2,
+                    unison_detune: 4.0,
+                    ..EngineValues::default()
                 },
-                effects: EffectsValues {
-                    reverb: 0.35,
-                    delay: 120.0,
-                    distortion: 0.0,
-                    volume: 0.6,
-                },
-                author: "System".to_string(),
-                description: "Shimmering bell-like keys with space".to_string(),
-                created_at: default_timestamp(),
-            },
+                "Romantic keys with felt edges, a tighter room, and enough sustain for lyrical lines.",
+            ),
         );
 
         initial_presets.insert(
-            "soft_ep".to_string(),
-            Preset {
-                name: "Soft EP".to_string(),
-                waveform: "Triangle".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.01,
-                    decay: 0.3,
-                    sustain: 0.4,
-                    release: 0.6,
+            "aurora_glass".to_string(),
+            system_preset(
+                "Aurora Glass",
+                "Sine",
+                ADSRValues { attack: 0.02, decay: 0.24, sustain: 0.48, release: 0.72 },
+                EffectsValues { reverb: 0.46, delay: 138.0, distortion: 0.0, volume: 0.62 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 9_800.0,
+                    filter_resonance: 0.94,
+                    use_fm: true,
+                    fm_ratio: 3.0,
+                    fm_index: 4.8,
+                    lfo_rate: 0.18,
+                    lfo_depth: 0.08,
+                    lfo_target: 3,
+                    ..EngineValues::default()
                 },
-                effects: EffectsValues {
-                    reverb: 0.25,
-                    delay: 90.0,
-                    distortion: 0.0,
-                    volume: 0.6,
-                },
-                author: "System".to_string(),
-                description: "Mellow electric piano vibe".to_string(),
-                created_at: default_timestamp(),
-            },
+                "Bell-glass harmonics with a slow moving shimmer for high-register melodies and arpeggios.",
+            ),
         );
 
         initial_presets.insert(
-            "lofi_tape".to_string(),
-            Preset {
-                name: "LoFi Tape".to_string(),
-                waveform: "Square".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.03,
-                    decay: 0.2,
-                    sustain: 0.5,
-                    release: 0.8,
+            "cathedral_bloom".to_string(),
+            system_preset(
+                "Cathedral Bloom",
+                "Triangle",
+                ADSRValues { attack: 0.78, decay: 0.34, sustain: 0.72, release: 1.9 },
+                EffectsValues { reverb: 0.78, delay: 220.0, distortion: 0.01, volume: 0.58 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 8_200.0,
+                    filter_resonance: 0.68,
+                    unison_voices: 3,
+                    unison_detune: 10.0,
+                    lfo_rate: 0.08,
+                    lfo_depth: 0.06,
+                    lfo_target: 3,
+                    ..EngineValues::default()
                 },
-                effects: EffectsValues {
-                    reverb: 0.4,
-                    delay: 180.0,
-                    distortion: 0.05,
-                    volume: 0.5,
+                "A slower, wider bloom for pads and suspended chords that need weight and tail.",
+            ),
+        );
+
+        initial_presets.insert(
+            "bronze_reed".to_string(),
+            system_preset(
+                "Bronze Reed",
+                "Sawtooth",
+                ADSRValues { attack: 0.04, decay: 0.22, sustain: 0.66, release: 0.68 },
+                EffectsValues { reverb: 0.28, delay: 96.0, distortion: 0.04, volume: 0.63 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 6_400.0,
+                    filter_resonance: 1.08,
+                    unison_voices: 2,
+                    unison_detune: 9.0,
+                    use_fm: true,
+                    fm_ratio: 1.5,
+                    fm_index: 1.6,
+                    ..EngineValues::default()
                 },
-                author: "System".to_string(),
-                description: "Slight grit with cozy ambience".to_string(),
-                created_at: default_timestamp(),
-            },
+                "A brass-and-reed hybrid: darker core, metallic edge, and enough body for leads.",
+            ),
+        );
+
+        initial_presets.insert(
+            "ember_pulse".to_string(),
+            system_preset(
+                "Ember Pulse",
+                "Sawtooth",
+                ADSRValues { attack: 0.005, decay: 0.12, sustain: 0.44, release: 0.18 },
+                EffectsValues { reverb: 0.14, delay: 0.0, distortion: 0.1, volume: 0.7 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 5_200.0,
+                    filter_resonance: 1.2,
+                    unison_voices: 2,
+                    unison_detune: 12.0,
+                    ..EngineValues::default()
+                },
+                "Fast and focused with a little heat. Good for ostinati, hooks, and rhythmic figures.",
+            ),
+        );
+
+        initial_presets.insert(
+            "dusty_tape".to_string(),
+            system_preset(
+                "Dusty Tape",
+                "Square",
+                ADSRValues { attack: 0.03, decay: 0.2, sustain: 0.54, release: 0.88 },
+                EffectsValues { reverb: 0.34, delay: 164.0, distortion: 0.07, volume: 0.57 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 7_600.0,
+                    filter_resonance: 0.9,
+                    lfo_rate: 0.19,
+                    lfo_depth: 0.05,
+                    lfo_target: 1,
+                    ..EngineValues::default()
+                },
+                "Softly degraded, slightly unstable, and better suited to atmosphere than clean fidelity.",
+            ),
         );
 
         initial_presets.insert(
             "analog_bass".to_string(),
-            Preset {
-                name: "Analog Bass".to_string(),
-                waveform: "Sawtooth".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.0,
-                    decay: 0.12,
-                    sustain: 0.7,
-                    release: 0.2,
+            system_preset(
+                "Analog Bass",
+                "Sawtooth",
+                ADSRValues { attack: 0.006, decay: 0.11, sustain: 0.62, release: 0.24 },
+                EffectsValues { reverb: 0.02, delay: 0.0, distortion: 0.13, volume: 0.72 },
+                EngineValues {
+                    use_filter: true,
+                    filter_cutoff: 2_400.0,
+                    filter_resonance: 1.5,
+                    ..EngineValues::default()
                 },
-                effects: EffectsValues {
-                    reverb: 0.0,
-                    delay: 0.0,
-                    distortion: 0.1,
-                    volume: 0.7,
-                },
-                author: "System".to_string(),
-                description: "Rounded classic subtractive bass".to_string(),
-                created_at: default_timestamp(),
-            },
-        );
-
-        initial_presets.insert(
-            "pluck".to_string(),
-            Preset {
-                name: "Pluck".to_string(),
-                waveform: "Sawtooth".to_string(),
-                adsr: ADSRValues {
-                    attack: 0.01,
-                    decay: 0.15,
-                    sustain: 0.2,
-                    release: 0.1,
-                },
-                effects: EffectsValues {
-                    reverb: 0.2,
-                    delay: 0.0,
-                    distortion: 0.0,
-                    volume: 0.7,
-                },
-                author: "System".to_string(),
-                description: "Sharp plucked sound".to_string(),
-                created_at: default_timestamp(),
-            },
+                "Round low-end with enough drive to hold the center without eating the mix.",
+            ),
         );
 
         PresetStore {
@@ -280,6 +325,7 @@ fn status() -> Json<StatusResponse> {
             "Real-time Synthesis",
             "Multi-mode Filters",
             "LFO Modulation",
+            "Curated Performance Presets",
         ],
         uptime_seconds: uptime,
     })
@@ -343,16 +389,7 @@ async fn delete_preset(
     let mut presets = store.presets.write().await;
     
     // Prevent deletion of system presets
-    if matches!(name, 
-        "default" | 
-        "pad" | 
-        "pluck" | 
-        "warm_pad" | 
-        "glass_keys" | 
-        "soft_ep" | 
-        "lofi_tape" | 
-        "analog_bass"
-    ) {
+    if SYSTEM_PRESET_KEYS.contains(&name) {
         return Json(ApiResponse {
             success: false,
             data: None,

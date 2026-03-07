@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
 import BirdsEyeRadar from './components/BirdsEyeRadar';
+import PresetManager from './components/PresetManager';
 import Sidebar from './components/Sidebar';
 import { audioEngine } from './utils/audioEngine.js';
 import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM, sanitizeAudioParams } from './utils/audioParams.js';
@@ -117,6 +118,10 @@ const App = () => {
     return { ...AUDIO_PARAM_DEFAULTS };
   });
   const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
+  const [showBirdsEyeOnKeyboard, setShowBirdsEyeOnKeyboard] = useState(
+    () => initialSession.showBirdsEyeOnKeyboard !== false
+  );
+  const [isBirdsEyeFullscreen, setIsBirdsEyeFullscreen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
   const [sampleLoading, setSampleLoading] = useState(false);
@@ -177,6 +182,11 @@ const App = () => {
     if (Math.abs(initialSession.tempoFactor - 1) < 0.001) return;
     midiPlayback.setTempo(initialSession.tempoFactor);
   }, [initialSession.tempoFactor, midiPlayback.setTempo]);
+
+  useEffect(() => {
+    if (midiPlayback.currentMidi) return;
+    setIsBirdsEyeFullscreen(false);
+  }, [midiPlayback.currentMidi]);
 
   const handleAudioFileImport = useCallback(async (file, selection = null) => {
     if (!file) return;
@@ -367,6 +377,10 @@ const App = () => {
 
       if (textInputActive) {
         if (event.key === 'Escape') {
+          if (isBirdsEyeFullscreen) {
+            setIsBirdsEyeFullscreen(false);
+            return;
+          }
           setShowShortcuts(false);
         }
         return;
@@ -378,6 +392,10 @@ const App = () => {
       }
 
       if (event.key === 'Escape') {
+        if (isBirdsEyeFullscreen) {
+          setIsBirdsEyeFullscreen(false);
+          return;
+        }
         setShowShortcuts(false);
       }
 
@@ -390,7 +408,7 @@ const App = () => {
 
     window.addEventListener('keydown', handleKeyboardShortcuts);
     return () => window.removeEventListener('keydown', handleKeyboardShortcuts);
-  }, [copySettingsToClipboard, handleRecordToggle, pasteSettingsFromClipboard]);
+  }, [copySettingsToClipboard, handleRecordToggle, isBirdsEyeFullscreen, pasteSettingsFromClipboard]);
 
   useEffect(() => {
     const onPaste = async (event) => {
@@ -490,6 +508,7 @@ const App = () => {
       activeSampleId,
       sampleSelection,
       showShortcuts,
+      showBirdsEyeOnKeyboard,
       tempoFactor: midiPlayback.tempoFactor,
       resume: resumeSnapshot
     });
@@ -499,6 +518,7 @@ const App = () => {
     midiPlayback.tempoFactor,
     resumeSnapshot,
     sampleSelection,
+    showBirdsEyeOnKeyboard,
     showShortcuts,
     sidebarOpen,
     sidebarTab,
@@ -511,6 +531,43 @@ const App = () => {
       [paramName]: value
     }));
   };
+
+  const handlePresetApply = useCallback((preset) => {
+    if (!preset || typeof preset !== 'object') return;
+
+    if (typeof preset.waveform === 'string' && preset.waveform.length > 0) {
+      setWaveformType(preset.waveform);
+    }
+
+    setAudioParams((prev) => sanitizeAudioParams({
+      ...prev,
+      ...preset.effects,
+      ...preset.engine,
+      ...preset.adsr,
+      useADSR: true
+    }));
+    pushNotice(`Preset ready: ${preset.name || 'Loaded sound'}.`);
+  }, [pushNotice]);
+
+  const handleBirdsEyeToggle = useCallback(() => {
+    if (!midiPlayback.currentMidi) return;
+    setShowBirdsEyeOnKeyboard((prev) => {
+      const next = !prev;
+      if (!next) {
+        setIsBirdsEyeFullscreen(false);
+      }
+      return next;
+    });
+  }, [midiPlayback.currentMidi]);
+
+  const handleBirdsEyeFullscreenToggle = useCallback(() => {
+    if (!midiPlayback.currentMidi) return;
+    setShowBirdsEyeOnKeyboard(true);
+    setIsBirdsEyeFullscreen((prev) => !prev);
+  }, [midiPlayback.currentMidi]);
+
+  const birdsEyeAvailable = !!midiPlayback.currentMidi;
+  const showBirdsEyeInline = birdsEyeAvailable && showBirdsEyeOnKeyboard;
 
   return (
     <ErrorBoundary>
@@ -583,14 +640,51 @@ const App = () => {
 
         <main className="zone-center content-primary" aria-label="Keyboard area">
           <WaveCandy />
-          <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
+          <div
+            className={`keyboard-surface tier-focus ${showBirdsEyeInline ? 'keyboard-surface--with-visualizer' : ''}`}
+            role="region"
+            aria-label="Virtual keyboard"
+          >
             <div className="keyboard-header">
               <span className="keyboard-legend">
                 {sampleInfo ? `Sample: ${sampleInfo.name}` : `Waveform: ${waveformType}`}
                 {isRecording && <span className="recording-indicator"> [REC]</span>}
               </span>
+              <div className="keyboard-header__actions">
+                <button
+                  type="button"
+                  className={`keyboard-chip-button ${showBirdsEyeInline ? 'keyboard-chip-button--active' : ''}`}
+                  onClick={handleBirdsEyeToggle}
+                  disabled={!birdsEyeAvailable}
+                  aria-pressed={showBirdsEyeInline}
+                  aria-label={showBirdsEyeInline ? "Hide bird's-eye player" : "Show bird's-eye player above keyboard"}
+                >
+                  {showBirdsEyeInline ? 'Hide radar' : 'Show radar'}
+                </button>
+                <button
+                  type="button"
+                  className={`keyboard-chip-button ${isBirdsEyeFullscreen ? 'keyboard-chip-button--active' : ''}`}
+                  onClick={handleBirdsEyeFullscreenToggle}
+                  disabled={!birdsEyeAvailable}
+                  aria-pressed={isBirdsEyeFullscreen}
+                  aria-label={isBirdsEyeFullscreen ? "Exit full screen bird's-eye player" : "Expand bird's-eye player to full screen"}
+                >
+                  {isBirdsEyeFullscreen ? 'Exit full screen' : 'Full screen'}
+                </button>
+              </div>
             </div>
             <div className="keyboard-region">
+              {showBirdsEyeInline && (
+                <BirdsEyeRadar
+                  currentMidi={midiPlayback.currentMidi}
+                  progress={midiPlayback.progress}
+                  activeNotes={midiPlayback.activeNotes}
+                  isPlaying={midiPlayback.isPlaying}
+                  activeSoundSetName={midiPlayback.activeSoundSetName}
+                  layeringMode={midiPlayback.layeringMode}
+                  mode="inline"
+                />
+              )}
               <SynthKeyboard
                 waveformType={waveformType}
                 audioParams={audioParams}
@@ -612,10 +706,15 @@ const App = () => {
 
         <section className="zone-bottom content-secondary" aria-label="Control surface">
           <div className="controls-surface tier-support">
-            <div className="controls-panel" aria-label="Waveform selection">
+            <div className="controls-panel controls-panel--stack" aria-label="Waveform selection and presets">
               <UIOverlay
                 currentWaveform={waveformType}
                 onWaveformChange={setWaveformType}
+              />
+              <PresetManager
+                audioParams={audioParams}
+                waveformType={waveformType}
+                onPresetApply={handlePresetApply}
               />
             </div>
             <div className="controls-panel wide" aria-label="Audio controls">
@@ -624,16 +723,6 @@ const App = () => {
                 onParamChange={handleAudioParamChange}
               />
             </div>
-            {midiPlayback.isPlaying && (
-              <div className="controls-panel full" aria-label="Bird's-eye radar">
-                <BirdsEyeRadar
-                  currentMidi={midiPlayback.currentMidi}
-                  progress={midiPlayback.progress}
-                  activeNotes={midiPlayback.activeNotes}
-                  isPlaying={midiPlayback.isPlaying}
-                />
-              </div>
-            )}
           </div>
         </section>
 
@@ -653,11 +742,11 @@ const App = () => {
               </div>
               <dl className="shortcuts-grid">
                 <div>
-                  <dt>A – ;</dt>
+                  <dt>A - ;</dt>
                   <dd>Play white keys in octave.</dd>
                 </div>
                 <div>
-                  <dt>W – P</dt>
+                  <dt>W - P</dt>
                   <dd>Play black keys in octave.</dd>
                 </div>
                 <div>
@@ -684,6 +773,22 @@ const App = () => {
         {notice && (
           <div className="app-notice" role="status" aria-live="polite">
             {notice}
+          </div>
+        )}
+
+        {isBirdsEyeFullscreen && birdsEyeAvailable && (
+          <div className="birds-eye-overlay" role="dialog" aria-modal="true" aria-label="Full screen bird's-eye player">
+            <BirdsEyeRadar
+              currentMidi={midiPlayback.currentMidi}
+              progress={midiPlayback.progress}
+              activeNotes={midiPlayback.activeNotes}
+              isPlaying={midiPlayback.isPlaying}
+              activeSoundSetName={midiPlayback.activeSoundSetName}
+              layeringMode={midiPlayback.layeringMode}
+              mode="fullscreen"
+              onClose={() => setIsBirdsEyeFullscreen(false)}
+              onToggleFullscreen={handleBirdsEyeFullscreenToggle}
+            />
           </div>
         )}
 

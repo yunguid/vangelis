@@ -127,12 +127,12 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
       layerFamilies: ['piano', 'strings']
     },
     'rachmaninoff-op23-04-prelude': {
-      soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['piano', 'strings', 'brass']
+      soundSetId: 'rachmaninoff-orchestral-lite',
+      layerFamilies: ['piano', 'strings']
     },
     'rachmaninoff-op23-05-prelude': {
       soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['piano', 'strings', 'brass']
+      layerFamilies: ['piano', 'strings']
     },
     'mussorgsky-night-on-bald-mountain': {
       soundSetId: 'orchestral-extended-starter',
@@ -234,8 +234,8 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
       name: 'Vocalise Op. 34',
       path: toBuiltInPath('rachmaninoff-vocalise.mid'),
       composer: 'Sergei Rachmaninoff',
-      soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['piano', 'strings', 'brass']
+      soundSetId: 'orchestral-extended-starter',
+      layerFamilies: ['strings', 'reed', 'piano']
     }
   ];
 }

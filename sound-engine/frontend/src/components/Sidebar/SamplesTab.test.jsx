@@ -19,8 +19,8 @@ describe('SamplesTab starter pack integration', () => {
     render(<SamplesTab onSampleSelect={vi.fn()} activeSampleId={null} />);
 
     expect(screen.queryByText('Starter Pack')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Harp High/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /French Horn Low/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Concert Grand Air/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /French Horn Round/i })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText(/No samples yet/i)).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('SamplesTab starter pack integration', () => {
       expect(screen.getByText(/No samples yet/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /French Horn Mid/i }));
+    fireEvent.click(screen.getByRole('button', { name: /French Horn Burnished/i }));
 
     expect(onSampleSelect).toHaveBeenCalledTimes(1);
     expect(onSampleSelect).toHaveBeenCalledWith(expect.objectContaining({
@@ -53,8 +53,8 @@ describe('SamplesTab starter pack integration', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /^reed$/i }));
-    expect(screen.getByRole('button', { name: /Bassoon Low/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /French Horn Low/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bassoon Grain/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /French Horn Round/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Filter starter samples')).not.toBeInTheDocument();
   });
 });

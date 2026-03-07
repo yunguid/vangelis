@@ -3,29 +3,29 @@ import { clamp } from './math.js';
 export const MICRO_FADE_TIME = 0.005;
 
 export const AUDIO_PARAM_DEFAULTS = {
-  reverb: 0.3,
-  delay: 0,
+  reverb: 0.24,
+  delay: 72,
   distortion: 0,
-  volume: 0.7,
+  volume: 0.68,
   useADSR: true,
-  attack: 0.01,
-  decay: 0.1,
-  sustain: 0.8,
-  release: 0.3,
+  attack: 0.012,
+  decay: 0.18,
+  sustain: 0.76,
+  release: 0.42,
   useFM: false,
   fmRatio: 2,
   fmIndex: 2,
   pan: 0.5,
   phaseOffset: 0,
-  useFilter: false,
-  filterCutoff: 18000,
-  filterResonance: 0.7,
+  useFilter: true,
+  filterCutoff: 13200,
+  filterResonance: 0.82,
   filterMode: 0,
   lfoRate: 0,
   lfoDepth: 0,
   lfoTarget: 0,
-  unisonVoices: 1,
-  unisonDetune: 0
+  unisonVoices: 2,
+  unisonDetune: 7
 };
 
 export const AUDIO_PARAM_RANGES = {

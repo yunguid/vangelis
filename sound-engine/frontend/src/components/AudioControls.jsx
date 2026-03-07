@@ -41,6 +41,29 @@ const makePercentSlider = (param, { id, label, display, helpText }) => {
   };
 };
 
+const makeLogSlider = (param, { id, label, display, helpText }) => {
+  const range = AUDIO_PARAM_RANGES[param];
+  const logMin = Math.log(range.min);
+  const logMax = Math.log(range.max);
+  const logSpan = logMax - logMin;
+
+  return {
+    id,
+    label,
+    param,
+    min: 0,
+    max: 1000,
+    step: 1,
+    toSlider: (value) => {
+      const safeValue = Math.min(Math.max(value, range.min), range.max);
+      return ((Math.log(safeValue) - logMin) / logSpan) * 1000;
+    },
+    fromSlider: (value) => Math.exp(logMin + (value / 1000) * logSpan),
+    display: display || ((value) => `${Math.round(value)} Hz`),
+    helpText
+  };
+};
+
 const ESSENTIAL_SLIDERS = [
   makePercentSlider('volume', {
     id: 'volume',
@@ -110,6 +133,32 @@ const PHASE_SLIDER = makeSlider('phaseOffset', {
   label: 'Phase offset',
   display: (value) => `${Math.round(value)}°`
 });
+
+const FILTER_SLIDERS = [
+  makeLogSlider('filterCutoff', {
+    id: 'filter-cutoff',
+    label: 'Filter cutoff',
+    display: (value) => `${Math.round(value)} Hz`
+  }),
+  makeSlider('filterResonance', {
+    id: 'filter-resonance',
+    label: 'Filter resonance',
+    display: (value) => value.toFixed(1)
+  })
+];
+
+const UNISON_SLIDERS = [
+  makeSlider('unisonVoices', {
+    id: 'unison-voices',
+    label: 'Unison voices',
+    display: (value) => `${Math.round(value)}`
+  }),
+  makeSlider('unisonDetune', {
+    id: 'unison-detune',
+    label: 'Unison detune',
+    display: (value) => `${Math.round(value)} cents`
+  })
+];
 
 const SliderControl = ({
   id,
@@ -187,6 +236,7 @@ const AudioControls = ({ audioParams, onParamChange }) => {
 
   const useADSR = getToggle('useADSR');
   const useFM = getToggle('useFM');
+  const useFilter = getToggle('useFilter');
 
   return (
     <div className="panel elevated control-groups">
@@ -243,6 +293,25 @@ const AudioControls = ({ audioParams, onParamChange }) => {
           )}
 
           {renderSlider(PHASE_SLIDER)}
+
+          <label className="toggle-row" htmlFor="use-filter">
+            <span>Tone filter</span>
+            <input
+              id="use-filter"
+              type="checkbox"
+              checked={useFilter}
+              onChange={(e) => onParamChange('useFilter', e.target.checked)}
+            />
+          </label>
+          {useFilter && (
+            <div className="slider-grid">
+              {FILTER_SLIDERS.map(renderSlider)}
+            </div>
+          )}
+
+          <div className="slider-grid">
+            {UNISON_SLIDERS.map(renderSlider)}
+          </div>
         </div>
       )}
     </div>

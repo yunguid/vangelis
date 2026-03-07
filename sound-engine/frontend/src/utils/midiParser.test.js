@@ -30,7 +30,7 @@ describe('getBuiltInMidiFiles', () => {
     expect(rachConcerto.every((file) => file.layerFamilies.includes('strings'))).toBe(true);
   });
 
-  it('assigns cinematic starter layering metadata to cello and vocalise pieces', () => {
+  it('assigns layered playback metadata to cello and vocalise pieces', () => {
     const files = getBuiltInMidiFiles('/');
     const cello = files.find((file) => file.id === 'bach-cello-prelude');
     const vocalise = files.find((file) => file.id === 'rachmaninoff-vocalise');
@@ -38,8 +38,8 @@ describe('getBuiltInMidiFiles', () => {
     expect(cello?.soundSetId).toBe('cinematic-starter-pack');
     expect(cello?.layerFamilies).toEqual(['strings']);
 
-    expect(vocalise?.soundSetId).toBe('cinematic-starter-pack');
-    expect(vocalise?.layerFamilies).toEqual(['piano', 'strings', 'brass']);
+    expect(vocalise?.soundSetId).toBe('orchestral-extended-starter');
+    expect(vocalise?.layerFamilies).toEqual(['strings', 'reed', 'piano']);
   });
 
   it('assigns orchestral extended layering metadata to selected Russian library pieces', () => {
