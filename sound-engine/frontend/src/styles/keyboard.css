@@ -7,11 +7,10 @@
   position: relative;
   width: min(1400px, 96vw);
   min-height: clamp(280px, 40vh, 420px);
-  max-height: clamp(360px, 55vh, 520px);
   padding: var(--space-lg);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-md);
   border-radius: var(--radius-large);
   background:
@@ -23,27 +22,15 @@
   overflow: hidden;
 }
 
-.keyboard-surface--with-visualizer {
-  min-height: clamp(440px, 62vh, 720px);
-}
-
 .keyboard-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   color: var(--color-text-secondary);
   font-size: clamp(0.8rem, 1vw, 0.95rem);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   gap: var(--space-sm);
-}
-
-.keyboard-header__actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .keyboard-region {
@@ -77,41 +64,6 @@
   min-height: 0;
   touch-action: none;
   user-select: none;
-}
-
-.keyboard-chip-button {
-  min-height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--color-text-secondary);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, transform 120ms ease;
-}
-
-.keyboard-chip-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: rgba(255, 136, 86, 0.14);
-  border-color: rgba(255, 160, 116, 0.32);
-  color: var(--color-text-primary);
-}
-
-.keyboard-chip-button--active {
-  background: linear-gradient(180deg, rgba(255, 150, 94, 0.22) 0%, rgba(255, 113, 58, 0.12) 100%);
-  border-color: rgba(255, 166, 122, 0.42);
-  color: rgba(255, 226, 205, 0.96);
-}
-
-.keyboard-region > .birds-eye-radar--inline {
-  min-height: 0;
-}
-
-.keyboard-region > .birds-eye-radar--inline .birds-eye-radar__stage {
-  min-height: clamp(220px, 33vh, 360px);
 }
 
 /* White Keys Container */

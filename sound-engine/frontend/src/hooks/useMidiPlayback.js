@@ -678,7 +678,6 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const stop = useCallback(() => {
     playRequestSeqRef.current += 1;
     stopInternal();
-    setCurrentMidi(null);
   }, [stopInternal]);
 
   return {

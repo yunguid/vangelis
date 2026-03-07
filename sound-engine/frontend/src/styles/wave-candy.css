@@ -111,114 +111,10 @@
 .birds-eye-radar {
   width: 100%;
   padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   background:
     radial-gradient(120% 120% at 50% 0%, rgba(91, 171, 232, 0.1) 0%, rgba(91, 171, 232, 0) 42%),
     radial-gradient(90% 110% at 50% 108%, rgba(255, 126, 62, 0.14) 0%, rgba(255, 126, 62, 0) 50%),
     linear-gradient(180deg, rgba(7, 13, 22, 0.96) 0%, rgba(4, 9, 16, 0.98) 100%);
-}
-
-.birds-eye-radar--fullscreen {
-  min-height: min(92vh, 980px);
-  padding: clamp(14px, 2vw, 20px);
-}
-
-.birds-eye-radar__chrome,
-.birds-eye-radar__hud {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.birds-eye-radar__copy {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.birds-eye-radar__eyebrow {
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(204, 220, 236, 0.58);
-}
-
-.birds-eye-radar__title {
-  margin: 0;
-  font-size: clamp(0.92rem, 1.25vw, 1.12rem);
-  letter-spacing: 0.08em;
-}
-
-.birds-eye-radar__subtitle {
-  margin: 0;
-  color: rgba(218, 230, 242, 0.72);
-  font-size: 0.76rem;
-  line-height: 1.45;
-}
-
-.birds-eye-radar__actions {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.birds-eye-radar__action {
-  min-height: 38px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--color-text-secondary);
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-
-.birds-eye-radar__action:hover {
-  background: rgba(255, 133, 84, 0.14);
-  border-color: rgba(255, 162, 121, 0.36);
-  color: var(--color-text-primary);
-}
-
-.birds-eye-radar__action--quiet {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.birds-eye-radar__hud {
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.birds-eye-radar__stat {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(234, 242, 249, 0.74);
-  font-size: 0.6rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.birds-eye-radar__stat--accent {
-  border-color: rgba(255, 160, 116, 0.3);
-  color: rgba(255, 220, 198, 0.94);
-}
-
-.birds-eye-radar__stat--mode {
-  color: rgba(175, 214, 255, 0.84);
-  border-color: rgba(137, 186, 240, 0.22);
 }
 
 .birds-eye-radar__stage {
@@ -235,10 +131,6 @@
     inset 0 0 0 1px rgba(255, 255, 255, 0.05),
     inset 0 -60px 100px rgba(255, 114, 46, 0.08),
     0 26px 48px rgba(3, 8, 14, 0.34);
-}
-
-.birds-eye-radar--fullscreen .birds-eye-radar__stage {
-  min-height: min(74vh, 760px);
 }
 
 .birds-eye-radar__canvas {

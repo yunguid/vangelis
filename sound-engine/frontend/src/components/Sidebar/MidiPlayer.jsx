@@ -10,7 +10,6 @@ const MidiPlayer = ({
   currentMidi,
   tempoFactor = 1.0,
   activeSoundSetName = null,
-  layeringMode = 'waveform',
   onPlay,
   onPause,
   onResume,
@@ -104,9 +103,6 @@ const MidiPlayer = ({
             {activeSoundSetName && (
               <span className="midi-player__badge">{activeSoundSetName}</span>
             )}
-            <span className="midi-player__badge midi-player__badge--mode">
-              {layeringMode}
-            </span>
           </div>
         </div>
       )}

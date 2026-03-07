@@ -22,13 +22,21 @@ const createParticles = (count) => Array.from({ length: count }, () => ({
   size: 0.8 + Math.random() * 1.5
 }));
 
+const interpolateChannel = (start, end, mix) => Math.round(start + (end - start) * mix);
+
 const colorForMidi = (midi, isActive) => {
-  const hue = 20 + ((midi - DEFAULT_MIN_MIDI) / (DEFAULT_MAX_MIDI - DEFAULT_MIN_MIDI)) * 190;
+  const mix = clamp((midi - DEFAULT_MIN_MIDI) / (DEFAULT_MAX_MIDI - DEFAULT_MIN_MIDI), 0, 1);
+  const blue = [108, 168, 232];
+  const orange = [255, 164, 112];
+  const r = interpolateChannel(blue[0], orange[0], mix);
+  const g = interpolateChannel(blue[1], orange[1], mix * 0.8);
+  const b = interpolateChannel(blue[2], orange[2], mix);
+
   return {
-    glow: `hsla(${hue}, 96%, ${isActive ? 74 : 62}%, ${isActive ? 0.92 : 0.46})`,
-    trail: `hsla(${hue}, 88%, ${isActive ? 74 : 66}%, ${isActive ? 0.22 : 0.14})`,
-    core: `hsla(${hue}, 96%, ${isActive ? 88 : 74}%, ${isActive ? 0.98 : 0.86})`,
-    edge: `hsla(${hue}, 100%, ${isActive ? 96 : 84}%, ${isActive ? 0.98 : 0.62})`
+    glow: `rgba(${r}, ${g}, ${b}, ${isActive ? 0.28 : 0.12})`,
+    trail: `rgba(${r}, ${g}, ${b}, ${isActive ? 0.12 : 0.08})`,
+    core: `rgba(${Math.min(255, r + 18)}, ${Math.min(255, g + 16)}, ${Math.min(255, b + 14)}, ${isActive ? 0.9 : 0.72})`,
+    edge: `rgba(245, 248, 252, ${isActive ? 0.86 : 0.46})`
   };
 };
 
@@ -36,12 +44,7 @@ const BirdsEyeRadar = ({
   currentMidi,
   progress,
   activeNotes = EMPTY_ACTIVE_NOTES,
-  isPlaying = false,
-  activeSoundSetName = null,
-  layeringMode = 'waveform',
-  mode = 'inline',
-  onClose,
-  onToggleFullscreen
+  isPlaying = false
 }) => {
   const canvasRef = useRef(null);
   const noteIdCacheRef = useRef(new Map());
@@ -55,8 +58,7 @@ const BirdsEyeRadar = ({
     progress,
     activeNotes,
     isPlaying,
-    noteRenderWindow,
-    mode
+    noteRenderWindow
   });
 
   propsRef.current = {
@@ -64,8 +66,7 @@ const BirdsEyeRadar = ({
     progress,
     activeNotes,
     isPlaying,
-    noteRenderWindow,
-    mode
+    noteRenderWindow
   };
 
   const midiRange = useMemo(() => {
@@ -218,8 +219,7 @@ const BirdsEyeRadar = ({
       trackTop,
       trackBottom,
       centerX,
-      playfieldWidth,
-      isFullscreen
+      playfieldWidth
     }) => {
       if (!midi?.duration || !renderWindow.notes.length) return;
 
@@ -260,7 +260,7 @@ const BirdsEyeRadar = ({
         const bodyLen = clamp(
           12 + note.duration * 74 * (0.34 + nearRatio * 0.7),
           12,
-          trackHeight * (isFullscreen ? 0.72 : 0.58)
+          trackHeight * 0.58
         );
         const tailLen = clamp(bodyLen * (0.24 + nearRatio * 0.88), 12, trackHeight * 0.56);
         const bodyTop = yHead - bodyLen;
@@ -278,7 +278,7 @@ const BirdsEyeRadar = ({
         ctx.fillRect(x - noteWidth * 0.72, tailTop, noteWidth * 1.44, yHead - tailTop + 2);
 
         ctx.shadowColor = palette.glow;
-        ctx.shadowBlur = isActive ? 14 : 5;
+        ctx.shadowBlur = isActive ? 7 : 2;
 
         const body = ctx.createLinearGradient(x, bodyTop, x, yHead);
         body.addColorStop(0, palette.trail);
@@ -297,12 +297,11 @@ const BirdsEyeRadar = ({
           ctx.arc(x, trackBottom - 1.4, 2.5, 0, Math.PI * 2);
           ctx.fill();
 
-          const minSpacing = isFullscreen ? 40 : 28;
-          const canPlaceLabel = activeLabels.every((placedX) => Math.abs(placedX - x) > minSpacing);
+          const canPlaceLabel = activeLabels.every((placedX) => Math.abs(placedX - x) > 28);
           if (canPlaceLabel) {
             activeLabels.push(x);
             const labelY = trackBottom - 10;
-            ctx.font = `${isFullscreen ? '700 11px' : '600 10px'} "IBM Plex Mono", monospace`;
+            ctx.font = '600 10px "IBM Plex Mono", monospace';
             const labelW = ctx.measureText(noteId).width;
             const chipX = x - labelW * 0.5 - 6;
             const chipY = labelY - 12;
@@ -329,8 +328,7 @@ const BirdsEyeRadar = ({
         progress: playbackProgress,
         activeNotes: activeNoteSet,
         isPlaying: nowPlaying,
-        noteRenderWindow: renderWindow,
-        mode: currentMode
+        noteRenderWindow: renderWindow
       } = propsRef.current;
       if (document.visibilityState !== 'visible') {
         rafId = requestAnimationFrame(loop);
@@ -348,7 +346,6 @@ const BirdsEyeRadar = ({
 
       const { width, height } = syncCanvasSize();
       const nowSeconds = time * 0.001;
-      const isFullscreen = currentMode === 'fullscreen';
 
       ctx.clearRect(0, 0, width, height);
       drawBackdrop({ width, height, nowSeconds, playbackProgress });
@@ -369,8 +366,7 @@ const BirdsEyeRadar = ({
         trackTop,
         trackBottom,
         centerX,
-        playfieldWidth,
-        isFullscreen
+        playfieldWidth
       });
 
       rafId = requestAnimationFrame(loop);
@@ -380,58 +376,8 @@ const BirdsEyeRadar = ({
     return () => cancelAnimationFrame(rafId);
   }, [midiRange.max, midiRange.min]);
 
-  const progressPercent = Math.round(clamp(progress, 0, 1) * 100);
-  const activeCount = activeNotes?.size || 0;
-  const isFullscreen = mode === 'fullscreen';
-
   return (
-    <section
-      className={`birds-eye-radar panel elevated birds-eye-radar--${mode}`}
-      aria-label="Bird's-eye MIDI radar"
-    >
-      <div className="birds-eye-radar__chrome">
-        <div className="birds-eye-radar__copy">
-          <span className="birds-eye-radar__eyebrow">Incoming MIDI panorama</span>
-          <h2 className="birds-eye-radar__title">
-            {currentMidi ? currentMidi.name : 'Bird\'s-eye player'}
-          </h2>
-          <p className="birds-eye-radar__subtitle">
-            {currentMidi
-              ? (isPlaying ? 'Tracking note traffic in real time.' : 'Ready to run the score again.')
-              : 'Load a MIDI file to reveal the incoming note field.'}
-          </p>
-        </div>
-        <div className="birds-eye-radar__actions">
-          {onToggleFullscreen && (
-            <button
-              type="button"
-              className="birds-eye-radar__action"
-              onClick={onToggleFullscreen}
-            >
-              {isFullscreen ? 'Exit full screen' : 'Full screen'}
-            </button>
-          )}
-          {onClose && (
-            <button
-              type="button"
-              className="birds-eye-radar__action birds-eye-radar__action--quiet"
-              onClick={onClose}
-            >
-              Close
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="birds-eye-radar__hud">
-        <span className="birds-eye-radar__stat">Progress {progressPercent}%</span>
-        <span className="birds-eye-radar__stat">Active notes {activeCount}</span>
-        {activeSoundSetName && (
-          <span className="birds-eye-radar__stat birds-eye-radar__stat--accent">{activeSoundSetName}</span>
-        )}
-        <span className="birds-eye-radar__stat birds-eye-radar__stat--mode">{layeringMode}</span>
-      </div>
-
+    <section className="birds-eye-radar panel elevated" aria-label="Bird's-eye MIDI radar">
       <div className="birds-eye-radar__stage">
         <canvas ref={canvasRef} className="birds-eye-radar__canvas" />
         {!currentMidi && (
