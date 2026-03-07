@@ -275,7 +275,7 @@ describe('useMidiPlayback layering', () => {
     expect(audioEngine.playFrequency).not.toHaveBeenCalled();
     expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
     expect(result.current.isPlaying).toBe(false);
-    expect(result.current.currentMidi).toBeNull();
+    expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(64);
   });
 
   it('logs and preserves paused state when resume cannot initialize audio context', async () => {
@@ -366,7 +366,7 @@ describe('useMidiPlayback layering', () => {
 
     expect(result.current.isPlaying).toBe(false);
     expect(result.current.isPaused).toBe(false);
-    expect(result.current.currentMidi).toBeNull();
+    expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(60);
     expect(audioEngine.playFrequency.mock.calls.length).toBe(playCallsBeforeResume);
   });
 
