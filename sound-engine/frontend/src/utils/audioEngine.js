@@ -109,8 +109,11 @@ const DELAY_WORKLET_DEFAULTS = {
   drive: 0.02,
   modRate: 0.14,
   modDepth: 0.0001,
+  flutterRate: 4,
+  flutterDepth: 0.00002,
   width: 0.7,
-  ducking: 0.12
+  ducking: 0.12,
+  duckRelease: 0.18
 };
 
 class DelayWorklet {
@@ -206,9 +209,15 @@ const DELAY_MODE_CONFIG = {
     localFeedback: 1,
     crossFeedback: 0,
     spread: 0.14,
-    modulationRate: 0.11,
-    modulationDepth: 0.00012,
-    drive: 0.02
+    modulationRate: 0.12,
+    modulationDepth: 0.00008,
+    drive: 0.015,
+    ageDrive: 0.05,
+    ageHighCutDrop: 0.18,
+    ageLowCutLift: 60,
+    flutterAmount: 0.18,
+    flutterRate: 3.8,
+    duckRelease: 0.14
   },
   tape: {
     inputLeft: 1,
@@ -216,9 +225,15 @@ const DELAY_MODE_CONFIG = {
     localFeedback: 0.84,
     crossFeedback: 0.12,
     spread: 0.18,
-    modulationRate: 0.22,
-    modulationDepth: 0.00072,
-    drive: 0.12
+    modulationRate: 0.18,
+    modulationDepth: 0.00034,
+    drive: 0.08,
+    ageDrive: 0.18,
+    ageHighCutDrop: 0.52,
+    ageLowCutLift: 180,
+    flutterAmount: 0.92,
+    flutterRate: 5.6,
+    duckRelease: 0.24
   },
   'ping-pong': {
     inputLeft: 1,
@@ -226,9 +241,15 @@ const DELAY_MODE_CONFIG = {
     localFeedback: 0.12,
     crossFeedback: 0.84,
     spread: 0.24,
-    modulationRate: 0.17,
-    modulationDepth: 0.00038,
-    drive: 0.06
+    modulationRate: 0.15,
+    modulationDepth: 0.00018,
+    drive: 0.04,
+    ageDrive: 0.09,
+    ageHighCutDrop: 0.28,
+    ageLowCutLift: 100,
+    flutterAmount: 0.42,
+    flutterRate: 4.5,
+    duckRelease: 0.18
   }
 };
 
@@ -593,6 +614,8 @@ class AudioEngine {
       : AUDIO_PARAM_DEFAULTS.delayMode;
     const delayConfig = DELAY_MODE_CONFIG[delayMode];
     const delayActive = sanitized.delayEnabled && sanitized.delayMix > 0.001;
+    const delayAge = sanitized.delayAge;
+    const delayMotion = sanitized.delayMotion;
     const delaySeconds = getDelaySeconds(sanitized, this.transportTempoBpm);
     const stereoSpread = 0.015 + sanitized.delayStereo * delayConfig.spread;
     const leftDelayTime = clamp(delaySeconds * (1 - stereoSpread), 0.02, 4);
@@ -610,17 +633,42 @@ class AudioEngine {
     nodes.delayWet.gain.cancelScheduledValues(now);
     nodes.delayWet.gain.setTargetAtTime(delayWetLevel, now, 0.05);
 
-    const lowCut = sanitized.delayLowCut;
-    const highCut = Math.max(sanitized.delayHighCut, lowCut + 400);
+    const lowCut = clamp(
+      sanitized.delayLowCut + delayAge * delayConfig.ageLowCutLift,
+      20,
+      2600
+    );
+    const highCut = clamp(
+      Math.max(
+        sanitized.delayHighCut * (1 - delayAge * delayConfig.ageHighCutDrop),
+        lowCut + 400
+      ),
+      800,
+      14000
+    );
 
     const modulationDepth = delayActive
-      ? delayConfig.modulationDepth * (0.6 + sanitized.delayStereo * 0.6 + sanitized.delayFeedback * 0.7)
+      ? delayConfig.modulationDepth
+        * (0.35 + delayMotion * 1.9 + sanitized.delayStereo * 0.35 + sanitized.delayFeedback * 0.45)
       : 0;
-    const modulationRate = delayConfig.modulationRate + sanitized.delayStereo * 0.08;
+    const modulationRate = delayConfig.modulationRate * (0.8 + delayMotion * 1.65);
+    const flutterDepth = delayActive
+      ? clamp(
+        modulationDepth * delayConfig.flutterAmount * (0.18 + delayMotion * 0.9),
+        0,
+        0.0034
+      )
+      : 0;
+    const flutterRate = delayConfig.flutterRate * (0.75 + delayMotion * 1.3);
 
     const delayDrive = delayActive
-      ? clamp(delayConfig.drive + sanitized.delayFeedback * 0.12, 0, 0.35)
+      ? clamp(delayConfig.drive + sanitized.delayFeedback * 0.1 + delayAge * delayConfig.ageDrive, 0, 0.38)
       : 0;
+    const duckRelease = clamp(
+      delayConfig.duckRelease + (1 - delayMotion) * 0.06 + delayAge * 0.05,
+      0.08,
+      0.48
+    );
     this.delayWorklet.setParams({
       enabled: delayActive,
       inputLeft: delayActive ? delayConfig.inputLeft : 0,
@@ -634,8 +682,11 @@ class AudioEngine {
       drive: delayDrive,
       modRate: modulationRate,
       modDepth: modulationDepth,
+      flutterRate,
+      flutterDepth,
       width: sanitized.delayStereo,
-      ducking: sanitized.delayDucking
+      ducking: sanitized.delayDucking,
+      duckRelease
     });
 
     const reverbWet = Math.pow(sanitized.reverb, 1.2) * 0.9;

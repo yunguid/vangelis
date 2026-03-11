@@ -47,7 +47,9 @@ const DELAY_PRESET_PATCHES = {
     delayStereo: 0.22,
     delayLowCut: 180,
     delayHighCut: 7600,
-    delayDucking: 0.16
+    delayDucking: 0.16,
+    delayAge: 0.08,
+    delayMotion: 0.14
   },
   'wide-quarter': {
     delayEnabled: true,
@@ -60,7 +62,9 @@ const DELAY_PRESET_PATCHES = {
     delayStereo: 0.72,
     delayLowCut: 140,
     delayHighCut: 6200,
-    delayDucking: 0.24
+    delayDucking: 0.24,
+    delayAge: 0.18,
+    delayMotion: 0.42
   },
   'tape-echo': {
     delayEnabled: true,
@@ -73,7 +77,9 @@ const DELAY_PRESET_PATCHES = {
     delayStereo: 0.58,
     delayLowCut: 180,
     delayHighCut: 4200,
-    delayDucking: 0.18
+    delayDucking: 0.18,
+    delayAge: 0.72,
+    delayMotion: 0.66
   },
   'ping-pong': {
     delayEnabled: true,
@@ -86,7 +92,9 @@ const DELAY_PRESET_PATCHES = {
     delayStereo: 1,
     delayLowCut: 220,
     delayHighCut: 6400,
-    delayDucking: 0.22
+    delayDucking: 0.22,
+    delayAge: 0.2,
+    delayMotion: 0.56
   }
 };
 
@@ -110,6 +118,8 @@ export const AUDIO_PARAM_DEFAULTS = {
   delayLowCut: 90,
   delayHighCut: 5400,
   delayDucking: 0.12,
+  delayAge: 0.22,
+  delayMotion: 0.3,
   distortion: 0,
   volume: 0.68,
   useADSR: true,
@@ -142,6 +152,8 @@ export const AUDIO_PARAM_RANGES = {
   delayLowCut: { min: 20, max: 2000, step: 1 },
   delayHighCut: { min: 800, max: 14000, step: 1 },
   delayDucking: { min: 0, max: 1, step: 0.01 },
+  delayAge: { min: 0, max: 1, step: 0.01 },
+  delayMotion: { min: 0, max: 1, step: 0.01 },
   reverb: { min: 0, max: 1, step: 0.01 },
   distortion: { min: 0, max: 1, step: 0.01 },
   pan: { min: 0, max: 1, step: 0.01 },
@@ -272,6 +284,16 @@ export const sanitizeAudioParams = (params = {}) => {
       merged.delayDucking ?? AUDIO_PARAM_DEFAULTS.delayDucking,
       ranges.delayDucking.min,
       ranges.delayDucking.max
+    ),
+    delayAge: clamp(
+      merged.delayAge ?? AUDIO_PARAM_DEFAULTS.delayAge,
+      ranges.delayAge.min,
+      ranges.delayAge.max
+    ),
+    delayMotion: clamp(
+      merged.delayMotion ?? AUDIO_PARAM_DEFAULTS.delayMotion,
+      ranges.delayMotion.min,
+      ranges.delayMotion.max
     ),
     reverb: clamp(merged.reverb, ranges.reverb.min, ranges.reverb.max),
     distortion: clamp(merged.distortion, ranges.distortion.min, ranges.distortion.max),

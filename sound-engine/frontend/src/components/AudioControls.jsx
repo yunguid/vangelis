@@ -132,6 +132,28 @@ const DELAY_DUCKING_SLIDER = makePercentSlider('delayDucking', {
   label: 'Ducking'
 });
 
+const DELAY_AGE_SLIDER = makePercentSlider('delayAge', {
+  id: 'delay-age',
+  label: 'Age',
+  display: (value) => {
+    if (value < 0.2) return 'Clean';
+    if (value < 0.55) return 'Warm';
+    if (value < 0.82) return 'Worn';
+    return 'Dusty';
+  }
+});
+
+const DELAY_MOTION_SLIDER = makePercentSlider('delayMotion', {
+  id: 'delay-motion',
+  label: 'Motion',
+  display: (value) => {
+    if (value < 0.2) return 'Still';
+    if (value < 0.55) return 'Moving';
+    if (value < 0.82) return 'Shimmer';
+    return 'Swirl';
+  }
+});
+
 const EFFECT_SLIDERS = [
   makePercentSlider('reverb', {
     id: 'reverb',
@@ -453,6 +475,8 @@ const AudioControls = ({
 
         {showDelayAdvanced && (
           <div className="slider-grid">
+            {renderSlider(DELAY_AGE_SLIDER)}
+            {renderSlider(DELAY_MOTION_SLIDER)}
             {renderSlider(DELAY_WIDTH_SLIDER)}
             {renderSlider(DELAY_DUCKING_SLIDER)}
             {renderSlider(DELAY_LOWCUT_SLIDER)}

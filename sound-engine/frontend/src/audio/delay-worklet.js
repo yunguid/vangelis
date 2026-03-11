@@ -13,8 +13,11 @@ const DEFAULT_DELAY_PARAMS = {
   drive: 0.02,
   modRate: 0.14,
   modDepth: 0.0001,
+  flutterRate: 4.0,
+  flutterDepth: 0.00002,
   width: 0.7,
-  ducking: 0.12
+  ducking: 0.12,
+  duckRelease: 0.18
 };
 
 function clamp(value, min, max) {
@@ -69,9 +72,9 @@ class DelayProcessor extends AudioWorkletProcessor {
     this.rightBuffer = new Float32Array(this.bufferLength);
     this.writeIndex = 0;
     this.modPhase = 0.0;
+    this.flutterPhase = 0.0;
     this.duckEnvelope = 0.0;
     this.duckAttack = 1 - Math.exp(-1 / (sampleRate * 0.012));
-    this.duckRelease = 1 - Math.exp(-1 / (sampleRate * 0.18));
 
     const paramDefaults = options.processorOptions?.paramDefaults || DEFAULT_DELAY_PARAMS;
     this.params = { ...DEFAULT_DELAY_PARAMS, ...paramDefaults };
@@ -107,6 +110,8 @@ class DelayProcessor extends AudioWorkletProcessor {
     this.leftBuffer.fill(0);
     this.rightBuffer.fill(0);
     this.writeIndex = 0;
+    this.modPhase = 0.0;
+    this.flutterPhase = 0.0;
     this.leftTone.reset();
     this.rightTone.reset();
     this.duckEnvelope = 0.0;
@@ -154,8 +159,11 @@ class DelayProcessor extends AudioWorkletProcessor {
       const drive = clamp(this.smoothParam('drive', 0.01), 0, 0.4);
       const modRate = clamp(this.smoothParam('modRate', 0.01), 0.01, 4);
       const modDepth = clamp(this.smoothParam('modDepth', 0.01), 0, 0.01);
+      const flutterRate = clamp(this.smoothParam('flutterRate', 0.01), 0.1, 12);
+      const flutterDepth = clamp(this.smoothParam('flutterDepth', 0.01), 0, 0.01);
       const width = clamp(this.smoothParam('width', 0.01), 0, 1);
       const ducking = clamp(this.smoothParam('ducking', 0.015), 0, 1);
+      const duckReleaseTime = clamp(this.smoothParam('duckRelease', 0.015), 0.04, 0.8);
       const leftInputGain = clamp(this.smoothParam('inputLeft', 0.01), 0, 1.2);
       const rightInputGain = clamp(this.smoothParam('inputRight', 0.01), 0, 1.2);
 
@@ -172,11 +180,23 @@ class DelayProcessor extends AudioWorkletProcessor {
       if (this.modPhase >= 1.0) {
         this.modPhase -= 1.0;
       }
+      this.flutterPhase += flutterRate / sampleRate;
+      if (this.flutterPhase >= 1.0) {
+        this.flutterPhase -= 1.0;
+      }
 
       const modLeft = Math.sin(TWO_PI * this.modPhase) * modDepth;
       const modRight = Math.sin(TWO_PI * (this.modPhase + 0.25)) * modDepth * 0.92;
-      const delaySamplesLeft = clamp((timeLeft + modLeft) * sampleRate, 1, this.bufferLength - 3);
-      const delaySamplesRight = clamp((timeRight - modRight) * sampleRate, 1, this.bufferLength - 3);
+      const flutterLeft = (
+        Math.sin(TWO_PI * this.flutterPhase)
+        + 0.35 * Math.sin(TWO_PI * (this.flutterPhase * 1.91 + 0.19))
+      ) * flutterDepth * 0.72;
+      const flutterRight = (
+        Math.sin(TWO_PI * (this.flutterPhase + 0.18))
+        + 0.28 * Math.sin(TWO_PI * (this.flutterPhase * 2.11 + 0.63))
+      ) * flutterDepth * 0.68;
+      const delaySamplesLeft = clamp((timeLeft + modLeft + flutterLeft) * sampleRate, 1, this.bufferLength - 3);
+      const delaySamplesRight = clamp((timeRight - modRight + flutterRight) * sampleRate, 1, this.bufferLength - 3);
 
       const rawDelayLeft = this.readInterpolated(this.leftBuffer, delaySamplesLeft);
       const rawDelayRight = this.readInterpolated(this.rightBuffer, delaySamplesRight);
@@ -190,7 +210,8 @@ class DelayProcessor extends AudioWorkletProcessor {
       const dryLeft = inputLeft?.[i] || 0;
       const dryRight = inputRight?.[i] || 0;
       const detector = clamp(Math.max(Math.abs(dryLeft), Math.abs(dryRight)) * 8, 0, 1);
-      const duckSmoothing = detector > this.duckEnvelope ? this.duckAttack : this.duckRelease;
+      const duckRelease = 1 - Math.exp(-1 / (sampleRate * duckReleaseTime));
+      const duckSmoothing = detector > this.duckEnvelope ? this.duckAttack : duckRelease;
       this.duckEnvelope += (detector - this.duckEnvelope) * duckSmoothing;
 
       const sourceLeft = dryLeft * leftInputGain;
