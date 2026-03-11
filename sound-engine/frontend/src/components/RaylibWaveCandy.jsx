@@ -92,6 +92,16 @@ const resampleByteToFloat = (src, dst) => {
   }
 };
 
+const measureSignalEnergy = (buffer) => {
+  if (!buffer || buffer.length === 0) return 0;
+  let sum = 0;
+  for (let i = 0; i < buffer.length; i += 8) {
+    const sample = buffer[i];
+    sum += sample * sample;
+  }
+  return Math.sqrt(sum / Math.max(1, Math.ceil(buffer.length / 8)));
+};
+
 const measureViewport = (container) => {
   const rect = container.getBoundingClientRect();
   const cssWidth = Math.max(1, Math.round(container.clientWidth || rect.width || FALLBACK_WIDTH));
@@ -349,9 +359,8 @@ const RaylibWaveCandy = ({
       if (!nodes || !nodes.analyser) return;
 
       const analyser = nodes.analyser;
-      const useStereoData = showVector;
-      const leftAnalyser = useStereoData ? (nodes.leftAnalyser || analyser) : null;
-      const rightAnalyser = useStereoData ? (nodes.rightAnalyser || analyser) : null;
+      const leftAnalyser = nodes.leftAnalyser || analyser;
+      const rightAnalyser = nodes.rightAnalyser || analyser;
 
       if (!buffersRef.current.freq || buffersRef.current.freq.length !== analyser.frequencyBinCount) {
         buffersRef.current.freq = new Uint8Array(analyser.frequencyBinCount);
@@ -360,24 +369,26 @@ const RaylibWaveCandy = ({
         buffersRef.current.time = new Float32Array(analyser.fftSize);
         buffersRef.current.timeByte = new Uint8Array(analyser.fftSize);
       }
-      if (useStereoData && leftAnalyser && rightAnalyser) {
-        if (!buffersRef.current.left || buffersRef.current.left.length !== leftAnalyser.fftSize) {
-          buffersRef.current.left = new Float32Array(leftAnalyser.fftSize);
-          buffersRef.current.leftByte = new Uint8Array(leftAnalyser.fftSize);
-        }
-        if (!buffersRef.current.right || buffersRef.current.right.length !== rightAnalyser.fftSize) {
-          buffersRef.current.right = new Float32Array(rightAnalyser.fftSize);
-          buffersRef.current.rightByte = new Uint8Array(rightAnalyser.fftSize);
-        }
+      if (!buffersRef.current.left || buffersRef.current.left.length !== leftAnalyser.fftSize) {
+        buffersRef.current.left = new Float32Array(leftAnalyser.fftSize);
+        buffersRef.current.leftByte = new Uint8Array(leftAnalyser.fftSize);
+      }
+      if (!buffersRef.current.right || buffersRef.current.right.length !== rightAnalyser.fftSize) {
+        buffersRef.current.right = new Float32Array(rightAnalyser.fftSize);
+        buffersRef.current.rightByte = new Uint8Array(rightAnalyser.fftSize);
       }
 
       analyser.getByteFrequencyData(buffersRef.current.freq);
       const timeData = readTimeDomain(analyser, buffersRef.current.time, buffersRef.current.timeByte);
-      let leftData = null;
-      let rightData = null;
-      if (useStereoData && leftAnalyser && rightAnalyser) {
-        leftData = readTimeDomain(leftAnalyser, buffersRef.current.left, buffersRef.current.leftByte);
-        rightData = readTimeDomain(rightAnalyser, buffersRef.current.right, buffersRef.current.rightByte);
+      const leftData = readTimeDomain(leftAnalyser, buffersRef.current.left, buffersRef.current.leftByte);
+      const rightData = readTimeDomain(rightAnalyser, buffersRef.current.right, buffersRef.current.rightByte);
+      const signalEnergy = Math.max(
+        measureSignalEnergy(timeData),
+        measureSignalEnergy(leftData),
+        measureSignalEnergy(rightData)
+      );
+      if (signalEnergy > 0.012) {
+        lastActiveAtRef.current = nowMs;
       }
 
       const views = syncViews();
@@ -385,10 +396,8 @@ const RaylibWaveCandy = ({
 
       resampleByteToFloat(buffersRef.current.freq, views.freq);
       resampleFloat(timeData, views.wave);
-      if (useStereoData && leftData && rightData) {
-        resampleFloat(leftData, views.left);
-        resampleFloat(rightData, views.right);
-      }
+      resampleFloat(leftData, views.left);
+      resampleFloat(rightData, views.right);
     };
 
     rafId = requestAnimationFrame(tick);

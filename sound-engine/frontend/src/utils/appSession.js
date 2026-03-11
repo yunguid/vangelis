@@ -1,6 +1,13 @@
 import { sanitizeAudioParams } from './audioParams.js';
 
 const STORAGE_KEY = 'vangelis-ui-session-v1';
+const DEFAULT_CONTROL_SECTIONS = Object.freeze({
+  essentials: true,
+  delay: false,
+  reverb: false,
+  color: false,
+  modulation: false
+});
 
 const coerceSidebarTab = (value) => (value === 'samples' ? 'samples' : 'midi');
 
@@ -43,9 +50,24 @@ const coerceResumePayload = (value) => {
   return result.midiPath || result.sampleSelection ? result : null;
 };
 
+const coerceControlSections = (value) => {
+  if (!value || typeof value !== 'object') {
+    return DEFAULT_CONTROL_SECTIONS;
+  }
+
+  return {
+    essentials: value.essentials !== false,
+    delay: !!value.delay,
+    reverb: !!value.reverb,
+    color: !!value.color,
+    modulation: !!value.modulation
+  };
+};
+
 export const getDefaultSessionState = () => ({
   waveformType: null,
   audioParams: null,
+  controlSections: DEFAULT_CONTROL_SECTIONS,
   sidebarTab: 'midi',
   sidebarOpen: false,
   activeSampleId: null,
@@ -73,6 +95,7 @@ export function loadAppSession() {
       ...fallback,
       waveformType: typeof parsed.waveformType === 'string' ? parsed.waveformType : null,
       audioParams,
+      controlSections: coerceControlSections(parsed.controlSections),
       sidebarTab: coerceSidebarTab(parsed.sidebarTab),
       sidebarOpen: !!parsed.sidebarOpen,
       activeSampleId: typeof parsed.activeSampleId === 'string' ? parsed.activeSampleId : null,

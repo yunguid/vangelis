@@ -15,6 +15,13 @@ import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { getSample } from './utils/sampleStorage.js';
 
 const NOTICE_TIMEOUT_MS = 2200;
+const DEFAULT_CONTROL_SECTIONS = Object.freeze({
+  essentials: true,
+  delay: false,
+  reverb: false,
+  color: false,
+  modulation: false
+});
 
 const isTextInputTarget = (target) => {
   const tagName = target?.tagName;
@@ -126,6 +133,9 @@ const App = () => {
   const [resumeSnapshot, setResumeSnapshot] = useState(() => initialSession.resume || null);
   const [isResumingSession, setIsResumingSession] = useState(false);
   const [notice, setNotice] = useState('');
+  const [controlSections, setControlSections] = useState(() => (
+    initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
+  ));
   const fileInputRef = useRef(null);
   const scrollRaf = useRef(null);
   const noticeTimeoutRef = useRef(null);
@@ -489,6 +499,7 @@ const App = () => {
     saveAppSession({
       waveformType,
       audioParams,
+      controlSections,
       sidebarTab,
       sidebarOpen,
       activeSampleId,
@@ -500,6 +511,7 @@ const App = () => {
   }, [
     activeSampleId,
     audioParams,
+    controlSections,
     midiPlayback.tempoFactor,
     resumeSnapshot,
     sampleSelection,
@@ -522,6 +534,14 @@ const App = () => {
       ...nextParams
     }));
   };
+
+  const handleControlSectionToggle = useCallback((section) => {
+    if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTROL_SECTIONS, section)) return;
+    setControlSections((prev) => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
 
   return (
     <ErrorBoundary>
@@ -593,7 +613,13 @@ const App = () => {
         </header>
 
         <main className="zone-center content-primary" aria-label="Keyboard area">
-          <WaveCandy />
+          <WaveCandy
+            audioParams={audioParams}
+            onParamChange={handleAudioParamChange}
+            transportBpm={transportBpm}
+            controlSections={controlSections}
+            onSectionToggle={handleControlSectionToggle}
+          />
           <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
             <div className="keyboard-header">
               <span className="keyboard-legend">
@@ -643,6 +669,8 @@ const App = () => {
                 onParamChange={handleAudioParamChange}
                 onParamsChange={handleAudioParamsChange}
                 transportBpm={transportBpm}
+                sections={controlSections}
+                onSectionToggle={handleControlSectionToggle}
               />
             </div>
           </div>
