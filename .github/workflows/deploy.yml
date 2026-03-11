@@ -38,6 +38,19 @@ jobs:
           cache: 'npm'
           cache-dependency-path: sound-engine/frontend/package-lock.json
 
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+
+      - name: Build audio engine WASM package
+        run: |
+          cd sound-engine/audio-engine
+          wasm-pack build --target web --out-dir ../frontend/public/pkg
+
       - name: Install frontend dependencies
         run: |
           cd sound-engine/frontend
