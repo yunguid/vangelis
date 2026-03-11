@@ -21,8 +21,6 @@ const Sidebar = ({
   progress,
   currentMidi,
   tempoFactor,
-  activeSoundSetName,
-  layeringMode,
   onPlay,
   onPause,
   onResume,
@@ -151,8 +149,6 @@ const Sidebar = ({
               progress={progress}
               currentMidi={currentMidi}
               tempoFactor={tempoFactor}
-              activeSoundSetName={activeSoundSetName}
-              layeringMode={layeringMode}
               onPlay={onPlay}
               onPause={onPause}
               onResume={onResume}

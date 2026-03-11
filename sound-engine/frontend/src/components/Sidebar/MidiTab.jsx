@@ -11,8 +11,6 @@ const MidiTab = ({
   progress,
   currentMidi,
   tempoFactor,
-  activeSoundSetName,
-  layeringMode,
   onPlay,
   onPause,
   onResume,
@@ -106,8 +104,6 @@ const MidiTab = ({
           progress={progress}
           currentMidi={currentMidi}
           tempoFactor={tempoFactor}
-          activeSoundSetName={activeSoundSetName}
-          layeringMode={layeringMode}
           onPlay={handlePlayCurrent}
           onPause={onPause}
           onResume={onResume}
@@ -144,20 +140,6 @@ const MidiTab = ({
                 >
                   <span className="midi-tab__file-name">{file.name}</span>
                   <span className="midi-tab__file-composer">{file.composer}</span>
-                  {(file.soundSetId || (Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0)) && (
-                    <span className="midi-tab__file-tags">
-                      {file.soundSetId && (
-                        <span className="midi-tab__file-tag midi-tab__file-tag--set">
-                          {file.soundSetId}
-                        </span>
-                      )}
-                      {Array.isArray(file.layerFamilies) && file.layerFamilies.length > 0 && (
-                        <span className="midi-tab__file-tag midi-tab__file-tag--layers">
-                          {file.layerFamilies.join(' + ')}
-                        </span>
-                      )}
-                    </span>
-                  )}
                 </button>
               </li>
             ))}

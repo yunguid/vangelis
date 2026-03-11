@@ -9,7 +9,6 @@ const MidiPlayer = ({
   progress,
   currentMidi,
   tempoFactor = 1.0,
-  activeSoundSetName = null,
   onPlay,
   onPause,
   onResume,
@@ -99,11 +98,6 @@ const MidiPlayer = ({
           <span className="midi-player__meta">
             {Math.round(currentMidi.bpm * tempoFactor)} BPM
           </span>
-          <div className="midi-player__badges">
-            {activeSoundSetName && (
-              <span className="midi-player__badge">{activeSoundSetName}</span>
-            )}
-          </div>
         </div>
       )}
 

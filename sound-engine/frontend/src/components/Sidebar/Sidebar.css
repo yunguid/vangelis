@@ -292,37 +292,6 @@
   text-transform: uppercase;
 }
 
-.midi-tab__file-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.midi-tab__file-tag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 16px;
-  padding: 0 6px;
-  border-radius: 999px;
-  font-size: 0.5rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.midi-tab__file-tag--set {
-  background: rgba(138, 194, 255, 0.16);
-  border: 1px solid rgba(152, 205, 255, 0.3);
-  color: rgba(218, 236, 255, 0.94);
-}
-
-.midi-tab__file-tag--layers {
-  background: rgba(255, 139, 90, 0.16);
-  border: 1px solid rgba(255, 158, 116, 0.28);
-  color: rgba(255, 224, 203, 0.94);
-}
-
 /* Upload button */
 .midi-tab__upload-btn {
   display: block;
@@ -461,33 +430,6 @@
   color: rgba(255, 255, 255, 0.4);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-}
-
-.midi-player__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
-.midi-player__badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 18px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: rgba(255, 140, 96, 0.16);
-  border: 1px solid rgba(255, 160, 121, 0.3);
-  color: rgba(255, 220, 200, 0.92);
-  font-size: 0.52rem;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-}
-
-.midi-player__badge--mode {
-  background: rgba(121, 191, 255, 0.12);
-  border-color: rgba(151, 205, 255, 0.3);
-  color: rgba(203, 231, 255, 0.9);
 }
 
 /* Tempo Control */
