@@ -37,23 +37,6 @@ export function createAudioGraph(ctx, distortionCache) {
   const delayWet = ctx.createGain();
   delayWet.gain.value = 0;
 
-  const delayLeft = ctx.createDelay(3);
-  delayLeft.delayTime.value = 0.12;
-  const delayRight = ctx.createDelay(3);
-  delayRight.delayTime.value = 0.17;
-
-  const delayFeedbackLeft = ctx.createGain();
-  delayFeedbackLeft.gain.value = 0;
-  const delayFeedbackRight = ctx.createGain();
-  delayFeedbackRight.gain.value = 0;
-
-  const delayToneLeft = makeFilter(ctx, 'lowpass', 4600, 0, 0.75);
-  const delayToneRight = makeFilter(ctx, 'lowpass', 4200, 0, 0.75);
-  const delayPannerLeft = ctx.createStereoPanner();
-  delayPannerLeft.pan.value = -0.45;
-  const delayPannerRight = ctx.createStereoPanner();
-  delayPannerRight.pan.value = 0.45;
-
   const reverbSend = ctx.createGain();
   reverbSend.gain.value = 0.18;
   const reverbPreDelay = ctx.createDelay(0.25);
@@ -104,20 +87,6 @@ export function createAudioGraph(ctx, distortionCache) {
   airFilter.connect(masterGain);
 
   airFilter.connect(delaySend);
-  delaySend.connect(delayLeft);
-  delaySend.connect(delayRight);
-
-  delayLeft.connect(delayToneLeft);
-  delayToneLeft.connect(delayPannerLeft);
-  delayPannerLeft.connect(delayWet);
-  delayToneLeft.connect(delayFeedbackLeft);
-  delayFeedbackLeft.connect(delayLeft);
-
-  delayRight.connect(delayToneRight);
-  delayToneRight.connect(delayPannerRight);
-  delayPannerRight.connect(delayWet);
-  delayToneRight.connect(delayFeedbackRight);
-  delayFeedbackRight.connect(delayRight);
 
   airFilter.connect(reverbSend);
   reverbSend.connect(reverbPreDelay);
@@ -154,14 +123,6 @@ export function createAudioGraph(ctx, distortionCache) {
     airFilter,
     delaySend,
     delayWet,
-    delayLeft,
-    delayRight,
-    delayFeedbackLeft,
-    delayFeedbackRight,
-    delayToneLeft,
-    delayToneRight,
-    delayPannerLeft,
-    delayPannerRight,
     reverbSend,
     reverbPreDelay,
     reverbNode,

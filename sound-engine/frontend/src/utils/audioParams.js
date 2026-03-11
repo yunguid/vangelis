@@ -1,10 +1,115 @@
 import { clamp } from './math.js';
 
 export const MICRO_FADE_TIME = 0.005;
+export const DEFAULT_TRANSPORT_TEMPO = 120;
+
+export const DELAY_MODE_OPTIONS = [
+  { value: 'digital', label: 'Digital' },
+  { value: 'tape', label: 'Tape' },
+  { value: 'ping-pong', label: 'Ping-pong' }
+];
+
+export const DELAY_DIVISION_OPTIONS = [
+  { value: '1/16', label: '1/16', beats: 0.25 },
+  { value: '1/8T', label: '1/8T', beats: 1 / 3 },
+  { value: '1/8', label: '1/8', beats: 0.5 },
+  { value: '1/8.', label: '1/8.', beats: 0.75 },
+  { value: '1/4T', label: '1/4T', beats: 2 / 3 },
+  { value: '1/4', label: '1/4', beats: 1 },
+  { value: '1/4.', label: '1/4.', beats: 1.5 },
+  { value: '1/2', label: '1/2', beats: 2 },
+  { value: '1/1', label: '1/1', beats: 4 }
+];
+
+export const DELAY_PRESET_OPTIONS = [
+  { value: 'custom', label: 'Custom' },
+  { value: 'clean-slap', label: 'Clean Slap' },
+  { value: 'wide-quarter', label: 'Wide Quarter' },
+  { value: 'tape-echo', label: 'Tape Echo' },
+  { value: 'ping-pong', label: 'Ping-Pong' }
+];
+
+const DELAY_MODE_VALUES = new Set(DELAY_MODE_OPTIONS.map(({ value }) => value));
+const DELAY_DIVISION_BEATS = Object.fromEntries(
+  DELAY_DIVISION_OPTIONS.map(({ value, beats }) => [value, beats])
+);
+const DELAY_PRESET_VALUES = new Set(DELAY_PRESET_OPTIONS.map(({ value }) => value));
+
+const DELAY_PRESET_PATCHES = {
+  'clean-slap': {
+    delayEnabled: true,
+    delayMode: 'digital',
+    delaySync: false,
+    delayTime: 112,
+    delayDivision: '1/8',
+    delayFeedback: 0.18,
+    delayMix: 0.16,
+    delayStereo: 0.22,
+    delayLowCut: 180,
+    delayHighCut: 7600,
+    delayDucking: 0.16
+  },
+  'wide-quarter': {
+    delayEnabled: true,
+    delayMode: 'digital',
+    delaySync: true,
+    delayTime: 420,
+    delayDivision: '1/4',
+    delayFeedback: 0.38,
+    delayMix: 0.24,
+    delayStereo: 0.72,
+    delayLowCut: 140,
+    delayHighCut: 6200,
+    delayDucking: 0.24
+  },
+  'tape-echo': {
+    delayEnabled: true,
+    delayMode: 'tape',
+    delaySync: true,
+    delayTime: 440,
+    delayDivision: '1/8.',
+    delayFeedback: 0.52,
+    delayMix: 0.28,
+    delayStereo: 0.58,
+    delayLowCut: 180,
+    delayHighCut: 4200,
+    delayDucking: 0.18
+  },
+  'ping-pong': {
+    delayEnabled: true,
+    delayMode: 'ping-pong',
+    delaySync: true,
+    delayTime: 280,
+    delayDivision: '1/8',
+    delayFeedback: 0.46,
+    delayMix: 0.26,
+    delayStereo: 1,
+    delayLowCut: 220,
+    delayHighCut: 6400,
+    delayDucking: 0.22
+  }
+};
+
+const isSameDelayPresetValue = (actual, expected) => {
+  if (typeof expected === 'number') {
+    return Math.abs((actual ?? 0) - expected) < 1e-6;
+  }
+  return actual === expected;
+};
 
 export const AUDIO_PARAM_DEFAULTS = {
   reverb: 0.24,
-  delay: 72,
+  delayEnabled: true,
+  delayMode: 'digital',
+  delaySync: false,
+  delayTime: 72,
+  delayDivision: '1/8',
+  delayFeedback: 0.26,
+  delayMix: 0.18,
+  delayStereo: 0.7,
+  delayLowCut: 90,
+  delayHighCut: 5400,
+  delayDucking: 0.12,
   distortion: 0,
   volume: 0.68,
   useADSR: true,
@@ -30,7 +135,13 @@ export const AUDIO_PARAM_DEFAULTS = {
 
 export const AUDIO_PARAM_RANGES = {
   volume: { min: 0, max: 1, step: 0.01 },
-  delay: { min: 0, max: 500, step: 10 },
+  delayTime: { min: 20, max: 1600, step: 1 },
+  delayFeedback: { min: 0, max: 0.92, step: 0.01 },
+  delayMix: { min: 0, max: 1, step: 0.01 },
+  delayStereo: { min: 0, max: 1, step: 0.01 },
+  delayLowCut: { min: 20, max: 2000, step: 1 },
+  delayHighCut: { min: 800, max: 14000, step: 1 },
+  delayDucking: { min: 0, max: 1, step: 0.01 },
   reverb: { min: 0, max: 1, step: 0.01 },
   distortion: { min: 0, max: 1, step: 0.01 },
   pan: { min: 0, max: 1, step: 0.01 },
@@ -54,13 +165,114 @@ export const AUDIO_PARAM_RANGES = {
 export const DEFAULT_WAVEFORM = 'Triangle';
 export const WAVEFORM_OPTIONS = ['Sine', 'Sawtooth', 'Square', 'Triangle'];
 
+const coerceDelayMode = (value) => (
+  typeof value === 'string' && DELAY_MODE_VALUES.has(value)
+    ? value
+    : AUDIO_PARAM_DEFAULTS.delayMode
+);
+
+const coerceDelayDivision = (value) => (
+  typeof value === 'string' && Object.prototype.hasOwnProperty.call(DELAY_DIVISION_BEATS, value)
+    ? value
+    : AUDIO_PARAM_DEFAULTS.delayDivision
+);
+
+export const getDelayDivisionBeats = (division) => DELAY_DIVISION_BEATS[coerceDelayDivision(division)];
+
+export const getDelayPresetPatch = (preset) => {
+  if (!DELAY_PRESET_VALUES.has(preset) || preset === 'custom') {
+    return null;
+  }
+  return { ...DELAY_PRESET_PATCHES[preset] };
+};
+
+export const getDelayPresetValue = (params = {}) => {
+  for (const option of DELAY_PRESET_OPTIONS) {
+    if (option.value === 'custom') continue;
+    const patch = DELAY_PRESET_PATCHES[option.value];
+    const matches = Object.entries(patch).every(([key, expected]) => (
+      isSameDelayPresetValue(params?.[key], expected)
+    ));
+    if (matches) {
+      return option.value;
+    }
+  }
+  return 'custom';
+};
+
+export const getDelaySeconds = (params = {}, transportBpm = DEFAULT_TRANSPORT_TEMPO) => {
+  const delaySync = params?.delaySync === true;
+  if (!delaySync) {
+    const manualMs = Number.isFinite(params?.delayTime)
+      ? params.delayTime
+      : Number.isFinite(params?.delay)
+        ? params.delay
+        : AUDIO_PARAM_DEFAULTS.delayTime;
+    return clamp(manualMs / 1000, 0.02, 4);
+  }
+
+  const bpm = clamp(
+    Number.isFinite(transportBpm) ? transportBpm : DEFAULT_TRANSPORT_TEMPO,
+    40,
+    280
+  );
+  return clamp((60 / bpm) * getDelayDivisionBeats(params?.delayDivision), 0.02, 4);
+};
+
 export const sanitizeAudioParams = (params = {}) => {
   const merged = { ...AUDIO_PARAM_DEFAULTS, ...params };
   const ranges = AUDIO_PARAM_RANGES;
+  const legacyDelayTime = Number.isFinite(merged.delayTime)
+    ? merged.delayTime
+    : Number.isFinite(merged.delay)
+      ? merged.delay
+      : AUDIO_PARAM_DEFAULTS.delayTime;
+  const delayLowCut = clamp(
+    merged.delayLowCut ?? AUDIO_PARAM_DEFAULTS.delayLowCut,
+    ranges.delayLowCut.min,
+    ranges.delayLowCut.max
+  );
+  const delayHighCut = clamp(
+    Math.max(
+      merged.delayHighCut ?? AUDIO_PARAM_DEFAULTS.delayHighCut,
+      delayLowCut + 400
+    ),
+    ranges.delayHighCut.min,
+    ranges.delayHighCut.max
+  );
+  const delayEnabled = typeof merged.delayEnabled === 'boolean'
+    ? merged.delayEnabled
+    : legacyDelayTime > 0;
 
   return {
     volume: clamp(merged.volume, ranges.volume.min, ranges.volume.max),
-    delay: clamp(merged.delay, ranges.delay.min, ranges.delay.max),
+    delayEnabled,
+    delayMode: coerceDelayMode(merged.delayMode),
+    delaySync: !!merged.delaySync,
+    delayTime: clamp(legacyDelayTime, ranges.delayTime.min, ranges.delayTime.max),
+    delayDivision: coerceDelayDivision(merged.delayDivision),
+    delayFeedback: clamp(
+      merged.delayFeedback ?? AUDIO_PARAM_DEFAULTS.delayFeedback,
+      ranges.delayFeedback.min,
+      ranges.delayFeedback.max
+    ),
+    delayMix: clamp(
+      merged.delayMix ?? AUDIO_PARAM_DEFAULTS.delayMix,
+      ranges.delayMix.min,
+      ranges.delayMix.max
+    ),
+    delayStereo: clamp(
+      merged.delayStereo ?? AUDIO_PARAM_DEFAULTS.delayStereo,
+      ranges.delayStereo.min,
+      ranges.delayStereo.max
+    ),
+    delayLowCut,
+    delayHighCut,
+    delayDucking: clamp(
+      merged.delayDucking ?? AUDIO_PARAM_DEFAULTS.delayDucking,
+      ranges.delayDucking.min,
+      ranges.delayDucking.max
+    ),
     reverb: clamp(merged.reverb, ranges.reverb.min, ranges.reverb.max),
     distortion: clamp(merged.distortion, ranges.distortion.min, ranges.distortion.max),
     pan: clamp(merged.pan, ranges.pan.min, ranges.pan.max),

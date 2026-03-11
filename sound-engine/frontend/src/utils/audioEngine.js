@@ -5,12 +5,16 @@
 
 import {
   AUDIO_PARAM_DEFAULTS,
+  DEFAULT_TRANSPORT_TEMPO,
+  getDelaySeconds,
   sanitizeAudioParams,
   toWorkletParams,
   WORKLET_PARAM_DEFAULTS
 } from './audioParams.js';
 import {
   DEFAULT_SAMPLE_RATE,
+  DELAY_WORKLET_PROCESSOR,
+  DELAY_WORKLET_URL,
   SAMPLE_VOICE_POOL,
   WORKLET_PROCESSOR,
   WORKLET_URL,
@@ -92,6 +96,76 @@ class SynthWorklet {
   }
 }
 
+const DELAY_WORKLET_DEFAULTS = {
+  enabled: false,
+  inputLeft: 1,
+  inputRight: 1,
+  timeLeft: 0.12,
+  timeRight: 0.17,
+  feedback: 0.25,
+  crossfeed: 0,
+  lowCut: 90,
+  highCut: 5400,
+  drive: 0.02,
+  modRate: 0.14,
+  modDepth: 0.0001,
+  width: 0.7,
+  ducking: 0.12
+};
+
+class DelayWorklet {
+  constructor(paramDefaults) {
+    this.node = null;
+    this.readyPromise = null;
+    this.ready = false;
+    this.paramDefaults = paramDefaults;
+    this.lastParams = paramDefaults;
+  }
+
+  async ensure(ctx, source, destination) {
+    if (this.readyPromise) return this.readyPromise;
+
+    this.readyPromise = (async () => {
+      if (!ctx.audioWorklet || !ctx.audioWorklet.addModule) {
+        throw new Error('AudioWorklet not supported');
+      }
+
+      await ctx.audioWorklet.addModule(DELAY_WORKLET_URL);
+
+      this.node = new AudioWorkletNode(ctx, DELAY_WORKLET_PROCESSOR, {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+        channelCount: 2,
+        channelCountMode: 'explicit',
+        processorOptions: {
+          paramDefaults: this.paramDefaults
+        }
+      });
+      source.connect(this.node);
+      this.node.connect(destination);
+      this.ready = true;
+      this.setParams(this.lastParams);
+    })();
+
+    return this.readyPromise;
+  }
+
+  setParams(params) {
+    this.lastParams = { ...this.lastParams, ...params };
+    if (!this.node) return;
+    this.node.port.postMessage({
+      type: 'setParams',
+      params: this.lastParams
+    });
+  }
+
+  clear() {
+    if (!this.node) return;
+    this.node.port.postMessage({ type: 'clear' });
+  }
+}
+
 class DistortionCurveCache {
   constructor(resolution = 44100) {
     this.resolution = resolution;
@@ -125,6 +199,39 @@ class DistortionCurveCache {
   }
 }
 
+const DELAY_MODE_CONFIG = {
+  digital: {
+    inputLeft: 1,
+    inputRight: 1,
+    localFeedback: 1,
+    crossFeedback: 0,
+    spread: 0.14,
+    modulationRate: 0.11,
+    modulationDepth: 0.00012,
+    drive: 0.02
+  },
+  tape: {
+    inputLeft: 1,
+    inputRight: 0.94,
+    localFeedback: 0.84,
+    crossFeedback: 0.12,
+    spread: 0.18,
+    modulationRate: 0.22,
+    modulationDepth: 0.00072,
+    drive: 0.12
+  },
+  'ping-pong': {
+    inputLeft: 1,
+    inputRight: 0.2,
+    localFeedback: 0.12,
+    crossFeedback: 0.84,
+    spread: 0.24,
+    modulationRate: 0.17,
+    modulationDepth: 0.00038,
+    drive: 0.06
+  }
+};
+
 class AudioEngine {
   constructor() {
     this.context = null;
@@ -142,9 +249,12 @@ class AudioEngine {
     this.globalNodes = null;
     this.currentParams = sanitizeAudioParams(AUDIO_PARAM_DEFAULTS);
     this.lastParamSignature = '';
+    this.transportTempoBpm = DEFAULT_TRANSPORT_TEMPO;
 
     this.worklet = new SynthWorklet(WORKLET_PARAM_DEFAULTS);
     this.workletReadyPromise = null;
+    this.delayWorklet = new DelayWorklet(DELAY_WORKLET_DEFAULTS);
+    this.delayWorkletReadyPromise = null;
 
     this.recorder = new RecorderController({
       onStop: () => this.exportRecording()
@@ -292,6 +402,34 @@ class AudioEngine {
     return this.workletReadyPromise;
   }
 
+  async ensureDelayWorklet(ctx) {
+    if (this.delayWorkletReadyPromise) {
+      return this.delayWorkletReadyPromise;
+    }
+
+    this.delayWorkletReadyPromise = Promise.resolve()
+      .then(async () => {
+        const nodes = this.setupGraph(ctx);
+        await this.delayWorklet.ensure(ctx, nodes.delaySend, nodes.delayWet);
+        if (this.currentParams) {
+          this.lastParamSignature = '';
+          this.applyGlobalParams(this.currentParams);
+        }
+      })
+      .catch((err) => {
+        this.status.error = {
+          type: 'DELAY_WORKLET_FAILED',
+          message: 'Failed to initialize delay effect',
+          detail: err.message,
+          timestamp: Date.now()
+        };
+        this.notify();
+        throw err;
+      });
+
+    return this.delayWorkletReadyPromise;
+  }
+
   async ensureRecorder(ctx) {
     const nodes = this.setupGraph(ctx);
     return this.recorder.ensure(ctx, nodes);
@@ -324,6 +462,7 @@ class AudioEngine {
 
         this.installUnlockHandlers();
         this.setupGraph(ctx);
+        this.ensureDelayWorklet(ctx).catch(() => {});
         this.ensureSamplePool(ctx);
 
         if (ctx.state === 'running') {
@@ -387,6 +526,10 @@ class AudioEngine {
     }
 
     this.globalNodes = createAudioGraph(ctx, this.distortionCache);
+    if (this.currentParams) {
+      this.lastParamSignature = '';
+      this.applyGlobalParams(this.currentParams);
+    }
     return this.globalNodes;
   }
 
@@ -445,27 +588,55 @@ class AudioEngine {
     nodes.masterGain.gain.cancelScheduledValues(now);
     nodes.masterGain.gain.setTargetAtTime(sanitized.volume * 0.94, now, 0.02);
 
-    const delayTime = sanitized.delay / 1000;
-    const leftDelayTime = clamp(delayTime * 0.92, 0, 2.4);
-    const rightDelayTime = clamp(delayTime * 1.28, 0, 2.6);
-    nodes.delayLeft.delayTime.cancelScheduledValues(now);
-    nodes.delayLeft.delayTime.setTargetAtTime(leftDelayTime, now, 0.05);
-    nodes.delayRight.delayTime.cancelScheduledValues(now);
-    nodes.delayRight.delayTime.setTargetAtTime(rightDelayTime, now, 0.05);
+    const delayMode = DELAY_MODE_CONFIG[sanitized.delayMode]
+      ? sanitized.delayMode
+      : AUDIO_PARAM_DEFAULTS.delayMode;
+    const delayConfig = DELAY_MODE_CONFIG[delayMode];
+    const delayActive = sanitized.delayEnabled && sanitized.delayMix > 0.001;
+    const delaySeconds = getDelaySeconds(sanitized, this.transportTempoBpm);
+    const stereoSpread = 0.015 + sanitized.delayStereo * delayConfig.spread;
+    const leftDelayTime = clamp(delaySeconds * (1 - stereoSpread), 0.02, 4);
+    const rightDelayTime = clamp(delaySeconds * (1 + stereoSpread), 0.02, 4);
 
-    const feedback = delayTime > 0.015 ? clamp(0.16 + delayTime * 0.9, 0, 0.62) : 0;
-    nodes.delayFeedbackLeft.gain.cancelScheduledValues(now);
-    nodes.delayFeedbackLeft.gain.setTargetAtTime(feedback, now, 0.08);
-    nodes.delayFeedbackRight.gain.cancelScheduledValues(now);
-    nodes.delayFeedbackRight.gain.setTargetAtTime(feedback * 0.96, now, 0.08);
-
-    const delaySend = delayTime > 0.015 ? clamp(0.1 + sanitized.reverb * 0.06 + delayTime * 0.35, 0, 0.38) : 0;
+    const feedbackBase = delayActive ? clamp(sanitized.delayFeedback, 0, 0.9) : 0;
+    const feedback = feedbackBase * delayConfig.localFeedback;
+    const crossfeed = feedbackBase * delayConfig.crossFeedback;
+    const delayLevel = delayActive ? Math.pow(sanitized.delayMix, 0.88) : 0;
+    const delaySend = delayLevel * 0.54;
     nodes.delaySend.gain.cancelScheduledValues(now);
     nodes.delaySend.gain.setTargetAtTime(delaySend, now, 0.05);
 
-    const delayWetLevel = delayTime > 0.015 ? clamp(0.12 + delayTime * 0.55, 0, 0.42) : 0;
+    const delayWetLevel = delayLevel * 0.68;
     nodes.delayWet.gain.cancelScheduledValues(now);
     nodes.delayWet.gain.setTargetAtTime(delayWetLevel, now, 0.05);
+
+    const lowCut = sanitized.delayLowCut;
+    const highCut = Math.max(sanitized.delayHighCut, lowCut + 400);
+
+    const modulationDepth = delayActive
+      ? delayConfig.modulationDepth * (0.6 + sanitized.delayStereo * 0.6 + sanitized.delayFeedback * 0.7)
+      : 0;
+    const modulationRate = delayConfig.modulationRate + sanitized.delayStereo * 0.08;
+
+    const delayDrive = delayActive
+      ? clamp(delayConfig.drive + sanitized.delayFeedback * 0.12, 0, 0.35)
+      : 0;
+    this.delayWorklet.setParams({
+      enabled: delayActive,
+      inputLeft: delayActive ? delayConfig.inputLeft : 0,
+      inputRight: delayActive ? delayConfig.inputRight : 0,
+      timeLeft: leftDelayTime,
+      timeRight: rightDelayTime,
+      feedback,
+      crossfeed,
+      lowCut,
+      highCut,
+      drive: delayDrive,
+      modRate: modulationRate,
+      modDepth: modulationDepth,
+      width: sanitized.delayStereo,
+      ducking: sanitized.delayDucking
+    });
 
     const reverbWet = Math.pow(sanitized.reverb, 1.2) * 0.9;
     nodes.reverbSend.gain.cancelScheduledValues(now);
@@ -498,6 +669,20 @@ class AudioEngine {
 
   setGlobalParams(params) {
     this.applyGlobalParams(sanitizeAudioParams(params));
+  }
+
+  setTransportTempo(bpm) {
+    const nextTempo = clamp(
+      Number.isFinite(bpm) ? bpm : DEFAULT_TRANSPORT_TEMPO,
+      40,
+      280
+    );
+    if (Math.abs(nextTempo - this.transportTempoBpm) < 0.01) return;
+    this.transportTempoBpm = nextTempo;
+    if (this.currentParams) {
+      this.lastParamSignature = '';
+      this.applyGlobalParams(this.currentParams);
+    }
   }
 
   // ============ Note Playback ============

@@ -112,10 +112,9 @@ const App = () => {
   const initialSession = initialSessionRef.current;
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = useState(() => initialSession.waveformType || DEFAULT_WAVEFORM);
-  const [audioParams, setAudioParams] = useState(() => {
-    if (initialSession.audioParams) return initialSession.audioParams;
-    return { ...AUDIO_PARAM_DEFAULTS };
-  });
+  const [audioParams, setAudioParams] = useState(() => (
+    sanitizeAudioParams(initialSession.audioParams || AUDIO_PARAM_DEFAULTS)
+  ));
   const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
@@ -136,6 +135,7 @@ const App = () => {
 
   // MIDI playback hook
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
+  const transportBpm = (midiPlayback.currentMidi?.bpm || 120) * midiPlayback.tempoFactor;
 
   const pushNotice = useCallback((message) => {
     setNotice(message);
@@ -157,6 +157,10 @@ const App = () => {
   useEffect(() => {
     audioEngine.setGlobalParams(audioParams);
   }, [audioParams]);
+
+  useEffect(() => {
+    audioEngine.setTransportTempo?.(transportBpm);
+  }, [transportBpm]);
 
   useEffect(() => {
     const unsubscribe = audioEngine.subscribe(setEngineStatus);
@@ -506,9 +510,16 @@ const App = () => {
   ]);
 
   const handleAudioParamChange = (paramName, value) => {
-    setAudioParams((prev) => ({
+    setAudioParams((prev) => sanitizeAudioParams({
       ...prev,
       [paramName]: value
+    }));
+  };
+
+  const handleAudioParamsChange = (nextParams) => {
+    setAudioParams((prev) => sanitizeAudioParams({
+      ...prev,
+      ...nextParams
     }));
   };
 
@@ -630,6 +641,8 @@ const App = () => {
               <AudioControls
                 audioParams={audioParams}
                 onParamChange={handleAudioParamChange}
+                onParamsChange={handleAudioParamsChange}
+                transportBpm={transportBpm}
               />
             </div>
           </div>

@@ -127,6 +127,27 @@
   gap: 20px;
 }
 
+.select-input-wrapper {
+  position: relative;
+}
+
+.control-select {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(244, 241, 232, 0.12);
+  background: linear-gradient(180deg, rgba(244, 241, 232, 0.14) 0%, rgba(244, 241, 232, 0.06) 100%);
+  color: var(--color-text-primary);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.control-select:focus-visible {
+  outline: none;
+  border-color: rgba(255, 122, 61, 0.46);
+  box-shadow: 0 0 0 1px rgba(255, 122, 61, 0.2);
+}
+
 /* Range Input */
 input[type="range"] {
   -webkit-appearance: none;

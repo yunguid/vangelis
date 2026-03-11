@@ -4,6 +4,8 @@ export const MINIMUM_GAIN = 0.0001;
 
 export const WORKLET_PROCESSOR = 'vangelis-synth';
 export const WORKLET_URL = new URL('../../audio/synth-worklet.js', import.meta.url);
+export const DELAY_WORKLET_PROCESSOR = 'vangelis-delay';
+export const DELAY_WORKLET_URL = new URL('../../audio/delay-worklet.js', import.meta.url);
 export const RECORDER_PROCESSOR = 'vangelis-recorder';
 export const RECORDER_URL = new URL('../../audio/recorder-worklet.js', import.meta.url);
 
