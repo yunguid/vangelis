@@ -15,6 +15,8 @@ import {
   DEFAULT_SAMPLE_RATE,
   DELAY_WORKLET_PROCESSOR,
   DELAY_WORKLET_URL,
+  REVERB_WORKLET_PROCESSOR,
+  REVERB_WORKLET_URL,
   SAMPLE_VOICE_POOL,
   WORKLET_PROCESSOR,
   WORKLET_URL,
@@ -116,6 +118,22 @@ const DELAY_WORKLET_DEFAULTS = {
   duckRelease: 0.18
 };
 
+const REVERB_WORKLET_DEFAULTS = {
+  enabled: false,
+  variant: 'hall',
+  preDelay: 0.018,
+  size: 0.58,
+  decay: 0.52,
+  damping: 0.42,
+  lowCut: 120,
+  highCut: 9200,
+  width: 0.82,
+  diffusion: 0.72,
+  modRate: 0.16,
+  modDepth: 0.0004,
+  earlyLevel: 0.34
+};
+
 class DelayWorklet {
   constructor(paramDefaults) {
     this.node = null;
@@ -136,6 +154,59 @@ class DelayWorklet {
       await ctx.audioWorklet.addModule(DELAY_WORKLET_URL);
 
       this.node = new AudioWorkletNode(ctx, DELAY_WORKLET_PROCESSOR, {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+        channelCount: 2,
+        channelCountMode: 'explicit',
+        processorOptions: {
+          paramDefaults: this.paramDefaults
+        }
+      });
+      source.connect(this.node);
+      this.node.connect(destination);
+      this.ready = true;
+      this.setParams(this.lastParams);
+    })();
+
+    return this.readyPromise;
+  }
+
+  setParams(params) {
+    this.lastParams = { ...this.lastParams, ...params };
+    if (!this.node) return;
+    this.node.port.postMessage({
+      type: 'setParams',
+      params: this.lastParams
+    });
+  }
+
+  clear() {
+    if (!this.node) return;
+    this.node.port.postMessage({ type: 'clear' });
+  }
+}
+
+class ReverbWorklet {
+  constructor(paramDefaults) {
+    this.node = null;
+    this.readyPromise = null;
+    this.ready = false;
+    this.paramDefaults = paramDefaults;
+    this.lastParams = paramDefaults;
+  }
+
+  async ensure(ctx, source, destination) {
+    if (this.readyPromise) return this.readyPromise;
+
+    this.readyPromise = (async () => {
+      if (!ctx.audioWorklet || !ctx.audioWorklet.addModule) {
+        throw new Error('AudioWorklet not supported');
+      }
+
+      await ctx.audioWorklet.addModule(REVERB_WORKLET_URL);
+
+      this.node = new AudioWorkletNode(ctx, REVERB_WORKLET_PROCESSOR, {
         numberOfInputs: 1,
         numberOfOutputs: 1,
         outputChannelCount: [2],
@@ -253,6 +324,53 @@ const DELAY_MODE_CONFIG = {
   }
 };
 
+const REVERB_MODE_CONFIG = {
+  room: {
+    sendScale: 0.46,
+    wetScale: 0.58,
+    dampingOffset: 0.06,
+    toneOffset: -0.06,
+    diffusion: 0.62,
+    modRate: 0.11,
+    modDepth: 0.00018,
+    earlyLevel: 0.46,
+    widthBias: 0.08
+  },
+  plate: {
+    sendScale: 0.5,
+    wetScale: 0.62,
+    dampingOffset: 0.02,
+    toneOffset: 0.04,
+    diffusion: 0.76,
+    modRate: 0.14,
+    modDepth: 0.00028,
+    earlyLevel: 0.32,
+    widthBias: 0.14
+  },
+  hall: {
+    sendScale: 0.54,
+    wetScale: 0.68,
+    dampingOffset: 0,
+    toneOffset: 0,
+    diffusion: 0.82,
+    modRate: 0.16,
+    modDepth: 0.00042,
+    earlyLevel: 0.28,
+    widthBias: 0.18
+  },
+  ambient: {
+    sendScale: 0.58,
+    wetScale: 0.74,
+    dampingOffset: -0.08,
+    toneOffset: 0.08,
+    diffusion: 0.9,
+    modRate: 0.19,
+    modDepth: 0.00058,
+    earlyLevel: 0.22,
+    widthBias: 0.24
+  }
+};
+
 class AudioEngine {
   constructor() {
     this.context = null;
@@ -276,6 +394,8 @@ class AudioEngine {
     this.workletReadyPromise = null;
     this.delayWorklet = new DelayWorklet(DELAY_WORKLET_DEFAULTS);
     this.delayWorkletReadyPromise = null;
+    this.reverbWorklet = new ReverbWorklet(REVERB_WORKLET_DEFAULTS);
+    this.reverbWorkletReadyPromise = null;
 
     this.recorder = new RecorderController({
       onStop: () => this.exportRecording()
@@ -451,6 +571,34 @@ class AudioEngine {
     return this.delayWorkletReadyPromise;
   }
 
+  async ensureReverbWorklet(ctx) {
+    if (this.reverbWorkletReadyPromise) {
+      return this.reverbWorkletReadyPromise;
+    }
+
+    this.reverbWorkletReadyPromise = Promise.resolve()
+      .then(async () => {
+        const nodes = this.setupGraph(ctx);
+        await this.reverbWorklet.ensure(ctx, nodes.reverbSend, nodes.reverbWet);
+        if (this.currentParams) {
+          this.lastParamSignature = '';
+          this.applyGlobalParams(this.currentParams);
+        }
+      })
+      .catch((err) => {
+        this.status.error = {
+          type: 'REVERB_WORKLET_FAILED',
+          message: 'Failed to initialize reverb effect',
+          detail: err.message,
+          timestamp: Date.now()
+        };
+        this.notify();
+        throw err;
+      });
+
+    return this.reverbWorkletReadyPromise;
+  }
+
   async ensureRecorder(ctx) {
     const nodes = this.setupGraph(ctx);
     return this.recorder.ensure(ctx, nodes);
@@ -484,6 +632,7 @@ class AudioEngine {
         this.installUnlockHandlers();
         this.setupGraph(ctx);
         this.ensureDelayWorklet(ctx).catch(() => {});
+        this.ensureReverbWorklet(ctx).catch(() => {});
         this.ensureSamplePool(ctx);
 
         if (ctx.state === 'running') {
@@ -689,18 +838,54 @@ class AudioEngine {
       duckRelease
     });
 
-    const reverbWet = Math.pow(sanitized.reverb, 1.2) * 0.9;
+    const reverbMode = REVERB_MODE_CONFIG[sanitized.reverbMode]
+      ? sanitized.reverbMode
+      : AUDIO_PARAM_DEFAULTS.reverbMode;
+    const reverbConfig = REVERB_MODE_CONFIG[reverbMode];
+    const reverbActive = sanitized.reverbEnabled && sanitized.reverbMix > 0.001;
+    const reverbLevel = reverbActive ? Math.pow(sanitized.reverbMix, 1.06) : 0;
     nodes.reverbSend.gain.cancelScheduledValues(now);
-    nodes.reverbSend.gain.setTargetAtTime(clamp(0.08 + reverbWet * 0.52, 0, 0.56), now, 0.08);
-    nodes.reverbPreDelay.delayTime.cancelScheduledValues(now);
-    nodes.reverbPreDelay.delayTime.setTargetAtTime(0.012 + reverbWet * 0.032, now, 0.08);
-    nodes.reverbGain.gain.cancelScheduledValues(now);
-    nodes.reverbGain.gain.setTargetAtTime(reverbWet, now, 0.12);
+    nodes.reverbSend.gain.setTargetAtTime(reverbLevel * reverbConfig.sendScale, now, 0.08);
+    nodes.reverbWet.gain.cancelScheduledValues(now);
+    nodes.reverbWet.gain.setTargetAtTime(reverbLevel * reverbConfig.wetScale, now, 0.12);
+
+    const reverbTone = clamp(sanitized.reverbTone + reverbConfig.toneOffset, 0, 1);
+    const reverbDamping = clamp(
+      0.18 + (1 - reverbTone) * 0.62 + reverbConfig.dampingOffset,
+      0.12,
+      0.9
+    );
+    const reverbLowCut = clamp(70 + (1 - reverbTone) * 180, 20, 1400);
+    const reverbHighCut = clamp(
+      Math.max(2600 + reverbTone * 9800, reverbLowCut + 900),
+      1200,
+      18000
+    );
+
+    this.reverbWorklet.setParams({
+      enabled: reverbActive,
+      variant: reverbMode,
+      preDelay: sanitized.reverbPreDelay / 1000,
+      size: sanitized.reverbSize,
+      decay: sanitized.reverbDecay,
+      damping: reverbDamping,
+      lowCut: reverbLowCut,
+      highCut: reverbHighCut,
+      width: clamp(sanitized.reverbWidth + reverbConfig.widthBias, 0, 1),
+      diffusion: clamp(reverbConfig.diffusion + sanitized.reverbSize * 0.12, 0.4, 0.98),
+      modRate: reverbConfig.modRate * (0.8 + sanitized.reverbSize * 0.45),
+      modDepth: reverbConfig.modDepth * (0.7 + sanitized.reverbDecay * 0.6),
+      earlyLevel: clamp(
+        reverbConfig.earlyLevel * (0.7 + (1 - sanitized.reverbSize) * 0.3),
+        0.12,
+        0.72
+      )
+    });
 
     nodes.warmthFilter.gain.cancelScheduledValues(now);
     nodes.warmthFilter.gain.setTargetAtTime(1.2 + sanitized.distortion * 1.6, now, 0.12);
     nodes.presenceFilter.gain.cancelScheduledValues(now);
-    nodes.presenceFilter.gain.setTargetAtTime(1.5 - sanitized.reverb * 0.7, now, 0.12);
+    nodes.presenceFilter.gain.setTargetAtTime(1.5 - sanitized.reverbMix * 0.7, now, 0.12);
     nodes.airFilter.gain.cancelScheduledValues(now);
     nodes.airFilter.gain.setTargetAtTime(1.8 - sanitized.distortion * 0.8, now, 0.12);
 

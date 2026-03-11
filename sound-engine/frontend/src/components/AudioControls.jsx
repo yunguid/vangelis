@@ -5,6 +5,7 @@ import {
   DELAY_DIVISION_OPTIONS,
   DELAY_MODE_OPTIONS,
   DELAY_PRESET_OPTIONS,
+  REVERB_MODE_OPTIONS,
   getDelayPresetPatch,
   getDelayPresetValue,
   getDelaySeconds
@@ -24,6 +25,9 @@ const formatFrequency = (value) => {
   }
   return `${Math.round(value)} Hz`;
 };
+
+const formatMilliseconds = (value) => `${Math.round(value)} ms`;
+const getOptionLabel = (options, value) => options.find((option) => option.value === value)?.label || value;
 
 const makeSlider = (param, { id, label, display, helpText }) => {
   const range = AUDIO_PARAM_RANGES[param];
@@ -154,16 +158,65 @@ const DELAY_MOTION_SLIDER = makePercentSlider('delayMotion', {
   }
 });
 
-const EFFECT_SLIDERS = [
-  makePercentSlider('reverb', {
-    id: 'reverb',
-    label: 'Reverb'
-  }),
-  makePercentSlider('distortion', {
-    id: 'distortion',
-    label: 'Distortion'
-  })
-];
+const REVERB_SIZE_SLIDER = makePercentSlider('reverbSize', {
+  id: 'reverb-size',
+  label: 'Size',
+  display: (value) => {
+    if (value < 0.2) return 'Tight';
+    if (value < 0.5) return 'Room';
+    if (value < 0.8) return 'Hall';
+    return 'Huge';
+  }
+});
+
+const REVERB_DECAY_SLIDER = makePercentSlider('reverbDecay', {
+  id: 'reverb-decay',
+  label: 'Decay',
+  display: (value) => {
+    if (value < 0.2) return 'Short';
+    if (value < 0.5) return 'Medium';
+    if (value < 0.8) return 'Long';
+    return 'Bloom';
+  }
+});
+
+const REVERB_TONE_SLIDER = makePercentSlider('reverbTone', {
+  id: 'reverb-tone',
+  label: 'Tone',
+  display: (value) => {
+    if (value < 0.2) return 'Dark';
+    if (value < 0.5) return 'Warm';
+    if (value < 0.8) return 'Open';
+    return 'Bright';
+  }
+});
+
+const REVERB_MIX_SLIDER = makePercentSlider('reverbMix', {
+  id: 'reverb-mix',
+  label: 'Blend'
+});
+
+const REVERB_PREDELAY_SLIDER = makeSlider('reverbPreDelay', {
+  id: 'reverb-predelay',
+  label: 'Pre-delay',
+  display: (value) => formatMilliseconds(value)
+});
+
+const REVERB_WIDTH_SLIDER = makePercentSlider('reverbWidth', {
+  id: 'reverb-width',
+  label: 'Width',
+  display: (value) => {
+    if (value < 0.2) return 'Mono';
+    if (value < 0.5) return 'Narrow';
+    if (value < 0.8) return 'Wide';
+    return 'Wrap';
+  }
+});
+
+const DISTORTION_SLIDER = makePercentSlider('distortion', {
+  id: 'distortion',
+  label: 'Distortion'
+});
 
 const ADSR_SLIDERS = [
   makeSlider('attack', {
@@ -305,6 +358,47 @@ const SelectControl = ({
   </div>
 );
 
+const SegmentedControl = ({
+  id,
+  label,
+  value,
+  onChange,
+  options,
+  helpText,
+  displayValue
+}) => (
+  <div className="slider-group">
+    <div className="label-stack">
+      <label htmlFor={id}>{label}</label>
+      {displayValue ? <span className="slider-value">{displayValue}</span> : null}
+    </div>
+    {helpText && <p className="slider-description">{helpText}</p>}
+    <div id={id} className="segment-grid" role="group" aria-label={label}>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={`segment-button ${value === option.value ? 'is-active' : ''}`}
+          onClick={() => onChange(option.value)}
+          aria-pressed={value === option.value}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  </div>
+);
+
+const EffectSummary = ({ items }) => (
+  <div className="effect-summary">
+    {items.filter(Boolean).map((item, index) => (
+      <div key={`${item}-${index}`} className="effect-chip">
+        {item}
+      </div>
+    ))}
+  </div>
+);
+
 const AudioControls = ({
   audioParams,
   onParamChange,
@@ -313,6 +407,7 @@ const AudioControls = ({
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showDelayAdvanced, setShowDelayAdvanced] = useState(false);
+  const [showReverbAdvanced, setShowReverbAdvanced] = useState(false);
 
   const getParam = (key) => {
     const value = audioParams?.[key];
@@ -358,6 +453,8 @@ const AudioControls = ({
   const delayMode = getChoice('delayMode');
   const delayDivision = getChoice('delayDivision');
   const delayPreset = getDelayPresetValue(audioParams);
+  const reverbEnabled = getToggle('reverbEnabled');
+  const reverbMode = getChoice('reverbMode');
   const delayPreviewSeconds = getDelaySeconds({
     delaySync,
     delayTime: getParam('delayTime'),
@@ -367,6 +464,9 @@ const AudioControls = ({
   const delayStatus = delaySync
     ? `${delayPreviewMs} ms @ ${Math.round(transportBpm)} BPM`
     : `${delayPreviewMs} ms free`;
+  const reverbStatus = reverbEnabled
+    ? `${Math.round(getParam('reverbPreDelay'))} ms pre-delay`
+    : 'Bypassed';
   const applyDelayPreset = (preset) => {
     const patch = getDelayPresetPatch(preset);
     if (!patch) return;
@@ -415,7 +515,13 @@ const AudioControls = ({
           />
         </label>
 
-        <SelectControl
+        <EffectSummary items={[
+          getOptionLabel(DELAY_PRESET_OPTIONS, delayPreset),
+          getOptionLabel(DELAY_MODE_OPTIONS, delayMode),
+          delayStatus
+        ]} />
+
+        <SegmentedControl
           id="delay-preset"
           label="Preset"
           value={delayPreset}
@@ -424,7 +530,7 @@ const AudioControls = ({
           onChange={applyDelayPreset}
         />
 
-        <SelectControl
+        <SegmentedControl
           id="delay-mode"
           label="Mode"
           value={delayMode}
@@ -486,8 +592,61 @@ const AudioControls = ({
       </div>
 
       <div className="control-section">
-        <h2 className="controls-heading">Space</h2>
-        {EFFECT_SLIDERS.map(renderSlider)}
+        <div className="label-stack">
+          <h2 className="controls-heading">Reverb</h2>
+          <button
+            type="button"
+            className="button-link"
+            onClick={() => setShowReverbAdvanced((prev) => !prev)}
+          >
+            {showReverbAdvanced ? 'Less detail' : 'Shape space'}
+          </button>
+        </div>
+
+        <label className="toggle-row" htmlFor="reverb-enabled">
+          <span>Reverb active</span>
+          <input
+            id="reverb-enabled"
+            type="checkbox"
+            checked={reverbEnabled}
+            onChange={(e) => onParamChange('reverbEnabled', e.target.checked)}
+          />
+        </label>
+
+        <EffectSummary items={[
+          getOptionLabel(REVERB_MODE_OPTIONS, reverbMode),
+          reverbStatus,
+          `${Math.round(getParam('reverbMix') * 100)}% wet`
+        ]} />
+
+        <SegmentedControl
+          id="reverb-mode"
+          label="Mode"
+          value={reverbMode}
+          displayValue={reverbEnabled ? 'On' : 'Bypassed'}
+          helpText="Pick the space shape before fine-tuning it."
+          options={REVERB_MODE_OPTIONS}
+          onChange={(value) => onParamChange('reverbMode', value)}
+        />
+
+        <div className="slider-grid">
+          {renderSlider(REVERB_SIZE_SLIDER)}
+          {renderSlider(REVERB_DECAY_SLIDER)}
+          {renderSlider(REVERB_TONE_SLIDER)}
+          {renderSlider(REVERB_MIX_SLIDER)}
+        </div>
+
+        {showReverbAdvanced && (
+          <div className="slider-grid">
+            {renderSlider(REVERB_PREDELAY_SLIDER)}
+            {renderSlider(REVERB_WIDTH_SLIDER)}
+          </div>
+        )}
+      </div>
+
+      <div className="control-section">
+        <h2 className="controls-heading">Color</h2>
+        {renderSlider(DISTORTION_SLIDER)}
       </div>
 
       {showAdvanced && (

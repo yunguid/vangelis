@@ -29,7 +29,15 @@ export const DELAY_PRESET_OPTIONS = [
   { value: 'ping-pong', label: 'Ping-Pong' }
 ];
 
+export const REVERB_MODE_OPTIONS = [
+  { value: 'room', label: 'Room' },
+  { value: 'plate', label: 'Plate' },
+  { value: 'hall', label: 'Hall' },
+  { value: 'ambient', label: 'Ambient' }
+];
+
 const DELAY_MODE_VALUES = new Set(DELAY_MODE_OPTIONS.map(({ value }) => value));
+const REVERB_MODE_VALUES = new Set(REVERB_MODE_OPTIONS.map(({ value }) => value));
 const DELAY_DIVISION_BEATS = Object.fromEntries(
   DELAY_DIVISION_OPTIONS.map(({ value, beats }) => [value, beats])
 );
@@ -107,6 +115,14 @@ const isSameDelayPresetValue = (actual, expected) => {
 
 export const AUDIO_PARAM_DEFAULTS = {
   reverb: 0.24,
+  reverbEnabled: true,
+  reverbMode: 'hall',
+  reverbSize: 0.58,
+  reverbDecay: 0.52,
+  reverbTone: 0.56,
+  reverbMix: 0.24,
+  reverbPreDelay: 18,
+  reverbWidth: 0.82,
   delayEnabled: true,
   delayMode: 'digital',
   delaySync: false,
@@ -155,6 +171,12 @@ export const AUDIO_PARAM_RANGES = {
   delayAge: { min: 0, max: 1, step: 0.01 },
   delayMotion: { min: 0, max: 1, step: 0.01 },
   reverb: { min: 0, max: 1, step: 0.01 },
+  reverbSize: { min: 0, max: 1, step: 0.01 },
+  reverbDecay: { min: 0, max: 1, step: 0.01 },
+  reverbTone: { min: 0, max: 1, step: 0.01 },
+  reverbMix: { min: 0, max: 1, step: 0.01 },
+  reverbPreDelay: { min: 0, max: 120, step: 1 },
+  reverbWidth: { min: 0, max: 1, step: 0.01 },
   distortion: { min: 0, max: 1, step: 0.01 },
   pan: { min: 0, max: 1, step: 0.01 },
   attack: { min: MICRO_FADE_TIME, max: 5, step: 0.01 },
@@ -181,6 +203,12 @@ const coerceDelayMode = (value) => (
   typeof value === 'string' && DELAY_MODE_VALUES.has(value)
     ? value
     : AUDIO_PARAM_DEFAULTS.delayMode
+);
+
+const coerceReverbMode = (value) => (
+  typeof value === 'string' && REVERB_MODE_VALUES.has(value)
+    ? value
+    : AUDIO_PARAM_DEFAULTS.reverbMode
 );
 
 const coerceDelayDivision = (value) => (
@@ -234,6 +262,13 @@ export const getDelaySeconds = (params = {}, transportBpm = DEFAULT_TRANSPORT_TE
 export const sanitizeAudioParams = (params = {}) => {
   const merged = { ...AUDIO_PARAM_DEFAULTS, ...params };
   const ranges = AUDIO_PARAM_RANGES;
+  const legacyReverbMix = clamp(
+    Number.isFinite(merged.reverbMix)
+      ? merged.reverbMix
+      : (merged.reverb ?? AUDIO_PARAM_DEFAULTS.reverbMix),
+    ranges.reverbMix.min,
+    ranges.reverbMix.max
+  );
   const legacyDelayTime = Number.isFinite(merged.delayTime)
     ? merged.delayTime
     : Number.isFinite(merged.delay)
@@ -252,12 +287,44 @@ export const sanitizeAudioParams = (params = {}) => {
     ranges.delayHighCut.min,
     ranges.delayHighCut.max
   );
+  const reverbEnabled = typeof merged.reverbEnabled === 'boolean'
+    ? merged.reverbEnabled
+    : legacyReverbMix > 0.001;
   const delayEnabled = typeof merged.delayEnabled === 'boolean'
     ? merged.delayEnabled
     : legacyDelayTime > 0;
 
   return {
     volume: clamp(merged.volume, ranges.volume.min, ranges.volume.max),
+    reverb: legacyReverbMix,
+    reverbEnabled,
+    reverbMode: coerceReverbMode(merged.reverbMode),
+    reverbSize: clamp(
+      merged.reverbSize ?? AUDIO_PARAM_DEFAULTS.reverbSize,
+      ranges.reverbSize.min,
+      ranges.reverbSize.max
+    ),
+    reverbDecay: clamp(
+      merged.reverbDecay ?? AUDIO_PARAM_DEFAULTS.reverbDecay,
+      ranges.reverbDecay.min,
+      ranges.reverbDecay.max
+    ),
+    reverbTone: clamp(
+      merged.reverbTone ?? AUDIO_PARAM_DEFAULTS.reverbTone,
+      ranges.reverbTone.min,
+      ranges.reverbTone.max
+    ),
+    reverbMix: legacyReverbMix,
+    reverbPreDelay: clamp(
+      merged.reverbPreDelay ?? AUDIO_PARAM_DEFAULTS.reverbPreDelay,
+      ranges.reverbPreDelay.min,
+      ranges.reverbPreDelay.max
+    ),
+    reverbWidth: clamp(
+      merged.reverbWidth ?? AUDIO_PARAM_DEFAULTS.reverbWidth,
+      ranges.reverbWidth.min,
+      ranges.reverbWidth.max
+    ),
     delayEnabled,
     delayMode: coerceDelayMode(merged.delayMode),
     delaySync: !!merged.delaySync,
@@ -295,7 +362,6 @@ export const sanitizeAudioParams = (params = {}) => {
       ranges.delayMotion.min,
       ranges.delayMotion.max
     ),
-    reverb: clamp(merged.reverb, ranges.reverb.min, ranges.reverb.max),
     distortion: clamp(merged.distortion, ranges.distortion.min, ranges.distortion.max),
     pan: clamp(merged.pan, ranges.pan.min, ranges.pan.max),
     attack: clamp(merged.attack, ranges.attack.min, ranges.attack.max),

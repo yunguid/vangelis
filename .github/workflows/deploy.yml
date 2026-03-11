@@ -50,6 +50,14 @@ jobs:
         env:
           GITHUB_PAGES: true
 
+      - name: Verify bundled static assets
+        run: |
+          test -f sound-engine/frontend/dist/pkg/sound_engine.js
+          test -f sound-engine/frontend/dist/pkg/sound_engine_bg.wasm
+          test -f sound-engine/frontend/dist/midi/rachmaninoff-concerto2-mov1.mid
+          test -f sound-engine/frontend/dist/midi/satie-gymnopedie-1.mid
+          test -f sound-engine/frontend/dist/midi/russian/stanchinsky-prelude-c-minor.mid
+
       - name: Add .nojekyll to build output
         run: |
           touch sound-engine/frontend/dist/.nojekyll

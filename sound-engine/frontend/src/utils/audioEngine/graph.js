@@ -38,15 +38,9 @@ export function createAudioGraph(ctx, distortionCache) {
   delayWet.gain.value = 0;
 
   const reverbSend = ctx.createGain();
-  reverbSend.gain.value = 0.18;
-  const reverbPreDelay = ctx.createDelay(0.25);
-  reverbPreDelay.delayTime.value = 0.018;
-  const reverbNode = ctx.createConvolver();
-  const reverbHighpass = makeFilter(ctx, 'highpass', 180, 0, 0.72);
-  const reverbLowpass = makeFilter(ctx, 'lowpass', 9200, 0, 0.72);
-  const reverbGain = ctx.createGain();
-  reverbGain.gain.value = 0;
-  ensureImpulse(ctx, reverbNode);
+  reverbSend.gain.value = 0;
+  const reverbWet = ctx.createGain();
+  reverbWet.gain.value = 0;
 
   const masterGain = ctx.createGain();
   masterGain.gain.value = 0.68;
@@ -89,14 +83,9 @@ export function createAudioGraph(ctx, distortionCache) {
   airFilter.connect(delaySend);
 
   airFilter.connect(reverbSend);
-  reverbSend.connect(reverbPreDelay);
-  reverbPreDelay.connect(reverbNode);
-  reverbNode.connect(reverbHighpass);
-  reverbHighpass.connect(reverbLowpass);
-  reverbLowpass.connect(reverbGain);
 
   delayWet.connect(masterGain);
-  reverbGain.connect(masterGain);
+  reverbWet.connect(masterGain);
 
   masterGain.connect(stereoPanner);
   stereoPanner.connect(masterLimiter);
@@ -124,11 +113,7 @@ export function createAudioGraph(ctx, distortionCache) {
     delaySend,
     delayWet,
     reverbSend,
-    reverbPreDelay,
-    reverbNode,
-    reverbHighpass,
-    reverbLowpass,
-    reverbGain,
+    reverbWet,
     masterGain,
     stereoPanner,
     masterLimiter,
@@ -139,33 +124,4 @@ export function createAudioGraph(ctx, distortionCache) {
     silentGain,
     recordingDest
   };
-}
-
-function ensureImpulse(ctx, reverbNode) {
-  const seconds = 2.9;
-  const channels = 2;
-  const length = Math.floor(ctx.sampleRate * seconds);
-  const impulse = ctx.createBuffer(channels, length, ctx.sampleRate);
-
-  for (let channel = 0; channel < channels; channel += 1) {
-    const data = impulse.getChannelData(channel);
-    const drift = channel === 0 ? 0.00021 : -0.00018;
-
-    for (let i = 0; i < length; i += 1) {
-      const t = i / length;
-      const decay = Math.pow(1 - t, 2.4);
-      const noise = Math.random() * 2 - 1;
-      const shimmer = Math.sin((340 + drift * i * ctx.sampleRate) * t * Math.PI * 2) * 0.05;
-      let sample = (noise * 0.78 + shimmer) * decay;
-
-      if (i < length * 0.09) {
-        const reflection = Math.sin((12 + channel * 3) * t * Math.PI * 2) * 0.12;
-        sample += reflection * Math.pow(1 - t * 10, 2);
-      }
-
-      data[i] = sample * (channel === 0 ? 0.96 : 0.9);
-    }
-  }
-
-  reverbNode.buffer = impulse;
 }

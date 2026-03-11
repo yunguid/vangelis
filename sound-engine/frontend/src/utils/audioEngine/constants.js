@@ -6,6 +6,8 @@ export const WORKLET_PROCESSOR = 'vangelis-synth';
 export const WORKLET_URL = new URL('../../audio/synth-worklet.js', import.meta.url);
 export const DELAY_WORKLET_PROCESSOR = 'vangelis-delay';
 export const DELAY_WORKLET_URL = new URL('../../audio/delay-worklet.js', import.meta.url);
+export const REVERB_WORKLET_PROCESSOR = 'vangelis-reverb';
+export const REVERB_WORKLET_URL = new URL('../../audio/reverb-worklet.js', import.meta.url);
 export const RECORDER_PROCESSOR = 'vangelis-recorder';
 export const RECORDER_URL = new URL('../../audio/recorder-worklet.js', import.meta.url);
 
