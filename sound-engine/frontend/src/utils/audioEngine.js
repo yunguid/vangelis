@@ -843,7 +843,8 @@ class AudioEngine {
       : AUDIO_PARAM_DEFAULTS.reverbMode;
     const reverbConfig = REVERB_MODE_CONFIG[reverbMode];
     const reverbActive = sanitized.reverbEnabled && sanitized.reverbMix > 0.001;
-    const reverbLevel = reverbActive ? Math.pow(sanitized.reverbMix, 1.06) : 0;
+    const reverbMix = reverbActive ? sanitized.reverbMix : 0;
+    const reverbLevel = reverbMix > 0 ? Math.pow(reverbMix, 1.06) : 0;
     nodes.reverbSend.gain.cancelScheduledValues(now);
     nodes.reverbSend.gain.setTargetAtTime(reverbLevel * reverbConfig.sendScale, now, 0.08);
     nodes.reverbWet.gain.cancelScheduledValues(now);
@@ -885,7 +886,7 @@ class AudioEngine {
     nodes.warmthFilter.gain.cancelScheduledValues(now);
     nodes.warmthFilter.gain.setTargetAtTime(1.2 + sanitized.distortion * 1.6, now, 0.12);
     nodes.presenceFilter.gain.cancelScheduledValues(now);
-    nodes.presenceFilter.gain.setTargetAtTime(1.5 - sanitized.reverbMix * 0.7, now, 0.12);
+    nodes.presenceFilter.gain.setTargetAtTime(1.5 - reverbMix * 0.7, now, 0.12);
     nodes.airFilter.gain.cancelScheduledValues(now);
     nodes.airFilter.gain.setTargetAtTime(1.8 - sanitized.distortion * 0.8, now, 0.12);
 

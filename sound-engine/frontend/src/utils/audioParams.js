@@ -43,43 +43,19 @@ const DELAY_DIVISION_BEATS = Object.fromEntries(
 );
 const DELAY_PRESET_VALUES = new Set(DELAY_PRESET_OPTIONS.map(({ value }) => value));
 
-const LEGACY_EFFECT_DEFAULTS = Object.freeze({
-  reverb: 0.24,
+const LEGACY_EFFECT_SIGNATURE = Object.freeze({
   reverbEnabled: true,
-  reverbMode: 'hall',
-  reverbSize: 0.58,
-  reverbDecay: 0.52,
-  reverbTone: 0.56,
   reverbMix: 0.24,
-  reverbPreDelay: 18,
-  reverbWidth: 0.82,
   delayEnabled: true,
-  delayMode: 'digital',
-  delaySync: false,
   delayTime: 72,
-  delayDivision: '1/8',
   delayFeedback: 0.26,
-  delayMix: 0.18,
-  delayStereo: 0.7,
-  delayLowCut: 90,
-  delayHighCut: 5400,
-  delayDucking: 0.12,
-  delayAge: 0.22,
-  delayMotion: 0.3
+  delayMix: 0.18
 });
 
-const LEGACY_CORE_TONE_DEFAULTS = Object.freeze({
-  useFM: false,
-  fmRatio: 2,
-  fmIndex: 2,
-  phaseOffset: 0,
+const LEGACY_CORE_TONE_SIGNATURE = Object.freeze({
   useFilter: true,
   filterCutoff: 13200,
   filterResonance: 0.82,
-  filterMode: 0,
-  lfoRate: 0,
-  lfoDepth: 0,
-  lfoTarget: 0,
   unisonVoices: 2,
   unisonDetune: 7
 });
@@ -103,7 +79,6 @@ const CLEAN_CORE_TONE_DEFAULTS = Object.freeze({
 
 const DELAY_PRESET_PATCHES = {
   'clean-slap': {
-    delayEnabled: true,
     delayMode: 'digital',
     delaySync: false,
     delayTime: 112,
@@ -118,7 +93,6 @@ const DELAY_PRESET_PATCHES = {
     delayMotion: 0.14
   },
   'wide-quarter': {
-    delayEnabled: true,
     delayMode: 'digital',
     delaySync: true,
     delayTime: 420,
@@ -133,7 +107,6 @@ const DELAY_PRESET_PATCHES = {
     delayMotion: 0.42
   },
   'tape-echo': {
-    delayEnabled: true,
     delayMode: 'tape',
     delaySync: true,
     delayTime: 440,
@@ -148,7 +121,6 @@ const DELAY_PRESET_PATCHES = {
     delayMotion: 0.66
   },
   'ping-pong': {
-    delayEnabled: true,
     delayMode: 'ping-pong',
     delaySync: true,
     delayTime: 280,
@@ -270,14 +242,14 @@ export const upgradeLegacyAudioParams = (params = {}) => {
 
   let next = { ...params };
 
-  if (matchesProfile(next, LEGACY_CORE_TONE_DEFAULTS)) {
+  if (matchesProfile(next, LEGACY_CORE_TONE_SIGNATURE)) {
     next = {
       ...next,
       ...CLEAN_CORE_TONE_DEFAULTS
     };
   }
 
-  if (matchesProfile(next, LEGACY_EFFECT_DEFAULTS)) {
+  if (matchesProfile(next, LEGACY_EFFECT_SIGNATURE)) {
     next = {
       ...next,
       ...CLEAN_EFFECT_DEFAULTS
@@ -380,10 +352,10 @@ export const sanitizeAudioParams = (params = {}) => {
   );
   const reverbEnabled = typeof merged.reverbEnabled === 'boolean'
     ? merged.reverbEnabled
-    : legacyReverbMix > 0.001;
+    : AUDIO_PARAM_DEFAULTS.reverbEnabled;
   const delayEnabled = typeof merged.delayEnabled === 'boolean'
     ? merged.delayEnabled
-    : legacyDelayTime > 0;
+    : AUDIO_PARAM_DEFAULTS.delayEnabled;
 
   return {
     volume: clamp(merged.volume, ranges.volume.min, ranges.volume.max),
