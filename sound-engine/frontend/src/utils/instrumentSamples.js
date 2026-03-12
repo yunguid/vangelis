@@ -13,6 +13,7 @@ const toSamplePath = (relativePath, base = import.meta.env.BASE_URL) =>
   withBase(`samples/${relativePath}`, base);
 
 const soundSetCache = new Map();
+let privateSoundSetManifestPromise = null;
 const rejectedInstrumentLog = new Set();
 
 function toInstrumentLogKey(soundSetId, instrumentId, samplePath) {
@@ -45,6 +46,126 @@ function materializeSoundSet(definition, base = import.meta.env.BASE_URL) {
       sampleUrl: instrument.sampleUrl || (instrument.samplePath ? toSamplePath(instrument.samplePath, base) : null)
     }))
   };
+}
+
+const cloneInstrumentDefinition = (instrument) => {
+  if (!instrument || typeof instrument !== 'object') return instrument;
+  return {
+    ...instrument,
+    families: Array.isArray(instrument.families) ? [...instrument.families] : instrument.families,
+    names: Array.isArray(instrument.names) ? [...instrument.names] : instrument.names
+  };
+};
+
+const cloneSoundSetDefinition = (definition) => {
+  if (!definition || typeof definition !== 'object') return definition;
+  return {
+    ...definition,
+    quality: definition.quality ? { ...definition.quality } : definition.quality,
+    layerFamilies: Array.isArray(definition.layerFamilies) ? [...definition.layerFamilies] : definition.layerFamilies,
+    instruments: Array.isArray(definition.instruments)
+      ? definition.instruments.map(cloneInstrumentDefinition)
+      : []
+  };
+};
+
+export function mergeSoundSetDefinitions(baseDefinition, overrideDefinition) {
+  if (!baseDefinition) return cloneSoundSetDefinition(overrideDefinition);
+  if (!overrideDefinition) return cloneSoundSetDefinition(baseDefinition);
+
+  const merged = cloneSoundSetDefinition(baseDefinition);
+  const override = cloneSoundSetDefinition(overrideDefinition);
+  const mergedInstruments = Array.isArray(merged.instruments) ? merged.instruments : [];
+  const instrumentIndexById = new Map();
+
+  mergedInstruments.forEach((instrument, index) => {
+    if (typeof instrument?.id === 'string' && instrument.id.length > 0) {
+      instrumentIndexById.set(instrument.id, index);
+    }
+  });
+
+  (override.instruments || []).forEach((instrument) => {
+    if (typeof instrument?.id === 'string' && instrument.id.length > 0 && instrumentIndexById.has(instrument.id)) {
+      const index = instrumentIndexById.get(instrument.id);
+      mergedInstruments[index] = {
+        ...mergedInstruments[index],
+        ...instrument,
+        families: Array.isArray(instrument.families)
+          ? [...instrument.families]
+          : mergedInstruments[index].families,
+        names: Array.isArray(instrument.names)
+          ? [...instrument.names]
+          : mergedInstruments[index].names
+      };
+      return;
+    }
+
+    mergedInstruments.push(cloneInstrumentDefinition(instrument));
+  });
+
+  return {
+    ...merged,
+    ...override,
+    quality: override.quality ? { ...(merged.quality || {}), ...override.quality } : merged.quality,
+    layerFamilies: Array.isArray(override.layerFamilies) ? [...override.layerFamilies] : merged.layerFamilies,
+    instruments: mergedInstruments
+  };
+}
+
+function normalizePrivateSoundSetManifest(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return new Map();
+  }
+
+  const entries = Array.isArray(payload.soundSets) ? payload.soundSets : [];
+  const byId = new Map();
+  entries.forEach((entry) => {
+    if (!entry || typeof entry !== 'object') return;
+    if (typeof entry.id !== 'string' || entry.id.length === 0) return;
+    byId.set(entry.id, entry);
+  });
+  return byId;
+}
+
+async function loadPrivateSoundSetManifest(base = import.meta.env.BASE_URL) {
+  if (privateSoundSetManifestPromise) return privateSoundSetManifestPromise;
+
+  privateSoundSetManifestPromise = (async () => {
+    const url = withBase('private-sound-sets.json', base);
+
+    try {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) {
+        if (response.status === 404) return new Map();
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('text/html')) {
+        return new Map();
+      }
+
+      const payload = await response.json();
+      return normalizePrivateSoundSetManifest(payload);
+    } catch (error) {
+      console.warn('Ignoring private sound-set overrides:', error);
+      return new Map();
+    }
+  })();
+
+  return privateSoundSetManifestPromise;
+}
+
+async function getResolvedSoundSetDefinition(id, base = import.meta.env.BASE_URL) {
+  const builtInDefinition = getSoundSetManifest(id);
+  const privateManifest = await loadPrivateSoundSetManifest(base);
+  const privateOverride = privateManifest.get(id);
+
+  if (builtInDefinition && privateOverride) {
+    return mergeSoundSetDefinitions(builtInDefinition, privateOverride);
+  }
+
+  return cloneSoundSetDefinition(privateOverride || builtInDefinition);
 }
 
 function noteIdToFrequency(noteId) {
@@ -165,7 +286,8 @@ export async function ensureSoundSetLoaded(id) {
   if (!id) return null;
   if (soundSetCache.has(id)) return soundSetCache.get(id);
 
-  const soundSet = materializeSoundSet(getSoundSetManifest(id));
+  const resolvedDefinition = await getResolvedSoundSetDefinition(id);
+  const soundSet = materializeSoundSet(resolvedDefinition);
   if (!soundSet) return null;
 
   const ctx = await audioEngine.ensureAudioContext();

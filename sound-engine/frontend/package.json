@@ -6,6 +6,7 @@
         "build": "vite build",
         "perf:visual": "node scripts/perf_visual_workload.mjs",
         "sync:midis": "node scripts/sync_russian_midis.mjs",
+        "sync:private-sound-sets": "node scripts/sync_private_sound_sets.mjs",
         "sync:starter-sounds": "node scripts/sync_starter_sounds.mjs",
         "preview": "vite preview",
         "test": "vitest run",

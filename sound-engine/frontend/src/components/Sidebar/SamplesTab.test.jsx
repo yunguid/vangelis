@@ -13,6 +13,13 @@ vi.mock('../../utils/sampleStorage.js', () => ({
 describe('SamplesTab starter pack integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: false,
+      status: 404,
+      headers: {
+        get: () => 'application/json'
+      }
+    })));
   });
 
   it('renders starter pack quick-access buttons', async () => {
@@ -56,5 +63,46 @@ describe('SamplesTab starter pack integration', () => {
     expect(screen.getByRole('button', { name: /Bassoon Grain/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /French Horn Round/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Filter starter samples')).not.toBeInTheDocument();
+  });
+
+  it('surfaces private local starter sounds when a private manifest exists', async () => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: () => 'application/json'
+      },
+      json: async () => ({
+        soundSets: [
+          {
+            id: 'ableton-private-starter',
+            instruments: [
+              {
+                id: 'ableton-phantasm',
+                label: 'Ableton Phantasm',
+                families: ['synth'],
+                samplePath: 'private-library/ableton-grand-piano/phantasm-c4.wav',
+                baseNote: 'C4'
+              }
+            ]
+          }
+        ]
+      })
+    });
+
+    const onSampleSelect = vi.fn();
+    render(<SamplesTab onSampleSelect={onSampleSelect} activeSampleId={null} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Ableton Phantasm/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Ableton Phantasm/i }));
+
+    expect(onSampleSelect).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'starter-ableton-private-starter-ableton-phantasm',
+      sourceUrl: expect.stringContaining('samples/private-library/'),
+      mimeType: 'audio/wav'
+    }));
   });
 });

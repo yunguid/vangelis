@@ -41,3 +41,7 @@ pkg/
 sound-engine/frontend/raylib/.emcache/
 !sound-engine/frontend/public/raylib/wavecandy.js
 !sound-engine/frontend/public/raylib/wavecandy.wasm
+
+# Local/private sample overrides
+sound-engine/frontend/public/private-sound-sets.json
+sound-engine/frontend/public/samples/private-library/

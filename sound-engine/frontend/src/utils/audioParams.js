@@ -43,6 +43,64 @@ const DELAY_DIVISION_BEATS = Object.fromEntries(
 );
 const DELAY_PRESET_VALUES = new Set(DELAY_PRESET_OPTIONS.map(({ value }) => value));
 
+const LEGACY_EFFECT_DEFAULTS = Object.freeze({
+  reverb: 0.24,
+  reverbEnabled: true,
+  reverbMode: 'hall',
+  reverbSize: 0.58,
+  reverbDecay: 0.52,
+  reverbTone: 0.56,
+  reverbMix: 0.24,
+  reverbPreDelay: 18,
+  reverbWidth: 0.82,
+  delayEnabled: true,
+  delayMode: 'digital',
+  delaySync: false,
+  delayTime: 72,
+  delayDivision: '1/8',
+  delayFeedback: 0.26,
+  delayMix: 0.18,
+  delayStereo: 0.7,
+  delayLowCut: 90,
+  delayHighCut: 5400,
+  delayDucking: 0.12,
+  delayAge: 0.22,
+  delayMotion: 0.3
+});
+
+const LEGACY_CORE_TONE_DEFAULTS = Object.freeze({
+  useFM: false,
+  fmRatio: 2,
+  fmIndex: 2,
+  phaseOffset: 0,
+  useFilter: true,
+  filterCutoff: 13200,
+  filterResonance: 0.82,
+  filterMode: 0,
+  lfoRate: 0,
+  lfoDepth: 0,
+  lfoTarget: 0,
+  unisonVoices: 2,
+  unisonDetune: 7
+});
+
+const CLEAN_EFFECT_DEFAULTS = Object.freeze({
+  reverb: 0,
+  reverbEnabled: false,
+  reverbMix: 0,
+  delayEnabled: false,
+  delayMix: 0
+});
+
+const CLEAN_CORE_TONE_DEFAULTS = Object.freeze({
+  useFilter: false,
+  filterCutoff: 18000,
+  filterResonance: 0.7,
+  filterMode: 0,
+  unisonVoices: 1,
+  unisonDetune: 0
+});
+
 const DELAY_PRESET_PATCHES = {
   'clean-slap': {
     delayEnabled: true,
@@ -114,22 +172,22 @@ const isSameDelayPresetValue = (actual, expected) => {
 };
 
 export const AUDIO_PARAM_DEFAULTS = {
-  reverb: 0.24,
-  reverbEnabled: true,
+  reverb: 0,
+  reverbEnabled: false,
   reverbMode: 'hall',
   reverbSize: 0.58,
   reverbDecay: 0.52,
   reverbTone: 0.56,
-  reverbMix: 0.24,
+  reverbMix: 0,
   reverbPreDelay: 18,
   reverbWidth: 0.82,
-  delayEnabled: true,
+  delayEnabled: false,
   delayMode: 'digital',
   delaySync: false,
   delayTime: 72,
   delayDivision: '1/8',
   delayFeedback: 0.26,
-  delayMix: 0.18,
+  delayMix: 0,
   delayStereo: 0.7,
   delayLowCut: 90,
   delayHighCut: 5400,
@@ -148,15 +206,15 @@ export const AUDIO_PARAM_DEFAULTS = {
   fmIndex: 2,
   pan: 0.5,
   phaseOffset: 0,
-  useFilter: true,
-  filterCutoff: 13200,
-  filterResonance: 0.82,
+  useFilter: false,
+  filterCutoff: 18000,
+  filterResonance: 0.7,
   filterMode: 0,
   lfoRate: 0,
   lfoDepth: 0,
   lfoTarget: 0,
-  unisonVoices: 2,
-  unisonDetune: 7
+  unisonVoices: 1,
+  unisonDetune: 0
 };
 
 export const AUDIO_PARAM_RANGES = {
@@ -196,7 +254,40 @@ export const AUDIO_PARAM_RANGES = {
   unisonDetune: { min: 0, max: 50, step: 1 }
 };
 
-export const DEFAULT_WAVEFORM = 'Triangle';
+const matchesProfileValue = (actual, expected) => {
+  if (typeof expected === 'number') {
+    return Math.abs((actual ?? 0) - expected) < 1e-6;
+  }
+  return actual === expected;
+};
+
+const matchesProfile = (params, profile) => Object.entries(profile).every(([key, expected]) => (
+  matchesProfileValue(params?.[key], expected)
+));
+
+export const upgradeLegacyAudioParams = (params = {}) => {
+  if (!params || typeof params !== 'object') return params;
+
+  let next = { ...params };
+
+  if (matchesProfile(next, LEGACY_CORE_TONE_DEFAULTS)) {
+    next = {
+      ...next,
+      ...CLEAN_CORE_TONE_DEFAULTS
+    };
+  }
+
+  if (matchesProfile(next, LEGACY_EFFECT_DEFAULTS)) {
+    next = {
+      ...next,
+      ...CLEAN_EFFECT_DEFAULTS
+    };
+  }
+
+  return next;
+};
+
+export const DEFAULT_WAVEFORM = 'Sine';
 export const WAVEFORM_OPTIONS = ['Sine', 'Sawtooth', 'Square', 'Triangle'];
 
 const coerceDelayMode = (value) => (

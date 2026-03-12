@@ -9,7 +9,7 @@ import {
 import { getAllSoundSetManifests } from '../../data/soundSets.js';
 import { withBase } from '../../utils/baseUrl.js';
 
-const STARTER_FAMILY_ORDER = ['piano', 'strings', 'brass', 'reed', 'chromatic percussion'];
+const STARTER_FAMILY_ORDER = ['piano', 'strings', 'brass', 'reed', 'chromatic percussion', 'bass', 'synth', 'texture'];
 
 const encodeSamplePath = (samplePath = '') =>
   samplePath
@@ -34,11 +34,78 @@ const closeDecoderContext = async (ctx) => {
   }
 };
 
-const buildStarterCatalog = () => {
-  const manifests = getAllSoundSetManifests();
+const cloneInstrumentDefinition = (instrument) => ({
+  ...instrument,
+  families: Array.isArray(instrument?.families) ? [...instrument.families] : instrument?.families,
+  names: Array.isArray(instrument?.names) ? [...instrument.names] : instrument?.names
+});
+
+const mergeSoundSetManifestLists = (baseManifests, overrideManifests) => {
+  const byId = new Map();
+
+  (baseManifests || []).forEach((manifest) => {
+    if (!manifest?.id) return;
+    byId.set(manifest.id, {
+      ...manifest,
+      quality: manifest.quality ? { ...manifest.quality } : manifest.quality,
+      layerFamilies: Array.isArray(manifest.layerFamilies) ? [...manifest.layerFamilies] : manifest.layerFamilies,
+      instruments: Array.isArray(manifest.instruments) ? manifest.instruments.map(cloneInstrumentDefinition) : []
+    });
+  });
+
+  (overrideManifests || []).forEach((override) => {
+    if (!override?.id) return;
+
+    if (!byId.has(override.id)) {
+      byId.set(override.id, {
+        ...override,
+        quality: override.quality ? { ...override.quality } : override.quality,
+        layerFamilies: Array.isArray(override.layerFamilies) ? [...override.layerFamilies] : override.layerFamilies,
+        instruments: Array.isArray(override.instruments) ? override.instruments.map(cloneInstrumentDefinition) : []
+      });
+      return;
+    }
+
+    const base = byId.get(override.id);
+    const nextInstruments = Array.isArray(base.instruments) ? [...base.instruments] : [];
+    const indexById = new Map();
+    nextInstruments.forEach((instrument, index) => {
+      if (typeof instrument?.id === 'string' && instrument.id.length > 0) {
+        indexById.set(instrument.id, index);
+      }
+    });
+
+    (override.instruments || []).forEach((instrument) => {
+      if (typeof instrument?.id === 'string' && instrument.id.length > 0 && indexById.has(instrument.id)) {
+        const index = indexById.get(instrument.id);
+        nextInstruments[index] = {
+          ...nextInstruments[index],
+          ...instrument,
+          families: Array.isArray(instrument.families) ? [...instrument.families] : nextInstruments[index].families,
+          names: Array.isArray(instrument.names) ? [...instrument.names] : nextInstruments[index].names
+        };
+        return;
+      }
+
+      nextInstruments.push(cloneInstrumentDefinition(instrument));
+    });
+
+    byId.set(override.id, {
+      ...base,
+      ...override,
+      quality: override.quality ? { ...(base.quality || {}), ...override.quality } : base.quality,
+      layerFamilies: Array.isArray(override.layerFamilies) ? [...override.layerFamilies] : base.layerFamilies,
+      instruments: nextInstruments
+    });
+  });
+
+  return [...byId.values()];
+};
+
+const buildStarterCatalog = (manifests) => {
   const uniqueByPath = new Map();
 
-  manifests.forEach((soundSet) => {
+  (manifests || []).forEach((soundSet) => {
     (soundSet.instruments || []).forEach((instrument) => {
       if (!instrument.samplePath) return;
       if (uniqueByPath.has(instrument.samplePath)) return;
@@ -66,6 +133,12 @@ const buildStarterCatalog = () => {
   });
 
   return items;
+};
+
+const toPrivateManifestUrl = () => {
+  const relative = withBase('private-sound-sets.json');
+  if (typeof window === 'undefined') return relative;
+  return new URL(relative, window.location.href).toString();
 };
 
 const selectFeaturedStarterItems = (items, maxTotal = 16, maxPerFamily = 4) => {
@@ -112,10 +185,14 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [starterFamilyFilter, setStarterFamilyFilter] = useState('all');
+  const [privateSoundSets, setPrivateSoundSets] = useState([]);
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const cancelImportRef = useRef(false);
-  const starterCatalog = useMemo(() => buildStarterCatalog(), []);
+  const starterCatalog = useMemo(() => {
+    const mergedManifests = mergeSoundSetManifestLists(getAllSoundSetManifests(), privateSoundSets);
+    return buildStarterCatalog(mergedManifests);
+  }, [privateSoundSets]);
   const featuredStarterCatalog = useMemo(
     () => selectFeaturedStarterItems(starterCatalog),
     [starterCatalog]
@@ -138,6 +215,36 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   // Load samples on mount
   useEffect(() => {
     loadSamples();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPrivateSoundSets = async () => {
+      try {
+        const response = await fetch(toPrivateManifestUrl(), { cache: 'no-store' });
+        if (!response.ok) return;
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) return;
+
+        const payload = await response.json();
+        if (cancelled) return;
+
+        const soundSets = Array.isArray(payload?.soundSets) ? payload.soundSets : [];
+        setPrivateSoundSets(soundSets.filter((entry) => entry && typeof entry.id === 'string' && entry.id.length > 0));
+      } catch {
+        if (!cancelled) {
+          setPrivateSoundSets([]);
+        }
+      }
+    };
+
+    loadPrivateSoundSets();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadSamples = async () => {

@@ -1,4 +1,4 @@
-import { sanitizeAudioParams } from './audioParams.js';
+import { sanitizeAudioParams, upgradeLegacyAudioParams } from './audioParams.js';
 
 const STORAGE_KEY = 'vangelis-ui-session-v1';
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
@@ -89,7 +89,9 @@ export function loadAppSession() {
     if (!parsed || typeof parsed !== 'object') return getDefaultSessionState();
 
     const fallback = getDefaultSessionState();
-    const audioParams = sanitizeAudioParams(parsed.audioParams || undefined);
+    const audioParams = sanitizeAudioParams(
+      upgradeLegacyAudioParams(parsed.audioParams || undefined)
+    );
 
     return {
       ...fallback,
