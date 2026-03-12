@@ -613,13 +613,7 @@ const App = () => {
         </header>
 
         <main className="zone-center content-primary" aria-label="Keyboard area">
-          <WaveCandy
-            audioParams={audioParams}
-            onParamChange={handleAudioParamChange}
-            transportBpm={transportBpm}
-            controlSections={controlSections}
-            onSectionToggle={handleControlSectionToggle}
-          />
+          <WaveCandy />
           <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
             <div className="keyboard-header">
               <span className="keyboard-legend">

@@ -105,47 +105,6 @@
     font-size: 0.76rem;
   }
 
-  .wave-candy-fx-dock {
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .wave-candy-fx-card {
-    padding: 8px;
-    gap: 6px;
-  }
-
-  .wave-candy-fx-card__main {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .wave-candy-fx-card__canvas {
-    max-width: none;
-    height: 42px;
-  }
-
-  .wave-candy-fx-card__state {
-    display: none;
-  }
-
-  .wave-candy-fx-card__summary--muted {
-    display: none;
-  }
-
-  .wave-candy-fx-card__actions {
-    gap: 6px;
-  }
-
-  .wave-candy-fx-card__action {
-    min-height: 30px;
-    padding: 6px 8px;
-    font-size: 0.52rem;
-    letter-spacing: 0.1em;
-  }
-
   .birds-eye-radar {
     padding: 8px;
   }
