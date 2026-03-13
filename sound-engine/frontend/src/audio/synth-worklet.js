@@ -76,10 +76,6 @@ function waveformSample(waveform, phase, dt) {
   }
 }
 
-function softClip(x) {
-  return Math.tanh(x);
-}
-
 function normalizeWaveform(value) {
   if (typeof value === 'number') {
     return clamp(Math.floor(value), 0, 3);
@@ -596,7 +592,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           sample += voice.nextSample();
         }
       }
-      sample = softClip(sample * mixGain);
+      sample *= mixGain;
       left[i] = sample;
       if (right) {
         right[i] = sample;

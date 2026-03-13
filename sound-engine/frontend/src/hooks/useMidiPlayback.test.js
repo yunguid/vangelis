@@ -482,7 +482,7 @@ describe('useMidiPlayback layering', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith('No MIDI data to play');
   });
 
-  it('normalizes instrument family casing for waveform fallback mapping', async () => {
+  it('normalizes instrument family casing without overriding waveform mode playback', async () => {
     ensureSoundSetLoaded.mockResolvedValue(null);
 
     const { result } = renderHook(() => useMidiPlayback({
@@ -505,7 +505,7 @@ describe('useMidiPlayback layering', () => {
     });
 
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
-    expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('triangle');
+    expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('sine');
     expect(result.current.currentMidi?.notes?.[0]?.instrumentFamily).toBe('piano');
   });
 });

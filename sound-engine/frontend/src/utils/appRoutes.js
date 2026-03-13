@@ -2,10 +2,12 @@ import { normalizeBase, withBase } from './baseUrl.js';
 
 export const APP_ROUTES = Object.freeze({
   synth: 'synth',
-  vocalFinder: 'vocal-finder'
+  vocalFinder: 'vocal-finder',
+  stemSplitter: 'stem-splitter'
 });
 
 const VOCAL_FINDER_PATH = '/vocal-finder';
+const STEM_SPLITTER_PATH = '/stem-splitter';
 
 const isAbsoluteBase = (value) => /^https?:\/\//i.test(value);
 
@@ -40,7 +42,11 @@ const stripBasePath = (pathname, base = import.meta.env.BASE_URL) => {
 };
 
 const resolveRoute = (path) => (
-  normalizeRoutePath(path) === VOCAL_FINDER_PATH ? APP_ROUTES.vocalFinder : APP_ROUTES.synth
+  normalizeRoutePath(path) === VOCAL_FINDER_PATH
+    ? APP_ROUTES.vocalFinder
+    : normalizeRoutePath(path) === STEM_SPLITTER_PATH
+      ? APP_ROUTES.stemSplitter
+      : APP_ROUTES.synth
 );
 
 export const getCurrentRoute = (base = import.meta.env.BASE_URL) => {
@@ -57,6 +63,10 @@ export const getCurrentRoute = (base = import.meta.env.BASE_URL) => {
 export const getRouteHref = (route, base = import.meta.env.BASE_URL) => {
   if (route === APP_ROUTES.vocalFinder) {
     return `${withBase('', base)}#/vocal-finder`;
+  }
+
+  if (route === APP_ROUTES.stemSplitter) {
+    return `${withBase('', base)}#/stem-splitter`;
   }
 
   return withBase('', base);

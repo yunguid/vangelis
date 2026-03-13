@@ -889,12 +889,15 @@ class AudioEngine {
       )
     });
 
+    const colorAmount = clamp(effective.distortion, 0, 1);
     nodes.warmthFilter.gain.cancelScheduledValues(now);
-    nodes.warmthFilter.gain.setTargetAtTime(1.2 + effective.distortion * 1.6, now, 0.12);
+    nodes.warmthFilter.gain.setTargetAtTime(colorAmount * 1.6, now, 0.12);
     nodes.presenceFilter.gain.cancelScheduledValues(now);
-    nodes.presenceFilter.gain.setTargetAtTime(1.5 - reverbMix * 0.7, now, 0.12);
+    nodes.presenceFilter.gain.setTargetAtTime(-reverbMix * 0.7, now, 0.12);
+    nodes.postTone.gain.cancelScheduledValues(now);
+    nodes.postTone.gain.setTargetAtTime(colorAmount * 0.4, now, 0.12);
     nodes.airFilter.gain.cancelScheduledValues(now);
-    nodes.airFilter.gain.setTargetAtTime(1.8 - effective.distortion * 0.8, now, 0.12);
+    nodes.airFilter.gain.setTargetAtTime(-colorAmount * 0.8, now, 0.12);
 
     nodes.distortion.curve = this.distortionCache.get(effective.distortion);
 

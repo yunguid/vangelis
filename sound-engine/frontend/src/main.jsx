@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import VocalFinderPage from './components/VocalFinderPage.jsx';
+import StemSplitterPage from './components/StemSplitterPage.jsx';
 import './style.css';
 import { audioEngine } from './utils/audioEngine.js';
 import { APP_ROUTES, getCurrentRoute, subscribeToRouteChanges } from './utils/appRoutes.js';
@@ -16,11 +17,25 @@ const RoutedApp = () => {
   }, []);
 
   React.useEffect(() => {
-    document.title = route === APP_ROUTES.vocalFinder ? 'Vocal Finder | Vangelis' : 'Vangelis';
+    if (route === APP_ROUTES.vocalFinder) {
+      document.title = 'Vocal Finder | Vangelis';
+      return;
+    }
+
+    if (route === APP_ROUTES.stemSplitter) {
+      document.title = 'Stem Splitter | Vangelis';
+      return;
+    }
+
+    document.title = 'Vangelis';
   }, [route]);
 
   if (route === APP_ROUTES.vocalFinder) {
     return <VocalFinderPage />;
+  }
+
+  if (route === APP_ROUTES.stemSplitter) {
+    return <StemSplitterPage />;
   }
 
   return <App />;

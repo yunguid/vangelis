@@ -15,22 +15,22 @@ export function createAudioGraph(ctx, distortionCache) {
   headroom.gain.value = 0.92;
 
   const rumbleFilter = makeFilter(ctx, 'highpass', 28, 0, 0.72);
-  const warmthFilter = makeFilter(ctx, 'lowshelf', 168, 1.6, 0.72);
-  const presenceFilter = makeFilter(ctx, 'peaking', 2400, 1.4, 0.85);
-  const airFilter = makeFilter(ctx, 'highshelf', 8400, 2.2, 0.66);
+  const warmthFilter = makeFilter(ctx, 'lowshelf', 168, 0, 0.72);
+  const presenceFilter = makeFilter(ctx, 'peaking', 2400, 0, 0.85);
+  const airFilter = makeFilter(ctx, 'highshelf', 8400, 0, 0.66);
 
   const glueCompressor = ctx.createDynamicsCompressor();
-  glueCompressor.threshold.value = -15;
-  glueCompressor.knee.value = 18;
-  glueCompressor.ratio.value = 2.5;
-  glueCompressor.attack.value = 0.004;
-  glueCompressor.release.value = 0.22;
+  glueCompressor.threshold.value = 0;
+  glueCompressor.knee.value = 0;
+  glueCompressor.ratio.value = 1;
+  glueCompressor.attack.value = 0.003;
+  glueCompressor.release.value = 0.08;
 
   const distortion = ctx.createWaveShaper();
   distortion.curve = distortionCache.get(0);
   distortion.oversample = '4x';
 
-  const postTone = makeFilter(ctx, 'peaking', 540, 0.4, 0.6);
+  const postTone = makeFilter(ctx, 'peaking', 540, 0, 0.6);
 
   const delaySend = ctx.createGain();
   delaySend.gain.value = 0;

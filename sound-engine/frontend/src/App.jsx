@@ -573,6 +573,9 @@ const App = () => {
             <a href={getRouteHref(APP_ROUTES.vocalFinder)} className="button-link session-resume">
               Vocal finder
             </a>
+            <a href={getRouteHref(APP_ROUTES.stemSplitter)} className="button-link session-resume">
+              Stem splitter
+            </a>
           </div>
           <div className="header-controls">
             {/* Sample Upload */}

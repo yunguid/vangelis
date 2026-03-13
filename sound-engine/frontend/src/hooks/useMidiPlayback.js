@@ -315,23 +315,10 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       }
     }
 
-    // Use instrument-specific waveform if available, otherwise fall back to global
-    let waveform = waveformRef.current;
-    if (noteMeta.instrumentFamily) {
-      const familyWaveform = FAMILY_WAVEFORMS[noteMeta.instrumentFamily];
-      if (familyWaveform) {
-        waveform = familyWaveform;
-      }
-      // If familyWaveform is null (percussion), skip the note
-      if (familyWaveform === null) {
-        return startedVoiceIds;
-      }
-    }
-
     const started = audioEngine.playFrequency({
       noteId: voiceId,
       frequency,
-      waveformType: waveform,
+      waveformType: waveformRef.current,
       params,
       velocity
     });

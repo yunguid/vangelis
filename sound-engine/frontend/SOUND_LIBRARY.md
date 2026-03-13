@@ -45,6 +45,21 @@ Options:
 - `--quiet` minimal logs
 - `--verify-existing` verify checksums for already-downloaded files
 
+## Public Catalog API
+
+The website now serves its default starter sounds through a small SQLite catalog at:
+
+- `/api/sound-catalog`
+
+Implementation notes:
+
+- the API is backed by an in-memory SQLite database using `sql.js`
+- it is seeded from `src/data/publicSoundCatalogSeed.json`
+- only redistributable public starter sounds belong in that seed
+- the actual audio files still live under `public/samples/starter-pack`
+
+This gives the frontend one public catalog endpoint to query while keeping the audio assets on normal static hosting/CDN paths.
+
 ## Private Local Overrides
 
 For machine-local upgrades sourced from your installed tools, use:

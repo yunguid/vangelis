@@ -64,6 +64,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
+  max-width: 960px;
 }
 
 .vocal-finder-hero {
@@ -115,10 +116,17 @@
   min-height: 100%;
 }
 
+.vocal-finder-section-header h1,
 .vocal-finder-section-header h2,
 .vocal-finder-guardrail h2,
 .vocal-finder-source-card h3 {
   margin: 0;
+}
+
+.vocal-finder-section-header h1 {
+  max-width: 14ch;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 0.96;
 }
 
 .vocal-finder-section-header p,
@@ -146,6 +154,13 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.vocal-finder-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  gap: 12px;
+  align-items: end;
 }
 
 .vocal-finder-inline-grid {
@@ -397,6 +412,10 @@
   }
 
   .vocal-finder-inline-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vocal-finder-search-row {
     grid-template-columns: 1fr;
   }
 

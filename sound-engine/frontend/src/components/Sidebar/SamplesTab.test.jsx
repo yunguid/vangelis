@@ -22,6 +22,42 @@ describe('SamplesTab starter pack integration', () => {
     })));
   });
 
+  it('prefers the catalog API when it returns starter sounds', async () => {
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {
+          get: () => 'application/json'
+        },
+        json: async () => ({
+          items: [
+            {
+              id: 'starter-api-synth',
+              name: 'API Glass Pad',
+              family: 'synth',
+              baseNote: 'C4',
+              samplePath: 'starter-pack/piano/UR1_C4_mf_RR1.wav',
+              mimeType: 'audio/wav'
+            }
+          ]
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        headers: {
+          get: () => 'application/json'
+        }
+      });
+
+    render(<SamplesTab onSampleSelect={vi.fn()} activeSampleId={null} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /API Glass Pad/i })).toBeInTheDocument();
+    });
+  });
+
   it('renders starter pack quick-access buttons', async () => {
     render(<SamplesTab onSampleSelect={vi.fn()} activeSampleId={null} />);
 
@@ -66,29 +102,37 @@ describe('SamplesTab starter pack integration', () => {
   });
 
   it('surfaces private local starter sounds when a private manifest exists', async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: {
-        get: () => 'application/json'
-      },
-      json: async () => ({
-        soundSets: [
-          {
-            id: 'ableton-private-starter',
-            instruments: [
-              {
-                id: 'ableton-phantasm',
-                label: 'Ableton Phantasm',
-                families: ['synth'],
-                samplePath: 'private-library/ableton-grand-piano/phantasm-c4.wav',
-                baseNote: 'C4'
-              }
-            ]
-          }
-        ]
+    global.fetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        headers: {
+          get: () => 'application/json'
+        }
       })
-    });
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: {
+          get: () => 'application/json'
+        },
+        json: async () => ({
+          soundSets: [
+            {
+              id: 'ableton-private-starter',
+              instruments: [
+                {
+                  id: 'ableton-phantasm',
+                  label: 'Ableton Phantasm',
+                  families: ['synth'],
+                  samplePath: 'private-library/ableton-grand-piano/phantasm-c4.wav',
+                  baseNote: 'C4'
+                }
+              ]
+            }
+          ]
+        })
+      });
 
     const onSampleSelect = vi.fn();
     render(<SamplesTab onSampleSelect={onSampleSelect} activeSampleId={null} />);

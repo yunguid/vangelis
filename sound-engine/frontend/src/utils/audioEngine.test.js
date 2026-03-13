@@ -36,6 +36,7 @@ describe('audioEngine effect gating', () => {
     const reverbWet = createTargetSpy();
     const warmthGain = createTargetSpy();
     const presenceGain = createTargetSpy();
+    const postToneGain = createTargetSpy();
     const airGain = createTargetSpy();
     const pan = createTargetSpy();
 
@@ -48,6 +49,7 @@ describe('audioEngine effect gating', () => {
       reverbWet: { gain: reverbWet },
       warmthFilter: { gain: warmthGain },
       presenceFilter: { gain: presenceGain },
+      postTone: { gain: postToneGain },
       airFilter: { gain: airGain },
       distortion: { curve: null },
       stereoPanner: { pan }
@@ -70,7 +72,14 @@ describe('audioEngine effect gating', () => {
         enabled: false
       })
     );
-    expect(presenceGain.setTargetAtTime).toHaveBeenCalledWith(1.5, 0, 0.12);
+    expect(warmthGain.setTargetAtTime).toHaveBeenCalledWith(0, 0, 0.12);
+    expect(postToneGain.setTargetAtTime).toHaveBeenCalledWith(0, 0, 0.12);
+    expect(Math.abs(presenceGain.setTargetAtTime.mock.calls[0][0])).toBe(0);
+    expect(presenceGain.setTargetAtTime.mock.calls[0][1]).toBe(0);
+    expect(presenceGain.setTargetAtTime.mock.calls[0][2]).toBe(0.12);
+    expect(Math.abs(airGain.setTargetAtTime.mock.calls[0][0])).toBe(0);
+    expect(airGain.setTargetAtTime.mock.calls[0][1]).toBe(0);
+    expect(airGain.setTargetAtTime.mock.calls[0][2]).toBe(0.12);
   });
 
   it('keeps delay-disabled sounds dry even when delay mix is non-zero', () => {
@@ -81,6 +90,7 @@ describe('audioEngine effect gating', () => {
     const reverbWet = createTargetSpy();
     const warmthGain = createTargetSpy();
     const presenceGain = createTargetSpy();
+    const postToneGain = createTargetSpy();
     const airGain = createTargetSpy();
     const pan = createTargetSpy();
 
@@ -93,6 +103,7 @@ describe('audioEngine effect gating', () => {
       reverbWet: { gain: reverbWet },
       warmthFilter: { gain: warmthGain },
       presenceFilter: { gain: presenceGain },
+      postTone: { gain: postToneGain },
       airFilter: { gain: airGain },
       distortion: { curve: null },
       stereoPanner: { pan }

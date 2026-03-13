@@ -6,16 +6,17 @@ import {
   deleteCategory,
   getStorageStats
 } from '../../utils/sampleStorage.js';
+import publicSoundCatalogSeed from '../../data/publicSoundCatalogSeed.json';
 import { getAllSoundSetManifests } from '../../data/soundSets.js';
 import { withBase } from '../../utils/baseUrl.js';
-
-const STARTER_FAMILY_ORDER = ['piano', 'strings', 'brass', 'reed', 'chromatic percussion', 'bass', 'synth', 'texture'];
-
-const encodeSamplePath = (samplePath = '') =>
-  samplePath
-    .split('/')
-    .map((segment) => encodeURIComponent(segment))
-    .join('/');
+import {
+  STARTER_FAMILY_ORDER,
+  buildStarterCatalog,
+  hydrateCatalogItems,
+  mergeCatalogItems,
+  mergeSoundSetManifestLists,
+  selectFeaturedStarterItems
+} from '../../utils/starterCatalog.js';
 
 const createDecoderContext = () => {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
@@ -34,143 +35,16 @@ const closeDecoderContext = async (ctx) => {
   }
 };
 
-const cloneInstrumentDefinition = (instrument) => ({
-  ...instrument,
-  families: Array.isArray(instrument?.families) ? [...instrument.families] : instrument?.families,
-  names: Array.isArray(instrument?.names) ? [...instrument.names] : instrument?.names
-});
-
-const mergeSoundSetManifestLists = (baseManifests, overrideManifests) => {
-  const byId = new Map();
-
-  (baseManifests || []).forEach((manifest) => {
-    if (!manifest?.id) return;
-    byId.set(manifest.id, {
-      ...manifest,
-      quality: manifest.quality ? { ...manifest.quality } : manifest.quality,
-      layerFamilies: Array.isArray(manifest.layerFamilies) ? [...manifest.layerFamilies] : manifest.layerFamilies,
-      instruments: Array.isArray(manifest.instruments) ? manifest.instruments.map(cloneInstrumentDefinition) : []
-    });
-  });
-
-  (overrideManifests || []).forEach((override) => {
-    if (!override?.id) return;
-
-    if (!byId.has(override.id)) {
-      byId.set(override.id, {
-        ...override,
-        quality: override.quality ? { ...override.quality } : override.quality,
-        layerFamilies: Array.isArray(override.layerFamilies) ? [...override.layerFamilies] : override.layerFamilies,
-        instruments: Array.isArray(override.instruments) ? override.instruments.map(cloneInstrumentDefinition) : []
-      });
-      return;
-    }
-
-    const base = byId.get(override.id);
-    const nextInstruments = Array.isArray(base.instruments) ? [...base.instruments] : [];
-    const indexById = new Map();
-    nextInstruments.forEach((instrument, index) => {
-      if (typeof instrument?.id === 'string' && instrument.id.length > 0) {
-        indexById.set(instrument.id, index);
-      }
-    });
-
-    (override.instruments || []).forEach((instrument) => {
-      if (typeof instrument?.id === 'string' && instrument.id.length > 0 && indexById.has(instrument.id)) {
-        const index = indexById.get(instrument.id);
-        nextInstruments[index] = {
-          ...nextInstruments[index],
-          ...instrument,
-          families: Array.isArray(instrument.families) ? [...instrument.families] : nextInstruments[index].families,
-          names: Array.isArray(instrument.names) ? [...instrument.names] : nextInstruments[index].names
-        };
-        return;
-      }
-
-      nextInstruments.push(cloneInstrumentDefinition(instrument));
-    });
-
-    byId.set(override.id, {
-      ...base,
-      ...override,
-      quality: override.quality ? { ...(base.quality || {}), ...override.quality } : base.quality,
-      layerFamilies: Array.isArray(override.layerFamilies) ? [...override.layerFamilies] : base.layerFamilies,
-      instruments: nextInstruments
-    });
-  });
-
-  return [...byId.values()];
-};
-
-const buildStarterCatalog = (manifests) => {
-  const uniqueByPath = new Map();
-
-  (manifests || []).forEach((soundSet) => {
-    (soundSet.instruments || []).forEach((instrument) => {
-      if (!instrument.samplePath) return;
-      if (uniqueByPath.has(instrument.samplePath)) return;
-
-      const family = (instrument.families || [])[0] || 'other';
-      uniqueByPath.set(instrument.samplePath, {
-        id: `starter-${soundSet.id}-${instrument.id}`,
-        name: instrument.label || instrument.id,
-        family,
-        baseNote: instrument.baseNote || null,
-        sourceUrl: withBase(`samples/${encodeSamplePath(instrument.samplePath)}`),
-        mimeType: 'audio/wav'
-      });
-    });
-  });
-
-  const items = [...uniqueByPath.values()];
-  items.sort((a, b) => {
-    const familyRankA = STARTER_FAMILY_ORDER.indexOf(a.family);
-    const familyRankB = STARTER_FAMILY_ORDER.indexOf(b.family);
-    const normalizedRankA = familyRankA === -1 ? 999 : familyRankA;
-    const normalizedRankB = familyRankB === -1 ? 999 : familyRankB;
-    if (normalizedRankA !== normalizedRankB) return normalizedRankA - normalizedRankB;
-    return a.name.localeCompare(b.name);
-  });
-
-  return items;
+const toPublicCatalogUrl = () => {
+  const relative = withBase('api/sound-catalog');
+  if (typeof window === 'undefined') return relative;
+  return new URL(relative, window.location.href).toString();
 };
 
 const toPrivateManifestUrl = () => {
   const relative = withBase('private-sound-sets.json');
   if (typeof window === 'undefined') return relative;
   return new URL(relative, window.location.href).toString();
-};
-
-const selectFeaturedStarterItems = (items, maxTotal = 16, maxPerFamily = 4) => {
-  const grouped = new Map();
-  items.forEach((item) => {
-    if (!grouped.has(item.family)) {
-      grouped.set(item.family, []);
-    }
-    grouped.get(item.family).push(item);
-  });
-
-  const featured = [];
-  const consumeFamily = (family) => {
-    const familyItems = grouped.get(family) || [];
-    for (let i = 0; i < familyItems.length && i < maxPerFamily && featured.length < maxTotal; i += 1) {
-      featured.push(familyItems[i]);
-    }
-    grouped.delete(family);
-  };
-
-  STARTER_FAMILY_ORDER.forEach(consumeFamily);
-
-  if (featured.length < maxTotal) {
-    const leftovers = [...grouped.values()].flat();
-    leftovers.sort((a, b) => a.name.localeCompare(b.name));
-    for (const item of leftovers) {
-      if (featured.length >= maxTotal) break;
-      featured.push(item);
-    }
-  }
-
-  return featured;
 };
 
 /**
@@ -185,14 +59,19 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   const [stats, setStats] = useState(null);
   const [error, setError] = useState(null);
   const [starterFamilyFilter, setStarterFamilyFilter] = useState('all');
+  const [publicCatalog, setPublicCatalog] = useState(() => hydrateCatalogItems(publicSoundCatalogSeed));
   const [privateSoundSets, setPrivateSoundSets] = useState([]);
   const folderInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const cancelImportRef = useRef(false);
-  const starterCatalog = useMemo(() => {
+  const privateCatalog = useMemo(() => {
+    if (privateSoundSets.length === 0) return [];
     const mergedManifests = mergeSoundSetManifestLists(getAllSoundSetManifests(), privateSoundSets);
     return buildStarterCatalog(mergedManifests);
   }, [privateSoundSets]);
+  const starterCatalog = useMemo(() => {
+    return mergeCatalogItems(publicCatalog, privateCatalog);
+  }, [privateCatalog, publicCatalog]);
   const featuredStarterCatalog = useMemo(
     () => selectFeaturedStarterItems(starterCatalog),
     [starterCatalog]
@@ -215,6 +94,38 @@ const SamplesTab = ({ onSampleSelect, activeSampleId }) => {
   // Load samples on mount
   useEffect(() => {
     loadSamples();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPublicCatalog = async () => {
+      try {
+        const response = await fetch(toPublicCatalogUrl(), { cache: 'no-store' });
+        if (!response.ok) return;
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) return;
+
+        const payload = await response.json();
+        if (cancelled) return;
+
+        const items = Array.isArray(payload?.items) ? hydrateCatalogItems(payload.items) : [];
+        if (items.length > 0) {
+          setPublicCatalog(items);
+        }
+      } catch {
+        if (!cancelled) {
+          setPublicCatalog(hydrateCatalogItems(publicSoundCatalogSeed));
+        }
+      }
+    };
+
+    loadPublicCatalog();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
