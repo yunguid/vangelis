@@ -5,12 +5,23 @@
   "functions": {
     "sound-engine/frontend/api/**/*.ts": {
       "runtime": "nodejs18.x"
+    },
+    "sound-engine/frontend/api/**/*.js": {
+      "runtime": "nodejs18.x"
     }
   },
   "routes": [
     {
+      "src": "/api/sound-catalog",
+      "dest": "sound-engine/frontend/api/sound-catalog.js"
+    },
+    {
       "src": "/api/status",
       "dest": "sound-engine/frontend/api/status.ts"
+    },
+    {
+      "src": "/api/vocal-search",
+      "dest": "sound-engine/frontend/api/vocal-search.js"
     },
     {
       "src": "/pkg/(.*)",

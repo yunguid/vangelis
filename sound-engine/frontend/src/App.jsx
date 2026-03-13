@@ -8,11 +8,17 @@ import WaveCandy from './components/WaveCandy';
 import BirdsEyeRadar from './components/BirdsEyeRadar';
 import Sidebar from './components/Sidebar';
 import { audioEngine } from './utils/audioEngine.js';
-import { AUDIO_PARAM_DEFAULTS, DEFAULT_WAVEFORM, sanitizeAudioParams } from './utils/audioParams.js';
+import {
+  AUDIO_PARAM_DEFAULTS,
+  DEFAULT_WAVEFORM,
+  sanitizeAudioParams,
+  upgradeLegacyAudioParams
+} from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { parseMidiFile } from './utils/midiParser.js';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { getSample } from './utils/sampleStorage.js';
+import { APP_ROUTES, getRouteHref } from './utils/appRoutes.js';
 
 const NOTICE_TIMEOUT_MS = 2200;
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
@@ -303,7 +309,9 @@ const App = () => {
       if (typeof parsed.waveformType === 'string') {
         setWaveformType(parsed.waveformType);
       }
-      setAudioParams(sanitizeAudioParams(parsed.audioParams || undefined));
+      setAudioParams(sanitizeAudioParams(
+        upgradeLegacyAudioParams(parsed.audioParams || undefined)
+      ));
       if (typeof parsed.tempoFactor === 'number') {
         midiPlayback.setTempo(parsed.tempoFactor);
       }
@@ -562,6 +570,9 @@ const App = () => {
                 {isResumingSession ? 'Resuming...' : 'Resume last session'}
               </button>
             )}
+            <a href={getRouteHref(APP_ROUTES.vocalFinder)} className="button-link session-resume">
+              Vocal finder
+            </a>
           </div>
           <div className="header-controls">
             {/* Sample Upload */}
