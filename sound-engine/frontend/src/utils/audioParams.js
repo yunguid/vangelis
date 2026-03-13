@@ -448,6 +448,24 @@ export const sanitizeAudioParams = (params = {}) => {
   };
 };
 
+export const applyEffectToggleState = (params = {}) => {
+  const next = { ...params };
+
+  if (next.delayEnabled === false) {
+    next.delayMix = 0;
+    next.delayFeedback = 0;
+    next.delayAge = 0;
+    next.delayMotion = 0;
+  }
+
+  if (next.reverbEnabled === false) {
+    next.reverb = 0;
+    next.reverbMix = 0;
+  }
+
+  return next;
+};
+
 export const toWorkletParams = (params) => ({
   attack: params.attack,
   decay: params.decay,

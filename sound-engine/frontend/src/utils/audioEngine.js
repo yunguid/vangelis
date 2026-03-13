@@ -6,6 +6,7 @@
 import {
   AUDIO_PARAM_DEFAULTS,
   DEFAULT_TRANSPORT_TEMPO,
+  applyEffectToggleState,
   getDelaySeconds,
   sanitizeAudioParams,
   toWorkletParams,
@@ -386,7 +387,7 @@ class AudioEngine {
     };
 
     this.globalNodes = null;
-    this.currentParams = sanitizeAudioParams(AUDIO_PARAM_DEFAULTS);
+    this.currentParams = applyEffectToggleState(sanitizeAudioParams(AUDIO_PARAM_DEFAULTS));
     this.lastParamSignature = '';
     this.transportTempoBpm = DEFAULT_TRANSPORT_TEMPO;
 
@@ -743,12 +744,17 @@ class AudioEngine {
   }
 
   applyGlobalParams(sanitized) {
-    const ctx = this.context;
-    if (!ctx || !this.globalNodes) return;
+    const effective = applyEffectToggleState(sanitized);
+    this.currentParams = effective;
 
-    const signature = this.paramsSignature(sanitized);
+    const ctx = this.context;
+    if (!ctx || !this.globalNodes) {
+      this.lastParamSignature = '';
+      return;
+    }
+
+    const signature = this.paramsSignature(effective);
     if (signature === this.lastParamSignature) {
-      this.currentParams = sanitized;
       return;
     }
 
@@ -756,24 +762,24 @@ class AudioEngine {
     const now = ctx.currentTime;
 
     nodes.masterGain.gain.cancelScheduledValues(now);
-    nodes.masterGain.gain.setTargetAtTime(sanitized.volume * 0.94, now, 0.02);
+    nodes.masterGain.gain.setTargetAtTime(effective.volume * 0.94, now, 0.02);
 
-    const delayMode = DELAY_MODE_CONFIG[sanitized.delayMode]
-      ? sanitized.delayMode
+    const delayMode = DELAY_MODE_CONFIG[effective.delayMode]
+      ? effective.delayMode
       : AUDIO_PARAM_DEFAULTS.delayMode;
     const delayConfig = DELAY_MODE_CONFIG[delayMode];
-    const delayActive = sanitized.delayEnabled && sanitized.delayMix > 0.001;
-    const delayAge = sanitized.delayAge;
-    const delayMotion = sanitized.delayMotion;
-    const delaySeconds = getDelaySeconds(sanitized, this.transportTempoBpm);
-    const stereoSpread = 0.015 + sanitized.delayStereo * delayConfig.spread;
+    const delayActive = effective.delayEnabled && effective.delayMix > 0.001;
+    const delayAge = effective.delayAge;
+    const delayMotion = effective.delayMotion;
+    const delaySeconds = getDelaySeconds(effective, this.transportTempoBpm);
+    const stereoSpread = 0.015 + effective.delayStereo * delayConfig.spread;
     const leftDelayTime = clamp(delaySeconds * (1 - stereoSpread), 0.02, 4);
     const rightDelayTime = clamp(delaySeconds * (1 + stereoSpread), 0.02, 4);
 
-    const feedbackBase = delayActive ? clamp(sanitized.delayFeedback, 0, 0.9) : 0;
+    const feedbackBase = delayActive ? clamp(effective.delayFeedback, 0, 0.9) : 0;
     const feedback = feedbackBase * delayConfig.localFeedback;
     const crossfeed = feedbackBase * delayConfig.crossFeedback;
-    const delayLevel = delayActive ? Math.pow(sanitized.delayMix, 0.88) : 0;
+    const delayLevel = delayActive ? Math.pow(effective.delayMix, 0.88) : 0;
     const delaySend = delayLevel * 0.54;
     nodes.delaySend.gain.cancelScheduledValues(now);
     nodes.delaySend.gain.setTargetAtTime(delaySend, now, 0.05);
@@ -783,13 +789,13 @@ class AudioEngine {
     nodes.delayWet.gain.setTargetAtTime(delayWetLevel, now, 0.05);
 
     const lowCut = clamp(
-      sanitized.delayLowCut + delayAge * delayConfig.ageLowCutLift,
+      effective.delayLowCut + delayAge * delayConfig.ageLowCutLift,
       20,
       2600
     );
     const highCut = clamp(
       Math.max(
-        sanitized.delayHighCut * (1 - delayAge * delayConfig.ageHighCutDrop),
+        effective.delayHighCut * (1 - delayAge * delayConfig.ageHighCutDrop),
         lowCut + 400
       ),
       800,
@@ -798,7 +804,7 @@ class AudioEngine {
 
     const modulationDepth = delayActive
       ? delayConfig.modulationDepth
-        * (0.35 + delayMotion * 1.9 + sanitized.delayStereo * 0.35 + sanitized.delayFeedback * 0.45)
+        * (0.35 + delayMotion * 1.9 + effective.delayStereo * 0.35 + effective.delayFeedback * 0.45)
       : 0;
     const modulationRate = delayConfig.modulationRate * (0.8 + delayMotion * 1.65);
     const flutterDepth = delayActive
@@ -811,7 +817,7 @@ class AudioEngine {
     const flutterRate = delayConfig.flutterRate * (0.75 + delayMotion * 1.3);
 
     const delayDrive = delayActive
-      ? clamp(delayConfig.drive + sanitized.delayFeedback * 0.1 + delayAge * delayConfig.ageDrive, 0, 0.38)
+      ? clamp(delayConfig.drive + effective.delayFeedback * 0.1 + delayAge * delayConfig.ageDrive, 0, 0.38)
       : 0;
     const duckRelease = clamp(
       delayConfig.duckRelease + (1 - delayMotion) * 0.06 + delayAge * 0.05,
@@ -833,24 +839,24 @@ class AudioEngine {
       modDepth: modulationDepth,
       flutterRate,
       flutterDepth,
-      width: sanitized.delayStereo,
-      ducking: sanitized.delayDucking,
+      width: effective.delayStereo,
+      ducking: effective.delayDucking,
       duckRelease
     });
 
-    const reverbMode = REVERB_MODE_CONFIG[sanitized.reverbMode]
-      ? sanitized.reverbMode
+    const reverbMode = REVERB_MODE_CONFIG[effective.reverbMode]
+      ? effective.reverbMode
       : AUDIO_PARAM_DEFAULTS.reverbMode;
     const reverbConfig = REVERB_MODE_CONFIG[reverbMode];
-    const reverbActive = sanitized.reverbEnabled && sanitized.reverbMix > 0.001;
-    const reverbMix = reverbActive ? sanitized.reverbMix : 0;
+    const reverbActive = effective.reverbEnabled && effective.reverbMix > 0.001;
+    const reverbMix = reverbActive ? effective.reverbMix : 0;
     const reverbLevel = reverbMix > 0 ? Math.pow(reverbMix, 1.06) : 0;
     nodes.reverbSend.gain.cancelScheduledValues(now);
     nodes.reverbSend.gain.setTargetAtTime(reverbLevel * reverbConfig.sendScale, now, 0.08);
     nodes.reverbWet.gain.cancelScheduledValues(now);
     nodes.reverbWet.gain.setTargetAtTime(reverbLevel * reverbConfig.wetScale, now, 0.12);
 
-    const reverbTone = clamp(sanitized.reverbTone + reverbConfig.toneOffset, 0, 1);
+    const reverbTone = clamp(effective.reverbTone + reverbConfig.toneOffset, 0, 1);
     const reverbDamping = clamp(
       0.18 + (1 - reverbTone) * 0.62 + reverbConfig.dampingOffset,
       0.12,
@@ -866,41 +872,40 @@ class AudioEngine {
     this.reverbWorklet.setParams({
       enabled: reverbActive,
       variant: reverbMode,
-      preDelay: sanitized.reverbPreDelay / 1000,
-      size: sanitized.reverbSize,
-      decay: sanitized.reverbDecay,
+      preDelay: effective.reverbPreDelay / 1000,
+      size: effective.reverbSize,
+      decay: effective.reverbDecay,
       damping: reverbDamping,
       lowCut: reverbLowCut,
       highCut: reverbHighCut,
-      width: clamp(sanitized.reverbWidth + reverbConfig.widthBias, 0, 1),
-      diffusion: clamp(reverbConfig.diffusion + sanitized.reverbSize * 0.12, 0.4, 0.98),
-      modRate: reverbConfig.modRate * (0.8 + sanitized.reverbSize * 0.45),
-      modDepth: reverbConfig.modDepth * (0.7 + sanitized.reverbDecay * 0.6),
+      width: clamp(effective.reverbWidth + reverbConfig.widthBias, 0, 1),
+      diffusion: clamp(reverbConfig.diffusion + effective.reverbSize * 0.12, 0.4, 0.98),
+      modRate: reverbConfig.modRate * (0.8 + effective.reverbSize * 0.45),
+      modDepth: reverbConfig.modDepth * (0.7 + effective.reverbDecay * 0.6),
       earlyLevel: clamp(
-        reverbConfig.earlyLevel * (0.7 + (1 - sanitized.reverbSize) * 0.3),
+        reverbConfig.earlyLevel * (0.7 + (1 - effective.reverbSize) * 0.3),
         0.12,
         0.72
       )
     });
 
     nodes.warmthFilter.gain.cancelScheduledValues(now);
-    nodes.warmthFilter.gain.setTargetAtTime(1.2 + sanitized.distortion * 1.6, now, 0.12);
+    nodes.warmthFilter.gain.setTargetAtTime(1.2 + effective.distortion * 1.6, now, 0.12);
     nodes.presenceFilter.gain.cancelScheduledValues(now);
     nodes.presenceFilter.gain.setTargetAtTime(1.5 - reverbMix * 0.7, now, 0.12);
     nodes.airFilter.gain.cancelScheduledValues(now);
-    nodes.airFilter.gain.setTargetAtTime(1.8 - sanitized.distortion * 0.8, now, 0.12);
+    nodes.airFilter.gain.setTargetAtTime(1.8 - effective.distortion * 0.8, now, 0.12);
 
-    nodes.distortion.curve = this.distortionCache.get(sanitized.distortion);
+    nodes.distortion.curve = this.distortionCache.get(effective.distortion);
 
-    const panValue = (sanitized.pan - 0.5) * 2;
+    const panValue = (effective.pan - 0.5) * 2;
     nodes.stereoPanner.pan.cancelScheduledValues(now);
     nodes.stereoPanner.pan.setTargetAtTime(panValue, now, 0.05);
 
     if (this.worklet.ready) {
-      this.worklet.setParams(toWorkletParams(sanitized));
+      this.worklet.setParams(toWorkletParams(effective));
     }
 
-    this.currentParams = sanitized;
     this.lastParamSignature = signature;
   }
 
