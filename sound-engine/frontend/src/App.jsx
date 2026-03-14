@@ -543,6 +543,11 @@ const App = () => {
     }));
   };
 
+  const handleResetSound = useCallback(() => {
+    setAudioParams(sanitizeAudioParams(AUDIO_PARAM_DEFAULTS));
+    pushNotice('Sound reset to dry defaults.');
+  }, [pushNotice]);
+
   const handleControlSectionToggle = useCallback((section) => {
     if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTROL_SECTIONS, section)) return;
     setControlSections((prev) => ({
@@ -578,6 +583,14 @@ const App = () => {
             </a>
           </div>
           <div className="header-controls">
+            <button
+              type="button"
+              className="button-link"
+              onClick={handleResetSound}
+              title="Restore the default dry sound"
+            >
+              Reset sound
+            </button>
             {/* Sample Upload */}
             <input
               ref={fileInputRef}
