@@ -17,8 +17,6 @@ import {
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { parseMidiFile } from './utils/midiParser.js';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
-import { getSample } from './utils/sampleStorage.js';
-import { APP_ROUTES, getRouteHref } from './utils/appRoutes.js';
 
 const NOTICE_TIMEOUT_MS = 2200;
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
@@ -136,8 +134,6 @@ const App = () => {
   const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'midi');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
-  const [resumeSnapshot, setResumeSnapshot] = useState(() => initialSession.resume || null);
-  const [isResumingSession, setIsResumingSession] = useState(false);
   const [notice, setNotice] = useState('');
   const [controlSections, setControlSections] = useState(() => (
     initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
@@ -147,7 +143,6 @@ const App = () => {
   const noticeTimeoutRef = useRef(null);
   const wasmLoaded = engineStatus.wasmReady;
   const isGraphWarm = engineStatus.graphWarmed;
-  const hasResumeSnapshot = !!(resumeSnapshot?.midiPath || resumeSnapshot?.sampleSelection);
 
   // MIDI playback hook
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
@@ -321,55 +316,6 @@ const App = () => {
     }
   }, [midiPlayback.setTempo, pushNotice]);
 
-  const resumeSession = useCallback(async () => {
-    if (!resumeSnapshot || isResumingSession) return;
-
-    setIsResumingSession(true);
-    try {
-      if (resumeSnapshot.sampleSelection) {
-        if (resumeSnapshot.sampleSelection.type === 'starter') {
-          await handleSampleSelect(resumeSnapshot.sampleSelection);
-        } else if (resumeSnapshot.sampleSelection.type === 'stored') {
-          const storedSample = await getSample(resumeSnapshot.sampleSelection.id);
-          if (storedSample) {
-            await handleSampleSelect(storedSample);
-          }
-        }
-      }
-
-      if (resumeSnapshot.midiPath) {
-        let midiData;
-        try {
-          midiData = await parseMidiFile(resumeSnapshot.midiPath);
-        } catch (midiError) {
-          if (!resumeSnapshot.midiSourceUrl) throw midiError;
-          midiData = await parseMidiFile(resumeSnapshot.midiSourceUrl);
-        }
-
-        midiPlayback.play({
-          ...midiData,
-          name: resumeSnapshot.midiName || midiData.name,
-          sourcePath: resumeSnapshot.midiPath,
-          sourceFileId: resumeSnapshot.midiSourceFileId || null,
-          sourceUrl: resumeSnapshot.midiSourceUrl || null
-        });
-      }
-
-      if (typeof resumeSnapshot.tempoFactor === 'number') {
-        midiPlayback.setTempo(resumeSnapshot.tempoFactor);
-      }
-
-      setSidebarTab('midi');
-      setSidebarOpen(true);
-      pushNotice('Session resumed.');
-    } catch (error) {
-      console.error('Failed to resume session:', error);
-      pushNotice('Resume failed.');
-    } finally {
-      setIsResumingSession(false);
-    }
-  }, [handleSampleSelect, isResumingSession, midiPlayback.play, midiPlayback.setTempo, pushNotice, resumeSnapshot]);
-
   useEffect(() => {
     const handleKeyboardShortcuts = (event) => {
       const key = event.key.toLowerCase();
@@ -476,34 +422,6 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    const currentMidi = midiPlayback.currentMidi;
-    if (!currentMidi || (!currentMidi.sourcePath && !currentMidi.sourceUrl)) return;
-
-    setResumeSnapshot((prev) => ({
-      ...(prev || {}),
-      midiPath: currentMidi.sourcePath || null,
-      midiSourceUrl: currentMidi.sourceUrl || null,
-      midiSourceFileId: currentMidi.sourceFileId || null,
-      midiName: currentMidi.name || null,
-      tempoFactor: midiPlayback.tempoFactor,
-      sampleSelection: sampleSelection || prev?.sampleSelection || null,
-      updatedAt: Date.now()
-    }));
-  }, [midiPlayback.currentMidi, midiPlayback.tempoFactor, sampleSelection]);
-
-  useEffect(() => {
-    if (!sampleSelection) return;
-    setResumeSnapshot((prev) => {
-      const base = prev || {};
-      return {
-        ...base,
-        sampleSelection,
-        updatedAt: Date.now()
-      };
-    });
-  }, [sampleSelection]);
-
-  useEffect(() => {
     saveAppSession({
       waveformType,
       audioParams,
@@ -513,15 +431,13 @@ const App = () => {
       activeSampleId,
       sampleSelection,
       showShortcuts,
-      tempoFactor: midiPlayback.tempoFactor,
-      resume: resumeSnapshot
+      tempoFactor: midiPlayback.tempoFactor
     });
   }, [
     activeSampleId,
     audioParams,
     controlSections,
     midiPlayback.tempoFactor,
-    resumeSnapshot,
     sampleSelection,
     showShortcuts,
     sidebarOpen,
@@ -565,22 +481,6 @@ const App = () => {
         <header className="zone-top tier-subtle content-tertiary" aria-label="Branding and quick actions">
           <div className="brand-block">
             <div className="brand-title">Vangelis</div>
-            {hasResumeSnapshot && (
-              <button
-                type="button"
-                className="button-link session-resume"
-                onClick={resumeSession}
-                disabled={isResumingSession}
-              >
-                {isResumingSession ? 'Resuming...' : 'Resume last session'}
-              </button>
-            )}
-            <a href={getRouteHref(APP_ROUTES.vocalFinder)} className="button-link session-resume">
-              Vocal finder
-            </a>
-            <a href={getRouteHref(APP_ROUTES.stemSplitter)} className="button-link session-resume">
-              Stem splitter
-            </a>
           </div>
           <div className="header-controls">
             <button

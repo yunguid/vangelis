@@ -64,11 +64,6 @@
     letter-spacing: 0.12em;
   }
 
-  .session-note,
-  .session-resume {
-    text-align: center;
-  }
-
   .header-controls {
     gap: 6px;
     flex-wrap: wrap;

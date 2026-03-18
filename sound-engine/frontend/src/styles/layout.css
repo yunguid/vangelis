@@ -132,22 +132,6 @@
   padding-left: 1px;
 }
 
-.session-note {
-  margin: 0;
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-secondary);
-}
-
-.session-resume {
-  padding: 0;
-  letter-spacing: 0.05em;
-  text-transform: none;
-  font-size: 0.75rem;
-  min-height: 28px;
-}
-
 .brand-subtitle {
   font-weight: 300;
   font-size: clamp(0.8rem, 1.2vw, 1rem);

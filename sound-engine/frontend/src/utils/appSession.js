@@ -1,6 +1,6 @@
 import { sanitizeAudioParams, upgradeLegacyAudioParams } from './audioParams.js';
 
-const STORAGE_KEY = 'vangelis-ui-session-v1';
+const STORAGE_KEY = 'vangelis-ui-session-v2';
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
   delay: false,
@@ -26,30 +26,6 @@ const coerceSampleSelection = (value) => {
   return normalized;
 };
 
-const coerceResumePayload = (value) => {
-  if (!value || typeof value !== 'object') return null;
-
-  const result = {};
-  if (typeof value.midiPath === 'string' && value.midiPath.length > 0) result.midiPath = value.midiPath;
-  if (typeof value.midiName === 'string' && value.midiName.length > 0) result.midiName = value.midiName;
-  if (typeof value.midiSourceFileId === 'string' && value.midiSourceFileId.length > 0) {
-    result.midiSourceFileId = value.midiSourceFileId;
-  }
-  if (typeof value.midiSourceUrl === 'string' && value.midiSourceUrl.length > 0) {
-    result.midiSourceUrl = value.midiSourceUrl;
-  }
-  if (typeof value.tempoFactor === 'number' && Number.isFinite(value.tempoFactor)) {
-    result.tempoFactor = Math.max(0.25, Math.min(2, value.tempoFactor));
-  }
-  const sampleSelection = coerceSampleSelection(value.sampleSelection);
-  if (sampleSelection) result.sampleSelection = sampleSelection;
-  if (typeof value.updatedAt === 'number' && Number.isFinite(value.updatedAt)) {
-    result.updatedAt = value.updatedAt;
-  }
-
-  return result.midiPath || result.sampleSelection ? result : null;
-};
-
 const coerceControlSections = (value) => {
   if (!value || typeof value !== 'object') {
     return DEFAULT_CONTROL_SECTIONS;
@@ -73,8 +49,7 @@ export const getDefaultSessionState = () => ({
   activeSampleId: null,
   sampleSelection: null,
   showShortcuts: false,
-  tempoFactor: 1,
-  resume: null
+  tempoFactor: 1
 });
 
 export function loadAppSession() {
@@ -105,8 +80,7 @@ export function loadAppSession() {
       showShortcuts: !!parsed.showShortcuts,
       tempoFactor: typeof parsed.tempoFactor === 'number' && Number.isFinite(parsed.tempoFactor)
         ? Math.max(0.25, Math.min(2, parsed.tempoFactor))
-        : 1,
-      resume: coerceResumePayload(parsed.resume)
+        : 1
     };
   } catch {
     return getDefaultSessionState();
