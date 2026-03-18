@@ -24,12 +24,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: Pull Git LFS assets
-        run: |
-          git lfs pull
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,6 +50,13 @@ jobs:
           cd sound-engine/frontend
           npm ci --legacy-peer-deps --no-audit --no-fund
 
+      - name: Sync starter sound assets
+        run: |
+          cd sound-engine/frontend
+          npm run sync:starter-sounds -- --force --quiet
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
       - name: Build frontend
         run: |
           cd sound-engine/frontend
@@ -70,6 +71,8 @@ jobs:
           test -f sound-engine/frontend/dist/midi/rachmaninoff-concerto2-mov1.mid
           test -f sound-engine/frontend/dist/midi/satie-gymnopedie-1.mid
           test -f sound-engine/frontend/dist/midi/russian/stanchinsky-prelude-c-minor.mid
+          test -f sound-engine/frontend/dist/samples/rachmaninoff/cello-c2.wav
+          test -f sound-engine/frontend/dist/samples/starter-pack/piano/UR1_C4_mf_RR1.wav
 
       - name: Add .nojekyll to build output
         run: |
