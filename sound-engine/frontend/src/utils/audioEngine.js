@@ -7,370 +7,26 @@ import {
   AUDIO_PARAM_DEFAULTS,
   DEFAULT_TRANSPORT_TEMPO,
   applyEffectToggleState,
-  getDelaySeconds,
   sanitizeAudioParams,
-  toWorkletParams,
   WORKLET_PARAM_DEFAULTS
 } from './audioParams.js';
 import {
   DEFAULT_SAMPLE_RATE,
-  DELAY_WORKLET_PROCESSOR,
-  DELAY_WORKLET_URL,
-  REVERB_WORKLET_PROCESSOR,
-  REVERB_WORKLET_URL,
-  SAMPLE_VOICE_POOL,
-  WORKLET_PROCESSOR,
-  WORKLET_URL,
-  NOTE_NAMES,
-  MIN_OCTAVE,
-  MAX_OCTAVE,
-  NOTE_OFFSET_FROM_A
+  SAMPLE_VOICE_POOL
 } from './audioEngine/constants.js';
 import { createAudioGraph } from './audioEngine/graph.js';
 import { createSampleVoicePool } from './audioEngine/samplePool.js';
 import { RecorderController } from './audioEngine/recorder.js';
+import { applyGlobalParams, DistortionCurveCache, paramsSignature } from './audioEngine/effects.js';
+import { buildFrequencyTable, getFrequencyFromTable } from './audioEngine/frequency.js';
+import {
+  DelayWorklet,
+  DELAY_WORKLET_DEFAULTS,
+  ReverbWorklet,
+  REVERB_WORKLET_DEFAULTS,
+  SynthWorklet
+} from './audioEngine/worklets.js';
 import { clamp } from './math.js';
-
-class SynthWorklet {
-  constructor(paramDefaults) {
-    this.node = null;
-    this.readyPromise = null;
-    this.ready = false;
-    this.paramDefaults = paramDefaults;
-  }
-
-  async ensure(ctx, destination) {
-    if (this.readyPromise) return this.readyPromise;
-
-    this.readyPromise = (async () => {
-      if (!ctx.audioWorklet || !ctx.audioWorklet.addModule) {
-        throw new Error('AudioWorklet not supported');
-      }
-
-      await ctx.audioWorklet.addModule(WORKLET_URL);
-
-      this.node = new AudioWorkletNode(ctx, WORKLET_PROCESSOR, {
-        numberOfInputs: 0,
-        numberOfOutputs: 1,
-        outputChannelCount: [2],
-        processorOptions: {
-          paramDefaults: this.paramDefaults
-        }
-      });
-      this.node.connect(destination);
-      this.ready = true;
-    })();
-
-    return this.readyPromise;
-  }
-
-  setParams(params) {
-    if (!this.node) return;
-    this.node.port.postMessage({
-      type: 'setParams',
-      params
-    });
-  }
-
-  noteOn({ noteId, frequency, waveform, velocity }) {
-    if (!this.node) return;
-    this.node.port.postMessage({
-      type: 'noteOn',
-      noteId,
-      frequency,
-      waveform,
-      velocity
-    });
-  }
-
-  noteOff(noteId) {
-    if (!this.node) return;
-    this.node.port.postMessage({
-      type: 'noteOff',
-      noteId
-    });
-  }
-
-  allNotesOff() {
-    if (!this.node) return;
-    this.node.port.postMessage({
-      type: 'allNotesOff'
-    });
-  }
-}
-
-const DELAY_WORKLET_DEFAULTS = {
-  enabled: false,
-  inputLeft: 1,
-  inputRight: 1,
-  timeLeft: 0.12,
-  timeRight: 0.17,
-  feedback: 0.25,
-  crossfeed: 0,
-  lowCut: 90,
-  highCut: 5400,
-  drive: 0.02,
-  modRate: 0.14,
-  modDepth: 0.0001,
-  flutterRate: 4,
-  flutterDepth: 0.00002,
-  width: 0.7,
-  ducking: 0.12,
-  duckRelease: 0.18
-};
-
-const REVERB_WORKLET_DEFAULTS = {
-  enabled: false,
-  variant: 'hall',
-  preDelay: 0.018,
-  size: 0.58,
-  decay: 0.52,
-  damping: 0.42,
-  lowCut: 120,
-  highCut: 9200,
-  width: 0.82,
-  diffusion: 0.72,
-  modRate: 0.16,
-  modDepth: 0.0004,
-  earlyLevel: 0.34
-};
-
-class DelayWorklet {
-  constructor(paramDefaults) {
-    this.node = null;
-    this.readyPromise = null;
-    this.ready = false;
-    this.paramDefaults = paramDefaults;
-    this.lastParams = paramDefaults;
-  }
-
-  async ensure(ctx, source, destination) {
-    if (this.readyPromise) return this.readyPromise;
-
-    this.readyPromise = (async () => {
-      if (!ctx.audioWorklet || !ctx.audioWorklet.addModule) {
-        throw new Error('AudioWorklet not supported');
-      }
-
-      await ctx.audioWorklet.addModule(DELAY_WORKLET_URL);
-
-      this.node = new AudioWorkletNode(ctx, DELAY_WORKLET_PROCESSOR, {
-        numberOfInputs: 1,
-        numberOfOutputs: 1,
-        outputChannelCount: [2],
-        channelCount: 2,
-        channelCountMode: 'explicit',
-        processorOptions: {
-          paramDefaults: this.paramDefaults
-        }
-      });
-      source.connect(this.node);
-      this.node.connect(destination);
-      this.ready = true;
-      this.setParams(this.lastParams);
-    })();
-
-    return this.readyPromise;
-  }
-
-  setParams(params) {
-    this.lastParams = { ...this.lastParams, ...params };
-    if (!this.node) return;
-    this.node.port.postMessage({
-      type: 'setParams',
-      params: this.lastParams
-    });
-  }
-
-  clear() {
-    if (!this.node) return;
-    this.node.port.postMessage({ type: 'clear' });
-  }
-}
-
-class ReverbWorklet {
-  constructor(paramDefaults) {
-    this.node = null;
-    this.readyPromise = null;
-    this.ready = false;
-    this.paramDefaults = paramDefaults;
-    this.lastParams = paramDefaults;
-  }
-
-  async ensure(ctx, source, destination) {
-    if (this.readyPromise) return this.readyPromise;
-
-    this.readyPromise = (async () => {
-      if (!ctx.audioWorklet || !ctx.audioWorklet.addModule) {
-        throw new Error('AudioWorklet not supported');
-      }
-
-      await ctx.audioWorklet.addModule(REVERB_WORKLET_URL);
-
-      this.node = new AudioWorkletNode(ctx, REVERB_WORKLET_PROCESSOR, {
-        numberOfInputs: 1,
-        numberOfOutputs: 1,
-        outputChannelCount: [2],
-        channelCount: 2,
-        channelCountMode: 'explicit',
-        processorOptions: {
-          paramDefaults: this.paramDefaults
-        }
-      });
-      source.connect(this.node);
-      this.node.connect(destination);
-      this.ready = true;
-      this.setParams(this.lastParams);
-    })();
-
-    return this.readyPromise;
-  }
-
-  setParams(params) {
-    this.lastParams = { ...this.lastParams, ...params };
-    if (!this.node) return;
-    this.node.port.postMessage({
-      type: 'setParams',
-      params: this.lastParams
-    });
-  }
-
-  clear() {
-    if (!this.node) return;
-    this.node.port.postMessage({ type: 'clear' });
-  }
-}
-
-class DistortionCurveCache {
-  constructor(resolution = 44100) {
-    this.resolution = resolution;
-    this.cache = new Map();
-  }
-
-  get(amount) {
-    const normalized = clamp(amount ?? 0, 0, 1);
-    const key = Math.round(normalized * 1000) / 1000;
-
-    if (this.cache.has(key)) {
-      return this.cache.get(key);
-    }
-
-    const curve = new Float32Array(this.resolution);
-    if (key === 0) {
-      for (let i = 0; i < this.resolution; i++) {
-        curve[i] = (i * 2) / this.resolution - 1;
-      }
-    } else {
-      const k = key * 150;
-      const deg = Math.PI / 180;
-      for (let i = 0; i < this.resolution; i++) {
-        const x = (i * 2) / this.resolution - 1;
-        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
-      }
-    }
-
-    this.cache.set(key, curve);
-    return curve;
-  }
-}
-
-const DELAY_MODE_CONFIG = {
-  digital: {
-    inputLeft: 1,
-    inputRight: 1,
-    localFeedback: 1,
-    crossFeedback: 0,
-    spread: 0.14,
-    modulationRate: 0.12,
-    modulationDepth: 0.00008,
-    drive: 0.015,
-    ageDrive: 0.05,
-    ageHighCutDrop: 0.18,
-    ageLowCutLift: 60,
-    flutterAmount: 0.18,
-    flutterRate: 3.8,
-    duckRelease: 0.14
-  },
-  tape: {
-    inputLeft: 1,
-    inputRight: 0.94,
-    localFeedback: 0.84,
-    crossFeedback: 0.12,
-    spread: 0.18,
-    modulationRate: 0.18,
-    modulationDepth: 0.00034,
-    drive: 0.08,
-    ageDrive: 0.18,
-    ageHighCutDrop: 0.52,
-    ageLowCutLift: 180,
-    flutterAmount: 0.92,
-    flutterRate: 5.6,
-    duckRelease: 0.24
-  },
-  'ping-pong': {
-    inputLeft: 1,
-    inputRight: 0.2,
-    localFeedback: 0.12,
-    crossFeedback: 0.84,
-    spread: 0.24,
-    modulationRate: 0.15,
-    modulationDepth: 0.00018,
-    drive: 0.04,
-    ageDrive: 0.09,
-    ageHighCutDrop: 0.28,
-    ageLowCutLift: 100,
-    flutterAmount: 0.42,
-    flutterRate: 4.5,
-    duckRelease: 0.18
-  }
-};
-
-const REVERB_MODE_CONFIG = {
-  room: {
-    sendScale: 0.46,
-    wetScale: 0.58,
-    dampingOffset: 0.06,
-    toneOffset: -0.06,
-    diffusion: 0.62,
-    modRate: 0.11,
-    modDepth: 0.00018,
-    earlyLevel: 0.46,
-    widthBias: 0.08
-  },
-  plate: {
-    sendScale: 0.5,
-    wetScale: 0.62,
-    dampingOffset: 0.02,
-    toneOffset: 0.04,
-    diffusion: 0.76,
-    modRate: 0.14,
-    modDepth: 0.00028,
-    earlyLevel: 0.32,
-    widthBias: 0.14
-  },
-  hall: {
-    sendScale: 0.54,
-    wetScale: 0.68,
-    dampingOffset: 0,
-    toneOffset: 0,
-    diffusion: 0.82,
-    modRate: 0.16,
-    modDepth: 0.00042,
-    earlyLevel: 0.28,
-    widthBias: 0.18
-  },
-  ambient: {
-    sendScale: 0.58,
-    wetScale: 0.74,
-    dampingOffset: -0.08,
-    toneOffset: 0.08,
-    diffusion: 0.9,
-    modRate: 0.19,
-    modDepth: 0.00058,
-    earlyLevel: 0.22,
-    widthBias: 0.24
-  }
-};
 
 class AudioEngine {
   constructor() {
@@ -392,11 +48,8 @@ class AudioEngine {
     this.transportTempoBpm = DEFAULT_TRANSPORT_TEMPO;
 
     this.worklet = new SynthWorklet(WORKLET_PARAM_DEFAULTS);
-    this.workletReadyPromise = null;
     this.delayWorklet = new DelayWorklet(DELAY_WORKLET_DEFAULTS);
-    this.delayWorkletReadyPromise = null;
     this.reverbWorklet = new ReverbWorklet(REVERB_WORKLET_DEFAULTS);
-    this.reverbWorkletReadyPromise = null;
 
     this.recorder = new RecorderController({
       onStop: () => this.exportRecording()
@@ -420,7 +73,7 @@ class AudioEngine {
     };
 
     this.distortionCache = new DistortionCurveCache();
-    this.frequencyTable = this.buildFrequencyTable();
+    this.frequencyTable = buildFrequencyTable();
   }
 
   // ============ Status Management ============
@@ -516,88 +169,49 @@ class AudioEngine {
   }
 
   async ensureWorklet() {
-    if (this.workletReadyPromise) {
-      return this.workletReadyPromise;
-    }
+    try {
+      const ctx = await this.ensureAudioContext();
+      const nodes = this.setupGraph(ctx);
+      await this.worklet.ensure(ctx, nodes.inputBus);
 
-    this.workletReadyPromise = this.ensureAudioContext()
-      .then(async (ctx) => {
-        const nodes = this.setupGraph(ctx);
-        await this.worklet.ensure(ctx, nodes.inputBus);
+      if (!this.status.wasmReady) {
         this.status.wasmReady = true;
         this.notify();
-        if (this.currentParams) {
-          this.worklet.setParams(toWorkletParams(this.currentParams));
-        }
-      })
-      .catch((err) => {
-        this.status.error = {
-          type: 'AUDIO_WORKLET_FAILED',
-          message: 'Failed to initialize audio worklet',
-          detail: err.message,
-          timestamp: Date.now()
-        };
-        this.notify();
-        throw err;
-      });
+      }
 
-    return this.workletReadyPromise;
+      return this.worklet;
+    } catch (err) {
+      this.reportStatusError('AUDIO_WORKLET_FAILED', 'Failed to initialize audio worklet', err);
+      throw err;
+    }
   }
 
-  async ensureDelayWorklet(ctx) {
-    if (this.delayWorkletReadyPromise) {
-      return this.delayWorkletReadyPromise;
+  async ensureEffectWorklet({
+    ctx,
+    worklet,
+    sourceNode,
+    destinationNode,
+    errorType,
+    errorMessage
+  }) {
+    try {
+      const nodes = this.setupGraph(ctx);
+      await worklet.ensure(ctx, nodes[sourceNode], nodes[destinationNode]);
+      return worklet;
+    } catch (err) {
+      this.reportStatusError(errorType, errorMessage, err);
+      throw err;
     }
-
-    this.delayWorkletReadyPromise = Promise.resolve()
-      .then(async () => {
-        const nodes = this.setupGraph(ctx);
-        await this.delayWorklet.ensure(ctx, nodes.delaySend, nodes.delayWet);
-        if (this.currentParams) {
-          this.lastParamSignature = '';
-          this.applyGlobalParams(this.currentParams);
-        }
-      })
-      .catch((err) => {
-        this.status.error = {
-          type: 'DELAY_WORKLET_FAILED',
-          message: 'Failed to initialize delay effect',
-          detail: err.message,
-          timestamp: Date.now()
-        };
-        this.notify();
-        throw err;
-      });
-
-    return this.delayWorkletReadyPromise;
   }
 
-  async ensureReverbWorklet(ctx) {
-    if (this.reverbWorkletReadyPromise) {
-      return this.reverbWorkletReadyPromise;
-    }
-
-    this.reverbWorkletReadyPromise = Promise.resolve()
-      .then(async () => {
-        const nodes = this.setupGraph(ctx);
-        await this.reverbWorklet.ensure(ctx, nodes.reverbSend, nodes.reverbWet);
-        if (this.currentParams) {
-          this.lastParamSignature = '';
-          this.applyGlobalParams(this.currentParams);
-        }
-      })
-      .catch((err) => {
-        this.status.error = {
-          type: 'REVERB_WORKLET_FAILED',
-          message: 'Failed to initialize reverb effect',
-          detail: err.message,
-          timestamp: Date.now()
-        };
-        this.notify();
-        throw err;
-      });
-
-    return this.reverbWorkletReadyPromise;
+  reportStatusError(type, message, err) {
+    this.status.error = {
+      type,
+      message,
+      detail: err.message,
+      timestamp: Date.now()
+    };
+    this.notify();
   }
 
   async ensureRecorder(ctx) {
@@ -632,8 +246,22 @@ class AudioEngine {
 
         this.installUnlockHandlers();
         this.setupGraph(ctx);
-        this.ensureDelayWorklet(ctx).catch(() => {});
-        this.ensureReverbWorklet(ctx).catch(() => {});
+        this.ensureEffectWorklet({
+          ctx,
+          worklet: this.delayWorklet,
+          sourceNode: 'delaySend',
+          destinationNode: 'delayWet',
+          errorType: 'DELAY_WORKLET_FAILED',
+          errorMessage: 'Failed to initialize delay effect'
+        }).catch(() => {});
+        this.ensureEffectWorklet({
+          ctx,
+          worklet: this.reverbWorklet,
+          sourceNode: 'reverbSend',
+          destinationNode: 'reverbWet',
+          errorType: 'REVERB_WORKLET_FAILED',
+          errorMessage: 'Failed to initialize reverb effect'
+        }).catch(() => {});
         this.ensureSamplePool(ctx);
 
         if (ctx.state === 'running') {
@@ -719,196 +347,38 @@ class AudioEngine {
 
   // ============ Frequency Table ============
 
-  buildFrequencyTable() {
-    const table = new Map();
-    for (let octave = MIN_OCTAVE; octave <= MAX_OCTAVE; octave++) {
-      for (const name of NOTE_NAMES) {
-        const semitoneOffset = (octave - 4) * 12 + NOTE_OFFSET_FROM_A[name];
-        const frequency = 440 * Math.pow(2, semitoneOffset / 12);
-        table.set(`${name}${octave}`, frequency);
-      }
-    }
-    return table;
-  }
-
   getFrequency(noteName, octave) {
-    return this.frequencyTable.get(`${noteName}${octave}`) || null;
+    return getFrequencyFromTable(this.frequencyTable, noteName, octave);
   }
 
   // ============ Parameter Management ============
-
-  paramsSignature(params) {
-    return Object.values(params).map((value) =>
-      typeof value === 'number' ? value.toFixed(4) : String(value)
-    ).join('|');
-  }
 
   applyGlobalParams(sanitized) {
     const effective = applyEffectToggleState(sanitized);
     this.currentParams = effective;
 
     const ctx = this.context;
-    if (!ctx || !this.globalNodes) {
+    const nodes = this.globalNodes;
+    if (!ctx || !nodes) {
       this.lastParamSignature = '';
       return;
     }
 
-    const signature = this.paramsSignature(effective);
+    const signature = paramsSignature(effective);
     if (signature === this.lastParamSignature) {
       return;
     }
 
-    const nodes = this.globalNodes;
-    const now = ctx.currentTime;
-
-    nodes.masterGain.gain.cancelScheduledValues(now);
-    nodes.masterGain.gain.setTargetAtTime(effective.volume * 0.94, now, 0.02);
-
-    const delayMode = DELAY_MODE_CONFIG[effective.delayMode]
-      ? effective.delayMode
-      : AUDIO_PARAM_DEFAULTS.delayMode;
-    const delayConfig = DELAY_MODE_CONFIG[delayMode];
-    const delayActive = effective.delayEnabled && effective.delayMix > 0.001;
-    const delayAge = effective.delayAge;
-    const delayMotion = effective.delayMotion;
-    const delaySeconds = getDelaySeconds(effective, this.transportTempoBpm);
-    const stereoSpread = 0.015 + effective.delayStereo * delayConfig.spread;
-    const leftDelayTime = clamp(delaySeconds * (1 - stereoSpread), 0.02, 4);
-    const rightDelayTime = clamp(delaySeconds * (1 + stereoSpread), 0.02, 4);
-
-    const feedbackBase = delayActive ? clamp(effective.delayFeedback, 0, 0.9) : 0;
-    const feedback = feedbackBase * delayConfig.localFeedback;
-    const crossfeed = feedbackBase * delayConfig.crossFeedback;
-    const delayLevel = delayActive ? Math.pow(effective.delayMix, 0.88) : 0;
-    const delaySend = delayLevel * 0.54;
-    nodes.delaySend.gain.cancelScheduledValues(now);
-    nodes.delaySend.gain.setTargetAtTime(delaySend, now, 0.05);
-
-    const delayWetLevel = delayLevel * 0.68;
-    nodes.delayWet.gain.cancelScheduledValues(now);
-    nodes.delayWet.gain.setTargetAtTime(delayWetLevel, now, 0.05);
-
-    const lowCut = clamp(
-      effective.delayLowCut + delayAge * delayConfig.ageLowCutLift,
-      20,
-      2600
-    );
-    const highCut = clamp(
-      Math.max(
-        effective.delayHighCut * (1 - delayAge * delayConfig.ageHighCutDrop),
-        lowCut + 400
-      ),
-      800,
-      14000
-    );
-
-    const modulationDepth = delayActive
-      ? delayConfig.modulationDepth
-        * (0.35 + delayMotion * 1.9 + effective.delayStereo * 0.35 + effective.delayFeedback * 0.45)
-      : 0;
-    const modulationRate = delayConfig.modulationRate * (0.8 + delayMotion * 1.65);
-    const flutterDepth = delayActive
-      ? clamp(
-        modulationDepth * delayConfig.flutterAmount * (0.18 + delayMotion * 0.9),
-        0,
-        0.0034
-      )
-      : 0;
-    const flutterRate = delayConfig.flutterRate * (0.75 + delayMotion * 1.3);
-
-    const delayDrive = delayActive
-      ? clamp(delayConfig.drive + effective.delayFeedback * 0.1 + delayAge * delayConfig.ageDrive, 0, 0.38)
-      : 0;
-    const duckRelease = clamp(
-      delayConfig.duckRelease + (1 - delayMotion) * 0.06 + delayAge * 0.05,
-      0.08,
-      0.48
-    );
-    this.delayWorklet.setParams({
-      enabled: delayActive,
-      inputLeft: delayActive ? delayConfig.inputLeft : 0,
-      inputRight: delayActive ? delayConfig.inputRight : 0,
-      timeLeft: leftDelayTime,
-      timeRight: rightDelayTime,
-      feedback,
-      crossfeed,
-      lowCut,
-      highCut,
-      drive: delayDrive,
-      modRate: modulationRate,
-      modDepth: modulationDepth,
-      flutterRate,
-      flutterDepth,
-      width: effective.delayStereo,
-      ducking: effective.delayDucking,
-      duckRelease
+    applyGlobalParams({
+      params: effective,
+      transportTempoBpm: this.transportTempoBpm,
+      ctx,
+      nodes,
+      distortionCache: this.distortionCache,
+      delayWorklet: this.delayWorklet,
+      reverbWorklet: this.reverbWorklet,
+      synthWorklet: this.worklet
     });
-
-    const reverbMode = REVERB_MODE_CONFIG[effective.reverbMode]
-      ? effective.reverbMode
-      : AUDIO_PARAM_DEFAULTS.reverbMode;
-    const reverbConfig = REVERB_MODE_CONFIG[reverbMode];
-    const reverbActive = effective.reverbEnabled && effective.reverbMix > 0.001;
-    const reverbMix = reverbActive ? effective.reverbMix : 0;
-    const reverbLevel = reverbMix > 0 ? Math.pow(reverbMix, 1.06) : 0;
-    nodes.reverbSend.gain.cancelScheduledValues(now);
-    nodes.reverbSend.gain.setTargetAtTime(reverbLevel * reverbConfig.sendScale, now, 0.08);
-    nodes.reverbWet.gain.cancelScheduledValues(now);
-    nodes.reverbWet.gain.setTargetAtTime(reverbLevel * reverbConfig.wetScale, now, 0.12);
-
-    const reverbTone = clamp(effective.reverbTone + reverbConfig.toneOffset, 0, 1);
-    const reverbDamping = clamp(
-      0.18 + (1 - reverbTone) * 0.62 + reverbConfig.dampingOffset,
-      0.12,
-      0.9
-    );
-    const reverbLowCut = clamp(70 + (1 - reverbTone) * 180, 20, 1400);
-    const reverbHighCut = clamp(
-      Math.max(2600 + reverbTone * 9800, reverbLowCut + 900),
-      1200,
-      18000
-    );
-
-    this.reverbWorklet.setParams({
-      enabled: reverbActive,
-      variant: reverbMode,
-      preDelay: effective.reverbPreDelay / 1000,
-      size: effective.reverbSize,
-      decay: effective.reverbDecay,
-      damping: reverbDamping,
-      lowCut: reverbLowCut,
-      highCut: reverbHighCut,
-      width: clamp(effective.reverbWidth + reverbConfig.widthBias, 0, 1),
-      diffusion: clamp(reverbConfig.diffusion + effective.reverbSize * 0.12, 0.4, 0.98),
-      modRate: reverbConfig.modRate * (0.8 + effective.reverbSize * 0.45),
-      modDepth: reverbConfig.modDepth * (0.7 + effective.reverbDecay * 0.6),
-      earlyLevel: clamp(
-        reverbConfig.earlyLevel * (0.7 + (1 - effective.reverbSize) * 0.3),
-        0.12,
-        0.72
-      )
-    });
-
-    const colorAmount = clamp(effective.distortion, 0, 1);
-    nodes.warmthFilter.gain.cancelScheduledValues(now);
-    nodes.warmthFilter.gain.setTargetAtTime(colorAmount * 1.6, now, 0.12);
-    nodes.presenceFilter.gain.cancelScheduledValues(now);
-    nodes.presenceFilter.gain.setTargetAtTime(-reverbMix * 0.7, now, 0.12);
-    nodes.postTone.gain.cancelScheduledValues(now);
-    nodes.postTone.gain.setTargetAtTime(colorAmount * 0.4, now, 0.12);
-    nodes.airFilter.gain.cancelScheduledValues(now);
-    nodes.airFilter.gain.setTargetAtTime(-colorAmount * 0.8, now, 0.12);
-
-    nodes.distortion.curve = this.distortionCache.get(effective.distortion);
-
-    const panValue = (effective.pan - 0.5) * 2;
-    nodes.stereoPanner.pan.cancelScheduledValues(now);
-    nodes.stereoPanner.pan.setTargetAtTime(panValue, now, 0.05);
-
-    if (this.worklet.ready) {
-      this.worklet.setParams(toWorkletParams(effective));
-    }
-
     this.lastParamSignature = signature;
   }
 
