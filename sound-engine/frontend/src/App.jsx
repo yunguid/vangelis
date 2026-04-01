@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import SynthKeyboard from './components/SynthKeyboard';
-import AudioControls from './components/AudioControls';
-import UIOverlay from './components/UIOverlay';
 import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
 import WaveCandy from './components/WaveCandy';
@@ -576,27 +574,6 @@ const App = () => {
           </div>
         </main>
 
-        <section className="zone-bottom content-secondary" aria-label="Control surface">
-          <div className="controls-surface tier-support">
-            <div className="controls-panel" aria-label="Waveform selection">
-              <UIOverlay
-                currentWaveform={waveformType}
-                onWaveformChange={setWaveformType}
-              />
-            </div>
-            <div className="controls-panel wide" aria-label="Audio controls">
-              <AudioControls
-                audioParams={audioParams}
-                onParamChange={handleAudioParamChange}
-                onParamsChange={handleAudioParamsChange}
-                transportBpm={transportBpm}
-                sections={controlSections}
-                onSectionToggle={handleControlSectionToggle}
-              />
-            </div>
-          </div>
-        </section>
-
         {showShortcuts && (
           <div className="shortcuts-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
             <div className="shortcuts-card tier-support">
@@ -667,6 +644,14 @@ const App = () => {
           onTempoChange={midiPlayback.setTempo}
           onSampleSelect={handleSampleSelect}
           activeSampleId={activeSampleId}
+          waveformType={waveformType}
+          onWaveformChange={setWaveformType}
+          audioParams={audioParams}
+          onParamChange={handleAudioParamChange}
+          onParamsChange={handleAudioParamsChange}
+          transportBpm={transportBpm}
+          controlSections={controlSections}
+          onControlSectionToggle={handleControlSectionToggle}
         />
 
       </div>

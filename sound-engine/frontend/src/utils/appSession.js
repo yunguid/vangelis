@@ -9,7 +9,8 @@ const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   modulation: false
 });
 
-const coerceSidebarTab = (value) => (value === 'samples' ? 'samples' : 'midi');
+const VALID_SIDEBAR_TABS = new Set(['midi', 'samples', 'sound']);
+const coerceSidebarTab = (value) => (VALID_SIDEBAR_TABS.has(value) ? value : 'midi');
 
 const coerceSampleSelection = (value) => {
   if (!value || typeof value !== 'object') return null;

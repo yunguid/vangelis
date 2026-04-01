@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AUDIO_PARAM_DEFAULTS,
   applyEffectToggleState,
   getDelayPresetPatch,
   sanitizeAudioParams
@@ -47,5 +48,11 @@ describe('audioParams effect source of truth', () => {
     expect(engineParams.reverbEnabled).toBe(false);
     expect(engineParams.reverb).toBe(0);
     expect(engineParams.reverbMix).toBe(0);
+  });
+
+  it('forces pan back to center when loading saved params', () => {
+    const sanitized = sanitizeAudioParams({ pan: 0 });
+
+    expect(sanitized.pan).toBe(AUDIO_PARAM_DEFAULTS.pan);
   });
 });

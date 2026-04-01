@@ -426,7 +426,7 @@ export const sanitizeAudioParams = (params = {}) => {
       ranges.delayMotion.max
     ),
     distortion: clamp(merged.distortion, ranges.distortion.min, ranges.distortion.max),
-    pan: clamp(merged.pan, ranges.pan.min, ranges.pan.max),
+    pan: AUDIO_PARAM_DEFAULTS.pan,
     attack: clamp(merged.attack, ranges.attack.min, ranges.attack.max),
     decay: clamp(merged.decay, ranges.decay.min, ranges.decay.max),
     sustain: clamp(merged.sustain, ranges.sustain.min, ranges.sustain.max),

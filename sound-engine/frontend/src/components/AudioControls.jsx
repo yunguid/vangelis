@@ -91,11 +91,6 @@ const ESSENTIAL_SLIDERS = [
     id: 'volume',
     label: 'Volume',
     helpText: 'Set output level.'
-  }),
-  makePercentSlider('pan', {
-    id: 'pan',
-    label: 'Stereo pan',
-    display: (value) => `L${Math.round((value - 0.5) * 200)} R`
   })
 ];
 
@@ -578,10 +573,7 @@ const AudioControls = ({
         title="Essentials"
         open={activeSections.essentials}
         onToggle={toggleSection}
-        summary={<EffectSummary items={[
-          `${percentValue(getParam('volume'))}% level`,
-          `Pan ${Math.round((getParam('pan') - 0.5) * 200)}`
-        ]} />}
+        summary={<EffectSummary items={[`${percentValue(getParam('volume'))}% level`]} />}
       >
         {ESSENTIAL_SLIDERS.map(renderSlider)}
       </CollapsibleSection>

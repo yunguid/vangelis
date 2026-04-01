@@ -179,6 +179,12 @@
   padding: 14px 14px 16px;
 }
 
+.sound-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 /* Backdrop */
 .sidebar-backdrop {
   position: fixed;

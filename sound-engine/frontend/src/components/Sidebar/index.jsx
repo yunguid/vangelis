@@ -1,13 +1,14 @@
 import React, { useEffect, useCallback } from 'react';
 import MidiTab from './MidiTab.jsx';
 import SamplesTab from './SamplesTab.jsx';
+import SoundTab from './SoundTab.jsx';
 import './Sidebar.css';
 
 const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
 
 /**
  * Collapsed sidebar rail with expandable panel
- * Supports multiple tabs: MIDI, Samples
+ * Supports multiple tabs: MIDI, Samples, Sound
  */
 const Sidebar = ({
   isOpen,
@@ -28,7 +29,16 @@ const Sidebar = ({
   onTempoChange,
   // Samples props
   onSampleSelect,
-  activeSampleId
+  activeSampleId,
+  // Sound props
+  waveformType,
+  onWaveformChange,
+  audioParams,
+  onParamChange,
+  onParamsChange,
+  transportBpm,
+  controlSections,
+  onControlSectionToggle
 }) => {
   // Close on escape key
   useEffect(() => {
@@ -89,8 +99,34 @@ const Sidebar = ({
         </svg>
       ),
       isActive: !!activeSampleId
+    },
+    {
+      id: 'sound',
+      label: 'Sound',
+      icon: (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="6" y1="5" x2="6" y2="19" />
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="18" y1="5" x2="18" y2="19" />
+          <circle cx="6" cy="9" r="2.2" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="15" r="2.2" fill="currentColor" stroke="none" />
+          <circle cx="18" cy="8" r="2.2" fill="currentColor" stroke="none" />
+        </svg>
+      ),
+      isActive: false
     }
   ];
+  const activePanel = tabs.find((tab) => tab.id === activeTab) || tabs[0];
+  const panelTitle = activeTab === 'midi'
+    ? 'MIDI Library'
+    : activeTab === 'samples'
+      ? 'Sample Library'
+      : 'Sound Controls';
+  const panelSubtitle = activeTab === 'midi'
+    ? (currentMidi?.name || 'Pick a file, then play')
+    : activeTab === 'samples'
+      ? (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
+      : `Waveform: ${waveformType}`;
 
   return (
     <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''}`}>
@@ -102,7 +138,7 @@ const Sidebar = ({
             type="button"
             className={`sidebar-rail__btn ${isOpen && activeTab === tab.id ? 'sidebar-rail__btn--active' : ''} ${tab.isActive ? 'sidebar-rail__btn--playing' : ''}`}
             onClick={() => handleRailClick(tab.id)}
-            aria-label={isOpen && activeTab === tab.id ? `Close ${tab.label} browser` : `Open ${tab.label} browser`}
+            aria-label={isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
             aria-expanded={isOpen && activeTab === tab.id}
           >
             {tab.icon}
@@ -117,20 +153,13 @@ const Sidebar = ({
         className={`sidebar-panel ${isOpen ? 'sidebar-panel--open' : ''}`}
         aria-hidden={!isOpen}
         role="complementary"
-        aria-label={activeTab === 'midi' ? 'MIDI browser' : 'Samples browser'}
+        aria-label={activePanel.id === 'sound' ? 'Sound controls' : `${activePanel.label} browser`}
         {...(!isOpen && { inert: '' })}
       >
         <div className="sidebar-panel__header">
           <div className="sidebar-panel__heading-group">
-            <h2 className="sidebar-panel__title">
-              {activeTab === 'midi' ? 'MIDI Library' : 'Sample Library'}
-            </h2>
-            <p className="sidebar-panel__subtitle">
-              {activeTab === 'midi'
-                ? (currentMidi?.name || 'Pick a file, then play')
-                : (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
-              }
-            </p>
+            <h2 className="sidebar-panel__title">{panelTitle}</h2>
+            <p className="sidebar-panel__subtitle">{panelSubtitle}</p>
           </div>
           <button
             type="button"
@@ -160,6 +189,18 @@ const Sidebar = ({
             <SamplesTab
               onSampleSelect={onSampleSelect}
               activeSampleId={activeSampleId}
+            />
+          )}
+          {activeTab === 'sound' && (
+            <SoundTab
+              currentWaveform={waveformType}
+              onWaveformChange={onWaveformChange}
+              audioParams={audioParams}
+              onParamChange={onParamChange}
+              onParamsChange={onParamsChange}
+              transportBpm={transportBpm}
+              sections={controlSections}
+              onSectionToggle={onControlSectionToggle}
             />
           )}
         </div>

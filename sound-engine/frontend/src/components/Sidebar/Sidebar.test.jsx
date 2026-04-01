@@ -10,6 +10,10 @@ vi.mock('./SamplesTab.jsx', () => ({
   default: () => <div data-testid="samples-tab">Samples content</div>
 }));
 
+vi.mock('./SoundTab.jsx', () => ({
+  default: () => <div data-testid="sound-tab">Sound content</div>
+}));
+
 const buildProps = (overrides = {}) => ({
   isOpen: false,
   onClose: vi.fn(),
@@ -28,6 +32,20 @@ const buildProps = (overrides = {}) => ({
   onTempoChange: vi.fn(),
   onSampleSelect: vi.fn(),
   activeSampleId: null,
+  waveformType: 'Sine',
+  onWaveformChange: vi.fn(),
+  audioParams: {},
+  onParamChange: vi.fn(),
+  onParamsChange: vi.fn(),
+  transportBpm: 120,
+  controlSections: {
+    essentials: true,
+    delay: false,
+    reverb: false,
+    color: false,
+    modulation: false
+  },
+  onControlSectionToggle: vi.fn(),
   ...overrides
 });
 
@@ -42,6 +60,7 @@ describe('Sidebar', () => {
     render(<Sidebar {...buildProps()} />);
     expect(screen.getByRole('button', { name: /open midi browser/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open samples browser/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open sound controls/i })).toBeInTheDocument();
   });
 
   it('opens selected tab when rail button clicked', () => {
@@ -61,6 +80,13 @@ describe('Sidebar', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /close midi browser/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the sound tab panel content', () => {
+    render(<Sidebar {...buildProps({ isOpen: true, activeTab: 'sound' })} />);
+
+    expect(screen.getByText('Sound Controls')).toBeInTheDocument();
+    expect(screen.getByTestId('sound-tab')).toBeInTheDocument();
   });
 
   it('closes when escape is pressed', () => {
