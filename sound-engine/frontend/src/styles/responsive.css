@@ -12,7 +12,7 @@
   }
 
   .zone-top {
-    width: min(640px, 100%);
+    width: min(1000px, 100%);
   }
 
   .zone-center,
@@ -49,30 +49,47 @@
   }
 
   .zone-top {
-    padding: 12px 14px;
-    gap: 10px;
-    border-radius: 12px;
+    grid-template-columns: 1fr;
+    padding: 0 0 14px;
+    gap: 12px;
+    border-radius: 0;
   }
 
   .brand-block {
-    width: 100%;
-    align-items: center;
+    width: auto;
+    align-items: flex-start;
   }
 
   .brand-title {
     font-size: 1rem;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.02em;
   }
 
   .header-controls {
-    gap: 6px;
+    width: 100%;
+    align-items: flex-start;
+    gap: 10px;
+    justify-content: flex-start;
+  }
+
+  .header-nav {
+    width: 100%;
+    gap: 14px;
+  }
+
+  .header-actions {
+    width: 100%;
+    padding-left: 0;
+    padding-top: 10px;
+    border-left: 0;
+    border-top: 1px solid rgba(244, 241, 232, 0.08);
+    justify-content: flex-start;
     flex-wrap: wrap;
-    justify-content: flex-end;
   }
 
   .header-controls .button-icon {
-    width: 46px;
-    height: 46px;
+    width: 42px;
+    height: 42px;
     font-size: 1rem;
   }
 
@@ -195,8 +212,8 @@
   }
 
   .control-section-shell {
-    padding: 12px;
-    border-radius: 14px;
+    padding: 0 0 14px;
+    border-radius: 0;
     gap: 10px;
   }
 
@@ -211,13 +228,13 @@
 
   .effect-macro-dial__touch,
   .effect-macro-dial__canvas {
-    width: 96px;
-    height: 96px;
+    width: min(var(--dial-size, 96px), 96px);
+    height: min(var(--dial-size, 96px), 96px);
   }
 
   .controls-heading {
     font-size: 0.78rem;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.03em;
   }
 
   .label-stack {
@@ -249,11 +266,22 @@
     gap: 8px;
   }
 
+  .waveform-grid--inline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .waveform-button {
-    min-height: 72px;
+    min-height: 56px;
     padding: 12px;
     font-size: 0.72rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.02em;
+  }
+
+  .waveform-button--compact {
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 0.66rem;
+    letter-spacing: 0.02em;
   }
 
   .waveform-button.is-active {
@@ -282,18 +310,19 @@
 /* Phone landscape */
 @media (max-width: 700px) {
   .zone-top {
-    flex-wrap: wrap;
-    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .brand-title {
-    width: 100%;
-    text-align: center;
+    width: auto;
+    text-align: left;
   }
 
   .header-controls {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .keyboard-hints {
@@ -302,6 +331,10 @@
 
   .waveform-grid {
     grid-template-columns: 1fr;
+  }
+
+  .waveform-grid--inline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -314,17 +347,17 @@
   }
 
   .zone-top {
-    padding: 10px 12px;
+    padding-bottom: 12px;
   }
 
   .brand-title {
     font-size: 0.92rem;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.02em;
   }
 
   .header-controls .button-icon {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
   }
 
   .wave-candy--raylib {

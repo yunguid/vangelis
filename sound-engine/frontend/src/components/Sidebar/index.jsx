@@ -118,10 +118,10 @@ const Sidebar = ({
   ];
   const activePanel = tabs.find((tab) => tab.id === activeTab) || tabs[0];
   const panelTitle = activeTab === 'midi'
-    ? 'MIDI Library'
+    ? 'MIDI library'
     : activeTab === 'samples'
-      ? 'Sample Library'
-      : 'Sound Controls';
+      ? 'Sample library'
+      : 'Sound controls';
   const panelSubtitle = activeTab === 'midi'
     ? (currentMidi?.name || 'Pick a file, then play')
     : activeTab === 'samples'

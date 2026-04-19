@@ -15,6 +15,7 @@ import {
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { parseMidiFile } from './utils/midiParser.js';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
+import { HOME_HREF, MIDI_PIPELINE_HREF, STUDY_SONGS_HREF } from './utils/routes.js';
 
 const NOTICE_TIMEOUT_MS = 2200;
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
@@ -481,59 +482,78 @@ const App = () => {
             <div className="brand-title">Vangelis</div>
           </div>
           <div className="header-controls">
-            <button
-              type="button"
-              className="button-link"
-              onClick={handleResetSound}
-              title="Restore the default dry sound"
-            >
-              Reset sound
-            </button>
-            {/* Sample Upload */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*"
-              onChange={handleFileSelect}
-              style={{ display: 'none' }}
-              id="sample-upload"
-            />
-            <label
-              htmlFor="sample-upload"
-              className={`button-icon ${sampleLoading ? 'loading' : ''}`}
-              aria-label={sampleInfo ? `Loaded sample ${sampleInfo.name}` : 'Upload sample'}
-            >
-              <span aria-hidden="true">{sampleInfo ? '!' : '+'}</span>
-            </label>
-            {sampleInfo && (
+            <nav className="header-nav" aria-label="Primary">
+              <a
+                className="button-link button-link--nav is-active"
+                href={HOME_HREF}
+                aria-current="page"
+              >
+                Studio
+              </a>
+              <a
+                className="button-link button-link--nav"
+                href={MIDI_PIPELINE_HREF}
+              >
+                MIDI pipeline
+              </a>
+              <a
+                className="button-link button-link--nav"
+                href={STUDY_SONGS_HREF}
+              >
+                Song studies
+              </a>
+            </nav>
+            <div className="header-actions">
+              <button
+                type="button"
+                className="button-link button-link--quiet"
+                onClick={handleResetSound}
+                title="Restore the default dry sound"
+              >
+                Reset sound
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+                id="sample-upload"
+              />
+              <label
+                htmlFor="sample-upload"
+                className={`button-icon ${sampleLoading ? 'loading' : ''}`}
+                aria-label={sampleInfo ? `Loaded sample ${sampleInfo.name}` : 'Upload sample'}
+              >
+                <span aria-hidden="true">{sampleInfo ? '!' : '+'}</span>
+              </label>
+              {sampleInfo && (
+                <button
+                  type="button"
+                  className="button-icon"
+                  onClick={handleClearSample}
+                  aria-label="Clear custom sample"
+                >
+                  <span aria-hidden="true">x</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className={`button-icon record-button ${isRecording ? 'recording' : ''}`}
+                onClick={handleRecordToggle}
+                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+              >
+                <span aria-hidden="true">{isRecording ? '||' : 'O'}</span>
+              </button>
               <button
                 type="button"
                 className="button-icon"
-                onClick={handleClearSample}
-                aria-label="Clear custom sample"
+                aria-label="View keyboard shortcuts"
+                onClick={() => setShowShortcuts(true)}
               >
-                <span aria-hidden="true">x</span>
+                <span aria-hidden="true">?</span>
               </button>
-            )}
-
-            {/* Recording Button */}
-            <button
-              type="button"
-              className={`button-icon record-button ${isRecording ? 'recording' : ''}`}
-              onClick={handleRecordToggle}
-              aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-            >
-              <span aria-hidden="true">{isRecording ? '||' : 'O'}</span>
-            </button>
-
-            <button
-              type="button"
-              className="button-icon"
-              aria-label="View keyboard shortcuts"
-              onClick={() => setShowShortcuts(true)}
-            >
-              <span aria-hidden="true">?</span>
-            </button>
+            </div>
           </div>
         </header>
 

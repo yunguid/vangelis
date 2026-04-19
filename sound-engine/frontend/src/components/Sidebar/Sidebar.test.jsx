@@ -85,7 +85,7 @@ describe('Sidebar', () => {
   it('renders the sound tab panel content', () => {
     render(<Sidebar {...buildProps({ isOpen: true, activeTab: 'sound' })} />);
 
-    expect(screen.getByText('Sound Controls')).toBeInTheDocument();
+    expect(screen.getByText('Sound controls')).toBeInTheDocument();
     expect(screen.getByTestId('sound-tab')).toBeInTheDocument();
   });
 

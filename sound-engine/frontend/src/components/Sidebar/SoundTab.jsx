@@ -13,18 +13,23 @@ const SoundTab = ({
   onSectionToggle
 }) => (
   <div className="sound-tab">
-    <UIOverlay
-      currentWaveform={currentWaveform}
-      onWaveformChange={onWaveformChange}
-    />
-    <AudioControls
-      audioParams={audioParams}
-      onParamChange={onParamChange}
-      onParamsChange={onParamsChange}
-      transportBpm={transportBpm}
-      sections={sections}
-      onSectionToggle={onSectionToggle}
-    />
+    <div className="sound-tab__surface">
+      <UIOverlay
+        currentWaveform={currentWaveform}
+        onWaveformChange={onWaveformChange}
+        compact
+      />
+      <AudioControls
+        audioParams={audioParams}
+        onParamChange={onParamChange}
+        onParamsChange={onParamsChange}
+        transportBpm={transportBpm}
+        sections={sections}
+        onSectionToggle={onSectionToggle}
+        compact
+        embedded
+      />
+    </div>
   </div>
 );
 

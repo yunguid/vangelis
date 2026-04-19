@@ -41,20 +41,56 @@
 }
 
 .button-link {
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 0;
+  border-radius: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   color: var(--color-text-secondary);
-  background: none;
   text-decoration: none;
-  padding: 8px 12px;
-  border-radius: var(--radius-small);
-  transition: color 100ms ease;
-  min-height: 40px;
+  transition: color 100ms ease, border-color 100ms ease, background-color 100ms ease;
 }
 
 .button-link:hover {
   color: var(--color-text-primary);
+}
+
+.button-link:focus-visible {
+  outline: none;
+  color: var(--color-text-primary);
+}
+
+.button-link--nav {
+  padding-bottom: 8px;
+  border-bottom-color: transparent;
+}
+
+.button-link--nav:hover,
+.button-link--nav:focus-visible,
+.button-link--nav.is-active {
+  border-bottom-color: rgba(255, 122, 61, 0.32);
+}
+
+.button-link--nav.is-active {
+  color: var(--color-text-primary);
+}
+
+.button-link--quiet {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(244, 241, 232, 0.05);
+}
+
+.button-link--quiet:hover,
+.button-link--quiet:focus-visible {
+  background: rgba(244, 241, 232, 0.1);
 }
 
 .button-icon:hover,
@@ -89,14 +125,23 @@
 .label-stack {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 16px;
+}
+
+.label-stack__meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+  min-width: 0;
 }
 
 .slider-value {
   font-size: clamp(0.75rem, 0.9vw, 0.85rem);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--color-text-tertiary);
 }
 
@@ -104,18 +149,18 @@
   font-size: clamp(0.72rem, 0.95vw, 0.85rem);
   color: var(--color-text-secondary);
   opacity: 0.9;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
 }
 
 .slider-input-wrapper {
   position: relative;
   width: 100%;
-  height: 40px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  border-radius: 0;
+  padding: 10px 0;
+  border-radius: 999px;
   background: transparent;
   overflow: visible;
   --slider-progress: 50%;
@@ -157,12 +202,11 @@
 .segment-button {
   min-height: 42px;
   padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(244, 241, 232, 0.1);
-  background: linear-gradient(180deg, rgba(244, 241, 232, 0.12) 0%, rgba(244, 241, 232, 0.05) 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(244, 241, 232, 0.08);
+  background: rgba(244, 241, 232, 0.04);
   color: var(--color-text-secondary);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   font-size: 0.74rem;
   transition: border-color 120ms ease, color 120ms ease, transform 120ms ease, background 120ms ease;
 }
@@ -175,28 +219,33 @@
 .segment-button.is-active {
   color: var(--color-text-primary);
   border-color: rgba(255, 122, 61, 0.42);
-  background: linear-gradient(180deg, rgba(255, 122, 61, 0.3) 0%, rgba(255, 122, 61, 0.14) 100%);
-  box-shadow: 0 10px 24px rgba(12, 24, 36, 0.18);
+  background: rgba(255, 122, 61, 0.14);
+  box-shadow: none;
 }
 
 .effect-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 6px;
 }
 
 .effect-chip {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(244, 241, 232, 0.07);
-  border: 1px solid rgba(244, 241, 232, 0.08);
+  min-height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
   color: var(--color-text-secondary);
-  font-size: 0.71rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
+}
+
+.effect-chip + .effect-chip::before {
+  content: '·';
+  margin-right: 6px;
+  color: var(--color-text-tertiary);
 }
 
 /* Range Input */
@@ -204,14 +253,14 @@ input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 8px;
-  border-radius: 0;
+  height: 6px;
+  border-radius: 999px;
   background: linear-gradient(
     90deg,
-    rgba(255, 122, 61, 0.3) 0%,
+    rgba(255, 122, 61, 0.24) 0%,
     rgba(255, 122, 61, 0.62) var(--slider-progress, 50%),
-    rgba(244, 241, 232, 0.08) calc(var(--slider-progress, 50%) + 0.1%),
-    rgba(244, 241, 232, 0.08) 100%
+    rgba(244, 241, 232, 0.06) calc(var(--slider-progress, 50%) + 0.1%),
+    rgba(244, 241, 232, 0.06) 100%
   );
   transition: all 100ms ease;
   border: none;
@@ -221,10 +270,10 @@ input[type="range"] {
 input[type="range"]:hover {
   background: linear-gradient(
     90deg,
-    rgba(255, 122, 61, 0.4) 0%,
-    rgba(255, 122, 61, 0.75) var(--slider-progress, 50%),
-    rgba(244, 241, 232, 0.1) calc(var(--slider-progress, 50%) + 0.1%),
-    rgba(244, 241, 232, 0.1) 100%
+    rgba(255, 122, 61, 0.36) 0%,
+    rgba(255, 122, 61, 0.78) var(--slider-progress, 50%),
+    rgba(244, 241, 232, 0.08) calc(var(--slider-progress, 50%) + 0.1%),
+    rgba(244, 241, 232, 0.08) 100%
   );
 }
 
@@ -235,41 +284,96 @@ input[type="range"]:focus-visible {
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   background: rgba(255, 122, 61, 0.95);
-  border: 2px solid rgba(255, 122, 61, 1);
-  box-shadow: none;
+  border: 1px solid rgba(255, 204, 177, 0.92);
+  box-shadow:
+    0 0 0 5px rgba(255, 122, 61, 0.12),
+    0 8px 16px rgba(12, 24, 36, 0.24);
   cursor: pointer;
   transition: all 100ms ease;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
   background: rgba(255, 122, 61, 1);
+  box-shadow:
+    0 0 0 6px rgba(255, 122, 61, 0.16),
+    0 10px 18px rgba(12, 24, 36, 0.28);
 }
 
 input[type="range"]::-webkit-slider-thumb:active {
-  transform: scale(0.9);
+  transform: scale(0.94);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
   background: rgba(255, 122, 61, 0.95);
-  border: 2px solid rgba(255, 122, 61, 1);
-  box-shadow: none;
+  border: 1px solid rgba(255, 204, 177, 0.92);
+  box-shadow:
+    0 0 0 5px rgba(255, 122, 61, 0.12),
+    0 8px 16px rgba(12, 24, 36, 0.24);
   cursor: pointer;
   transition: all 100ms ease;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
   background: rgba(255, 122, 61, 1);
+  box-shadow:
+    0 0 0 6px rgba(255, 122, 61, 0.16),
+    0 10px 18px rgba(12, 24, 36, 0.28);
 }
 
 input[type="range"]::-moz-range-thumb:active {
-  transform: scale(0.9);
+  transform: scale(0.94);
+}
+
+.inline-toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 241, 232, 0.1);
+  background: rgba(244, 241, 232, 0.05);
+  color: var(--color-text-secondary);
+  font-size: 0.64rem;
+  letter-spacing: 0.02em;
+  transition: border-color 120ms ease, color 120ms ease, background 120ms ease, transform 120ms ease;
+}
+
+.inline-toggle-pill:hover {
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+}
+
+.inline-toggle-pill.is-active {
+  border-color: rgba(255, 122, 61, 0.38);
+  background: rgba(255, 122, 61, 0.14);
+  color: rgba(255, 222, 204, 0.94);
+}
+
+.inline-toggle-pill--subtle {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.56rem;
+}
+
+.inline-toggle-pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(244, 241, 232, 0.26);
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+.inline-toggle-pill.is-active .inline-toggle-pill__dot {
+  background: rgba(255, 122, 61, 0.92);
+  box-shadow: 0 0 0 4px rgba(255, 122, 61, 0.14);
 }
 
 /* Toggle Checkbox */
@@ -280,8 +384,7 @@ input[type="range"]::-moz-range-thumb:active {
   gap: 16px;
   font-size: clamp(0.78rem, 0.95vw, 0.88rem);
   color: var(--color-text-secondary);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .toggle-row input[type="checkbox"] {

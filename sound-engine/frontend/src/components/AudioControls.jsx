@@ -290,7 +290,8 @@ const SliderControl = ({
   max,
   step,
   onChange,
-  helpText
+  helpText,
+  headerAccessory = null
 }) => {
   const numericMin = typeof min === 'number' ? min : Number(min ?? 0);
   const numericMax = typeof max === 'number' ? max : Number(max ?? 1);
@@ -303,7 +304,10 @@ const SliderControl = ({
     <div className="slider-group">
       <div className="label-stack">
         <label htmlFor={id}>{label}</label>
-        <span className="slider-value">{displayValue}</span>
+        <div className="label-stack__meta">
+          {headerAccessory}
+          {displayValue ? <span className="slider-value">{displayValue}</span> : null}
+        </div>
       </div>
       {helpText && <p className="slider-description">{helpText}</p>}
       <div className="slider-input-wrapper" style={sliderProgressStyle}>
@@ -329,12 +333,16 @@ const SelectControl = ({
   onChange,
   options,
   helpText,
-  displayValue
+  displayValue,
+  headerAccessory = null
 }) => (
   <div className="slider-group">
     <div className="label-stack">
       <label htmlFor={id}>{label}</label>
-      {displayValue ? <span className="slider-value">{displayValue}</span> : null}
+      <div className="label-stack__meta">
+        {headerAccessory}
+        {displayValue ? <span className="slider-value">{displayValue}</span> : null}
+      </div>
     </div>
     {helpText && <p className="slider-description">{helpText}</p>}
     <div className="select-input-wrapper">
@@ -361,12 +369,16 @@ const SegmentedControl = ({
   onChange,
   options,
   helpText,
-  displayValue
+  displayValue,
+  headerAccessory = null
 }) => (
   <div className="slider-group">
     <div className="label-stack">
       <label htmlFor={id}>{label}</label>
-      {displayValue ? <span className="slider-value">{displayValue}</span> : null}
+      <div className="label-stack__meta">
+        {headerAccessory}
+        {displayValue ? <span className="slider-value">{displayValue}</span> : null}
+      </div>
     </div>
     {helpText && <p className="slider-description">{helpText}</p>}
     <div id={id} className="segment-grid" role="group" aria-label={label}>
@@ -385,14 +397,34 @@ const SegmentedControl = ({
   </div>
 );
 
+const InlineTogglePill = ({
+  pressed,
+  onToggle,
+  activeLabel = 'On',
+  inactiveLabel = 'Off',
+  srLabel,
+  subtle = false
+}) => (
+  <button
+    type="button"
+    className={`inline-toggle-pill${pressed ? ' is-active' : ''}${subtle ? ' inline-toggle-pill--subtle' : ''}`}
+    onClick={onToggle}
+    aria-pressed={pressed}
+    aria-label={srLabel || (pressed ? activeLabel : inactiveLabel)}
+  >
+    <span className="inline-toggle-pill__dot" aria-hidden="true" />
+    <span>{pressed ? activeLabel : inactiveLabel}</span>
+  </button>
+);
+
 const EffectSummary = ({ items }) => (
-  <div className="effect-summary">
+  <span className="effect-summary">
     {items.filter(Boolean).map((item, index) => (
-      <div key={`${item}-${index}`} className="effect-chip">
+      <span key={`${item}-${index}`} className="effect-chip">
         {item}
-      </div>
+      </span>
     ))}
-  </div>
+  </span>
 );
 
 const EFFECT_DIALS = {
@@ -424,28 +456,35 @@ const CollapsibleSection = ({
   open,
   onToggle,
   summary = null,
+  headerAccessory = null,
   children
 }) => (
   <section
     className={`control-section-shell ${open ? 'is-open' : 'is-collapsed'}`}
     data-control-section={id}
   >
-    <button
-      type="button"
-      className="control-section-toggle"
-      onClick={() => onToggle(id)}
-      aria-expanded={open}
-      aria-controls={`${id}-panel`}
-    >
-      <span className="control-section-toggle__copy">
-        <span className="controls-heading">{title}</span>
-        <span className="control-section-toggle__meta">{open ? 'Collapse' : 'Expand'}</span>
-      </span>
-      <span className="control-section-toggle__chevron" aria-hidden="true">
-        {open ? '−' : '+'}
-      </span>
-    </button>
-    {summary ? <div className="control-section-summary">{summary}</div> : null}
+    <div className="control-section-header">
+      <button
+        type="button"
+        className="control-section-toggle"
+        onClick={() => onToggle(id)}
+        aria-expanded={open}
+        aria-controls={`${id}-panel`}
+      >
+        <span className="control-section-toggle__copy">
+          <span className="controls-heading">{title}</span>
+          {summary ? <span className="control-section-summary">{summary}</span> : null}
+        </span>
+        <span className="control-section-toggle__chevron" aria-hidden="true">
+          {open ? '−' : '+'}
+        </span>
+      </button>
+      {headerAccessory ? (
+        <div className="control-section-header__accessory">
+          {headerAccessory}
+        </div>
+      ) : null}
+    </div>
     {open ? (
       <div id={`${id}-panel`} className="control-section-body">
         {children}
@@ -460,7 +499,9 @@ const AudioControls = ({
   onParamsChange,
   transportBpm = 120,
   sections,
-  onSectionToggle
+  onSectionToggle,
+  compact = false,
+  embedded = false
 }) => {
   const [localSections, setLocalSections] = useState(DEFAULT_CONTROL_SECTIONS);
   const [showDelayAdvanced, setShowDelayAdvanced] = useState(false);
@@ -529,6 +570,8 @@ const AudioControls = ({
         displayValue={slider.display(paramValue)}
         accent={accent}
         disabled={disabled}
+        size={compact ? 88 : 112}
+        compact={compact}
         onChange={(value) => onParamChange(slider.param, value)}
       />
     );
@@ -551,11 +594,11 @@ const AudioControls = ({
   }, transportBpm);
   const delayPreviewMs = Math.round(delayPreviewSeconds * 1000);
   const delayStatus = delaySync
-    ? `${delayPreviewMs} ms @ ${Math.round(transportBpm)} BPM`
+    ? `${delayPreviewMs} ms at ${Math.round(transportBpm)} BPM`
     : `${delayPreviewMs} ms free`;
   const reverbStatus = reverbEnabled
     ? `${Math.round(getParam('reverbPreDelay'))} ms pre-delay`
-    : 'Bypassed';
+    : 'Off';
   const applyDelayPreset = (preset) => {
     const patch = getDelayPresetPatch(preset);
     if (!patch) return;
@@ -566,8 +609,13 @@ const AudioControls = ({
     Object.entries(patch).forEach(([key, value]) => onParamChange(key, value));
   };
 
+  const containerClassName = [
+    embedded ? 'control-groups control-groups--embedded' : 'panel elevated control-groups',
+    compact ? 'control-groups--compact' : ''
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="panel elevated control-groups">
+    <div className={containerClassName}>
       <CollapsibleSection
         id="essentials"
         title="Essentials"
@@ -583,6 +631,13 @@ const AudioControls = ({
         title="Delay"
         open={activeSections.delay}
         onToggle={toggleSection}
+        headerAccessory={(
+          <InlineTogglePill
+            pressed={delayEnabled}
+            onToggle={() => onParamChange('delayEnabled', !delayEnabled)}
+            srLabel={delayEnabled ? 'Turn delay off' : 'Turn delay on'}
+          />
+        )}
         summary={<EffectSummary items={[
           getOptionLabel(DELAY_PRESET_OPTIONS, delayPreset),
           getOptionLabel(DELAY_MODE_OPTIONS, delayMode),
@@ -590,26 +645,6 @@ const AudioControls = ({
         ]} />}
       >
         <div className="control-section">
-          <div className="section-inline-actions">
-            <button
-              type="button"
-              className="button-link"
-              onClick={() => setShowDelayAdvanced((prev) => !prev)}
-            >
-              {showDelayAdvanced ? 'Hide detail' : 'Shape repeats'}
-            </button>
-          </div>
-
-          <label className="toggle-row" htmlFor="delay-enabled">
-            <span>Delay active</span>
-            <input
-              id="delay-enabled"
-              type="checkbox"
-              checked={delayEnabled}
-              onChange={(e) => onParamChange('delayEnabled', e.target.checked)}
-            />
-          </label>
-
           <SegmentedControl
             id="delay-preset"
             label="Preset"
@@ -623,21 +658,10 @@ const AudioControls = ({
             id="delay-mode"
             label="Mode"
             value={delayMode}
-            displayValue={delayEnabled ? 'On' : 'Bypassed'}
             helpText="Choose the stereo repeat character."
             options={DELAY_MODE_OPTIONS}
             onChange={(value) => onParamChange('delayMode', value)}
           />
-
-          <label className="toggle-row" htmlFor="delay-sync">
-            <span>Sync to tempo</span>
-            <input
-              id="delay-sync"
-              type="checkbox"
-              checked={delaySync}
-              onChange={(e) => onParamChange('delaySync', e.target.checked)}
-            />
-          </label>
 
           {delaySync ? (
             <SelectControl
@@ -646,6 +670,16 @@ const AudioControls = ({
               value={delayDivision}
               displayValue={delayStatus}
               helpText="Lock repeats to the current transport tempo."
+              headerAccessory={(
+                <InlineTogglePill
+                  pressed={delaySync}
+                  onToggle={() => onParamChange('delaySync', !delaySync)}
+                  activeLabel="Sync"
+                  inactiveLabel="Free"
+                  subtle
+                  srLabel={delaySync ? 'Use free delay time' : 'Sync delay to tempo'}
+                />
+              )}
               options={DELAY_DIVISION_OPTIONS}
               onChange={(value) => onParamChange('delayDivision', value)}
             />
@@ -660,6 +694,16 @@ const AudioControls = ({
               step={DELAY_TIME_SLIDER.step}
               onChange={(value) => onParamChange(DELAY_TIME_SLIDER.param, DELAY_TIME_SLIDER.fromSlider(value))}
               helpText="Free-run delay time in milliseconds."
+              headerAccessory={(
+                <InlineTogglePill
+                  pressed={delaySync}
+                  onToggle={() => onParamChange('delaySync', !delaySync)}
+                  activeLabel="Sync"
+                  inactiveLabel="Free"
+                  subtle
+                  srLabel={delaySync ? 'Use free delay time' : 'Sync delay to tempo'}
+                />
+              )}
             />
           )}
 
@@ -675,6 +719,16 @@ const AudioControls = ({
               {renderSlider(DELAY_HIGHCUT_SLIDER)}
             </div>
           ) : null}
+
+          <div className="section-footer-actions">
+            <button
+              type="button"
+              className="button-link"
+              onClick={() => setShowDelayAdvanced((prev) => !prev)}
+            >
+              {showDelayAdvanced ? 'Hide detail' : 'Shape repeats'}
+            </button>
+          </div>
         </div>
       </CollapsibleSection>
 
@@ -683,6 +737,13 @@ const AudioControls = ({
         title="Reverb"
         open={activeSections.reverb}
         onToggle={toggleSection}
+        headerAccessory={(
+          <InlineTogglePill
+            pressed={reverbEnabled}
+            onToggle={() => onParamChange('reverbEnabled', !reverbEnabled)}
+            srLabel={reverbEnabled ? 'Turn reverb off' : 'Turn reverb on'}
+          />
+        )}
         summary={<EffectSummary items={[
           getOptionLabel(REVERB_MODE_OPTIONS, reverbMode),
           reverbStatus,
@@ -690,31 +751,10 @@ const AudioControls = ({
         ]} />}
       >
         <div className="control-section">
-          <div className="section-inline-actions">
-            <button
-              type="button"
-              className="button-link"
-              onClick={() => setShowReverbAdvanced((prev) => !prev)}
-            >
-              {showReverbAdvanced ? 'Hide detail' : 'Shape space'}
-            </button>
-          </div>
-
-          <label className="toggle-row" htmlFor="reverb-enabled">
-            <span>Reverb active</span>
-            <input
-              id="reverb-enabled"
-              type="checkbox"
-              checked={reverbEnabled}
-              onChange={(e) => onParamChange('reverbEnabled', e.target.checked)}
-            />
-          </label>
-
           <SegmentedControl
             id="reverb-mode"
             label="Mode"
             value={reverbMode}
-            displayValue={reverbEnabled ? 'On' : 'Bypassed'}
             helpText="Pick the space shape before fine-tuning it."
             options={REVERB_MODE_OPTIONS}
             onChange={(value) => onParamChange('reverbMode', value)}
@@ -730,6 +770,16 @@ const AudioControls = ({
               {renderSlider(REVERB_WIDTH_SLIDER)}
             </div>
           ) : null}
+
+          <div className="section-footer-actions">
+            <button
+              type="button"
+              className="button-link"
+              onClick={() => setShowReverbAdvanced((prev) => !prev)}
+            >
+              {showReverbAdvanced ? 'Hide detail' : 'Shape space'}
+            </button>
+          </div>
         </div>
       </CollapsibleSection>
 
