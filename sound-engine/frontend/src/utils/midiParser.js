@@ -69,9 +69,31 @@ export async function parseMidiFile(source) {
     name: midi.name || 'Untitled',
     duration: midi.duration,
     bpm: midi.header.tempos[0]?.bpm || 120,
-    timeSignature: midi.header.timeSignatures[0] || { numerator: 4, denominator: 4 },
+    timeSignature: normalizeTimeSignature(midi.header.timeSignatures[0]),
     notes: flattenTracks(midi.tracks)
   };
+}
+
+function normalizeTimeSignature(timeSignatureEvent) {
+  if (timeSignatureEvent?.numerator && timeSignatureEvent?.denominator) {
+    return {
+      numerator: timeSignatureEvent.numerator,
+      denominator: timeSignatureEvent.denominator
+    };
+  }
+
+  const signature = Array.isArray(timeSignatureEvent?.timeSignature)
+    ? timeSignatureEvent.timeSignature
+    : null;
+
+  if (signature?.length >= 2) {
+    return {
+      numerator: signature[0],
+      denominator: signature[1]
+    };
+  }
+
+  return { numerator: 4, denominator: 4 };
 }
 
 /**

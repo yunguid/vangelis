@@ -51,4 +51,11 @@ describe('UIOverlay', () => {
     render(<UIOverlay currentWaveform="Sine" onWaveformChange={() => {}} />);
     expect(screen.queryByText(/harmonic profile/i)).not.toBeInTheDocument();
   });
+
+  it('renders compact waveform labels while preserving accessible names', () => {
+    render(<UIOverlay currentWaveform="Sawtooth" onWaveformChange={() => {}} compact />);
+
+    expect(screen.getByText('Saw')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Sawtooth' })).toHaveAttribute('aria-checked', 'true');
+  });
 });

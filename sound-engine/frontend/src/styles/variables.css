@@ -3,7 +3,7 @@
  * Three-color visual system: ink, paper, accent.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
   --color-core-ink: #10151f;
@@ -92,7 +92,7 @@ body {
   min-height: 100%;
   background: var(--color-bg-deep);
   color: var(--color-text-primary);
-  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  font-family: 'IBM Plex Mono', 'Menlo', 'Monaco', monospace;
   line-height: 1.5;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;

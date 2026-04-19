@@ -1,0 +1,200 @@
+:root {
+  --color-core-ink: #1d2021;
+  --color-core-paper: #ebdbb2;
+  --color-core-accent: #d79921;
+  --color-bg-sky: #1d2021;
+  --color-bg-deep: #1d2021;
+  --color-primary-soft: rgba(29, 32, 33, 0.94);
+  --color-primary-dim: rgba(29, 32, 33, 0.98);
+  --color-accent-sheen: rgba(215, 153, 33, 0.18);
+  --color-accent-sheen-strong: rgba(215, 153, 33, 0.4);
+  --color-accent-silver: rgba(215, 153, 33, 0.12);
+  --color-glimmer-one: #ebdbb2;
+  --color-glimmer-two: rgba(235, 219, 178, 0.9);
+  --color-glimmer-three: rgba(235, 219, 178, 0.58);
+  --color-text-primary: rgba(235, 219, 178, 0.96);
+  --color-text-secondary: rgba(235, 219, 178, 0.72);
+  --color-text-tertiary: rgba(235, 219, 178, 0.5);
+  --color-key-white: rgba(235, 219, 178, 0.96);
+  --color-key-active: rgba(215, 153, 33, 0.34);
+  --color-key-black: rgba(60, 56, 54, 0.98);
+  --color-key-black-active: rgba(214, 93, 14, 0.54);
+  --color-surface: rgba(40, 40, 40, 0.92);
+  --color-surface-intense: rgba(50, 48, 47, 0.96);
+  --color-surface-soft: rgba(40, 40, 40, 0.84);
+  --color-chip: rgba(60, 56, 54, 0.9);
+  --border-glass: 1px solid rgba(168, 153, 132, 0.22);
+  --border-glass-subtle: 1px solid rgba(168, 153, 132, 0.16);
+}
+
+body {
+  background: var(--color-bg-deep);
+}
+
+.simple-background,
+.gradient-layer {
+  background: var(--color-bg-deep) !important;
+}
+
+.zone-top,
+.panel,
+.panel.elevated,
+.controls-surface,
+.keyboard-surface,
+.birds-eye-radar,
+.birds-eye-radar__stage,
+.shortcuts-card,
+.shortcuts-overlay,
+.app-notice,
+.button-icon,
+.button-primary,
+.waveform-button,
+.segment-button,
+.control-select {
+  background-image: none !important;
+}
+
+.zone-top,
+.panel,
+.panel.elevated,
+.controls-surface,
+.shortcuts-card {
+  background: rgba(40, 40, 40, 0.92) !important;
+  border-color: rgba(168, 153, 132, 0.18) !important;
+}
+
+.button-icon,
+.button-primary,
+.waveform-button,
+.segment-button,
+.button-link,
+.control-select {
+  background: rgba(60, 56, 54, 0.84) !important;
+  border: 1px solid rgba(168, 153, 132, 0.18) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+.button-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.button-primary,
+.segment-button.is-active,
+.waveform-button[aria-pressed="true"] {
+  background: rgba(215, 153, 33, 0.2) !important;
+  border-color: rgba(215, 153, 33, 0.32) !important;
+}
+
+.keyboard-surface,
+.birds-eye-radar,
+.birds-eye-radar__stage,
+.wave-candy__canvas,
+.candy-canvas {
+  background: rgba(29, 32, 33, 0.96) !important;
+  border-color: rgba(168, 153, 132, 0.18) !important;
+  box-shadow: none !important;
+}
+
+.white-keys {
+  background: rgba(60, 56, 54, 0.98) !important;
+  box-shadow: none !important;
+}
+
+.key-white {
+  background: #ebdbb2 !important;
+  color: #1d2021 !important;
+  box-shadow: none !important;
+}
+
+.key-white.active,
+.key-white[data-active="true"] {
+  background: #d79921 !important;
+}
+
+.key-black {
+  background: #3c3836 !important;
+  box-shadow: none !important;
+}
+
+.key-black.active,
+.key-black[data-active="true"] {
+  background: #d65d0e !important;
+}
+
+input[type="range"] {
+  background: rgba(168, 153, 132, 0.16) !important;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  background: #d79921 !important;
+  border-color: rgba(235, 219, 178, 0.8) !important;
+  box-shadow: none !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+.brand-title {
+  letter-spacing: 0.03em;
+}
+
+.zone-top {
+  background: none !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(168, 153, 132, 0.18) !important;
+  box-shadow: none !important;
+}
+
+.header-actions {
+  border-left-color: rgba(168, 153, 132, 0.18);
+}
+
+.button-link {
+  background: transparent !important;
+  border: 0 !important;
+}
+
+.button-link--nav {
+  border-bottom: 1px solid transparent !important;
+}
+
+.button-link--nav:hover,
+.button-link--nav:focus-visible,
+.button-link--nav.is-active {
+  border-bottom-color: rgba(215, 153, 33, 0.32) !important;
+}
+
+.button-link--quiet {
+  background: rgba(60, 56, 54, 0.72) !important;
+  border: 1px solid rgba(168, 153, 132, 0.18) !important;
+}
+
+.header-controls .button-icon {
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.header-controls .button-icon:hover {
+  background: rgba(60, 56, 54, 0.84) !important;
+  border-color: rgba(168, 153, 132, 0.18) !important;
+}
+
+.waveform-button {
+  background: rgba(60, 56, 54, 0.5) !important;
+  border: 1px solid transparent !important;
+}
+
+.waveform-button.is-active {
+  background: rgba(215, 153, 33, 0.2) !important;
+  border-color: rgba(215, 153, 33, 0.32) !important;
+}
+
+@media (max-width: 900px) {
+  .header-actions {
+    border-left: 0;
+    border-top: 1px solid rgba(168, 153, 132, 0.18);
+  }
+}

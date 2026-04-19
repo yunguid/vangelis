@@ -120,7 +120,9 @@ const EffectMacroDial = ({
   displayValue,
   onChange,
   accent = 'delay',
-  disabled = false
+  disabled = false,
+  size = CANVAS_SIZE,
+  compact = false
 }) => {
   const canvasRef = useRef(null);
   const dragRef = useRef({
@@ -207,7 +209,10 @@ const EffectMacroDial = ({
   };
 
   return (
-    <div className={`effect-macro-dial ${disabled ? 'is-disabled' : ''}`}>
+    <div
+      className={`effect-macro-dial ${disabled ? 'is-disabled' : ''}${compact ? ' effect-macro-dial--compact' : ''}`}
+      style={{ '--dial-size': `${size}px` }}
+    >
       <div
         id={id}
         className="effect-macro-dial__touch"
@@ -226,15 +231,21 @@ const EffectMacroDial = ({
       >
         <canvas
           ref={canvasRef}
-          width={CANVAS_SIZE}
-          height={CANVAS_SIZE}
+          width={size}
+          height={size}
           className="effect-macro-dial__canvas"
           aria-hidden="true"
         />
       </div>
       <div className="effect-macro-dial__meta">
-        <span className="effect-macro-dial__label">{label}</span>
-        <span className="effect-macro-dial__value">{displayValue}</span>
+        {compact ? (
+          <span className="effect-macro-dial__meta-line">{`${label} · ${displayValue}`}</span>
+        ) : (
+          <>
+            <span className="effect-macro-dial__label">{label}</span>
+            <span className="effect-macro-dial__value">{displayValue}</span>
+          </>
+        )}
       </div>
     </div>
   );

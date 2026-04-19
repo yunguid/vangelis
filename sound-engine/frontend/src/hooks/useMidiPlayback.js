@@ -144,6 +144,7 @@ function normalizeMidiNotes(notes) {
  * @property {function} resume - Resume from pause
  * @property {function} stop - Stop playback completely
  * @property {function} setTempo - Set tempo multiplier (0.25-2.0)
+ * @property {function} seekTo - Jump to a position in original MIDI seconds
  */
 
 /**
@@ -523,11 +524,19 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     rafRef.current = requestAnimationFrame(updateProgress);
   }, [getElapsedOriginalTime, stopInternal]);
 
+  const resumeAudioContextIfNeeded = useCallback(async () => {
+    const ctx = await audioEngine.ensureAudioContext();
+    if (typeof ctx?.resume === 'function' && ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+    return ctx;
+  }, []);
+
   /**
    * Start playing a MIDI file
    * @param {Object} midiData - Parsed MIDI data from parseMidiFile()
    */
-  const play = useCallback((midiData) => {
+  const play = useCallback((midiData, options = {}) => {
     const normalizedNotes = normalizeMidiNotes(midiData?.notes);
     if (!midiData || normalizedNotes.length === 0) {
       console.warn('No MIDI data to play');
@@ -542,12 +551,19 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       notes: normalizedNotes,
       duration: midiDuration
     };
+    const requestedStartAt = Number(options?.startAt);
+    const startAt = Number.isFinite(requestedStartAt)
+      ? Math.min(Math.max(requestedStartAt, 0), midiDuration)
+      : 0;
 
     const playRequestSeq = playRequestSeqRef.current + 1;
     playRequestSeqRef.current = playRequestSeq;
+    playbackRef.current.midiData = effectiveMidiData;
+    setCurrentMidi(effectiveMidiData);
+    setProgress(midiDuration > 0 ? startAt / midiDuration : 0);
 
     // Ensure audio context is ready
-    audioEngine.ensureAudioContext().then(async () => {
+    resumeAudioContextIfNeeded().then(async () => {
       if (playRequestSeq !== playRequestSeqRef.current) return;
 
       // Stop any existing playback
@@ -586,23 +602,25 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       playbackRef.current.midiData = effectiveMidiData;
       playbackRef.current.startTime = startTime;
       playbackRef.current.pauseOriginalTime = 0;
-      playbackRef.current.elapsedOriginalAtStart = 0;
+      playbackRef.current.elapsedOriginalAtStart = startAt;
 
       setCurrentMidi(effectiveMidiData);
       setIsPlaying(true);
       setIsPaused(false);
-      setProgress(0);
+      setProgress(midiDuration > 0 ? startAt / midiDuration : 0);
 
-      // Schedule all notes
-      scheduleNotes(effectiveMidiData.notes, 0, startTime);
+      // Schedule notes from the requested timeline offset.
+      scheduleNotes(effectiveMidiData.notes, startAt, startTime);
 
       // Start progress update loop
       startProgressLoop(midiDuration);
     }).catch((error) => {
       if (playRequestSeq !== playRequestSeqRef.current) return;
+      setIsPlaying(false);
+      setIsPaused(false);
       console.warn('Failed to start MIDI playback:', error);
     });
-  }, [stopInternal, scheduleNotes, startProgressLoop]);
+  }, [resumeAudioContextIfNeeded, stopInternal, scheduleNotes, startProgressLoop]);
 
   /**
    * Pause playback at current position
@@ -635,7 +653,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     if (!pb.midiData || !isPaused) return;
     const resumeRequestSeq = playRequestSeqRef.current;
 
-    audioEngine.ensureAudioContext().then(() => {
+    resumeAudioContextIfNeeded().then(() => {
       if (resumeRequestSeq !== playRequestSeqRef.current) return;
 
       const ctx = audioEngine.context;
@@ -657,7 +675,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     }).catch((error) => {
       console.warn('Failed to resume MIDI playback:', error);
     });
-  }, [isPaused, scheduleNotes, startProgressLoop]);
+  }, [isPaused, resumeAudioContextIfNeeded, scheduleNotes, startProgressLoop]);
 
   /**
    * Stop playback completely and reset state
@@ -666,6 +684,56 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     playRequestSeqRef.current += 1;
     stopInternal();
   }, [stopInternal]);
+
+  const seekTo = useCallback((timeSeconds) => {
+    const pb = playbackRef.current;
+    if (!pb.midiData || !Number.isFinite(timeSeconds)) {
+      return;
+    }
+
+    const duration = resolveMidiDuration(pb.midiData);
+    const clampedTime = Math.min(Math.max(timeSeconds, 0), duration);
+
+    clearAllTimeouts();
+    stopAllNotes();
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+
+    pb.elapsedOriginalAtStart = clampedTime;
+    setProgress(duration > 0 ? clampedTime / duration : 0);
+
+    if (isPausedRef.current) {
+      pb.pauseOriginalTime = clampedTime;
+      pb.startTime = 0;
+      return;
+    }
+
+    if (!isPlayingRef.current) {
+      pb.pauseOriginalTime = clampedTime;
+      pb.startTime = 0;
+      return;
+    }
+
+    const seekRequestSeq = playRequestSeqRef.current;
+    resumeAudioContextIfNeeded().then(() => {
+      if (seekRequestSeq !== playRequestSeqRef.current) return;
+
+      const ctx = audioEngine.context;
+      const newStartTime = ctx?.currentTime || 0;
+
+      pb.startTime = newStartTime;
+      pb.pauseOriginalTime = 0;
+      pb.elapsedOriginalAtStart = clampedTime;
+
+      scheduleNotes(pb.midiData.notes, clampedTime, newStartTime);
+      startProgressLoop(duration);
+    }).catch((error) => {
+      console.warn('Failed to seek MIDI playback:', error);
+    });
+  }, [clearAllTimeouts, resumeAudioContextIfNeeded, scheduleNotes, startProgressLoop, stopAllNotes]);
 
   return {
     isPlaying,
@@ -680,6 +748,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     pause,
     resume,
     stop,
-    setTempo
+    setTempo,
+    seekTo
   };
 }

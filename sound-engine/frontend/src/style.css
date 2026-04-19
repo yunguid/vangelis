@@ -12,6 +12,7 @@
 @import './styles/wave-candy.css';
 @import './styles/overlays.css';
 @import './styles/responsive.css';
+@import './styles/gruvbox.css';
 
 /* Tailwind (if used) */
 @tailwind base;

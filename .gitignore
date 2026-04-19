@@ -45,3 +45,8 @@ sound-engine/frontend/raylib/.emcache/
 # Local/private sample overrides
 sound-engine/frontend/public/private-sound-sets.json
 sound-engine/frontend/public/samples/private-library/
+
+# Local MIDI pipeline runtime and outputs
+sound-engine/generated/
+sound-engine/pipeline/.venv/
+sound-engine/pipeline/__pycache__/
