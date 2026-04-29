@@ -1,8 +1,7 @@
 import React from 'react';
-import {
-  STUDY_SONGS_HREF,
-  getGeneratedStudyHref
-} from '../utils/routes.js';
+import AppHeader from '../components/AppHeader.jsx';
+import { getGeneratedStudyHref } from '../utils/routes.js';
+import SparkleSpinner from '../components/SparkleSpinner.jsx';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import './MidiPipelinePage.css';
@@ -16,6 +15,79 @@ const LAST_JOB_STORAGE_KEY = 'vangelis-midi-pipeline:last-job-id';
 const TERMINAL_JOB_STATES = new Set(['completed', 'failed']);
 const POLL_INTERVAL_MS = 2000;
 const BUILD_FORM_ID = 'song-study-builder-form';
+const PIPELINE_STAGES = [
+  { id: 'bootstrap', label: 'Check runtime' },
+  { id: 'download', label: 'Download audio' },
+  { id: 'separate', label: 'Split stems' },
+  { id: 'transcribe', label: 'Build MIDI' },
+  { id: 'merge', label: 'Merge arrange' },
+  { id: 'completed', label: 'Ready' }
+];
+
+const resolvePipelineStage = (step) => {
+  if (!step || step === 'queued') return 'bootstrap';
+  if (step.startsWith('transcribe-')) return 'transcribe';
+  if (PIPELINE_STAGES.some((stage) => stage.id === step)) return step;
+  if (step === 'failed') return 'merge';
+  return 'bootstrap';
+};
+
+const getProgressState = ({ job, surfacedStudy, submitting }) => {
+  const stageId = surfacedStudy ? 'completed' : resolvePipelineStage(job?.step);
+  const stageIndex = Math.max(
+    0,
+    PIPELINE_STAGES.findIndex((stage) => stage.id === stageId)
+  );
+  const finalIndex = PIPELINE_STAGES.length - 1;
+
+  if (surfacedStudy || job?.status === 'completed') {
+    return {
+      stageId: 'completed',
+      stageLabel: 'Ready',
+      value: 1,
+      isRunning: false,
+      isFailed: false
+    };
+  }
+
+  if (job?.status === 'failed') {
+    return {
+      stageId,
+      stageLabel: PIPELINE_STAGES[stageIndex]?.label || 'Stopped',
+      value: Math.min(0.94, stageIndex / finalIndex),
+      isRunning: false,
+      isFailed: true
+    };
+  }
+
+  if (job) {
+    return {
+      stageId,
+      stageLabel: PIPELINE_STAGES[stageIndex]?.label || 'Building',
+      value: Math.min(0.92, (stageIndex + 0.42) / finalIndex),
+      isRunning: true,
+      isFailed: false
+    };
+  }
+
+  if (submitting) {
+    return {
+      stageId: 'bootstrap',
+      stageLabel: 'Starting',
+      value: 0.08,
+      isRunning: true,
+      isFailed: false
+    };
+  }
+
+  return {
+    stageId: 'bootstrap',
+    stageLabel: 'Waiting',
+    value: 0,
+    isRunning: false,
+    isFailed: false
+  };
+};
 
 const MidiPipelinePage = () => {
   const [form, setForm] = React.useState(INITIAL_FORM);
@@ -86,6 +158,7 @@ const MidiPipelinePage = () => {
   const canSubmit = !submitting && Boolean(health?.ready) && hasSourceInput;
   const shouldShowCheckStep = hasSourceInput || Boolean(job);
   const shouldShowBuildStep = hasSourceInput || Boolean(job) || Boolean(surfacedStudy);
+  const stepCount = 1 + Number(shouldShowCheckStep) + Number(shouldShowBuildStep);
   const runtimeLabel = healthError
     ? 'Check failed'
     : health?.ready
@@ -107,15 +180,20 @@ const MidiPipelinePage = () => {
       : job
         ? 'Building'
         : canSubmit
-          ? 'Ready to start'
+          ? 'Ready to create'
           : 'Waiting';
   const buildSummary = surfacedStudy
-    ? `${surfacedStudy.title} is now in Song studies.`
+    ? `${surfacedStudy.title} is now in your study library.`
     : job?.status === 'failed'
       ? 'This run stopped before the study was created.'
       : job
         ? 'This study is building now and will move into the library when the merged MIDI is ready.'
-        : 'Pick a source first, then start the build.';
+        : 'Pick a source first, then create the study.';
+  const progressState = React.useMemo(
+    () => getProgressState({ job, surfacedStudy, submitting }),
+    [job, surfacedStudy, submitting]
+  );
+  const progressPercent = Math.round(progressState.value * 100);
 
   React.useEffect(() => {
     if (!generatedStudy?.jobId || handledCompletionRef.current === generatedStudy.jobId) {
@@ -169,7 +247,9 @@ const MidiPipelinePage = () => {
   return (
     <div className="pipeline-page">
       <main className="pipeline-page__shell">
-        <div className="pipeline-flow">
+        <AppHeader activeSection="pipeline" className="pipeline-page__header" />
+
+        <div className={`pipeline-flow ${stepCount === 1 ? 'pipeline-flow--single' : ''}`}>
           <section className="pipeline-step" aria-label="Step 1: pick a source">
             <div className="pipeline-step__marker" aria-hidden="true">01</div>
 
@@ -267,22 +347,92 @@ const MidiPipelinePage = () => {
           )}
 
           {shouldShowBuildStep && (
-            <section className="pipeline-step" aria-label="Step 3: build the study">
+            <section className="pipeline-step" aria-label="Step 3: create the study">
               <div className="pipeline-step__marker" aria-hidden="true">03</div>
 
               <div className="pipeline-card">
                 <div className="pipeline-card__split">
                   <div className="pipeline-card__header">
-                    <h2>{surfacedStudy ? 'Study saved' : job ? 'Build status' : 'Build the study'}</h2>
+                    <h2>{surfacedStudy ? 'Study saved' : job ? 'Build status' : 'Create the study'}</h2>
                     <p>{buildSummary}</p>
                   </div>
                   <span className={`pipeline-chip ${surfacedStudy ? 'is-ready' : job?.status === 'failed' ? 'is-warning' : ''}`}>
+                    {(job || surfacedStudy) && (
+                      <SparkleSpinner
+                        spinning={progressState.isRunning}
+                        complete={Boolean(surfacedStudy)}
+                      />
+                    )}
                     {buildLabel}
                   </span>
                 </div>
 
                 {jobError && (
                   <p className="pipeline-error">{jobError}</p>
+                )}
+
+                {(job || surfacedStudy || submitting) && (
+                  <div
+                    className={`pipeline-progress ${progressState.isRunning ? 'is-running' : ''} ${progressState.isFailed ? 'is-failed' : ''} ${surfacedStudy ? 'is-complete' : ''}`}
+                    aria-live="polite"
+                  >
+                    <div className="pipeline-progress__status">
+                      <SparkleSpinner
+                        className="pipeline-progress__sparkle"
+                        spinning={progressState.isRunning}
+                        complete={Boolean(surfacedStudy)}
+                      />
+                      <div className="pipeline-progress__copy">
+                        <strong>{progressState.stageLabel}</strong>
+                        <span>{job?.message || buildSummary}</span>
+                      </div>
+                      <span className="pipeline-progress__percent">
+                        {surfacedStudy ? 'Done' : `${progressPercent}%`}
+                      </span>
+                    </div>
+
+                    <div
+                      className="pipeline-progress__rail"
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={progressPercent}
+                      aria-valuetext={surfacedStudy ? 'Study ready' : `${progressPercent}% complete`}
+                    >
+                      <div className="pipeline-progress__track" />
+                      <div
+                        className="pipeline-progress__fill"
+                        style={{ transform: `scaleX(${progressState.value})` }}
+                      />
+                      <div
+                        className="pipeline-progress__marker"
+                        style={{ left: `calc(${progressState.value * 100}% - 11px)` }}
+                      >
+                        <SparkleSpinner
+                          className="pipeline-progress__sparkle pipeline-progress__sparkle--marker"
+                          spinning={progressState.isRunning}
+                          complete={Boolean(surfacedStudy)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pipeline-progress__steps" aria-hidden="true">
+                      {PIPELINE_STAGES.map((stage) => {
+                        const stageIndex = PIPELINE_STAGES.findIndex((entry) => entry.id === stage.id);
+                        const currentIndex = PIPELINE_STAGES.findIndex((entry) => entry.id === progressState.stageId);
+                        const isDone = surfacedStudy || stageIndex < currentIndex;
+                        const isCurrent = stage.id === progressState.stageId;
+
+                        return (
+                          <span
+                            key={stage.id}
+                            title={stage.label}
+                            className={`pipeline-progress__step ${isDone ? 'is-done' : ''} ${isCurrent ? 'is-current' : ''}`}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 )}
 
                 {job && (
@@ -343,7 +493,7 @@ const MidiPipelinePage = () => {
                       className="pipeline-submit"
                       disabled={!canSubmit}
                     >
-                      {submitting ? 'Starting...' : 'Start build'}
+                      {submitting ? 'Creating...' : job?.status === 'failed' ? 'Try again' : 'Create study'}
                     </button>
                   )}
 
@@ -352,10 +502,6 @@ const MidiPipelinePage = () => {
                       Open study
                     </a>
                   )}
-
-                  <a className="pipeline-secondary-link" href={STUDY_SONGS_HREF}>
-                    Song studies
-                  </a>
                 </div>
 
                 {missingTools.length > 0 && (

@@ -1,7 +1,7 @@
 import React from 'react';
+import AppHeader from '../components/AppHeader.jsx';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
-import { HOME_HREF, MIDI_PIPELINE_HREF, STUDY_SONGS_HREF } from '../utils/routes.js';
 import SongStudyPage from './SongStudyPage.jsx';
 import './SongStudyPage.css';
 
@@ -48,13 +48,9 @@ const GeneratedSongStudyPage = ({ jobId }) => {
       <div className="song-study__backdrop" aria-hidden="true" />
 
       <main className="song-study__shell">
-        <header className="song-study__masthead">
-          <nav className="song-study__nav" aria-label="Generated study navigation">
-            <a className="song-study__nav-link" href={STUDY_SONGS_HREF}>Song studies</a>
-            <a className="song-study__nav-link" href={MIDI_PIPELINE_HREF}>Build study</a>
-            <a className="song-study__nav-link" href={HOME_HREF}>Synth</a>
-          </nav>
+        <AppHeader activeSection="studies" />
 
+        <header className="song-study__masthead">
           <div className="song-study__title-group">
             <span className="song-study__eyebrow">Pipeline study</span>
             <h1>{job?.song || 'Loading study'}</h1>

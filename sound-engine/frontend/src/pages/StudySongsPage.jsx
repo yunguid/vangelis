@@ -1,4 +1,5 @@
 import React from 'react';
+import AppHeader from '../components/AppHeader.jsx';
 import { BUILT_IN_STUDIES, createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import {
@@ -96,6 +97,8 @@ const StudySongsPage = () => {
   return (
     <div className="study-library">
       <main className="study-library__shell">
+        <AppHeader activeSection="studies" />
+
         <section className="study-library__flow" aria-label="Study library flow">
           <article className="study-library__node study-library__node--choice">
             <div className="study-library__marker" aria-hidden="true">01</div>

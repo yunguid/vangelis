@@ -10,6 +10,11 @@
   padding: 28px 0 56px;
 }
 
+.pipeline-page__header {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
 .pipeline-flow {
   position: relative;
   display: flex;
@@ -24,11 +29,11 @@
   top: 24px;
   bottom: 24px;
   width: 1px;
-  background: linear-gradient(
-    180deg,
-    rgba(215, 153, 33, 0.3) 0%,
-    rgba(168, 153, 132, 0.18) 100%
-  );
+  background: rgba(215, 153, 33, 0.18);
+}
+
+.pipeline-flow--single::before {
+  display: none;
 }
 
 .pipeline-step {
@@ -107,6 +112,7 @@
 .pipeline-chip {
   display: inline-flex;
   align-items: center;
+  gap: 8px;
   min-height: 34px;
   padding: 0 10px;
   border-radius: 999px;
@@ -273,6 +279,188 @@
   font-size: 1rem;
 }
 
+.sparkle-spinner {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: currentColor;
+  flex: 0 0 auto;
+}
+
+.sparkle-spinner__track,
+.sparkle-spinner__dash {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparkle-spinner__track {
+  opacity: 0.16;
+}
+
+.sparkle-spinner__dash {
+  stroke-dasharray: 28 72;
+  stroke-dashoffset: 2;
+}
+
+.sparkle-spinner.is-spinning {
+  animation: pipeline-sparkle-spin 1.3s linear infinite;
+}
+
+.sparkle-spinner.is-spinning .sparkle-spinner__dash {
+  animation: pipeline-sparkle-dash 1.6s ease-in-out infinite;
+}
+
+.sparkle-spinner.is-complete .sparkle-spinner__track {
+  opacity: 0.26;
+}
+
+.sparkle-spinner.is-complete .sparkle-spinner__dash {
+  stroke-dasharray: 100 0;
+  stroke-dashoffset: 0;
+}
+
+.pipeline-progress {
+  padding: 14px 16px 12px;
+  border: 1px solid rgba(168, 153, 132, 0.16);
+  border-radius: 18px;
+  background: rgba(29, 32, 33, 0.78);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pipeline-progress.is-complete {
+  border-color: rgba(152, 151, 26, 0.28);
+}
+
+.pipeline-progress.is-failed {
+  border-color: rgba(204, 36, 29, 0.28);
+}
+
+.pipeline-progress__status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.pipeline-progress__sparkle {
+  width: 1.35rem;
+  height: 1.35rem;
+  color: rgba(215, 153, 33, 0.96);
+}
+
+.pipeline-progress.is-complete .pipeline-progress__sparkle {
+  color: #98971a;
+}
+
+.pipeline-progress.is-failed .pipeline-progress__sparkle {
+  color: #fb4934;
+}
+
+.pipeline-progress__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pipeline-progress__copy strong {
+  font-size: 0.96rem;
+}
+
+.pipeline-progress__copy span,
+.pipeline-progress__percent {
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pipeline-progress__percent {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.pipeline-progress__rail {
+  position: relative;
+  height: 22px;
+}
+
+.pipeline-progress__track,
+.pipeline-progress__fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform-origin: left center;
+}
+
+.pipeline-progress__track {
+  background: rgba(168, 153, 132, 0.16);
+  transform: translateY(-50%);
+}
+
+.pipeline-progress__fill {
+  background: linear-gradient(90deg, rgba(215, 153, 33, 0.72), rgba(235, 219, 178, 0.92));
+  transform: translateY(-50%) scaleX(0);
+}
+
+.pipeline-progress.is-complete .pipeline-progress__fill {
+  background: linear-gradient(90deg, rgba(152, 151, 26, 0.78), rgba(184, 187, 38, 0.96));
+}
+
+.pipeline-progress.is-failed .pipeline-progress__fill {
+  background: linear-gradient(90deg, rgba(204, 36, 29, 0.72), rgba(251, 73, 52, 0.96));
+}
+
+.pipeline-progress__marker {
+  position: absolute;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pipeline-progress__sparkle--marker {
+  width: 1.15rem;
+  height: 1.15rem;
+  background: rgba(29, 32, 33, 0.98);
+}
+
+.pipeline-progress__steps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.pipeline-progress__step {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(168, 153, 132, 0.16);
+}
+
+.pipeline-progress__step.is-done,
+.pipeline-progress__step.is-current {
+  background: rgba(215, 153, 33, 0.52);
+}
+
+.pipeline-progress.is-complete .pipeline-progress__step.is-done,
+.pipeline-progress.is-complete .pipeline-progress__step.is-current {
+  background: rgba(152, 151, 26, 0.82);
+}
+
+.pipeline-progress.is-failed .pipeline-progress__step.is-current {
+  background: rgba(204, 36, 29, 0.82);
+}
+
 .pipeline-source {
   display: block;
   padding: 12px;
@@ -286,8 +474,7 @@
   flex-wrap: wrap;
 }
 
-.pipeline-submit,
-.pipeline-secondary-link {
+.pipeline-submit {
   min-height: 42px;
   padding: 0 16px;
   border-radius: 999px;
@@ -308,9 +495,7 @@
 }
 
 .pipeline-submit:hover,
-.pipeline-submit:focus-visible,
-.pipeline-secondary-link:hover,
-.pipeline-secondary-link:focus-visible {
+.pipeline-submit:focus-visible {
   transform: translateY(-1px);
   outline: none;
 }
@@ -325,21 +510,35 @@
   opacity: 0.45;
 }
 
-.pipeline-secondary-link {
-  border: 1px solid rgba(168, 153, 132, 0.18);
-  background: rgba(60, 56, 54, 0.56);
-  color: var(--color-text-secondary);
-}
-
-.pipeline-secondary-link:hover,
-.pipeline-secondary-link:focus-visible {
-  color: var(--color-text-primary);
-  background: rgba(80, 73, 69, 0.82);
-  border-color: rgba(215, 153, 33, 0.3);
-}
-
 .pipeline-error {
   color: #fb4934;
+}
+
+@keyframes pipeline-sparkle-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pipeline-sparkle-dash {
+  0% {
+    stroke-dasharray: 18 82;
+    stroke-dashoffset: 6;
+  }
+
+  50% {
+    stroke-dasharray: 36 64;
+    stroke-dashoffset: 28;
+  }
+
+  100% {
+    stroke-dasharray: 18 82;
+    stroke-dashoffset: 88;
+  }
 }
 
 @media (max-width: 720px) {
@@ -367,5 +566,19 @@
 
   .pipeline-tool-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pipeline-progress__status {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .pipeline-progress__percent {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .pipeline-progress__steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 6px;
   }
 }

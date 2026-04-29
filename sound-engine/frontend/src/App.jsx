@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import AppHeader from './components/AppHeader.jsx';
 import SynthKeyboard from './components/SynthKeyboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import Scene from './components/Scene';
@@ -15,7 +16,6 @@ import {
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { parseMidiFile } from './utils/midiParser.js';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
-import { HOME_HREF, MIDI_PIPELINE_HREF, STUDY_SONGS_HREF } from './utils/routes.js';
 
 const NOTICE_TIMEOUT_MS = 2200;
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
@@ -137,7 +137,6 @@ const App = () => {
   const [controlSections, setControlSections] = useState(() => (
     initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
   ));
-  const fileInputRef = useRef(null);
   const scrollRaf = useRef(null);
   const noticeTimeoutRef = useRef(null);
   const wasmLoaded = engineStatus.wasmReady;
@@ -214,21 +213,11 @@ const App = () => {
     }
   }, [pushNotice]);
 
-  // Handle sample file upload
-  const handleFileSelect = useCallback(async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    await handleAudioFileImport(file, null);
-  }, [handleAudioFileImport]);
-
   const handleClearSample = useCallback(() => {
     audioEngine.clearCustomSample();
     setSampleInfo(null);
     setActiveSampleId(null);
     setSampleSelection(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
     pushNotice('Sample cleared.');
   }, [pushNotice]);
 
@@ -477,122 +466,55 @@ const App = () => {
         <Scene />
         
         <div className="app-shell">
-        <header className="zone-top tier-subtle content-tertiary" aria-label="Branding and quick actions">
-          <div className="brand-block">
-            <div className="brand-title">Vangelis</div>
-          </div>
-          <div className="header-controls">
-            <nav className="header-nav" aria-label="Primary">
-              <a
-                className="button-link button-link--nav is-active"
-                href={HOME_HREF}
-                aria-current="page"
-              >
-                Studio
-              </a>
-              <a
-                className="button-link button-link--nav"
-                href={MIDI_PIPELINE_HREF}
-              >
-                MIDI pipeline
-              </a>
-              <a
-                className="button-link button-link--nav"
-                href={STUDY_SONGS_HREF}
-              >
-                Song studies
-              </a>
-            </nav>
-            <div className="header-actions">
-              <button
-                type="button"
-                className="button-link button-link--quiet"
-                onClick={handleResetSound}
-                title="Restore the default dry sound"
-              >
-                Reset sound
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="audio/*"
-                onChange={handleFileSelect}
-                style={{ display: 'none' }}
-                id="sample-upload"
-              />
-              <label
-                htmlFor="sample-upload"
-                className={`button-icon ${sampleLoading ? 'loading' : ''}`}
-                aria-label={sampleInfo ? `Loaded sample ${sampleInfo.name}` : 'Upload sample'}
-              >
-                <span aria-hidden="true">{sampleInfo ? '!' : '+'}</span>
-              </label>
-              {sampleInfo && (
-                <button
-                  type="button"
-                  className="button-icon"
-                  onClick={handleClearSample}
-                  aria-label="Clear custom sample"
-                >
-                  <span aria-hidden="true">x</span>
-                </button>
-              )}
-              <button
-                type="button"
-                className={`button-icon record-button ${isRecording ? 'recording' : ''}`}
-                onClick={handleRecordToggle}
-                aria-label={isRecording ? 'Stop recording' : 'Start recording'}
-              >
-                <span aria-hidden="true">{isRecording ? '||' : 'O'}</span>
-              </button>
-              <button
-                type="button"
-                className="button-icon"
-                aria-label="View keyboard shortcuts"
-                onClick={() => setShowShortcuts(true)}
-              >
-                <span aria-hidden="true">?</span>
-              </button>
-            </div>
-          </div>
-        </header>
+          <AppHeader
+            activeSection="studio"
+            onResetSound={handleResetSound}
+            onUploadSample={handleAudioFileImport}
+            onClearSample={handleClearSample}
+            onToggleRecording={handleRecordToggle}
+            onShowShortcuts={() => setShowShortcuts(true)}
+            hasCustomSample={engineStatus.hasCustomSample}
+            isRecording={isRecording}
+            sampleLabel={sampleInfo?.name || sampleSelection?.name || ''}
+            sampleLoading={sampleLoading}
+          />
 
-        <main className="zone-center content-primary" aria-label="Keyboard area">
-          <WaveCandy />
-          <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
-            <div className="keyboard-header">
-              <span className="keyboard-legend">
-                {sampleInfo ? `Sample: ${sampleInfo.name}` : `Waveform: ${waveformType}`}
-                {isRecording && <span className="recording-indicator"> [REC]</span>}
-              </span>
-            </div>
-            <div className="keyboard-region">
-              {midiPlayback.currentMidi && (
-                <BirdsEyeRadar
-                  currentMidi={midiPlayback.currentMidi}
-                  progress={midiPlayback.progress}
-                  activeNotes={midiPlayback.activeNotes}
-                  isPlaying={midiPlayback.isPlaying}
+          <main className="zone-center content-primary" aria-label="Keyboard area">
+            <WaveCandy />
+            <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
+              <div className="keyboard-header">
+                <span className="keyboard-legend">
+                  {sampleInfo ? `Sample: ${sampleInfo.name}` : `Waveform: ${waveformType}`}
+                  {isRecording && <span className="recording-indicator"> [REC]</span>}
+                </span>
+              </div>
+              <div className="keyboard-region">
+                {midiPlayback.currentMidi && (
+                  <BirdsEyeRadar
+                    currentMidi={midiPlayback.currentMidi}
+                    progress={midiPlayback.progress}
+                    activeNotes={midiPlayback.activeNotes}
+                    isPlaying={midiPlayback.isPlaying}
+                  />
+                )}
+                <SynthKeyboard
+                  waveformType={waveformType}
+                  audioParams={audioParams}
+                  wasmLoaded={wasmLoaded}
+                  externalActiveNotes={midiPlayback.activeNotes}
                 />
-              )}
-              <SynthKeyboard
-                waveformType={waveformType}
-                audioParams={audioParams}
-                wasmLoaded={wasmLoaded}
-                externalActiveNotes={midiPlayback.activeNotes}
-              />
-              {!isGraphWarm && (
-                <div className="warmup-indicator" aria-live="polite">
-                  <span className="warmup-indicator__pulse" aria-hidden="true" />
-                  <span>Audio engine warms now.</span>
+                {!isGraphWarm && (
+                  <div className="warmup-indicator" aria-live="polite">
+                    <span className="warmup-indicator__pulse" aria-hidden="true" />
+                    <span>Audio engine warms now.</span>
+                  </div>
+                )}
+                <div className="keyboard-hints">
+                  <span className="keyboard-hint">Press Shift + / for keys.</span>
                 </div>
-              )}
-              <div className="keyboard-hints">
-                <span className="keyboard-hint">Press Shift + / for keys.</span>
               </div>
             </div>
-          </div>
-        </main>
+          </main>
 
         {showShortcuts && (
           <div className="shortcuts-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">

@@ -1,4 +1,5 @@
 import React from 'react';
+import AppHeader from '../components/AppHeader.jsx';
 import BirdsEyeRadar from '../components/BirdsEyeRadar.jsx';
 import SynthKeyboard from '../components/SynthKeyboard';
 import { DEFAULT_STUDY_AUDIO_PARAMS, DEFAULT_STUDY_WAVEFORM } from '../data/songStudies.js';
@@ -6,7 +7,6 @@ import { useMidiPlayback } from '../hooks/useMidiPlayback.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToName } from '../utils/math.js';
 import { parseMidiFile } from '../utils/midiParser.js';
-import { HOME_HREF, STUDY_SONGS_HREF } from '../utils/routes.js';
 import './SongStudyPage.css';
 
 const TEMPO_OPTIONS = [
@@ -42,26 +42,6 @@ const formatTime = (seconds) => {
 const formatMidiLabel = (midi) => {
   const octave = Math.floor(midi / 12) - 1;
   return `${formatPitchClass(midi % 12)}${octave}`;
-};
-
-const parseTimestampInput = (value) => {
-  if (typeof value !== 'string') return null;
-
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-
-  if (trimmed.includes(':')) {
-    const parts = trimmed.split(':').map((part) => part.trim());
-    if (parts.some((part) => part === '' || Number.isNaN(Number(part)))) {
-      return null;
-    }
-
-    const seconds = parts.reduce((total, part) => total * 60 + Number(part), 0);
-    return Number.isFinite(seconds) ? seconds : null;
-  }
-
-  const seconds = Number(trimmed);
-  return Number.isFinite(seconds) ? seconds : null;
 };
 
 const resolveDuration = (notes, fallbackDuration) => {
@@ -234,6 +214,53 @@ const useSingleLineTitle = (title) => {
   return titleRef;
 };
 
+const TransportIcon = ({ kind }) => {
+  if (kind === 'pause') {
+    return (
+      <svg className="song-study__action-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <rect x="4" y="3.5" width="4" height="13" rx="1" />
+        <rect x="12" y="3.5" width="4" height="13" rx="1" />
+      </svg>
+    );
+  }
+
+  if (kind === 'restart') {
+    return (
+      <svg className="song-study__action-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path
+          d="M5 8a5 5 0 1 1 1.2 6.8"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M5.2 4.5v4.8H10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+
+  if (kind === 'stop') {
+    return (
+      <svg className="song-study__action-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <rect x="4.5" y="4.5" width="11" height="11" rx="1.4" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="song-study__action-icon" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path d="M5 3.5 15.5 10 5 16.5Z" />
+    </svg>
+  );
+};
+
 const SongStudyPage = ({ study }) => {
   const waveformType = study?.waveformType || DEFAULT_STUDY_WAVEFORM;
   const audioParams = study?.audioParams || DEFAULT_STUDY_AUDIO_PARAMS;
@@ -243,9 +270,6 @@ const SongStudyPage = ({ study }) => {
   const [loadState, setLoadState] = React.useState('loading');
   const [loadError, setLoadError] = React.useState('');
   const [queuedStartTime, setQueuedStartTime] = React.useState(0);
-  const [jumpValue, setJumpValue] = React.useState('0:00');
-  const [jumpDirty, setJumpDirty] = React.useState(false);
-  const [jumpError, setJumpError] = React.useState('');
   const playback = useMidiPlayback({ waveformType, audioParams });
 
   React.useEffect(() => {
@@ -312,9 +336,6 @@ const SongStudyPage = ({ study }) => {
 
   React.useEffect(() => {
     setQueuedStartTime(0);
-    setJumpValue('0:00');
-    setJumpDirty(false);
-    setJumpError('');
   }, [study?.id]);
 
   const displayMidi = playback.currentMidi || loadedMidi;
@@ -360,11 +381,6 @@ const SongStudyPage = ({ study }) => {
     [visibleNotes]
   );
 
-  React.useEffect(() => {
-    if (jumpDirty) return;
-    setJumpValue(formatTime(transportPosition));
-  }, [jumpDirty, transportPosition]);
-
   const seekToTime = React.useCallback((nextTime) => {
     if (!transportDuration) return;
 
@@ -375,10 +391,6 @@ const SongStudyPage = ({ study }) => {
     } else {
       setQueuedStartTime(clampedTime);
     }
-
-    setJumpDirty(false);
-    setJumpError('');
-    setJumpValue(formatTime(clampedTime));
   }, [hasActiveTransport, playback, transportDuration]);
 
   const handlePlayToggle = () => {
@@ -400,18 +412,12 @@ const SongStudyPage = ({ study }) => {
   const handleRestart = () => {
     if (!loadedMidi) return;
     setQueuedStartTime(0);
-    setJumpDirty(false);
-    setJumpError('');
-    setJumpValue('0:00');
     playback.play(loadedMidi, { startAt: 0 });
   };
 
   const handleStop = () => {
     playback.stop();
     setQueuedStartTime(0);
-    setJumpDirty(false);
-    setJumpError('');
-    setJumpValue('0:00');
   };
 
   const handleScrubChange = (event) => {
@@ -422,28 +428,14 @@ const SongStudyPage = ({ study }) => {
     seekToTime(transportPosition + deltaSeconds);
   };
 
-  const handleJumpSubmit = (event) => {
-    event.preventDefault();
-    const parsedTimestamp = parseTimestampInput(jumpValue);
-    if (parsedTimestamp === null) {
-      setJumpError('Use mm:ss or seconds.');
-      return;
-    }
-
-    seekToTime(parsedTimestamp);
-  };
-
   return (
     <div className="song-study">
       <div className="song-study__backdrop" aria-hidden="true" />
 
       <main className="song-study__shell">
-        <header className="song-study__masthead">
-          <nav className="song-study__nav" aria-label="Song study navigation">
-            <a className="song-study__nav-link" href={STUDY_SONGS_HREF}>Song studies</a>
-            <a className="song-study__nav-link" href={HOME_HREF}>Synth</a>
-          </nav>
+        <AppHeader activeSection="studies" />
 
+        <header className="song-study__masthead">
           <div className="song-study__title-group">
             <span className="song-study__eyebrow">{study.eyebrow}</span>
             <h1 ref={titleRef}>{study.title}</h1>
@@ -459,35 +451,6 @@ const SongStudyPage = ({ study }) => {
         </header>
 
         <section className="song-study__transport" aria-label="MIDI transport">
-          <div className="song-study__transport-main">
-            <button
-              type="button"
-              className="song-study__action song-study__action--primary"
-              onClick={handlePlayToggle}
-              disabled={loadState !== 'ready'}
-            >
-              {playback.isPlaying ? 'Pause' : playback.isPaused ? 'Resume' : 'Play'}
-            </button>
-
-            <button
-              type="button"
-              className="song-study__action"
-              onClick={handleRestart}
-              disabled={loadState !== 'ready'}
-            >
-              Restart
-            </button>
-
-            <button
-              type="button"
-              className="song-study__action"
-              onClick={handleStop}
-              disabled={!playback.isPlaying && !playback.isPaused && queuedStartTime <= 0}
-            >
-              Stop
-            </button>
-          </div>
-
           <div className="song-study__progress">
             <input
               type="range"
@@ -525,67 +488,74 @@ const SongStudyPage = ({ study }) => {
               <span>{displayMidi ? `${Math.round(displayMidi.bpm * playback.tempoFactor)} BPM` : 'Loading MIDI'}</span>
               <span>{formatTime(transportDuration)}</span>
             </div>
+          </div>
+
+          <div className="song-study__transport-row">
+            <div className="song-study__transport-main">
+              <button
+                type="button"
+                className="song-study__action song-study__action--primary"
+                onClick={handlePlayToggle}
+                disabled={loadState !== 'ready'}
+                aria-label={playback.isPlaying ? 'Pause' : playback.isPaused ? 'Resume' : 'Play'}
+              >
+                <TransportIcon kind={playback.isPlaying ? 'pause' : 'play'} />
+              </button>
+
+              <button
+                type="button"
+                className="song-study__action"
+                onClick={handleRestart}
+                disabled={loadState !== 'ready'}
+                aria-label="Restart"
+              >
+                <TransportIcon kind="restart" />
+              </button>
+
+              <button
+                type="button"
+                className="song-study__action"
+                onClick={handleStop}
+                disabled={!playback.isPlaying && !playback.isPaused && queuedStartTime <= 0}
+                aria-label="Stop"
+              >
+                <TransportIcon kind="stop" />
+              </button>
+            </div>
 
             <div className="song-study__seek-tools">
               <div className="song-study__skip-group">
                 <button
                   type="button"
                   className="song-study__tempo-chip"
-                  onClick={() => handleSkip(-15)}
+                  onClick={() => handleSkip(-10)}
                   disabled={!transportDuration}
                 >
-                  -15s
+                  -10s
                 </button>
                 <button
                   type="button"
                   className="song-study__tempo-chip"
-                  onClick={() => handleSkip(15)}
+                  onClick={() => handleSkip(10)}
                   disabled={!transportDuration}
                 >
-                  +15s
+                  +10s
                 </button>
               </div>
-
-              <form className="song-study__jump" onSubmit={handleJumpSubmit}>
-                <input
-                  type="text"
-                  className="song-study__jump-input"
-                  value={jumpValue}
-                  onChange={(event) => {
-                    setJumpValue(event.target.value);
-                    setJumpDirty(true);
-                    setJumpError('');
-                  }}
-                  placeholder="mm:ss"
-                  inputMode="numeric"
-                  aria-label="Jump to timestamp"
-                />
-                <button
-                  type="submit"
-                  className="song-study__tempo-chip song-study__tempo-chip--jump"
-                  disabled={!transportDuration}
-                >
-                  Jump
-                </button>
-              </form>
             </div>
 
-            {jumpError && (
-              <p className="song-study__jump-error">{jumpError}</p>
-            )}
-          </div>
-
-          <div className="song-study__tempo">
-            {TEMPO_OPTIONS.map((option) => (
-              <button
-                key={option.label}
-                type="button"
-                className={`song-study__tempo-chip ${Math.abs(playback.tempoFactor - option.value) < 0.001 ? 'is-active' : ''}`}
-                onClick={() => playback.setTempo(option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
+            <div className="song-study__tempo">
+              {TEMPO_OPTIONS.map((option) => (
+                <button
+                  key={option.label}
+                  type="button"
+                  className={`song-study__tempo-chip ${Math.abs(playback.tempoFactor - option.value) < 0.001 ? 'is-active' : ''}`}
+                  onClick={() => playback.setTempo(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
