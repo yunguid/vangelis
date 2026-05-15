@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "cd sound-engine/frontend && npm run dev",
     "build": "cd sound-engine/frontend && npm run build",
+    "vercel-build": "bash scripts/vercel-build.sh",
     "preview": "cd sound-engine/frontend && npm run preview",
     "test": "cd sound-engine/frontend && npm test",
     "test:watch": "cd sound-engine/frontend && npm run test:watch"
