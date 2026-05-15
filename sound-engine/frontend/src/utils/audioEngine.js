@@ -39,7 +39,8 @@ class AudioEngine {
       wasmReady: false,
       contextReady: false,
       graphWarmed: false,
-      error: null
+      error: null,
+      hasVoicePhrase: false
     };
 
     this.globalNodes = null;
@@ -61,9 +62,18 @@ class AudioEngine {
     this.customSample = null;
     this.customSampleBaseFrequency = 261.63; // C4
     this.customSampleLoop = false;
+    this.voicePhrase = {
+      enabled: false,
+      chunks: [],
+      nextIndex: 0,
+      baseFrequency: 261.63,
+      lastChunk: null,
+      sourceText: ''
+    };
 
     this.isRecording = false;
     this.recordingListeners = new Set();
+    this.voicePhraseListeners = new Set();
     this.activityListeners = new Set();
     this.activeVoiceIds = new Set();
     this.audioActivity = {
@@ -94,7 +104,8 @@ class AudioEngine {
     return {
       ...this.status,
       isRecording: this.isRecording,
-      hasCustomSample: !!this.customSample
+      hasCustomSample: !!this.customSample,
+      hasVoicePhrase: this.voicePhrase.enabled && this.voicePhrase.chunks.length > 0
     };
   }
 
@@ -107,6 +118,30 @@ class AudioEngine {
     for (const listener of this.recordingListeners) {
       listener(this.isRecording);
     }
+  }
+
+  subscribeVoicePhrase(listener) {
+    this.voicePhraseListeners.add(listener);
+    listener(this.getVoicePhraseStatus());
+    return () => this.voicePhraseListeners.delete(listener);
+  }
+
+  notifyVoicePhrase() {
+    const snapshot = this.getVoicePhraseStatus();
+    for (const listener of this.voicePhraseListeners) {
+      listener(snapshot);
+    }
+    this.notify();
+  }
+
+  getVoicePhraseStatus() {
+    return {
+      enabled: this.voicePhrase.enabled,
+      chunkCount: this.voicePhrase.chunks.length,
+      nextIndex: this.voicePhrase.nextIndex,
+      lastChunk: this.voicePhrase.lastChunk,
+      sourceText: this.voicePhrase.sourceText
+    };
   }
 
   subscribeActivity(listener) {
@@ -435,13 +470,34 @@ class AudioEngine {
     };
   }
 
-  playFrequency({ noteId, frequency, waveformType, params = {}, velocity = 1 }) {
+  playFrequency({ noteId, frequency, waveformType, params = {}, velocity = 1, allowVoicePhrase = true }) {
     if (!this.context) {
       this.ensureAudioContext().catch(() => {});
       return null;
     }
 
     this.ensureSamplePool(this.context);
+
+    if (allowVoicePhrase && this.voicePhrase.enabled && this.voicePhrase.chunks.length > 0) {
+      const chunk = this.voicePhrase.chunks[this.voicePhrase.nextIndex] || this.voicePhrase.chunks[0];
+      this.voicePhrase.nextIndex = (this.voicePhrase.nextIndex + 1) % this.voicePhrase.chunks.length;
+      this.voicePhrase.lastChunk = {
+        id: chunk.id,
+        label: chunk.label,
+        phonemes: chunk.phonemes
+      };
+      this.notifyVoicePhrase();
+
+      return this.playBufferedSample({
+        noteId,
+        buffer: chunk.buffer,
+        frequency,
+        baseFrequency: this.voicePhrase.baseFrequency,
+        velocity,
+        params,
+        loop: false
+      });
+    }
 
     if (!this.customSample && !this.worklet.ready) {
       this.ensureWorklet().catch(() => {});
@@ -563,6 +619,46 @@ class AudioEngine {
     this.customSample = null;
     this.status.hasCustomSample = false;
     this.notify();
+  }
+
+  setVoicePhrase({ chunks, sourceText = '', enabled = true, baseFrequency = 261.63 } = {}) {
+    const nextChunks = Array.isArray(chunks)
+      ? chunks.filter((chunk) => chunk?.buffer)
+      : [];
+
+    this.voicePhrase = {
+      enabled: enabled && nextChunks.length > 0,
+      chunks: nextChunks,
+      nextIndex: 0,
+      baseFrequency,
+      lastChunk: null,
+      sourceText
+    };
+    this.status.hasVoicePhrase = this.voicePhrase.enabled;
+    this.notifyVoicePhrase();
+  }
+
+  setVoicePhraseEnabled(enabled) {
+    if (this.voicePhrase.chunks.length === 0) {
+      this.voicePhrase.enabled = false;
+    } else {
+      this.voicePhrase.enabled = !!enabled;
+    }
+    this.status.hasVoicePhrase = this.voicePhrase.enabled;
+    this.notifyVoicePhrase();
+  }
+
+  clearVoicePhrase() {
+    this.voicePhrase = {
+      enabled: false,
+      chunks: [],
+      nextIndex: 0,
+      baseFrequency: 261.63,
+      lastChunk: null,
+      sourceText: ''
+    };
+    this.status.hasVoicePhrase = false;
+    this.notifyVoicePhrase();
   }
 
   // ============ Recording ============

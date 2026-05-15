@@ -3,11 +3,13 @@ import { audioEngine } from '../utils/audioEngine.js';
 import {
   HOME_HREF,
   MIDI_PIPELINE_HREF,
-  STUDY_SONGS_HREF
+  STUDY_SONGS_HREF,
+  VOICE_LOOP_HREF
 } from '../utils/routes.js';
 
 const NAV_ITEMS = [
   { id: 'studio', label: 'Studio', href: HOME_HREF },
+  { id: 'voice-loop', label: 'Voice loop', href: VOICE_LOOP_HREF },
   { id: 'pipeline', label: 'MIDI pipeline', href: MIDI_PIPELINE_HREF },
   { id: 'studies', label: 'Song studies', href: STUDY_SONGS_HREF }
 ];

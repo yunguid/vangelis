@@ -6,18 +6,21 @@ import GeneratedSongStudyPage from './pages/GeneratedSongStudyPage.jsx';
 import MidiPipelinePage from './pages/MidiPipelinePage.jsx';
 import SongStudyPage from './pages/SongStudyPage.jsx';
 import StudySongsPage from './pages/StudySongsPage.jsx';
+import VoiceLoopLabPage from './pages/VoiceLoopLabPage.jsx';
 import './style.css';
 import { withBase } from './utils/baseUrl.js';
 import {
   getActiveRoute,
   getStudyRouteMatch,
   isMidiPipelineRoute,
-  isStudySongsRoute
+  isStudySongsRoute,
+  isVoiceLoopRoute
 } from './utils/routes.js';
 
 const Root = () => {
   const [route, setRoute] = React.useState(() => getActiveRoute());
   const showMidiPipeline = isMidiPipelineRoute(route);
+  const showVoiceLoop = isVoiceLoopRoute(route);
   const showStudySongs = isStudySongsRoute(route);
   const studyRoute = getStudyRouteMatch(route);
 
@@ -51,6 +54,10 @@ const Root = () => {
 
   if (showMidiPipeline) {
     return <MidiPipelinePage />;
+  }
+
+  if (showVoiceLoop) {
+    return <VoiceLoopLabPage />;
   }
 
   if (showStudySongs) {

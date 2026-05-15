@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef } from 'react';
 import { KEYBOARD_MAP, MIN_OFFSET, MAX_OFFSET, clamp } from '../constants';
 import { getNoteMeta } from '../utils/noteMeta';
 
+const isTextEntryTarget = (target) => {
+  const tagName = target?.tagName;
+  if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') return true;
+  return !!target?.isContentEditable;
+};
+
 export function useKeyboardInput({
   octaveOffsetRef,
   setOctaveOffset,
@@ -25,6 +31,10 @@ export function useKeyboardInput({
   }, [octaveOffsetRef]);
 
   const handleKeyboardDown = useCallback((event) => {
+    if (isTextEntryTarget(event.target)) {
+      return;
+    }
+
     const key = event.key.toLowerCase();
 
     if (key === 'z') {

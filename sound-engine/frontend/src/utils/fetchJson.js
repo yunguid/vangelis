@@ -9,7 +9,10 @@ export async function fetchJson(url, options) {
 
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(payload?.error || `Request failed with ${response.status}`);
+    const error = new Error(payload?.error || `Request failed with ${response.status}`);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
   }
 
   return payload;

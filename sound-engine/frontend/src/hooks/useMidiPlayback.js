@@ -303,7 +303,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
           frequency,
           waveformType: waveform,
           params,
-          velocity
+          velocity,
+          allowVoicePhrase: false
         });
         if (started?.voiceId) {
           startedVoiceIds.push(started.voiceId);
@@ -321,7 +322,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       frequency,
       waveformType: waveformRef.current,
       params,
-      velocity
+      velocity,
+      allowVoicePhrase: false
     });
     if (started?.voiceId) {
       startedVoiceIds.push(started.voiceId);

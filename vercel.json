@@ -17,6 +17,14 @@
       "dest": "sound-engine/frontend/api/sound-catalog.js"
     },
     {
+      "src": "/api/phrase-loop",
+      "dest": "sound-engine/frontend/api/phrase-loop.js"
+    },
+    {
+      "src": "/api/voice-phrase",
+      "dest": "sound-engine/frontend/api/voice-phrase.js"
+    },
+    {
       "src": "/api/status",
       "dest": "sound-engine/frontend/api/status.ts"
     },

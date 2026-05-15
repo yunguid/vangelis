@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import MidiTab from './MidiTab.jsx';
 import SamplesTab from './SamplesTab.jsx';
 import SoundTab from './SoundTab.jsx';
+import VoiceTab from './VoiceTab.jsx';
 import './Sidebar.css';
 
 const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
@@ -30,6 +31,18 @@ const Sidebar = ({
   // Samples props
   onSampleSelect,
   activeSampleId,
+  // Voice props
+  voiceText,
+  voicePreviewChunks,
+  voiceStatus,
+  voicePreparing,
+  voiceGenerating,
+  voiceError,
+  onVoiceTextChange,
+  onVoicePresetSelect,
+  onVoiceRandomize,
+  onVoiceToggle,
+  onVoiceClear,
   // Sound props
   waveformType,
   onWaveformChange,
@@ -101,6 +114,18 @@ const Sidebar = ({
       isActive: !!activeSampleId
     },
     {
+      id: 'voice',
+      label: 'Voice',
+      icon: (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12c1.8-3.8 4.2-5.7 7.2-5.7 4.6 0 7.1 4.1 8.8 5.7-1.7 1.6-4.2 5.7-8.8 5.7C8.2 17.7 5.8 15.8 4 12Z" />
+          <path d="M9.2 12h5.6" />
+          <path d="M12 9.2v5.6" />
+        </svg>
+      ),
+      isActive: !!voiceStatus?.enabled
+    },
+    {
       id: 'sound',
       label: 'Sound',
       icon: (
@@ -121,12 +146,16 @@ const Sidebar = ({
     ? 'MIDI library'
     : activeTab === 'samples'
       ? 'Sample library'
-      : 'Sound controls';
+      : activeTab === 'voice'
+        ? 'Voice phrase'
+        : 'Sound controls';
   const panelSubtitle = activeTab === 'midi'
     ? (currentMidi?.name || 'Pick a file, then play')
     : activeTab === 'samples'
       ? (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
-      : `Waveform: ${waveformType}`;
+      : activeTab === 'voice'
+        ? (voiceStatus?.enabled ? 'Voice on' : 'Type a phrase')
+        : `Waveform: ${waveformType}`;
 
   return (
     <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''}`}>
@@ -189,6 +218,21 @@ const Sidebar = ({
             <SamplesTab
               onSampleSelect={onSampleSelect}
               activeSampleId={activeSampleId}
+            />
+          )}
+          {activeTab === 'voice' && (
+            <VoiceTab
+              text={voiceText}
+              previewChunks={voicePreviewChunks}
+              voiceStatus={voiceStatus}
+              isPreparing={voicePreparing}
+              isGenerating={voiceGenerating}
+              error={voiceError}
+              onTextChange={onVoiceTextChange}
+              onPresetSelect={onVoicePresetSelect}
+              onRandomize={onVoiceRandomize}
+              onToggle={onVoiceToggle}
+              onClear={onVoiceClear}
             />
           )}
           {activeTab === 'sound' && (

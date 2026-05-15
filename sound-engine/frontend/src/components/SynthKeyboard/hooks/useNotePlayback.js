@@ -47,7 +47,7 @@ export function useNotePlayback({
     }
 
     const status = audioEngine.getStatus();
-    if (!wasmReadyRef.current && !status.hasCustomSample) {
+    if (!wasmReadyRef.current && !status.hasCustomSample && !status.hasVoicePhrase) {
       return;
     }
     if (activeNotesRef.current.has(noteMeta.noteId)) {
