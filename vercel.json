@@ -3,14 +3,6 @@
   "installCommand": "cd sound-engine/frontend && npm ci",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "sound-engine/frontend/dist",
-  "functions": {
-    "sound-engine/frontend/api/**/*.ts": {
-      "runtime": "nodejs18.x"
-    },
-    "sound-engine/frontend/api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "routes": [
     {
       "src": "/api/sound-catalog",
