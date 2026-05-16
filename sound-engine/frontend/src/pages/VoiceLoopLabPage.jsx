@@ -1,5 +1,6 @@
 import React from 'react';
 import AppHeader from '../components/AppHeader.jsx';
+import Sidebar from '../components/Sidebar';
 import { fetchJson } from '../utils/fetchJson.js';
 import { encodeWav } from '../utils/audioEngine/wav.js';
 import { renderVoiceScore } from '../utils/voicePhrase.js';
@@ -567,6 +568,7 @@ const VoiceLoopLabPage = () => {
           </section>
         </section>
       </main>
+      <Sidebar disabled isOpen={false} activeTab="voice" />
     </div>
   );
 };

@@ -61,6 +61,25 @@
   box-shadow: none;
 }
 
+.sidebar-container--disabled .sidebar-rail {
+  background:
+    linear-gradient(180deg, rgba(11, 16, 25, 0.78) 0%, rgba(7, 12, 19, 0.86) 100%);
+}
+
+.sidebar-container--disabled .sidebar-rail__btn,
+.sidebar-rail__btn:disabled {
+  cursor: default;
+  opacity: 0.36;
+}
+
+.sidebar-container--disabled .sidebar-rail__btn:hover,
+.sidebar-rail__btn:disabled:hover {
+  transform: none;
+  background: transparent;
+  border-color: transparent;
+  color: rgba(225, 236, 247, 0.58);
+}
+
 .sidebar-rail__btn--active {
   background: rgba(255, 107, 53, 0.14);
   border-color: rgba(255, 142, 98, 0.22);

@@ -1,5 +1,6 @@
 import React from 'react';
 import AppHeader from '../components/AppHeader.jsx';
+import Sidebar from '../components/Sidebar';
 import { getGeneratedStudyHref } from '../utils/routes.js';
 import SparkleSpinner from '../components/SparkleSpinner.jsx';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
@@ -514,6 +515,7 @@ const MidiPipelinePage = () => {
           )}
         </div>
       </main>
+      <Sidebar disabled isOpen={false} activeTab="midi" />
     </div>
   );
 };

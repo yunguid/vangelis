@@ -145,7 +145,7 @@ const App = () => {
   const [voiceGenerating, setVoiceGenerating] = useState(false);
   const [voiceError, setVoiceError] = useState('');
   const [voiceStatus, setVoiceStatus] = useState(() => audioEngine.getVoicePhraseStatus());
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [notice, setNotice] = useState('');
   const [controlSections, setControlSections] = useState(() => (
     initialSession.controlSections || DEFAULT_CONTROL_SECTIONS

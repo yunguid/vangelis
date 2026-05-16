@@ -42,10 +42,11 @@ const VoiceTab = ({
   const stateLabel = isPreparing
     ? 'Rendering'
     : isArmed
-      ? 'Ready'
+      ? 'Voice on'
       : hasRenderedPhrase
-        ? 'Muted'
+        ? 'Voice off'
         : 'Empty';
+  const toggleLabel = isArmed ? 'Turn voice off' : 'Turn voice on';
 
   const handlePhraseKeyDown = (event) => {
     event.stopPropagation();
@@ -144,7 +145,7 @@ const VoiceTab = ({
             disabled={!hasRenderedPhrase || isPreparing}
             aria-pressed={isArmed}
           >
-            {isArmed ? 'On' : 'Off'}
+            {toggleLabel}
           </button>
           <button
             type="button"

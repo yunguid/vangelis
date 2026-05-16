@@ -8,10 +8,10 @@ import {
 } from '../utils/routes.js';
 
 const NAV_ITEMS = [
-  { id: 'studio', label: 'Studio', href: HOME_HREF },
+  { id: 'studio', label: 'Keyboard', href: HOME_HREF },
   { id: 'voice-loop', label: 'Voice loop', href: VOICE_LOOP_HREF },
   { id: 'pipeline', label: 'MIDI pipeline', href: MIDI_PIPELINE_HREF },
-  { id: 'studies', label: 'Song studies', href: STUDY_SONGS_HREF }
+  { id: 'studies', label: 'Library', href: STUDY_SONGS_HREF }
 ];
 
 const AppHeader = ({
@@ -144,7 +144,7 @@ const AppHeader = ({
               className="button-link button-link--quiet"
               onClick={canResetSound ? onResetSound : undefined}
               disabled={!canResetSound}
-              title={canResetSound ? 'Restore the default dry sound' : 'Available in Studio'}
+              title={canResetSound ? 'Restore the default dry sound' : 'Available on Keyboard'}
             >
               Reset sound
             </button>
@@ -162,7 +162,7 @@ const AppHeader = ({
               className={`button-icon ${resolvedSampleLoading ? 'loading' : ''} ${canUploadSample ? '' : 'is-disabled'}`}
               aria-label={resolvedSampleLabel ? `Loaded sample ${resolvedSampleLabel}` : 'Upload sample'}
               aria-disabled={!canUploadSample}
-              title={canUploadSample ? 'Upload sample' : 'Available in Studio'}
+              title={canUploadSample ? 'Upload sample' : 'Available on Keyboard'}
             >
               <span aria-hidden="true">{resolvedHasCustomSample ? '!' : '+'}</span>
             </label>
@@ -174,7 +174,7 @@ const AppHeader = ({
                 onClick={canClearSample ? handleClearSample : undefined}
                 disabled={!canClearSample}
                 aria-label="Clear custom sample"
-                title={canClearSample ? 'Clear custom sample' : 'Available in Studio'}
+                title={canClearSample ? 'Clear custom sample' : 'Available on Keyboard'}
               >
                 <span aria-hidden="true">x</span>
               </button>
@@ -186,7 +186,7 @@ const AppHeader = ({
               onClick={canToggleRecording ? handleRecordToggle : undefined}
               disabled={!canToggleRecording}
               aria-label={resolvedIsRecording ? 'Stop recording' : 'Start recording'}
-              title={canToggleRecording ? 'Record output' : 'Available in Studio'}
+              title={canToggleRecording ? 'Record output' : 'Available on Keyboard'}
             >
               <span aria-hidden="true">{resolvedIsRecording ? '||' : 'O'}</span>
             </button>
@@ -197,7 +197,7 @@ const AppHeader = ({
               onClick={canShowShortcuts ? onShowShortcuts : undefined}
               disabled={!canShowShortcuts}
               aria-label="View keyboard shortcuts"
-              title={canShowShortcuts ? 'View keyboard shortcuts' : 'Available in Studio'}
+              title={canShowShortcuts ? 'View keyboard shortcuts' : 'Available on Keyboard'}
             >
               <span aria-hidden="true">?</span>
             </button>

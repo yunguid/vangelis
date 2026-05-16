@@ -13,10 +13,11 @@ const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
  */
 const Sidebar = ({
   isOpen,
-  onClose,
-  onOpen,
+  onClose = () => {},
+  onOpen = () => {},
   activeTab,
-  onTabChange,
+  onTabChange = () => {},
+  disabled = false,
   // MIDI props
   isPlaying,
   isPaused,
@@ -56,7 +57,7 @@ const Sidebar = ({
   // Close on escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (!disabled && e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
@@ -84,13 +85,15 @@ const Sidebar = ({
   }, [isOpen]);
 
   const handleRailClick = useCallback((tab) => {
+    if (disabled) return;
+
     if (isOpen && activeTab === tab) {
       onClose();
     } else {
       onTabChange(tab);
       if (!isOpen) onOpen();
     }
-  }, [isOpen, activeTab, onClose, onOpen, onTabChange]);
+  }, [disabled, isOpen, activeTab, onClose, onOpen, onTabChange]);
 
   const tabs = [
     {
@@ -101,7 +104,7 @@ const Sidebar = ({
           <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
         </svg>
       ),
-      isActive: isPlaying
+      isActive: !disabled && isPlaying
     },
     {
       id: 'samples',
@@ -111,7 +114,7 @@ const Sidebar = ({
           <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
         </svg>
       ),
-      isActive: !!activeSampleId
+      isActive: !disabled && !!activeSampleId
     },
     {
       id: 'voice',
@@ -123,7 +126,7 @@ const Sidebar = ({
           <path d="M12 9.2v5.6" />
         </svg>
       ),
-      isActive: !!voiceStatus?.enabled
+      isActive: !disabled && !!voiceStatus?.enabled
     },
     {
       id: 'sound',
@@ -154,11 +157,11 @@ const Sidebar = ({
     : activeTab === 'samples'
       ? (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
       : activeTab === 'voice'
-        ? (voiceStatus?.enabled ? 'Voice on' : 'Type a phrase')
+        ? (voiceStatus?.enabled ? 'Voice on' : 'Voice off')
         : `Waveform: ${waveformType}`;
 
   return (
-    <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''}`}>
+    <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''} ${disabled ? 'sidebar-container--disabled' : ''}`}>
       {/* Icon Rail - always visible */}
       <div className="sidebar-rail">
         {tabs.map(tab => (
@@ -167,8 +170,10 @@ const Sidebar = ({
             type="button"
             className={`sidebar-rail__btn ${isOpen && activeTab === tab.id ? 'sidebar-rail__btn--active' : ''} ${tab.isActive ? 'sidebar-rail__btn--playing' : ''}`}
             onClick={() => handleRailClick(tab.id)}
-            aria-label={isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
-            aria-expanded={isOpen && activeTab === tab.id}
+            disabled={disabled}
+            aria-label={disabled ? `${tab.label} panel unavailable on this page` : isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
+            aria-expanded={!disabled && isOpen && activeTab === tab.id}
+            title={disabled ? 'Available on Keyboard' : undefined}
           >
             {tab.icon}
             <span className="sidebar-rail__label">{tab.label}</span>
@@ -180,10 +185,10 @@ const Sidebar = ({
       {/* Expandable Panel */}
       <div
         className={`sidebar-panel ${isOpen ? 'sidebar-panel--open' : ''}`}
-        aria-hidden={!isOpen}
+        aria-hidden={!isOpen || disabled}
         role="complementary"
         aria-label={activePanel.id === 'sound' ? 'Sound controls' : `${activePanel.label} browser`}
-        {...(!isOpen && { inert: '' })}
+        {...((!isOpen || disabled) && { inert: '' })}
       >
         <div className="sidebar-panel__header">
           <div className="sidebar-panel__heading-group">
@@ -251,7 +256,7 @@ const Sidebar = ({
       </div>
 
       {/* Backdrop for closing */}
-      {isOpen && (
+      {isOpen && !disabled && (
         <div
           className="sidebar-backdrop"
           onClick={onClose}

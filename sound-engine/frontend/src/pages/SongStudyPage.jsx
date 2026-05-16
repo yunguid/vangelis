@@ -1,6 +1,7 @@
 import React from 'react';
 import AppHeader from '../components/AppHeader.jsx';
 import BirdsEyeRadar from '../components/BirdsEyeRadar.jsx';
+import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
 import { DEFAULT_STUDY_AUDIO_PARAMS, DEFAULT_STUDY_WAVEFORM } from '../data/songStudies.js';
 import { useMidiPlayback } from '../hooks/useMidiPlayback.js';
@@ -615,14 +616,10 @@ const SongStudyPage = ({ study }) => {
               </div>
             )}
 
-            <div className="keyboard-hints">
-              <span className="keyboard-hint">
-                Radar shows the full register. Keyboard folds the current voicing into the playable range.
-              </span>
-            </div>
           </div>
         </section>
       </main>
+      <Sidebar disabled isOpen={false} activeTab="midi" />
     </div>
   );
 };

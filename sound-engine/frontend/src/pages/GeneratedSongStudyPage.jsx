@@ -1,5 +1,6 @@
 import React from 'react';
 import AppHeader from '../components/AppHeader.jsx';
+import Sidebar from '../components/Sidebar';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import SongStudyPage from './SongStudyPage.jsx';
@@ -90,6 +91,7 @@ const GeneratedSongStudyPage = ({ jobId }) => {
           </section>
         )}
       </main>
+      <Sidebar disabled isOpen={false} activeTab="midi" />
     </div>
   );
 };

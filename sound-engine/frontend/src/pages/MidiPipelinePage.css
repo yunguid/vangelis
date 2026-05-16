@@ -5,9 +5,9 @@
 }
 
 .pipeline-page__shell {
-  width: min(920px, 94vw);
+  width: var(--max-shell-width);
   margin: 0 auto;
-  padding: 28px 0 56px;
+  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
 }
 
 .pipeline-page__header {
@@ -542,6 +542,12 @@
 }
 
 @media (max-width: 720px) {
+  .pipeline-page__shell {
+    width: 100%;
+    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
+      calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
   .pipeline-flow::before {
     left: 19px;
   }

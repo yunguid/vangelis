@@ -1,5 +1,6 @@
 import React from 'react';
 import AppHeader from '../components/AppHeader.jsx';
+import Sidebar from '../components/Sidebar';
 import { BUILT_IN_STUDIES, createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import {
@@ -37,7 +38,6 @@ const StudySongsPage = () => {
   const [error, setError] = React.useState('');
   const [deleteError, setDeleteError] = React.useState('');
   const [deletingJobId, setDeletingJobId] = React.useState('');
-  const [mode, setMode] = React.useState('open');
 
   const loadJobs = React.useCallback(async () => {
     try {
@@ -70,12 +70,6 @@ const StudySongsPage = () => {
     [jobs]
   );
 
-  React.useEffect(() => {
-    if (readyStudies.length === 0) {
-      setMode('create');
-    }
-  }, [readyStudies.length]);
-
   const handleDeleteStudy = async (jobId) => {
     if (!jobId || deletingJobId) return;
 
@@ -99,133 +93,88 @@ const StudySongsPage = () => {
       <main className="study-library__shell">
         <AppHeader activeSection="studies" />
 
-        <section className="study-library__flow" aria-label="Study library flow">
-          <article className="study-library__node study-library__node--choice">
-            <div className="study-library__marker" aria-hidden="true">01</div>
-
-            <div className="study-library__body">
-              <div className="study-library__choice-grid">
-                <button
-                  type="button"
-                  className={`study-library__choice ${mode === 'open' ? 'is-active' : ''}`}
-                  onClick={() => setMode('open')}
-                >
-                  <strong>Open a study</strong>
-                  <span>{readyStudies.length > 0 ? `${readyStudies.length} ready now` : 'Nothing saved yet'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={`study-library__choice ${mode === 'create' ? 'is-active' : ''}`}
-                  onClick={() => setMode('create')}
-                >
-                  <strong>Create a study</strong>
-                  <span>Build one from a link or song search</span>
-                </button>
-              </div>
+        <section className="study-library__panel" aria-label="Uploaded song library">
+          <div className="study-library__toolbar">
+            <div className="study-library__title-group">
+              <h1>Library</h1>
+              <span>{readyStudies.length} saved</span>
             </div>
-          </article>
+            <a className="study-library__action study-library__action--primary" href={MIDI_PIPELINE_HREF}>
+              Import song
+            </a>
+          </div>
 
-          {mode === 'open' ? (
-            <article className="study-library__node">
-              <div className="study-library__marker" aria-hidden="true">02</div>
+          {deleteError && (
+            <p className="study-library__error">{deleteError}</p>
+          )}
 
-              <div className="study-library__body">
-                {deleteError && (
-                  <p className="study-library__error">{deleteError}</p>
-                )}
-
-                {readyStudies.length > 0 ? (
-                  <div className="study-library__list">
-                    {readyStudies.map((study) => (
-                      <article className="study-library__study" key={study.id}>
-                        <div className="study-library__study-main">
-                          <span className="study-library__study-kicker">{study.sourceLabel}</span>
-                          <strong>{study.title}</strong>
-                          <p>{study.artist}</p>
-                        </div>
-
-                        <div className="study-library__study-side">
-                          <span>{study.eyebrow}</span>
-                          <div className="study-library__study-actions">
-                            <a className="study-library__action study-library__action--primary" href={study.href}>
-                              Open
-                            </a>
-                            {study.canDelete && (
-                              <button
-                                type="button"
-                                className="study-library__action"
-                                onClick={() => handleDeleteStudy(study.jobId)}
-                                disabled={deletingJobId === study.jobId}
-                              >
-                                {deletingJobId === study.jobId ? 'Deleting...' : 'Delete'}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </article>
-                    ))}
+          {readyStudies.length > 0 ? (
+            <div className="study-library__list">
+              {readyStudies.map((study) => (
+                <article className="study-library__study" key={study.id}>
+                  <div className="study-library__study-main">
+                    <span className="study-library__study-kicker">{study.sourceLabel}</span>
+                    <strong>{study.title}</strong>
+                    <p>{study.artist}</p>
                   </div>
-                ) : (
-                  <div className="study-library__empty">
-                    <p>No studies are saved yet.</p>
-                    <a className="study-library__action study-library__action--primary" href={MIDI_PIPELINE_HREF}>
-                      Create one
-                    </a>
+
+                  <div className="study-library__study-side">
+                    <span>{study.eyebrow}</span>
+                    <div className="study-library__study-actions">
+                      <a className="study-library__action study-library__action--primary" href={study.href}>
+                        Open
+                      </a>
+                      {study.canDelete && (
+                        <button
+                          type="button"
+                          className="study-library__action"
+                          onClick={() => handleDeleteStudy(study.jobId)}
+                          disabled={deletingJobId === study.jobId}
+                        >
+                          {deletingJobId === study.jobId ? 'Deleting...' : 'Delete'}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            </article>
+                </article>
+              ))}
+            </div>
           ) : (
-            <article className="study-library__node">
-              <div className="study-library__marker" aria-hidden="true">02</div>
-
-              <div className="study-library__body">
-                <div className="study-library__create">
-                  <p>Open the builder when you want to turn a link or search into a playable study.</p>
-                  <a className="study-library__action study-library__action--primary" href={MIDI_PIPELINE_HREF}>
-                    Open builder
-                  </a>
-                </div>
-              </div>
-            </article>
+            <div className="study-library__empty">
+              <p>No songs saved yet.</p>
+            </div>
           )}
 
           {(backgroundRuns.length > 0 || error) && (
-            <article className="study-library__node study-library__node--details">
-              <div className="study-library__marker" aria-hidden="true">03</div>
+            <details className="study-library__details">
+              <summary>Background runs</summary>
 
-              <div className="study-library__body">
-                <details className="study-library__details">
-                  <summary>Background runs</summary>
+              {error && (
+                <p className="study-library__error">{error}</p>
+              )}
 
-                  {error && (
-                    <p className="study-library__error">{error}</p>
-                  )}
-
-                  {backgroundRuns.length > 0 && (
-                    <div className="study-library__run-list">
-                      {backgroundRuns.map((job) => (
-                        <div className="study-library__run" key={job.id}>
-                          <div className="study-library__run-main">
-                            <strong>{job.song || 'Untitled run'}</strong>
-                            <span>{job.artist || 'Unknown artist'}</span>
-                          </div>
-                          <div className="study-library__run-meta">
-                            <span>{job.status}</span>
-                            <span>{job.step}</span>
-                            <span>{job.message}</span>
-                          </div>
-                        </div>
-                      ))}
+              {backgroundRuns.length > 0 && (
+                <div className="study-library__run-list">
+                  {backgroundRuns.map((job) => (
+                    <div className="study-library__run" key={job.id}>
+                      <div className="study-library__run-main">
+                        <strong>{job.song || 'Untitled run'}</strong>
+                        <span>{job.artist || 'Unknown artist'}</span>
+                      </div>
+                      <div className="study-library__run-meta">
+                        <span>{job.status}</span>
+                        <span>{job.step}</span>
+                        <span>{job.message}</span>
+                      </div>
                     </div>
-                  )}
-                </details>
-              </div>
-            </article>
+                  ))}
+                </div>
+              )}
+            </details>
           )}
         </section>
       </main>
+      <Sidebar disabled isOpen={false} activeTab="midi" />
     </div>
   );
 };

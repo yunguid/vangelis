@@ -5,9 +5,9 @@
 }
 
 .voice-loop-shell {
-  width: min(1180px, 94vw);
+  width: var(--max-shell-width);
   margin: 0 auto;
-  padding: 28px 0 56px;
+  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
 }
 
 .voice-loop-header {
@@ -451,8 +451,9 @@
 
 @media (max-width: 680px) {
   .voice-loop-shell {
-    width: min(100% - 24px, 1180px);
-    padding-top: 18px;
+    width: 100%;
+    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
+      calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
   .voice-loop-readout,
