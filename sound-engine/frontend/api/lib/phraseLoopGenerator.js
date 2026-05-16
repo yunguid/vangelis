@@ -2,11 +2,16 @@ const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-5.5';
 
 const NOTES = ['C', 'C#', 'D', 'D#', 'F', 'G', 'G#', 'A#'];
-const PHONEME_GROUPS = ['( AA )', '( AW )', '( ER )', '( IY )', '( AE )', '( OW )'];
+const PHONEME_GROUPS = ['AA', 'AW', 'ER', 'IY', 'AE', 'OW', 'AY', 'UW'];
+const CARRIER_OPTIONS = new Set(PHONEME_GROUPS);
+const GLIDE_OPTIONS = new Set(['low', 'medium', 'high']);
 const ROOTS = {
   'F# minor': ['F#3', 'G#3', 'A3', 'C#4', 'E4', 'F#4', 'G#4', 'A4', 'C#5'],
   'C# minor': ['C#3', 'D#3', 'E3', 'G#3', 'B3', 'C#4', 'D#4', 'E4', 'G#4', 'C#5'],
   'A# minor': ['A#2', 'C3', 'C#3', 'D#3', 'F3', 'F#3', 'G#3', 'A#3', 'C4', 'C#4', 'D#4', 'F4', 'F#4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5'],
+  'G# minor': ['G#2', 'A#2', 'B2', 'C#3', 'D#3', 'E3', 'F#3', 'G#3', 'B3', 'C#4', 'D#4', 'E4', 'F#4', 'G#4', 'B4', 'C#5', 'D#5'],
+  'D# minor': ['D#3', 'F3', 'F#3', 'G#3', 'A#3', 'B3', 'C#4', 'D#4', 'F#4', 'G#4', 'A#4', 'B4', 'C#5', 'D#5', 'F#5'],
+  'F minor': ['F2', 'G2', 'G#2', 'A#2', 'C3', 'C#3', 'D#3', 'F3', 'G#3', 'A#3', 'C4', 'C#4', 'D#4', 'F4', 'G#4', 'C5'],
   'A dorian': ['A2', 'B2', 'C3', 'D3', 'E3', 'F#3', 'G3', 'A3', 'C4', 'E4', 'G4'],
   'E minor': ['E2', 'F#2', 'G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'G3', 'B3', 'D4'],
   'D lydian': ['D3', 'E3', 'F#3', 'G#3', 'A3', 'B3', 'C#4', 'D4', 'F#4', 'A4']
@@ -57,6 +62,12 @@ function coerceNumber(value, fallback, min, max) {
   return Math.min(max, Math.max(min, number));
 }
 
+function coerceChoice(value, options, fallback) {
+  if (typeof value !== 'string') return fallback;
+  const normalized = value.trim();
+  return options.has(normalized) ? normalized : fallback;
+}
+
 function chooseScale(value) {
   return ROOTS[value] ? value : 'F# minor';
 }
@@ -81,12 +92,30 @@ function seededRandom(seed) {
   };
 }
 
-function buildScore({ key = 'F# minor', bpm = 144, density = 'high', phrase = '' } = {}) {
+function buildCarrierGroup(carrier, random, glide) {
+  const glideChance = glide === 'high' ? 0.22 : glide === 'low' ? 0.06 : 0.12;
+  const stressChance = glide === 'high' ? 0.12 : 0.06;
+
+  if (random() < glideChance) {
+    const lift = glide === 'high' ? 18 : glide === 'low' ? 6 : 12;
+    return `( ${carrier}(+${lift}) )`;
+  }
+
+  if (random() < stressChance) {
+    return `( ${carrier}! )`;
+  }
+
+  return `( ${carrier} )`;
+}
+
+function buildScore({ key = 'F# minor', bpm = 144, density = 'high', phrase = '', carrier = 'AA', glide = 'medium' } = {}) {
   const scaleKey = chooseScale(key);
   const pool = ROOTS[scaleKey];
   const dense = density === 'very high' ? 1 : density === 'wide-open' ? 3 : 2;
   const rate = Math.round(coerceNumber(bpm, 144, 90, 180));
-  const random = seededRandom(hashString(`${scaleKey}:${density}:${rate}:${phrase}`));
+  const safeCarrier = coerceChoice(carrier, CARRIER_OPTIONS, 'AA');
+  const safeGlide = coerceChoice(glide, GLIDE_OPTIONS, 'medium');
+  const random = seededRandom(hashString(`${scaleKey}:${density}:${rate}:${phrase}:${safeCarrier}:${safeGlide}`));
   const shapes = [
     [8, 6, 3, 0, 1, 2, 3, 5],
     [0, 2, 3, 5, 2, 3, 5, 7],
@@ -107,12 +136,14 @@ function buildScore({ key = 'F# minor', bpm = 144, density = 'high', phrase = ''
         const shapeIndex = invert ? shape.length - 1 - index : index;
         const noteIndex = shape[(shapeIndex + pass + shift) % shape.length] % pool.length;
         const note = pool[noteIndex];
-        const groupPool = random() > 0.86 ? CONSONANT_GROUPS : PHONEME_GROUPS;
-        const group = groupPool[(section + index + pass + shift) % groupPool.length];
+        const groupPool = random() > 0.9 ? CONSONANT_GROUPS : null;
+        const group = groupPool
+          ? groupPool[(section + index + pass + shift) % groupPool.length]
+          : buildCarrierGroup(safeCarrier, random, safeGlide);
         cells.push(`b${note} ${group}`);
       }
       const turnaround = pool[(section * 2 + pass) % pool.length];
-      cells.push(`b${turnaround} ( AA )`);
+      cells.push(`b${turnaround} ${buildCarrierGroup(safeCarrier, random, safeGlide)}`);
     }
   }
 
@@ -126,7 +157,9 @@ function fallbackLoop(options = {}) {
       key: coerceText(options.key, 'F# minor'),
       bpm,
       density: coerceText(options.density, 'high'),
-      phrase: coerceText(options.phrase || options.mood, '')
+      phrase: coerceText(options.phrase || options.mood, ''),
+      carrier: coerceChoice(options.carrier, CARRIER_OPTIONS, 'AA'),
+      glide: coerceChoice(options.glide, GLIDE_OPTIONS, 'medium')
     }),
     bpm,
     bars: 8,
@@ -152,11 +185,11 @@ function normalizeScore(value, fallback) {
   if (typeof value !== 'string') return fallback.score;
 
   const compact = value
-    .replace(/[^A-Za-z0-9#()+\-.\s]/g, ' ')
+    .replace(/[^A-Za-z0-9#()+\-.,;!\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (!/^r\d+\s/.test(compact) || !/b[A-G]#?\d\s+\(/.test(compact)) {
+  if (!/^r\d+(?:\.\d+)?\s/.test(compact) || !/b[A-G](?:#|b)?-?\d+\s+\(/.test(compact)) {
     return fallback.score;
   }
 
@@ -220,7 +253,9 @@ async function generatePhraseLoop(request = {}, env = process.env) {
     mood: coerceText(request.mood, 'state of the art 1980 speech synth arpeggio'),
     key: coerceText(request.key, 'F# minor'),
     bpm: coerceNumber(request.bpm, 144, 90, 180),
-    density: coerceText(request.density, 'very high')
+    density: coerceText(request.density, 'very high'),
+    carrier: coerceChoice(request.carrier, CARRIER_OPTIONS, 'AA'),
+    glide: coerceChoice(request.glide, GLIDE_OPTIONS, 'medium')
   };
 
   if (!apiKey) {
@@ -236,19 +271,20 @@ async function generatePhraseLoop(request = {}, env = process.env) {
     body: JSON.stringify({
       model,
       reasoning: { effort: 'low' },
-      prompt_cache_key: 'vangelis-klattsch-score-v5',
+      prompt_cache_key: 'vangelis-klattsch-score-v6',
       max_output_tokens: 9000,
       instructions: [
         'Generate original klattsch score strings for a retro browser speech synthesizer that should feel like a melodic electronic vocal loop.',
-        'Klattsch syntax is whitespace-separated. Use rN for per-phoneme duration in ms, pN for exact pauses, bNote for absolute pitch, parenthesized groups for one sung syllable slot, and ARPABET phonemes only.',
+        'Klattsch syntax is whitespace-separated. Use rN for per-phoneme duration in ms, pN for exact pauses, bNote for absolute pitch, parenthesized groups for one sung syllable slot, stress markers like AA!, transient pitch ornaments like AA(+12), and ARPABET phonemes only.',
         'The target feel is beautiful, emotional, cruising, and smooth: late-night electronic motion, gliding momentum, a little melancholy, a little lift, and a loop that can run for minutes without getting annoying.',
         'Think in shapes first. Make one long melodic ribbon with a low anchor, a mid-register cruise, a high answering lift, and a clean return to the downbeat.',
         'Before writing the score, internally choose a clear 4-bar or 8-bar harmonic map. Favor emotional electronic progressions such as i-VI-III-VII, i-v-VI-iv, i-III-VII-IV, i-VI-iv-V, dorian i-IV-v-VII, or lydian I-II-vii-I.',
         'Use note directives from roughly bG2 through bG#5. Wide octave displacement is good when it feels smooth and resolved. Chromatic neighbor turns are good when they add electronic emotion rather than randomness.',
-        'Most of the loop should ride one carrier vowel, usually ( AA ). Use vowel changes as rare color hits at pivots, lifts, or turnarounds. Do not change vowel on every note.',
+        'The request includes carrier. Most of the loop should ride that carrier vowel as the sung voice color. Use vowel changes as rare color hits at pivots, lifts, or turnarounds. Do not change vowel on every note.',
+        'The request includes glide. For glide=low, use very few pitch ornaments or stress marks. For glide=medium, add occasional transient ornaments at emotional turns. For glide=high, use more AA(+N)-style ornaments, but keep the melody smooth and resolved.',
         'One 4/4 bar can be treated as 1920 ms at 125 BPM. Quarter = 480 ms, eighth = 240 ms, sixteenth = 120 ms. For other BPM values, scale millisecond flags by 125 / BPM.',
         'Use r90-r120 as the main pulse, with occasional p40-p160 only where the phrase needs breath. Return 96-192 note events unless the density request is wide-open.',
-        'Use expressive directives sparingly at musical moments: h0.03-h0.12 for breath before a phrase, t0.05-t0.35 for brighter lifts, g0.65-g0.95 for emotional push, v2-v7 for held shimmer, m0.05-m0.18 for electronic tremolo.',
+        'Use expressive directives sparingly at musical moments: h0.03-h0.12 for breath before a phrase, s0.95-s1.14 for voice size changes, t0.05-t0.35 for brighter lifts, g0.65-g0.95 for emotional push, v2-v7 and w4-w7 for held shimmer, m0.05-m0.18 and n4-n9 for electronic tremolo.',
         `Avoid these output shapes:\n- ${AVOID_SHAPES.join('\n- ')}`,
         'If the score starts to resemble any avoided shape, change the contour before finalizing. Keep the final loop smooth, emotional, melodic, and cruising.',
         'The notes field should briefly name the harmonic map and emotional contour, for example: "F# minor i-VI-III-VII, lonely low motif opens into bright high answer."',

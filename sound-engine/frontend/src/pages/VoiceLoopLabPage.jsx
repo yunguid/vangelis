@@ -6,9 +6,11 @@ import { encodeWav } from '../utils/audioEngine/wav.js';
 import { renderVoiceScore } from '../utils/voicePhrase.js';
 import './VoiceLoopLabPage.css';
 
-const KEY_OPTIONS = ['F# minor', 'C# minor', 'A# minor', 'A dorian', 'E minor', 'D lydian'];
+const KEY_OPTIONS = ['F# minor', 'C# minor', 'A# minor', 'G# minor', 'D# minor', 'F minor', 'A dorian', 'E minor', 'D lydian'];
 const DENSITY_OPTIONS = ['very high', 'high', 'syncopated', 'wide-open'];
-const STARTER_SCORE = 'r120 bC5 ( AA ) bG#4 ( AA ) bC4 ( AA ) bF3 ( AA ) bC3 ( AA ) bG3 ( AA ) bG#3 ( AA ) bC4 ( AA ) bF4 ( ER ) bG#4 ( AW ) bC5 ( IY ) bG#4 ( AA ) bF4 ( ER ) bC#4 ( AA ) bF4 ( OW ) bG#4 ( AA ) bC#5 ( AE ) bF5 ( AA ) bD#5 ( ER ) bC#5 ( AA ) bG#4 ( AW )';
+const CARRIER_OPTIONS = ['AA', 'AW', 'ER', 'IY', 'AE', 'OW', 'AY', 'UW'];
+const GLIDE_OPTIONS = ['low', 'medium', 'high'];
+const STARTER_SCORE = 'r243.2 s1.14 bF#2 ( W ER ) bA2 ( K IH T ) bF#3 ( HH AA R ) bA3 ( D ER ) bC#4 ( M EY ) bA3 ( K IH T ) bF#3 ( B EH ) bA3 ( T ER ) bE2 ( D UW ) bE3 ( W IH T ) bA3 ( F AE S ) bE3 ( T ER ) bB3 ( M EY K ) bA3 ( S AH S ) bG#3 ( S T R AO NG ) bA3 ( G ER ) bEb2 ( M AO R ) bEb3 ( DH AE ) bF#4 ( N EH ) bEb4 ( V ER ) bB4 v8 w8 ( AW ) bA4 ( ER ) bF#4 ( AE F T ) bEb4 ( ER R ) bD3 v12 ( AW ) bD3 ( ER W ) v w bF#3 ( ER K ) bA3 ( IH Z N ) bF#2 s0.8 ( EH V ) bF#1 ( ER ) ( OW V ) r115 ER';
 const RANDOM_SEED_PARTS = {
   surfaces: ['chrome vowel engine', 'glass robot choir', 'neon throat sequencer', 'burnt tape vocoder', 'midnight arcade cantor'],
   motions: ['mirror arpeggio', 'stuttered octave climb', 'falling staircase loop', 'fast call and response', 'syncopated spiral pattern'],
@@ -36,7 +38,7 @@ function buildRandomSeed() {
 
 function parseScoreEvents(score) {
   const events = [];
-  const eventRe = /b([A-G]#?\d)\s*\(([^)]+)\)/g;
+  const eventRe = /b([A-G](?:#|b)?-?\d+)\s*\(\s*((?:[^()]|\([^)]*\))+?)\s*\)/g;
   let match = eventRe.exec(score);
   while (match) {
     events.push({
@@ -160,10 +162,12 @@ function stopSource(runtimeRef) {
 
 const VoiceLoopLabPage = () => {
   const [form, setForm] = React.useState({
-    seed: 'state of the art 1980 speech synth arpeggio',
+    seed: 'work it harder better faster stronger',
     key: 'F# minor',
     bpm: 120,
-    density: 'very high'
+    density: 'very high',
+    carrier: 'AA',
+    glide: 'medium'
   });
   const [score, setScore] = React.useState(STARTER_SCORE);
   const [rendered, setRendered] = React.useState(null);
@@ -173,14 +177,19 @@ const VoiceLoopLabPage = () => {
     wet: 0.16,
     gain: 0.82,
     effort: 0.82,
-    breath: 0.04
+    breath: 0.04,
+    scale: 1.02,
+    vibratoDepth: 1.5,
+    vibratoRate: 5,
+    tremoloDepth: 0.04,
+    tremoloRate: 5
   });
   const [meta, setMeta] = React.useState({ source: 'starter', warning: '' });
   const [generating, setGenerating] = React.useState(false);
   const [recording, setRecording] = React.useState(false);
   const [generationStatus, setGenerationStatus] = React.useState({
     tone: 'idle',
-    label: 'Ready'
+    label: ''
   });
   const [error, setError] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -214,12 +223,27 @@ const VoiceLoopLabPage = () => {
     const ctx = await ensureAudioContext();
     const nextRendered = renderVoiceScore(ctx, score, {
       effort: controls.effort,
-      aspiration: controls.breath
+      aspiration: controls.breath,
+      scale: controls.scale,
+      vibratoDepth: controls.vibratoDepth,
+      vibratoRate: controls.vibratoRate,
+      tremoloDepth: controls.tremoloDepth,
+      tremoloRate: controls.tremoloRate
     });
     setRendered(nextRendered);
     setError(nextRendered.warnings?.length ? nextRendered.warnings.join(' ') : '');
     return nextRendered;
-  }, [controls.breath, controls.effort, ensureAudioContext, score]);
+  }, [
+    controls.breath,
+    controls.effort,
+    controls.scale,
+    controls.tremoloDepth,
+    controls.tremoloRate,
+    controls.vibratoDepth,
+    controls.vibratoRate,
+    ensureAudioContext,
+    score
+  ]);
 
   const startRenderedLoop = React.useCallback((buffer) => {
     const ctx = audioContextRef.current;
@@ -249,17 +273,29 @@ const VoiceLoopLabPage = () => {
     }
   }, [controls.gain, controls.speed, controls.tone, controls.wet]);
 
-  React.useEffect(() => {
-    const timeoutId = window.setTimeout(async () => {
-      try {
-        const nextRendered = await renderScore();
-        if (isPlaying) startRenderedLoop(nextRendered.buffer);
-      } catch (renderError) {
-        setError('Score render failed.');
-      }
-    }, 260);
-    return () => window.clearTimeout(timeoutId);
-  }, [controls.breath, controls.effort, isPlaying, renderScore, score, startRenderedLoop]);
+	  React.useEffect(() => {
+	    const timeoutId = window.setTimeout(async () => {
+	      try {
+	        const nextRendered = await renderScore();
+	        if (isPlaying) startRenderedLoop(nextRendered.buffer);
+	      } catch (renderError) {
+	        setError('Score render failed.');
+	      }
+	    }, 260);
+	    return () => window.clearTimeout(timeoutId);
+	  }, [
+	    controls.breath,
+	    controls.effort,
+	    controls.scale,
+	    controls.tremoloDepth,
+	    controls.tremoloRate,
+	    controls.vibratoDepth,
+	    controls.vibratoRate,
+	    isPlaying,
+	    renderScore,
+	    score,
+	    startRenderedLoop
+	  ]);
 
   React.useEffect(() => {
     if (!isPlaying || !rendered) return undefined;
@@ -302,30 +338,32 @@ const VoiceLoopLabPage = () => {
       label: 'Generating pattern'
     });
 
-    try {
-      const result = await fetchJson('/api/phrase-loop', {
-        method: 'POST',
-        body: JSON.stringify({
-          phrase: nextForm.seed,
-          variation,
-          key: nextForm.key,
-          bpm: nextForm.bpm,
-          density: nextForm.density
-        })
-      });
+	    try {
+	      const result = await fetchJson('/api/phrase-loop', {
+	        method: 'POST',
+	        body: JSON.stringify({
+	          phrase: nextForm.seed,
+	          variation,
+	          key: nextForm.key,
+	          bpm: nextForm.bpm,
+	          density: nextForm.density,
+	          carrier: nextForm.carrier,
+	          glide: nextForm.glide
+	        })
+	      });
       if (result.loop?.score) {
         setScore(result.loop.score);
         setRendered(null);
       }
-      setMeta({
-        source: result.source || 'openai',
-        model: result.model || '',
-        warning: result.warning || ''
-      });
-      setGenerationStatus({
-        tone: 'ready',
-        label: 'OpenAI pattern ready'
-      });
+	      setMeta({
+	        source: result.source || 'openai',
+	        model: result.model || '',
+	        warning: result.warning || ''
+	      });
+	      setGenerationStatus({
+	        tone: 'ready',
+	        label: ''
+	      });
     } catch (generateError) {
       const providerCode = generateError.payload?.providerError?.code || generateError.payload?.providerError?.type || '';
       setError(providerCode ? `${generateError.message} (${providerCode})` : generateError.message);
@@ -429,24 +467,26 @@ const VoiceLoopLabPage = () => {
                 {recording ? 'Recording' : 'Record'}
               </button>
             </div>
-            <div
-              className={`voice-loop-status voice-loop-status--${generationStatus.tone}`}
-              role="status"
-              aria-live="polite"
-            >
-              <span className="voice-loop-status__dot" aria-hidden="true" />
-              <span>{generationStatus.label}</span>
-            </div>
+            {generationStatus.label && (
+              <div
+                className={`voice-loop-status voice-loop-status--${generationStatus.tone}`}
+                role="status"
+                aria-live="polite"
+              >
+                <span className="voice-loop-status__dot" aria-hidden="true" />
+                <span>{generationStatus.label}</span>
+              </div>
+            )}
 
             <div className="voice-loop-field">
               <div className="voice-loop-field-header">
                 <label htmlFor="voice-loop-seed">Seed</label>
                 <button
-	                  type="button"
-	                  className="voice-loop-dice"
-	                  onClick={handleRandomSeed}
-	                  disabled={generating || recording}
-	                  aria-label="Generate random seed"
+                  type="button"
+                  className="voice-loop-dice"
+                  onClick={handleRandomSeed}
+                  disabled={generating || recording}
+                  aria-label="Generate random seed"
                   title="Generate random seed"
                 >
                   <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
@@ -487,6 +527,26 @@ const VoiceLoopLabPage = () => {
               </label>
             </div>
 
+            <div className="voice-loop-control-grid">
+              <label className="voice-loop-field">
+                <span>Carrier</span>
+                <select name="carrier" value={form.carrier} onChange={handleFormChange}>
+                  {CARRIER_OPTIONS.map((carrier) => (
+                    <option key={carrier} value={carrier}>{carrier}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="voice-loop-field">
+                <span>Glide</span>
+                <select name="glide" value={form.glide} onChange={handleFormChange}>
+                  {GLIDE_OPTIONS.map((glide) => (
+                    <option key={glide} value={glide}>{glide}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
             <label className="voice-loop-field">
               <span>Tempo {form.bpm}</span>
               <input type="range" name="bpm" min="90" max="180" value={form.bpm} onChange={handleFormChange} />
@@ -519,10 +579,37 @@ const VoiceLoopLabPage = () => {
                 <input type="range" name="effort" min="0.35" max="1" step="0.01" value={controls.effort} onChange={handleControlChange} />
               </label>
               <label className="voice-loop-field">
+                <span>Scale {controls.scale.toFixed(2)}</span>
+                <input type="range" name="scale" min="0.82" max="1.3" step="0.01" value={controls.scale} onChange={handleControlChange} />
+              </label>
+            </div>
+
+            <div className="voice-loop-control-grid">
+              <label className="voice-loop-field">
                 <span>Breath {controls.breath.toFixed(2)}</span>
                 <input type="range" name="breath" min="0" max="0.28" step="0.01" value={controls.breath} onChange={handleControlChange} />
               </label>
+              <label className="voice-loop-field">
+                <span>Vibrato {controls.vibratoDepth.toFixed(1)}</span>
+                <input type="range" name="vibratoDepth" min="0" max="8" step="0.1" value={controls.vibratoDepth} onChange={handleControlChange} />
+              </label>
             </div>
+
+            <div className="voice-loop-control-grid">
+              <label className="voice-loop-field">
+                <span>Vib rate {controls.vibratoRate.toFixed(1)}</span>
+                <input type="range" name="vibratoRate" min="3" max="9" step="0.1" value={controls.vibratoRate} onChange={handleControlChange} />
+              </label>
+              <label className="voice-loop-field">
+                <span>Tremolo {controls.tremoloDepth.toFixed(2)}</span>
+                <input type="range" name="tremoloDepth" min="0" max="0.32" step="0.01" value={controls.tremoloDepth} onChange={handleControlChange} />
+              </label>
+            </div>
+
+            <label className="voice-loop-field">
+              <span>Trem rate {controls.tremoloRate.toFixed(1)}</span>
+              <input type="range" name="tremoloRate" min="2" max="12" step="0.1" value={controls.tremoloRate} onChange={handleControlChange} />
+            </label>
 
             {(meta.warning || error) && (
               <p className="voice-loop-message" role={error ? 'alert' : 'status'}>

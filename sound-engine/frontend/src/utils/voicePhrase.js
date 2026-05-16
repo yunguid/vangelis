@@ -217,6 +217,8 @@ export function renderVoiceScore(ctx, score, options = {}) {
     scale: options.scale ?? 1.02,
     vibratoDepth: options.vibratoDepth ?? 1.5,
     vibratoRate: options.vibratoRate ?? 5,
+    tremoloDepth: options.tremoloDepth ?? 0,
+    tremoloRate: options.tremoloRate ?? 5,
     aspiration: options.aspiration ?? 0.04,
     effort: options.effort ?? 0.82
   });
