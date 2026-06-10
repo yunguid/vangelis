@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import EffectMacroDial from './EffectMacroDial.jsx';
+import ValueSlider from './controls/ValueSlider.jsx';
 import {
   AUDIO_PARAM_DEFAULTS,
   AUDIO_PARAM_RANGES,
   DELAY_DIVISION_OPTIONS,
   DELAY_MODE_OPTIONS,
   DELAY_PRESET_OPTIONS,
+  LFO_SHAPE_OPTIONS,
+  MAX_MOD_ROUTES,
+  MOD_DEST_OPTIONS,
+  MOD_SOURCE_OPTIONS,
   REVERB_MODE_OPTIONS,
   getDelayPresetPatch,
   getDelayPresetValue,
@@ -268,6 +273,139 @@ const FILTER_SLIDERS = [
   })
 ];
 
+const GLIDE_SLIDER = makeSlider('glideTime', {
+  id: 'glide-time',
+  label: 'Glide',
+  display: (value) => (value < 0.005 ? 'Off' : `${value.toFixed(2)} s`),
+  helpText: 'Slide between consecutive notes.'
+});
+
+const VELOCITY_CURVE_SLIDER = makeSlider('velocityCurve', {
+  id: 'velocity-curve',
+  label: 'Velocity curve',
+  display: (value) => {
+    if (value < -0.3) return 'Soft';
+    if (value > 0.3) return 'Hard';
+    return 'Linear';
+  },
+  helpText: 'How strongly key velocity shapes loudness.'
+});
+
+const LFO1_RATE_SLIDER = makeSlider('lfoRate', {
+  id: 'lfo1-rate',
+  label: 'LFO 1 rate',
+  display: (value) => (value <= 0 ? 'Off' : `${value.toFixed(1)} Hz`)
+});
+
+const LFO2_RATE_SLIDER = makeSlider('lfo2Rate', {
+  id: 'lfo2-rate',
+  label: 'LFO 2 rate',
+  display: (value) => (value <= 0 ? 'Off' : `${value.toFixed(1)} Hz`)
+});
+
+const MOD_ENV_SLIDERS = [
+  makeSlider('modAttack', {
+    id: 'mod-attack',
+    label: 'Mod attack',
+    display: (value) => `${value.toFixed(2)} s`
+  }),
+  makeSlider('modDecay', {
+    id: 'mod-decay',
+    label: 'Mod decay',
+    display: (value) => `${value.toFixed(2)} s`
+  }),
+  makePercentSlider('modSustain', {
+    id: 'mod-sustain',
+    label: 'Mod sustain'
+  }),
+  makeSlider('modRelease', {
+    id: 'mod-release',
+    label: 'Mod release',
+    display: (value) => `${value.toFixed(2)} s`
+  })
+];
+
+const ModMatrixEditor = ({ routes, onChange }) => {
+  const addRoute = () => {
+    if (routes.length >= MAX_MOD_ROUTES) return;
+    onChange([...routes, { src: 0, dst: 1, depth: 0.25 }]);
+  };
+  const updateRoute = (index, patch) => {
+    onChange(routes.map((route, i) => (i === index ? { ...route, ...patch } : route)));
+  };
+  const removeRoute = (index) => {
+    onChange(routes.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="mod-matrix" role="group" aria-label="Modulation matrix">
+      {routes.length === 0 && (
+        <p className="slider-description">
+          Route LFOs, envelopes, velocity, key tracking, or the mod wheel to
+          pitch, filter, amplitude, FM, or detune.
+        </p>
+      )}
+      {routes.map((route, index) => (
+        <div className="mod-route-row" key={index}>
+          <select
+            className="control-select mod-route-select"
+            aria-label={`Route ${index + 1} source`}
+            value={route.src}
+            onChange={(e) => updateRoute(index, { src: Number(e.target.value) })}
+          >
+            {MOD_SOURCE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <span className="mod-route-arrow" aria-hidden="true">→</span>
+          <select
+            className="control-select mod-route-select"
+            aria-label={`Route ${index + 1} destination`}
+            value={route.dst}
+            onChange={(e) => updateRoute(index, { dst: Number(e.target.value) })}
+          >
+            {MOD_DEST_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <ValueSlider
+            className="mod-route-depth"
+            ariaLabel={`Route ${index + 1} depth`}
+            min={-1}
+            max={1}
+            step={0.05}
+            value={route.depth}
+            defaultValue={0}
+            formatValue={(v) => `${Math.round(v * 100)}%`}
+            onChange={(value) => updateRoute(index, { depth: value })}
+          />
+          <span className="slider-value mod-route-depth-value">
+            {`${Math.round(route.depth * 100)}%`}
+          </span>
+          <button
+            type="button"
+            className="button-icon mod-route-remove"
+            aria-label={`Remove route ${index + 1}`}
+            onClick={() => removeRoute(index)}
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+      ))}
+      <div className="section-footer-actions">
+        <button
+          type="button"
+          className="button-link"
+          onClick={addRoute}
+          disabled={routes.length >= MAX_MOD_ROUTES}
+        >
+          {routes.length >= MAX_MOD_ROUTES ? 'Route limit reached' : '+ Add route'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const UNISON_SLIDERS = [
   makeSlider('unisonVoices', {
     id: 'unison-voices',
@@ -291,40 +429,33 @@ const SliderControl = ({
   step,
   onChange,
   helpText,
+  defaultValue,
   headerAccessory = null
-}) => {
-  const numericMin = typeof min === 'number' ? min : Number(min ?? 0);
-  const numericMax = typeof max === 'number' ? max : Number(max ?? 1);
-  const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
-  const safeRange = numericMax - numericMin === 0 ? 1 : numericMax - numericMin;
-  const progress = Math.min(Math.max((numericValue - numericMin) / safeRange, 0), 1);
-  const sliderProgressStyle = { '--slider-progress': `${(progress * 100).toFixed(2)}%` };
-
-  return (
-    <div className="slider-group">
-      <div className="label-stack">
-        <label htmlFor={id}>{label}</label>
-        <div className="label-stack__meta">
-          {headerAccessory}
-          {displayValue ? <span className="slider-value">{displayValue}</span> : null}
-        </div>
-      </div>
-      {helpText && <p className="slider-description">{helpText}</p>}
-      <div className="slider-input-wrapper" style={sliderProgressStyle}>
-        <input
-          id={id}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={(e) => onChange(parseFloat(e.target.value))}
-          style={sliderProgressStyle}
-        />
+}) => (
+  <div className="slider-group">
+    <div className="label-stack">
+      <label id={`${id}-label`} htmlFor={id}>{label}</label>
+      <div className="label-stack__meta">
+        {headerAccessory}
+        {displayValue ? <span className="slider-value">{displayValue}</span> : null}
       </div>
     </div>
-  );
-};
+    {helpText && <p className="slider-description">{helpText}</p>}
+    <div className="slider-input-wrapper">
+      <ValueSlider
+        id={id}
+        ariaLabelledBy={`${id}-label`}
+        min={typeof min === 'number' ? min : Number(min ?? 0)}
+        max={typeof max === 'number' ? max : Number(max ?? 1)}
+        step={typeof step === 'number' ? step : Number(step ?? 0.01)}
+        value={typeof value === 'number' ? value : Number(value ?? 0)}
+        defaultValue={defaultValue}
+        formatValue={() => (typeof displayValue === 'string' ? displayValue : `${value}`)}
+        onChange={onChange}
+      />
+    </div>
+  </div>
+);
 
 const SelectControl = ({
   id,
@@ -543,6 +674,7 @@ const AudioControls = ({
 
   const renderSlider = (slider) => {
     const paramValue = getParam(slider.param);
+    const paramDefault = AUDIO_PARAM_DEFAULTS[slider.param];
     return (
       <SliderControl
         key={slider.id}
@@ -553,6 +685,7 @@ const AudioControls = ({
         min={slider.min}
         max={slider.max}
         step={slider.step}
+        defaultValue={typeof paramDefault === 'number' ? slider.toSlider(paramDefault) : undefined}
         onChange={(value) => onParamChange(slider.param, slider.fromSlider(value))}
         helpText={slider.helpText}
       />
@@ -857,6 +990,46 @@ const AudioControls = ({
           <div className="slider-grid">
             {UNISON_SLIDERS.map(renderSlider)}
           </div>
+
+          <div className="slider-grid">
+            {renderSlider(GLIDE_SLIDER)}
+            {renderSlider(VELOCITY_CURVE_SLIDER)}
+          </div>
+
+          <h4 className="controls-subheading">Mod matrix</h4>
+          <div className="slider-grid">
+            <SelectControl
+              id="lfo1-shape"
+              label="LFO 1 shape"
+              value={String(getParam('lfo1Shape'))}
+              options={LFO_SHAPE_OPTIONS.map((option) => ({
+                ...option,
+                value: String(option.value)
+              }))}
+              onChange={(value) => onParamChange('lfo1Shape', Number(value))}
+            />
+            {renderSlider(LFO1_RATE_SLIDER)}
+            <SelectControl
+              id="lfo2-shape"
+              label="LFO 2 shape"
+              value={String(getParam('lfo2Shape'))}
+              options={LFO_SHAPE_OPTIONS.map((option) => ({
+                ...option,
+                value: String(option.value)
+              }))}
+              onChange={(value) => onParamChange('lfo2Shape', Number(value))}
+            />
+            {renderSlider(LFO2_RATE_SLIDER)}
+          </div>
+
+          <div className="slider-grid">
+            {MOD_ENV_SLIDERS.map(renderSlider)}
+          </div>
+
+          <ModMatrixEditor
+            routes={Array.isArray(audioParams?.modRoutes) ? audioParams.modRoutes : []}
+            onChange={(routes) => onParamChange('modRoutes', routes)}
+          />
         </div>
       </CollapsibleSection>
     </div>

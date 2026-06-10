@@ -1,4 +1,5 @@
 import React from 'react';
+import ValueSlider from '../controls/ValueSlider.jsx';
 
 /**
  * MIDI playback controls component
@@ -106,14 +107,16 @@ const MidiPlayer = ({
           <span>Tempo</span>
           <span className="midi-player__tempo-value">{tempoFactor.toFixed(2)}×</span>
         </label>
-        <input
-          type="range"
+        <ValueSlider
           className="midi-player__tempo-slider"
-          min="0.25"
-          max="2"
-          step="0.05"
+          ariaLabel="Playback tempo"
+          min={0.25}
+          max={2}
+          step={0.05}
           value={tempoFactor}
-          onChange={(e) => onTempoChange?.(parseFloat(e.target.value))}
+          defaultValue={1}
+          formatValue={(v) => `${v.toFixed(2)}x`}
+          onChange={(value) => onTempoChange?.(value)}
         />
       </div>
     </div>

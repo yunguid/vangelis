@@ -1,6 +1,7 @@
 import React from 'react';
 import UIOverlay from '../UIOverlay.jsx';
 import AudioControls from '../AudioControls.jsx';
+import PresetShelf from '../PresetShelf.jsx';
 
 const SoundTab = ({
   currentWaveform,
@@ -18,6 +19,14 @@ const SoundTab = ({
         currentWaveform={currentWaveform}
         onWaveformChange={onWaveformChange}
         compact
+      />
+      <PresetShelf
+        waveformType={currentWaveform}
+        audioParams={audioParams}
+        onApply={(preset) => {
+          if (preset.waveformType) onWaveformChange?.(preset.waveformType);
+          if (preset.audioParams) onParamsChange?.(preset.audioParams);
+        }}
       />
       <AudioControls
         audioParams={audioParams}

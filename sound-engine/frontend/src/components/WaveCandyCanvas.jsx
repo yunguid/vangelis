@@ -2,6 +2,17 @@ import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { clamp } from '../utils/math.js';
 
+// Perceptual visualizer suite (Canvas 2D):
+// - Spectrum: log-frequency, dB scale with noise floor, attack/release ballistics
+// - Spectrogram: log-frequency rows, scrolling
+// - Oscilloscope: zero-crossing triggered to stabilize the trace
+// - Goniometer: mid/side rotated with phosphor persistence
+// - Meter: short-term loudness (400ms RMS, LUFS-style) + peak hold
+
+const MIN_FREQ = 20;
+const MAX_FREQ = 18000;
+const FLOOR_DB = -70;
+
 const createFloatBuffer = (length) => new Float32Array(length);
 const createByteBuffer = (length) => new Uint8Array(length);
 
@@ -17,8 +28,11 @@ const syncCanvas = (canvas, ctx, sizeRef) => {
     sizeRef.width = width;
     sizeRef.height = height;
     sizeRef.dpr = dpr;
+    sizeRef.resized = true;
+  } else {
+    sizeRef.resized = false;
   }
-  return { width, height };
+  return { width, height, resized: sizeRef.resized };
 };
 
 const readTimeDomain = (analyser, floatBuffer, byteBuffer) => {
@@ -33,21 +47,134 @@ const readTimeDomain = (analyser, floatBuffer, byteBuffer) => {
   return floatBuffer;
 };
 
-const drawSpectrogram = (ctx, canvas, freqData, width, height) => {
-  ctx.drawImage(canvas, -1, 0);
-  const columnX = width - 1;
-  const maxIndex = freqData.length - 1;
+// AnalyserNode byte data maps linearly from minDecibels..maxDecibels.
+const byteToDb = (value, minDb, maxDb) => minDb + (value / 255) * (maxDb - minDb);
 
+// Normalized position 0..1 -> frequency on a log scale
+const positionToFreq = (t) => MIN_FREQ * Math.pow(MAX_FREQ / MIN_FREQ, t);
+
+// Peak-preserving log-frequency resampling of FFT byte data into `out`
+// (values in dB), with per-cell attack/release smoothing into `smoothed`.
+const sampleLogSpectrum = ({
+  freqData,
+  sampleRate,
+  fftSize,
+  minDb,
+  maxDb,
+  out,
+  smoothed
+}) => {
+  const cells = out.length;
+  const hzPerBin = sampleRate / fftSize;
+  for (let i = 0; i < cells; i++) {
+    const f0 = positionToFreq(i / cells);
+    const f1 = positionToFreq((i + 1) / cells);
+    let lo = Math.floor(f0 / hzPerBin);
+    let hi = Math.ceil(f1 / hzPerBin);
+    lo = clamp(lo, 0, freqData.length - 1);
+    hi = clamp(hi, lo + 1, freqData.length);
+    let peak = 0;
+    for (let b = lo; b < hi; b++) {
+      if (freqData[b] > peak) peak = freqData[b];
+    }
+    const db = byteToDb(peak, minDb, maxDb);
+    out[i] = db;
+    // Ballistics: fast attack, slower release (per ~33ms frame)
+    const prev = smoothed[i];
+    const k = db > prev ? 0.55 : 0.14;
+    smoothed[i] = prev + (db - prev) * k;
+  }
+};
+
+const dbToUnit = (db) => clamp((db - FLOOR_DB) / (0 - FLOOR_DB), 0, 1);
+
+const drawSpectrum = (ctx, smoothedDb, width, height) => {
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
+  ctx.fillRect(0, 0, width, height);
+
+  // Octave grid (100Hz, 1kHz, 10kHz) + dB lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (const f of [100, 1000, 10000]) {
+    const x = (Math.log(f / MIN_FREQ) / Math.log(MAX_FREQ / MIN_FREQ)) * width;
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+  }
+  for (const db of [-60, -40, -20]) {
+    const y = height - dbToUnit(db) * height;
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+  }
+  ctx.stroke();
+
+  const cells = smoothedDb.length;
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  for (let i = 0; i < cells; i++) {
+    const x = (i / (cells - 1)) * width;
+    const y = height - dbToUnit(smoothedDb[i]) * height;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(width, height);
+  ctx.closePath();
+  const fill = ctx.createLinearGradient(0, 0, 0, height);
+  fill.addColorStop(0, 'rgba(140, 220, 255, 0.34)');
+  fill.addColorStop(1, 'rgba(140, 220, 255, 0.04)');
+  ctx.fillStyle = fill;
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(140, 220, 255, 0.9)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  for (let i = 0; i < cells; i++) {
+    const x = (i / (cells - 1)) * width;
+    const y = height - dbToUnit(smoothedDb[i]) * height;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+};
+
+const spectroColor = (unit) => {
+  // Dark charcoal -> ember -> amber -> near-white ramp
+  const hue = 30 - unit * 14;
+  const sat = 60 + unit * 30;
+  const light = 6 + unit * 66;
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
+};
+
+const drawSpectrogram = (ctx, canvas, smoothedDb, width, height, resized, dpr) => {
+  if (resized) {
+    ctx.fillStyle = 'rgb(8, 8, 8)';
+    ctx.fillRect(0, 0, width, height);
+  }
+  // Scroll left by exactly 1 CSS pixel: blit the canvas onto itself in
+  // device-pixel space (identity transform) to avoid DPR rescaling smear.
+  const shift = Math.max(1, Math.round(dpr));
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(canvas, -shift, 0);
+  ctx.restore();
+  const columnX = width - 1;
+  const cells = smoothedDb.length;
   for (let y = 0; y < height; y++) {
-    const ratio = y / height;
-    const curved = ratio * ratio;
-    const index = Math.floor(curved * maxIndex);
-    const value = freqData[index] / 255;
-    const hue = 260 - value * 220;
-    const light = 12 + value * 58;
-    ctx.fillStyle = `hsl(${hue}, 88%, ${light}%)`;
+    const t = y / height; // 0 bottom (low freq) after flip below
+    const cell = Math.min(cells - 1, Math.floor(t * cells));
+    const unit = dbToUnit(smoothedDb[cell]);
+    ctx.fillStyle = spectroColor(unit);
     ctx.fillRect(columnX, height - 1 - y, 1, 1);
   }
+};
+
+// Find a rising zero-crossing in the first half to trigger the scope on.
+const findTrigger = (data) => {
+  const half = data.length >> 1;
+  for (let i = 1; i < half; i++) {
+    if (data[i - 1] < 0 && data[i] >= 0) return i;
+  }
+  return 0;
 };
 
 const drawWaveform = (ctx, data, width, height) => {
@@ -55,116 +182,116 @@ const drawWaveform = (ctx, data, width, height) => {
   ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
   ctx.fillRect(0, 0, width, height);
 
-  ctx.strokeStyle = 'rgba(252, 214, 142, 0.9)';
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  const mid = height / 2;
-  for (let i = 0; i < data.length; i++) {
-    const x = (i / (data.length - 1)) * width;
-    const y = mid - data[i] * mid * 0.85;
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  }
-  ctx.stroke();
-
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
   ctx.lineWidth = 1;
   ctx.beginPath();
+  const mid = height / 2;
   ctx.moveTo(0, mid);
   ctx.lineTo(width, mid);
   ctx.stroke();
-};
 
-const drawSpectrum = (ctx, freqData, width, height) => {
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.strokeStyle = 'rgba(140, 220, 255, 0.9)';
-  ctx.lineWidth = 1.4;
+  const start = findTrigger(data);
+  const span = data.length - start;
+  ctx.strokeStyle = 'rgba(252, 214, 142, 0.9)';
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
-  const binCount = freqData.length;
-  for (let i = 0; i < binCount; i++) {
-    const value = freqData[i] / 255;
-    const x = (i / (binCount - 1)) * width;
-    const y = height - value * height * 0.9;
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
+  for (let i = 0; i < span; i++) {
+    const x = (i / (span - 1)) * width;
+    const y = mid - data[start + i] * mid * 0.85;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
   }
   ctx.stroke();
 };
 
-const drawGoniometer = (ctx, left, right, width, height) => {
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
+const drawGoniometer = (ctx, left, right, width, height, resized) => {
+  if (resized) {
+    ctx.fillStyle = 'rgb(6, 10, 16)';
+    ctx.fillRect(0, 0, width, height);
+  }
+  // Phosphor persistence: fade the previous frame instead of clearing
+  ctx.fillStyle = 'rgba(6, 10, 16, 0.22)';
   ctx.fillRect(0, 0, width, height);
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(width / 2, 0);
   ctx.lineTo(width / 2, height);
   ctx.moveTo(0, height / 2);
   ctx.lineTo(width, height / 2);
+  // 45-degree L/R axes
+  ctx.moveTo(0, height);
+  ctx.lineTo(width, 0);
+  ctx.moveTo(0, 0);
+  ctx.lineTo(width, height);
   ctx.stroke();
 
-  ctx.strokeStyle = 'rgba(255, 128, 92, 0.8)';
+  const cx = width / 2;
+  const cy = height / 2;
+  const scale = Math.min(width, height) * 0.62;
+  const len = Math.min(left.length, right.length);
+  const prevOp = ctx.globalCompositeOperation;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = 'rgba(255, 128, 92, 0.5)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  const len = Math.min(left.length, right.length);
+  const INV_SQRT2 = Math.SQRT1_2;
   for (let i = 0; i < len; i += 2) {
-    const x = (left[i] * 0.45 + 0.5) * width;
-    const y = (right[i] * -0.45 + 0.5) * height;
-    if (i === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
+    // Rotate 45 degrees: x = side, y = mid (up = in-phase)
+    const side = (left[i] - right[i]) * INV_SQRT2;
+    const m = (left[i] + right[i]) * INV_SQRT2;
+    const x = cx + side * scale;
+    const y = cy - m * scale;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
   }
   ctx.stroke();
+  ctx.globalCompositeOperation = prevOp;
 };
 
-const drawMeter = (ctx, left, right, width, height) => {
+const drawMeter = (ctx, state, width, height) => {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
   ctx.fillRect(0, 0, width, height);
 
-  let sum = 0;
-  let peak = 0;
-  const len = Math.min(left.length, right.length);
-  for (let i = 0; i < len; i += 2) {
-    const sample = (left[i] + right[i]) * 0.5;
-    const abs = Math.abs(sample);
-    sum += sample * sample;
-    if (abs > peak) peak = abs;
+  // dB ticks
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  ctx.font = '9px "TX-02-Regular", ui-sans-serif';
+  ctx.lineWidth = 1;
+  for (const db of [0, -12, -24, -36, -48]) {
+    const y = height - clamp((db + 60) / 60, 0, 1) * height;
+    ctx.beginPath();
+    ctx.moveTo(width * 0.16, y);
+    ctx.lineTo(width * 0.84, y);
+    ctx.stroke();
+    ctx.fillText(`${db}`, 2, y + 3);
   }
-  const rms = Math.sqrt(sum / Math.max(1, len));
-  const rmsDb = 20 * Math.log10(rms + 1e-6);
-  const peakDb = 20 * Math.log10(peak + 1e-6);
 
-  const rmsHeight = clamp((rmsDb + 60) / 60, 0, 1) * height;
-  const peakHeight = clamp((peakDb + 60) / 60, 0, 1) * height;
+  const stHeight = clamp((state.shortTermDb + 60) / 60, 0, 1) * height;
+  const grad = ctx.createLinearGradient(0, height, 0, 0);
+  grad.addColorStop(0, 'rgba(142, 192, 124, 0.85)');
+  grad.addColorStop(0.7, 'rgba(250, 189, 47, 0.85)');
+  grad.addColorStop(1, 'rgba(251, 73, 52, 0.9)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(width * 0.3, height - stHeight, width * 0.4, stHeight);
 
-  ctx.fillStyle = 'rgba(255, 126, 90, 0.85)';
-  ctx.fillRect(width * 0.25, height - rmsHeight, width * 0.5, rmsHeight);
-
+  // Peak hold line
+  const peakHeight = clamp((state.peakHoldDb + 60) / 60, 0, 1) * height;
   ctx.strokeStyle = 'rgba(255, 245, 210, 0.9)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(width * 0.2, height - peakHeight);
-  ctx.lineTo(width * 0.8, height - peakHeight);
+  ctx.moveTo(width * 0.22, height - peakHeight);
+  ctx.lineTo(width * 0.78, height - peakHeight);
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
   ctx.font = '10px "TX-02-Regular", ui-sans-serif';
-  ctx.fillText(`${rmsDb.toFixed(1)} dB`, 4, 12);
+  ctx.fillText(`${state.shortTermDb.toFixed(1)}`, 4, 12);
 };
+
+const SPECTRUM_CELLS = 96;
 
 const WaveCandyCanvas = () => {
   const spectrogramRef = useRef(null);
@@ -188,7 +315,17 @@ const WaveCandyCanvas = () => {
     left: null,
     leftByte: null,
     right: null,
-    rightByte: null
+    rightByte: null,
+    specDb: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
+    specSmoothed: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB)
+  });
+
+  // Loudness state: 400ms exponentially-weighted mean square + peak hold
+  const meterStateRef = useRef({
+    meanSquare: 0,
+    shortTermDb: -60,
+    peakHoldDb: -60,
+    peakHeldAt: 0
   });
 
   useEffect(() => {
@@ -201,6 +338,7 @@ const WaveCandyCanvas = () => {
     const render = (time) => {
       rafId = requestAnimationFrame(render);
       if (time - lastFrame < 33) return;
+      const frameDt = Math.min(0.2, (time - lastFrame) / 1000) || 0.033;
       lastFrame = time;
 
       const nodes = audioEngine.getAnalysisNodes();
@@ -210,33 +348,67 @@ const WaveCandyCanvas = () => {
       const leftAnalyser = nodes.leftAnalyser || analyser;
       const rightAnalyser = nodes.rightAnalyser || analyser;
 
-      if (!buffersRef.current.freq || buffersRef.current.freq.length !== analyser.frequencyBinCount) {
-        buffersRef.current.freq = createByteBuffer(analyser.frequencyBinCount);
+      const buffers = buffersRef.current;
+      if (!buffers.freq || buffers.freq.length !== analyser.frequencyBinCount) {
+        buffers.freq = createByteBuffer(analyser.frequencyBinCount);
       }
-      if (!buffersRef.current.time || buffersRef.current.time.length !== analyser.fftSize) {
-        buffersRef.current.time = createFloatBuffer(analyser.fftSize);
-        buffersRef.current.timeByte = createByteBuffer(analyser.fftSize);
+      if (!buffers.time || buffers.time.length !== analyser.fftSize) {
+        buffers.time = createFloatBuffer(analyser.fftSize);
+        buffers.timeByte = createByteBuffer(analyser.fftSize);
       }
-      if (!buffersRef.current.left || buffersRef.current.left.length !== leftAnalyser.fftSize) {
-        buffersRef.current.left = createFloatBuffer(leftAnalyser.fftSize);
-        buffersRef.current.leftByte = createByteBuffer(leftAnalyser.fftSize);
+      if (!buffers.left || buffers.left.length !== leftAnalyser.fftSize) {
+        buffers.left = createFloatBuffer(leftAnalyser.fftSize);
+        buffers.leftByte = createByteBuffer(leftAnalyser.fftSize);
       }
-      if (!buffersRef.current.right || buffersRef.current.right.length !== rightAnalyser.fftSize) {
-        buffersRef.current.right = createFloatBuffer(rightAnalyser.fftSize);
-        buffersRef.current.rightByte = createByteBuffer(rightAnalyser.fftSize);
+      if (!buffers.right || buffers.right.length !== rightAnalyser.fftSize) {
+        buffers.right = createFloatBuffer(rightAnalyser.fftSize);
+        buffers.rightByte = createByteBuffer(rightAnalyser.fftSize);
       }
 
-      analyser.getByteFrequencyData(buffersRef.current.freq);
-      const timeData = readTimeDomain(analyser, buffersRef.current.time, buffersRef.current.timeByte);
-      const leftData = readTimeDomain(leftAnalyser, buffersRef.current.left, buffersRef.current.leftByte);
-      const rightData = readTimeDomain(rightAnalyser, buffersRef.current.right, buffersRef.current.rightByte);
+      analyser.getByteFrequencyData(buffers.freq);
+      const timeData = readTimeDomain(analyser, buffers.time, buffers.timeByte);
+      const leftData = readTimeDomain(leftAnalyser, buffers.left, buffers.leftByte);
+      const rightData = readTimeDomain(rightAnalyser, buffers.right, buffers.rightByte);
+
+      sampleLogSpectrum({
+        freqData: buffers.freq,
+        sampleRate: audioEngine.context?.sampleRate || 48000,
+        fftSize: analyser.fftSize,
+        minDb: analyser.minDecibels,
+        maxDb: analyser.maxDecibels,
+        out: buffers.specDb,
+        smoothed: buffers.specSmoothed
+      });
+
+      // Loudness: stereo mean square smoothed over ~400ms, peak with 1.5s hold
+      const meter = meterStateRef.current;
+      let sum = 0;
+      let peak = 0;
+      const len = Math.min(leftData.length, rightData.length);
+      for (let i = 0; i < len; i++) {
+        const l = leftData[i];
+        const r = rightData[i];
+        sum += (l * l + r * r) * 0.5;
+        const a = Math.max(Math.abs(l), Math.abs(r));
+        if (a > peak) peak = a;
+      }
+      const frameMs = sum / Math.max(1, len);
+      const k = 1 - Math.exp(-frameDt / 0.4);
+      meter.meanSquare += (frameMs - meter.meanSquare) * k;
+      meter.shortTermDb = 10 * Math.log10(meter.meanSquare + 1e-9);
+      const peakDb = 20 * Math.log10(peak + 1e-6);
+      if (peakDb >= meter.peakHoldDb) {
+        meter.peakHoldDb = peakDb;
+        meter.peakHeldAt = time;
+      } else if (time - meter.peakHeldAt > 1500) {
+        meter.peakHoldDb -= 12 * frameDt; // 12 dB/s decay after hold
+      }
 
       const spectrogramCanvas = spectrogramRef.current;
       const scopeCanvas = scopeRef.current;
       const spectrumCanvas = spectrumRef.current;
       const goniometerCanvas = goniometerRef.current;
       const meterCanvas = meterRef.current;
-
       if (!spectrogramCanvas || !scopeCanvas || !spectrumCanvas || !goniometerCanvas || !meterCanvas) {
         return;
       }
@@ -253,11 +425,11 @@ const WaveCandyCanvas = () => {
       const goniometerSize = syncCanvas(goniometerCanvas, goniometerCtx, sizesRef.current.goniometer);
       const meterSize = syncCanvas(meterCanvas, meterCtx, sizesRef.current.meter);
 
-      drawSpectrogram(spectroCtx, spectrogramCanvas, buffersRef.current.freq, spectroSize.width, spectroSize.height);
+      drawSpectrogram(spectroCtx, spectrogramCanvas, buffers.specSmoothed, spectroSize.width, spectroSize.height, spectroSize.resized, sizesRef.current.spectrogram.dpr || 1);
       drawWaveform(scopeCtx, timeData, scopeSize.width, scopeSize.height);
-      drawSpectrum(spectrumCtx, buffersRef.current.freq, spectrumSize.width, spectrumSize.height);
-      drawGoniometer(goniometerCtx, leftData, rightData, goniometerSize.width, goniometerSize.height);
-      drawMeter(meterCtx, leftData, rightData, meterSize.width, meterSize.height);
+      drawSpectrum(spectrumCtx, buffers.specSmoothed, spectrumSize.width, spectrumSize.height);
+      drawGoniometer(goniometerCtx, leftData, rightData, goniometerSize.width, goniometerSize.height, goniometerSize.resized);
+      drawMeter(meterCtx, meterStateRef.current, meterSize.width, meterSize.height);
     };
 
     rafId = requestAnimationFrame(render);
@@ -278,11 +450,11 @@ const WaveCandyCanvas = () => {
           <canvas ref={scopeRef} className="candy-canvas" />
         </div>
         <div className="candy-tile candy-meter">
-          <span className="candy-label">Level</span>
+          <span className="candy-label">Loudness</span>
           <canvas ref={meterRef} className="candy-canvas" />
         </div>
         <div className="candy-tile">
-          <span className="candy-label">Vectorscope</span>
+          <span className="candy-label">Goniometer</span>
           <canvas ref={goniometerRef} className="candy-canvas" />
         </div>
         <div className="candy-tile">

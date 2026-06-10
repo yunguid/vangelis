@@ -14,6 +14,12 @@ import {
   upgradeLegacyAudioParams
 } from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
+import { useWebMidiInput } from './hooks/useWebMidiInput.js';
+import {
+  MidiTransportContext,
+  SoundControlsContext,
+  VoicePhraseContext
+} from './context/SynthContexts.jsx';
 import { parseMidiFile } from './utils/midiParser.js';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { fetchJson } from './utils/fetchJson.js';
@@ -160,6 +166,15 @@ const App = () => {
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
   const transportBpm = (midiPlayback.currentMidi?.bpm || 120) * midiPlayback.tempoFactor;
 
+  // Hardware MIDI input (notes + pitch bend + mod wheel)
+  const webMidi = useWebMidiInput({ waveformType, audioParams });
+  const externalActiveNotes = useMemo(() => {
+    if (webMidi.activeNotes.size === 0) return midiPlayback.activeNotes;
+    const merged = new Set(midiPlayback.activeNotes);
+    webMidi.activeNotes.forEach((noteId) => merged.add(noteId));
+    return merged;
+  }, [midiPlayback.activeNotes, webMidi.activeNotes]);
+
   const pushNotice = useCallback((message) => {
     setNotice(message);
     if (noticeTimeoutRef.current) {
@@ -184,6 +199,12 @@ const App = () => {
   useEffect(() => {
     audioEngine.setTransportTempo?.(transportBpm);
   }, [transportBpm]);
+
+  useEffect(() => {
+    if (webMidi.deviceName) {
+      pushNotice(`MIDI in: ${webMidi.deviceName}`);
+    }
+  }, [webMidi.deviceName, pushNotice]);
 
   useEffect(() => {
     const unsubscribe = audioEngine.subscribe(setEngineStatus);
@@ -570,6 +591,67 @@ const App = () => {
     }
   }, [voiceText]);
 
+  const soundControlsValue = useMemo(() => ({
+    waveformType,
+    onWaveformChange: setWaveformType,
+    audioParams,
+    onParamChange: handleAudioParamChange,
+    onParamsChange: handleAudioParamsChange,
+    transportBpm,
+    controlSections,
+    onControlSectionToggle: handleControlSectionToggle
+  }), [waveformType, audioParams, transportBpm, controlSections, handleControlSectionToggle]);
+
+  const midiTransportValue = useMemo(() => ({
+    isPlaying: midiPlayback.isPlaying,
+    isPaused: midiPlayback.isPaused,
+    progress: midiPlayback.progress,
+    currentMidi: midiPlayback.currentMidi,
+    tempoFactor: midiPlayback.tempoFactor,
+    onPlay: midiPlayback.play,
+    onPause: midiPlayback.pause,
+    onResume: midiPlayback.resume,
+    onStop: midiPlayback.stop,
+    onTempoChange: midiPlayback.setTempo
+  }), [
+    midiPlayback.isPlaying,
+    midiPlayback.isPaused,
+    midiPlayback.progress,
+    midiPlayback.currentMidi,
+    midiPlayback.tempoFactor,
+    midiPlayback.play,
+    midiPlayback.pause,
+    midiPlayback.resume,
+    midiPlayback.stop,
+    midiPlayback.setTempo
+  ]);
+
+  const voicePhraseValue = useMemo(() => ({
+    voiceText,
+    voicePreviewChunks,
+    voiceStatus,
+    voicePreparing,
+    voiceGenerating,
+    voiceError,
+    onVoiceTextChange: handleVoiceTextChange,
+    onVoicePresetSelect: handleVoicePresetSelect,
+    onVoiceRandomize: handleVoiceRandomize,
+    onVoiceToggle: handleVoiceToggle,
+    onVoiceClear: handleVoiceClear
+  }), [
+    voiceText,
+    voicePreviewChunks,
+    voiceStatus,
+    voicePreparing,
+    voiceGenerating,
+    voiceError,
+    handleVoiceTextChange,
+    handleVoicePresetSelect,
+    handleVoiceRandomize,
+    handleVoiceToggle,
+    handleVoiceClear
+  ]);
+
   const keyboardLabel = voiceStatus.enabled
     ? `Voice: ${voiceStatus.lastChunk?.label || voicePreviewChunks[voiceStatus.nextIndex]?.label || voicePreviewChunks[0]?.label || 'armed'}`
     : sampleInfo
@@ -617,7 +699,7 @@ const App = () => {
                   waveformType={waveformType}
                   audioParams={audioParams}
                   wasmLoaded={wasmLoaded}
-                  externalActiveNotes={midiPlayback.activeNotes}
+                  externalActiveNotes={externalActiveNotes}
                 />
                 {!isGraphWarm && (
                   <div className="warmup-indicator" aria-live="polite">
@@ -684,44 +766,21 @@ const App = () => {
 
         </div>
 
-        <Sidebar
-          isOpen={sidebarOpen}
-          onOpen={() => setSidebarOpen(true)}
-          onClose={() => setSidebarOpen(false)}
-          activeTab={sidebarTab}
-          onTabChange={setSidebarTab}
-          isPlaying={midiPlayback.isPlaying}
-          isPaused={midiPlayback.isPaused}
-          progress={midiPlayback.progress}
-          currentMidi={midiPlayback.currentMidi}
-          tempoFactor={midiPlayback.tempoFactor}
-          onPlay={midiPlayback.play}
-          onPause={midiPlayback.pause}
-          onResume={midiPlayback.resume}
-          onStop={midiPlayback.stop}
-          onTempoChange={midiPlayback.setTempo}
-          onSampleSelect={handleSampleSelect}
-          activeSampleId={activeSampleId}
-          voiceText={voiceText}
-          voicePreviewChunks={voicePreviewChunks}
-          voiceStatus={voiceStatus}
-          voicePreparing={voicePreparing}
-          voiceGenerating={voiceGenerating}
-          voiceError={voiceError}
-          onVoiceTextChange={handleVoiceTextChange}
-          onVoicePresetSelect={handleVoicePresetSelect}
-          onVoiceRandomize={handleVoiceRandomize}
-          onVoiceToggle={handleVoiceToggle}
-          onVoiceClear={handleVoiceClear}
-          waveformType={waveformType}
-          onWaveformChange={setWaveformType}
-          audioParams={audioParams}
-          onParamChange={handleAudioParamChange}
-          onParamsChange={handleAudioParamsChange}
-          transportBpm={transportBpm}
-          controlSections={controlSections}
-          onControlSectionToggle={handleControlSectionToggle}
-        />
+        <SoundControlsContext.Provider value={soundControlsValue}>
+          <MidiTransportContext.Provider value={midiTransportValue}>
+            <VoicePhraseContext.Provider value={voicePhraseValue}>
+              <Sidebar
+                isOpen={sidebarOpen}
+                onOpen={() => setSidebarOpen(true)}
+                onClose={() => setSidebarOpen(false)}
+                activeTab={sidebarTab}
+                onTabChange={setSidebarTab}
+                onSampleSelect={handleSampleSelect}
+                activeSampleId={activeSampleId}
+              />
+            </VoicePhraseContext.Provider>
+          </MidiTransportContext.Provider>
+        </SoundControlsContext.Provider>
 
       </div>
     </ErrorBoundary>

@@ -14,8 +14,12 @@ Vangelis is an expressive, playable web synthesizer that feels responsive and mu
 ## Architecture
 
 ### Sound Engine (`/sound-engine`)
-- **Rust/WASM** (`audio-engine/`) - High-performance waveform generation with PolyBLEP anti-aliasing
 - **Frontend** (`frontend/`) - React app with Web Audio API integration
+- **DSP core** - Pure-JS AudioWorklet processors in `frontend/src/audio/` (synth, delay,
+  reverb, recorder) running on the audio thread. There is no Rust/WASM in the audio path;
+  a worst-case polyphonic benchmark (`frontend/scripts/bench_synth_worklet.mjs`) showed
+  ample realtime headroom in plain JS (numbers in the PROGRESS.md decision record), so
+  the DSP stays in hot-reloadable JS.
 
 ### Audio Pipeline
 ```
@@ -44,12 +48,14 @@ frontend/src/
 ├── style.css                  # Global styles
 │
 ├── components/
-│   ├── AudioControls.jsx      # ADSR, effects, and filter controls
+│   ├── AudioControls.jsx      # ADSR, effects, filter, and mod-matrix controls
 │   ├── ErrorBoundary.jsx      # React error boundary
-│   ├── PresetManager.jsx      # Save/load synth presets
-│   ├── Scene.jsx              # 3D background (Three.js)
+│   ├── PresetShelf.jsx        # Factory + localStorage preset save/load
+│   ├── Scene.jsx              # Audio-reactive WebGL2 shader background
 │   ├── UIOverlay.jsx          # Waveform selector overlay
-│   ├── WaveCandy*.jsx         # Audio visualizers
+│   ├── WaveCandy*.jsx         # Perceptual visualizer suite (Canvas 2D)
+│   ├── controls/
+│   │   └── ValueSlider.jsx    # Accessible slider primitive (ARIA, drag, keys, wheel)
 │   │
 │   ├── Sidebar/               # Collapsible sidebar panel
 │   │   ├── index.jsx          # Sidebar container with icon rail
@@ -63,8 +69,12 @@ frontend/src/
 │       ├── components/Key.jsx # Individual key component
 │       └── hooks/             # Keyboard-specific hooks
 │
+├── context/
+│   └── SynthContexts.jsx      # SoundControls / MidiTransport / VoicePhrase contexts
+│
 ├── hooks/
-│   └── useMidiPlayback.js     # MIDI scheduling and playback engine
+│   ├── useMidiPlayback.js     # MIDI scheduling and playback engine
+│   └── useWebMidiInput.js     # Hardware MIDI in (notes, pitch bend, mod wheel)
 │
 ├── utils/
 │   ├── math.js                # Shared math utilities (clamp, MIDI helpers)
@@ -78,20 +88,25 @@ frontend/src/
 │       ├── samplePool.js      # Voice pool for sample playback
 │       └── recorder.js        # Recording and WAV export
 │
-├── audio/
-│   └── synth-worklet.js       # AudioWorklet processor (synthesis core)
-│
-└── wasm/                      # Compiled Rust WASM modules
+└── audio/
+    ├── synth-worklet.js       # AudioWorklet processor (synthesis core)
+    ├── delay-worklet.js       # Tempo-synced feedback delay
+    ├── reverb-worklet.js      # Algorithmic reverb
+    └── recorder-worklet.js    # PCM capture for WAV export
 ```
 
 ## Key Features
 
 ### Real-time Synthesis
-- AudioWorklet-based polyphonic synth with PolyBLEP anti-aliasing for saw/square
+- AudioWorklet-based polyphonic synth with PolyBLEP (saw/square) and PolyBLAMP (triangle) anti-aliasing
 - FM synthesis with adjustable modulation index and ratio
-- ADSR envelopes for amplitude and filter
+- ADSR envelopes for amplitude, plus a dedicated modulation envelope
 - State-variable filter with resonance
-- LFO modulation (pitch, filter, amplitude)
+- Modulation matrix: 7 sources (2 multi-shape LFOs incl. S&H, amp env, mod env,
+  velocity, key track, mod wheel) → 5 destinations (pitch, cutoff, amp, FM index,
+  detune), up to 8 routes with bipolar depth
+- Glide/portamento, pitch bend and mod wheel messages, velocity curves
+- Web MIDI hardware input (notes, bend wheel, CC1)
 - Unison with configurable voice count and detune
 
 ### Custom Sample Mode
@@ -131,10 +146,10 @@ npm install
 npm run dev
 ```
 
-Build WASM module (optional, for Rust changes):
+Benchmark the synth worklet's DSP hot loop:
 ```bash
-cd sound-engine/audio-engine
-wasm-pack build --target web
+cd sound-engine/frontend
+node scripts/bench_synth_worklet.mjs
 ```
 
 ## Keyboard Controls

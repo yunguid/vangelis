@@ -3,11 +3,7 @@ set -e
 
 echo "🚀 Building Vangelis for GitHub Pages..."
 
-# Build WASM
-echo "📦 Building WASM module..."
-cd sound-engine/audio-engine
-wasm-pack build --target web --out-dir ../frontend/public/pkg
-cd ../..
+# The synth DSP runs in a pure-JS AudioWorklet — no WASM build step needed.
 
 # Build frontend
 echo "⚛️  Building React frontend..."

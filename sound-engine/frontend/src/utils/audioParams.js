@@ -186,7 +186,64 @@ export const AUDIO_PARAM_DEFAULTS = {
   lfoDepth: 0,
   lfoTarget: 0,
   unisonVoices: 1,
-  unisonDetune: 0
+  unisonDetune: 0,
+  // Modulation matrix
+  lfo1Shape: 0,
+  lfo2Shape: 0,
+  lfo2Rate: 0,
+  modAttack: 0.05,
+  modDecay: 0.3,
+  modSustain: 0.5,
+  modRelease: 0.4,
+  modRoutes: [],
+  // Playability
+  glideTime: 0,
+  velocityCurve: 0
+};
+
+export const MOD_SOURCE_OPTIONS = [
+  { value: 0, label: 'LFO 1' },
+  { value: 1, label: 'LFO 2' },
+  { value: 2, label: 'Amp Env' },
+  { value: 3, label: 'Mod Env' },
+  { value: 4, label: 'Velocity' },
+  { value: 5, label: 'Key Track' },
+  { value: 6, label: 'Mod Wheel' }
+];
+
+export const MOD_DEST_OPTIONS = [
+  { value: 0, label: 'Pitch', unit: '±12 st' },
+  { value: 1, label: 'Filter Cutoff', unit: '±4 oct' },
+  { value: 2, label: 'Amplitude', unit: '±100%' },
+  { value: 3, label: 'FM Index', unit: '±10 rad' },
+  { value: 4, label: 'Unison Detune', unit: '±50 ¢' }
+];
+
+export const LFO_SHAPE_OPTIONS = [
+  { value: 0, label: 'Sine' },
+  { value: 1, label: 'Triangle' },
+  { value: 2, label: 'Square' },
+  { value: 3, label: 'Saw Up' },
+  { value: 4, label: 'Saw Down' },
+  { value: 5, label: 'S&H' }
+];
+
+export const MAX_MOD_ROUTES = 8;
+
+export const sanitizeModRoutes = (routes) => {
+  if (!Array.isArray(routes)) return [];
+  const result = [];
+  for (const route of routes) {
+    if (result.length >= MAX_MOD_ROUTES) break;
+    if (!route || typeof route !== 'object') continue;
+    const src = Math.floor(route.src ?? -1);
+    const dst = Math.floor(route.dst ?? -1);
+    const depth = Number(route.depth);
+    if (src < 0 || src > 6 || dst < 0 || dst > 4) continue;
+    if (!Number.isFinite(depth)) continue;
+    result.push({ src, dst, depth: clamp(depth, -1, 1) });
+  }
+  return result;
 };
 
 export const AUDIO_PARAM_RANGES = {
@@ -223,7 +280,16 @@ export const AUDIO_PARAM_RANGES = {
   lfoDepth: { min: 0, max: 1, step: 0.01 },
   lfoTarget: { min: 0, max: 3, step: 1 },
   unisonVoices: { min: 1, max: 4, step: 1 },
-  unisonDetune: { min: 0, max: 50, step: 1 }
+  unisonDetune: { min: 0, max: 50, step: 1 },
+  lfo1Shape: { min: 0, max: 5, step: 1 },
+  lfo2Shape: { min: 0, max: 5, step: 1 },
+  lfo2Rate: { min: 0, max: 20, step: 0.1 },
+  modAttack: { min: MICRO_FADE_TIME, max: 5, step: 0.01 },
+  modDecay: { min: 0, max: 5, step: 0.01 },
+  modSustain: { min: 0, max: 1, step: 0.01 },
+  modRelease: { min: MICRO_FADE_TIME, max: 5, step: 0.01 },
+  glideTime: { min: 0, max: 2, step: 0.01 },
+  velocityCurve: { min: -1, max: 1, step: 0.05 }
 };
 
 const matchesProfileValue = (actual, expected) => {
@@ -444,7 +510,17 @@ export const sanitizeAudioParams = (params = {}) => {
     lfoDepth: clamp(merged.lfoDepth, ranges.lfoDepth.min, ranges.lfoDepth.max),
     lfoTarget: clamp(Math.floor(merged.lfoTarget), ranges.lfoTarget.min, ranges.lfoTarget.max),
     unisonVoices: clamp(Math.floor(merged.unisonVoices), ranges.unisonVoices.min, ranges.unisonVoices.max),
-    unisonDetune: clamp(merged.unisonDetune, ranges.unisonDetune.min, ranges.unisonDetune.max)
+    unisonDetune: clamp(merged.unisonDetune, ranges.unisonDetune.min, ranges.unisonDetune.max),
+    lfo1Shape: clamp(Math.floor(merged.lfo1Shape ?? 0), ranges.lfo1Shape.min, ranges.lfo1Shape.max),
+    lfo2Shape: clamp(Math.floor(merged.lfo2Shape ?? 0), ranges.lfo2Shape.min, ranges.lfo2Shape.max),
+    lfo2Rate: clamp(merged.lfo2Rate ?? 0, ranges.lfo2Rate.min, ranges.lfo2Rate.max),
+    modAttack: clamp(merged.modAttack ?? AUDIO_PARAM_DEFAULTS.modAttack, ranges.modAttack.min, ranges.modAttack.max),
+    modDecay: clamp(merged.modDecay ?? AUDIO_PARAM_DEFAULTS.modDecay, ranges.modDecay.min, ranges.modDecay.max),
+    modSustain: clamp(merged.modSustain ?? AUDIO_PARAM_DEFAULTS.modSustain, ranges.modSustain.min, ranges.modSustain.max),
+    modRelease: clamp(merged.modRelease ?? AUDIO_PARAM_DEFAULTS.modRelease, ranges.modRelease.min, ranges.modRelease.max),
+    modRoutes: sanitizeModRoutes(merged.modRoutes),
+    glideTime: clamp(merged.glideTime ?? 0, ranges.glideTime.min, ranges.glideTime.max),
+    velocityCurve: clamp(merged.velocityCurve ?? 0, ranges.velocityCurve.min, ranges.velocityCurve.max)
   };
 };
 
@@ -484,7 +560,17 @@ export const toWorkletParams = (params) => ({
   lfoDepth: params.lfoDepth,
   lfoTarget: params.lfoTarget,
   unisonVoices: params.unisonVoices,
-  unisonDetune: params.unisonDetune
+  unisonDetune: params.unisonDetune,
+  lfo1Shape: params.lfo1Shape,
+  lfo2Shape: params.lfo2Shape,
+  lfo2Rate: params.lfo2Rate,
+  modAttack: params.modAttack,
+  modDecay: params.modDecay,
+  modSustain: params.modSustain,
+  modRelease: params.modRelease,
+  modRoutes: params.modRoutes,
+  glideTime: params.glideTime,
+  velocityCurve: params.velocityCurve
 });
 
 export const WORKLET_PARAM_DEFAULTS = toWorkletParams(AUDIO_PARAM_DEFAULTS);

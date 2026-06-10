@@ -1,6 +1,7 @@
 const TWO_PI = Math.PI * 2;
 const MAX_VOICES = 24;
 const MIN_GAIN = 0.0001;
+const MAX_MOD_ROUTES = 8;
 
 const WAVEFORMS = Object.freeze({
   SINE: 0,
@@ -15,6 +16,34 @@ const ENV_STAGE = Object.freeze({
   DECAY: 2,
   SUSTAIN: 3,
   RELEASE: 4
+});
+
+// Modulation matrix enums (mirrored in utils/audioParams.js)
+const MOD_SRC = Object.freeze({
+  LFO1: 0,
+  LFO2: 1,
+  AMP_ENV: 2,
+  MOD_ENV: 3,
+  VELOCITY: 4,
+  KEY_TRACK: 5,
+  MOD_WHEEL: 6
+});
+
+const MOD_DST = Object.freeze({
+  PITCH: 0, // +/-12 semitones at depth 1
+  CUTOFF: 1, // +/-4 octaves at depth 1
+  AMP: 2, // +/-1 (gain offset) at depth 1
+  FM_INDEX: 3, // +/-10 radians at depth 1
+  DETUNE: 4 // +/-50 cents at depth 1
+});
+
+const LFO_SHAPES = Object.freeze({
+  SINE: 0,
+  TRIANGLE: 1,
+  SQUARE: 2,
+  SAW_UP: 3,
+  SAW_DOWN: 4,
+  SAMPLE_HOLD: 5
 });
 
 const DEFAULT_PARAMS = {
@@ -35,7 +64,19 @@ const DEFAULT_PARAMS = {
   lfoDepth: 0.0,
   lfoTarget: 0,
   unisonVoices: 1,
-  unisonDetune: 0.0
+  unisonDetune: 0.0,
+  // Modulation matrix
+  lfo1Shape: 0,
+  lfo2Shape: 0,
+  lfo2Rate: 0.0,
+  modAttack: 0.05,
+  modDecay: 0.3,
+  modSustain: 0.5,
+  modRelease: 0.4,
+  modRoutes: [],
+  // Playability
+  glideTime: 0.0,
+  velocityCurve: 0.0
 };
 
 function clamp(value, min, max) {
@@ -50,6 +91,20 @@ function polyBlep(t, dt) {
   if (t > 1.0 - dt) {
     const x = (t - 1.0) / dt;
     return x * x + x + x + 1.0;
+  }
+  return 0.0;
+}
+
+// 2-point polyBLAMP residual for a slope discontinuity at phase 0.
+// Integral of the polyBlep step residual; rounds corners instead of steps.
+function polyBlamp(t, dt) {
+  if (t < dt) {
+    const x = t / dt - 1.0;
+    return -(x * x * x) / 3.0;
+  }
+  if (t > 1.0 - dt) {
+    const x = (t - 1.0) / dt + 1.0;
+    return (x * x * x) / 3.0;
   }
   return 0.0;
 }
@@ -69,8 +124,15 @@ function waveformSample(waveform, phase, dt) {
       value -= polyBlep((phase + 0.5) % 1.0, dt);
       return value;
     }
-    case WAVEFORMS.TRIANGLE:
-      return 2.0 * Math.abs(2.0 * phase - 1.0) - 1.0;
+    case WAVEFORMS.TRIANGLE: {
+      let value = 2.0 * Math.abs(2.0 * phase - 1.0) - 1.0;
+      // Slope changes by -8/cycle at the peak (phase 0) and +8/cycle at the
+      // trough (phase 0.5); per-sample slope change is 8*dt.
+      const blampScale = 8.0 * dt;
+      value -= blampScale * polyBlamp(phase, dt);
+      value += blampScale * polyBlamp((phase + 0.5) % 1.0, dt);
+      return value;
+    }
     default:
       return 0.0;
   }
@@ -190,6 +252,51 @@ class Envelope {
   }
 }
 
+class LFO {
+  constructor(sampleRate) {
+    this.sampleRate = sampleRate;
+    this.shape = LFO_SHAPES.SINE;
+    this.rate = 0.0;
+    this.phase = 0.0;
+    this.holdValue = 0.0;
+  }
+
+  reset() {
+    this.phase = 0.0;
+    this.holdValue = Math.random() * 2.0 - 1.0;
+  }
+
+  next() {
+    if (this.rate <= 0.0) return 0.0;
+    const prevPhase = this.phase;
+    let phase = prevPhase + this.rate / this.sampleRate;
+    if (phase >= 1.0) {
+      phase -= 1.0;
+      if (this.shape === LFO_SHAPES.SAMPLE_HOLD) {
+        this.holdValue = Math.random() * 2.0 - 1.0;
+      }
+    }
+    this.phase = phase;
+
+    switch (this.shape) {
+      case LFO_SHAPES.SINE:
+        return Math.sin(TWO_PI * phase);
+      case LFO_SHAPES.TRIANGLE:
+        return 1.0 - 4.0 * Math.abs(phase - 0.5);
+      case LFO_SHAPES.SQUARE:
+        return phase < 0.5 ? 1.0 : -1.0;
+      case LFO_SHAPES.SAW_UP:
+        return 2.0 * phase - 1.0;
+      case LFO_SHAPES.SAW_DOWN:
+        return 1.0 - 2.0 * phase;
+      case LFO_SHAPES.SAMPLE_HOLD:
+        return this.holdValue;
+      default:
+        return 0.0;
+    }
+  }
+}
+
 class StateVariableFilter {
   constructor(sampleRate) {
     this.sampleRate = sampleRate;
@@ -251,34 +358,105 @@ class StateVariableFilter {
   }
 }
 
+// Sanitize a modRoutes array into flat typed arrays for the hot loop.
+function compileModRoutes(routes, legacy) {
+  const src = new Int8Array(MAX_MOD_ROUTES + 2);
+  const dst = new Int8Array(MAX_MOD_ROUTES + 2);
+  const depth = new Float32Array(MAX_MOD_ROUTES + 2);
+  let count = 0;
+
+  if (Array.isArray(routes)) {
+    for (const route of routes) {
+      if (count >= MAX_MOD_ROUTES) break;
+      if (!route) continue;
+      const s = Math.floor(route.src ?? -1);
+      const d = Math.floor(route.dst ?? -1);
+      const k = Number(route.depth);
+      if (s < 0 || s > 6 || d < 0 || d > 4) continue;
+      if (!Number.isFinite(k) || k === 0) continue;
+      src[count] = s;
+      dst[count] = d;
+      depth[count] = clamp(k, -1, 1);
+      count++;
+    }
+  }
+
+  // Legacy single-LFO params map onto implicit LFO1 routes with the exact
+  // scaling the old hardcoded targets used (pitch +/-2st, amp +/-1, cutoff
+  // +/-4st), so existing presets/UI keep their sound.
+  if (legacy && legacy.lfoDepth > 0 && legacy.lfoRate > 0) {
+    if (legacy.lfoTarget === 1) {
+      src[count] = MOD_SRC.LFO1;
+      dst[count] = MOD_DST.PITCH;
+      depth[count] = clamp(legacy.lfoDepth * 2 / 12, -1, 1);
+      count++;
+    } else if (legacy.lfoTarget === 2) {
+      src[count] = MOD_SRC.LFO1;
+      dst[count] = MOD_DST.AMP;
+      depth[count] = clamp(legacy.lfoDepth, -1, 1);
+      count++;
+    } else if (legacy.lfoTarget === 3) {
+      src[count] = MOD_SRC.LFO1;
+      dst[count] = MOD_DST.CUTOFF;
+      depth[count] = clamp(legacy.lfoDepth * (4 / 12) / 4, -1, 1);
+      count++;
+    }
+  }
+
+  // Which sources does the hot loop actually need to evaluate?
+  let usesLfo1 = false;
+  let usesLfo2 = false;
+  let usesModEnv = false;
+  for (let i = 0; i < count; i++) {
+    if (src[i] === MOD_SRC.LFO1) usesLfo1 = true;
+    else if (src[i] === MOD_SRC.LFO2) usesLfo2 = true;
+    else if (src[i] === MOD_SRC.MOD_ENV) usesModEnv = true;
+  }
+
+  return {
+    src,
+    dst,
+    depth,
+    // Smoothed per-route depth (~20ms) to avoid zipper clicks while dragging
+    // depth controls; seeded by the caller.
+    depthSmoothed: new Float32Array(depth),
+    count,
+    usesLfo1,
+    usesLfo2,
+    usesModEnv
+  };
+}
+
 class Voice {
   constructor(sampleRate) {
     this.sampleRate = sampleRate;
     this.active = false;
     this.noteId = null;
-    this.frequency = 440;
+    this.frequency = 440; // glide-smoothed current frequency
+    this.targetFrequency = 440;
+    this.glideCoeff = 0.0; // 0 = no glide
     this.velocity = 1.0;
+    this.keyTrack = 0.0;
     this.waveform = WAVEFORMS.SINE;
     this.phase = 0.0;
     this.modPhase = 0.0;
     this.envelope = new Envelope(sampleRate);
+    this.modEnvelope = new Envelope(sampleRate);
     this.filter = new StateVariableFilter(sampleRate);
+    this.lfo1 = new LFO(sampleRate);
+    this.lfo2 = new LFO(sampleRate);
     this.useFilter = false;
     this.useFM = false;
     this.fmRatio = 2.0;
     this.fmIndex = 0.0;
     this.useADSR = true;
     this.startFrame = 0;
-    this.lfoRate = 0.0;
-    this.lfoDepth = 0.0;
-    this.lfoDepthSmoothed = 0.0;
-    this.lfoPhase = 0.0;
-    this.lfoTarget = 0; // 0 none, 1 pitch, 2 amp, 3 filter
     this.unisonVoices = 1;
     this.unisonDetune = 0.0;
     this.unisonPhases = new Float32Array(4);
-    // Smoothing coefficient for LFO depth (~20ms at 44100 Hz)
-    this.lfoSmoothCoeff = Math.exp(-1.0 / (0.02 * sampleRate));
+    this.routes = compileModRoutes([], null);
+    // ~20ms depth smoothing at 44100 Hz
+    this.depthSmoothCoeff = Math.exp(-1.0 / (0.02 * sampleRate));
     // Voice stealing fade-out
     this.isBeingStolen = false;
     this.stealFadeGain = 1.0;
@@ -286,13 +464,72 @@ class Voice {
     this.stealFadeRate = 1.0 / (0.01 * sampleRate);
   }
 
-  start({ noteId, frequency, waveform, velocity, params, frame }) {
+  applyParams(params) {
+    this.useADSR = params.useADSR !== false;
+    this.envelope.setADSR(
+      params.attack ?? 0.01,
+      params.decay ?? 0.1,
+      params.sustain ?? 0.8,
+      params.release ?? 0.3
+    );
+    this.modEnvelope.setADSR(
+      params.modAttack ?? 0.05,
+      params.modDecay ?? 0.3,
+      params.modSustain ?? 0.5,
+      params.modRelease ?? 0.4
+    );
+
+    this.useFM = !!params.useFM;
+    this.fmRatio = typeof params.fmRatio === 'number' ? params.fmRatio : this.fmRatio;
+    const fmIndex = typeof params.fmIndex === 'number' ? params.fmIndex : this.fmIndex * TWO_PI;
+    this.fmIndex = fmIndex / TWO_PI; // radians -> cycles
+
+    this.useFilter = !!params.useFilter;
+    this.filter.setParams({
+      cutoff: params.filterCutoff,
+      resonance: params.filterResonance,
+      mode: params.filterMode
+    });
+
+    this.lfo1.shape = clamp(Math.floor(params.lfo1Shape ?? 0), 0, 5);
+    this.lfo1.rate = clamp(params.lfoRate ?? 0, 0, 40);
+    this.lfo2.shape = clamp(Math.floor(params.lfo2Shape ?? 0), 0, 5);
+    this.lfo2.rate = clamp(params.lfo2Rate ?? 0, 0, 40);
+
+    this.unisonVoices = clamp(params.unisonVoices ?? this.unisonVoices, 1, 4);
+    this.unisonDetune = params.unisonDetune ?? this.unisonDetune;
+
+    const prevRoutes = this.routes;
+    const nextRoutes = compileModRoutes(params.modRoutes, {
+      lfoRate: params.lfoRate ?? 0,
+      lfoDepth: params.lfoDepth ?? 0,
+      lfoTarget: params.lfoTarget ?? 0
+    });
+    if (this.active && prevRoutes) {
+      // Carry over smoothed depths for matching routes; new routes ramp in
+      // from zero so live edits never click.
+      for (let i = 0; i < nextRoutes.count; i++) {
+        nextRoutes.depthSmoothed[i] = 0;
+        for (let j = 0; j < prevRoutes.count; j++) {
+          if (prevRoutes.src[j] === nextRoutes.src[i] && prevRoutes.dst[j] === nextRoutes.dst[i]) {
+            nextRoutes.depthSmoothed[i] = prevRoutes.depthSmoothed[j];
+            break;
+          }
+        }
+      }
+    }
+    this.routes = nextRoutes;
+
+    const glideTime = params.glideTime ?? 0;
+    this.glideCoeff = glideTime > 0.001
+      ? Math.exp(-1.0 / (glideTime * this.sampleRate / 4.0))
+      : 0.0;
+  }
+
+  start({ noteId, frequency, waveform, velocity, params, frame, glideFrom }) {
     this.noteId = noteId;
-    this.frequency = frequency;
-    this.velocity = clamp(velocity ?? 1.0, 0.0, 1.0);
+    this.targetFrequency = frequency;
     this.waveform = normalizeWaveform(waveform);
-    this.phase = 0.0;
-    this.modPhase = 0.0;
     this.active = true;
     this.startFrame = frame;
     // Reset steal fade state
@@ -301,39 +538,38 @@ class Voice {
 
     const phaseOffset = (params.phaseOffsetDeg ?? 0) / 360.0;
     this.phase = phaseOffset % 1.0;
+    this.modPhase = 0.0;
 
-    this.useFM = !!params.useFM;
-    this.fmRatio = typeof params.fmRatio === 'number' ? params.fmRatio : 2.0;
-    const fmIndex = typeof params.fmIndex === 'number' ? params.fmIndex : 0.0;
-    this.fmIndex = fmIndex / TWO_PI; // convert radians to cycles
+    // Velocity curve: exponent 2^(2*curve); curve<0 = soft (compressed),
+    // curve>0 = hard (expanded), 0 = linear.
+    const rawVelocity = clamp(velocity ?? 1.0, 0.0, 1.0);
+    const curve = clamp(params.velocityCurve ?? 0, -1, 1);
+    this.velocity = curve === 0
+      ? rawVelocity
+      : Math.pow(rawVelocity, Math.pow(2, curve * 2));
 
-    this.useADSR = params.useADSR !== false;
-    this.envelope.setADSR(
-      params.attack ?? 0.01,
-      params.decay ?? 0.1,
-      params.sustain ?? 0.8,
-      params.release ?? 0.3
-    );
+    // Key tracking: -1..+1 across +/-2 octaves around middle C
+    this.keyTrack = clamp(Math.log2(frequency / 261.63) / 2.0, -1, 1);
+
+    this.applyParams(params);
+    // Fresh note: no ramp-in needed, the amp envelope masks the onset.
+    this.routes.depthSmoothed.set(this.routes.depth);
+
+    // Glide starts from the previously played note, if any
+    this.frequency = (this.glideCoeff > 0 && glideFrom && glideFrom > 0)
+      ? glideFrom
+      : frequency;
+
     this.envelope.noteOn();
+    this.modEnvelope.noteOn();
     if (!this.useADSR) {
       this.envelope.setImmediate();
     }
 
-    this.useFilter = !!params.useFilter;
-    this.filter.setParams({
-      cutoff: params.filterCutoff ?? 18000,
-      resonance: params.filterResonance ?? 0.7,
-      mode: params.filterMode ?? 0
-    });
     this.filter.reset();
+    this.lfo1.reset();
+    this.lfo2.reset();
 
-    this.lfoRate = params.lfoRate ?? 0.0;
-    this.lfoDepth = params.lfoDepth ?? 0.0;
-    this.lfoTarget = params.lfoTarget ?? 0;
-    this.lfoPhase = 0.0;
-
-    this.unisonVoices = clamp(params.unisonVoices ?? 1, 1, 4);
-    this.unisonDetune = params.unisonDetune ?? 0.0;
     const basePhase = this.phase;
     const useSpread = this.unisonVoices > 1;
     for (let i = 0; i < this.unisonPhases.length; i++) {
@@ -346,88 +582,112 @@ class Voice {
   release() {
     if (!this.active) return;
     this.envelope.noteOff();
+    this.modEnvelope.noteOff();
   }
 
   updateParams(params) {
     if (!this.active) return;
-    this.useADSR = params.useADSR !== false;
-    this.envelope.setADSR(
-      params.attack ?? 0.01,
-      params.decay ?? 0.1,
-      params.sustain ?? 0.8,
-      params.release ?? 0.3
-    );
+    this.applyParams(params);
     if (!this.useADSR) {
       this.envelope.setImmediate();
     }
-    this.useFM = !!params.useFM;
-    this.fmRatio = typeof params.fmRatio === 'number' ? params.fmRatio : this.fmRatio;
-    const fmIndex = typeof params.fmIndex === 'number' ? params.fmIndex : this.fmIndex * TWO_PI;
-    this.fmIndex = fmIndex / TWO_PI;
-    this.useFilter = !!params.useFilter;
-    this.filter.setParams({
-      cutoff: params.filterCutoff,
-      resonance: params.filterResonance,
-      mode: params.filterMode
-    });
-    this.lfoRate = params.lfoRate ?? this.lfoRate;
-    this.lfoDepth = params.lfoDepth ?? this.lfoDepth;
-    this.lfoTarget = params.lfoTarget ?? this.lfoTarget;
-    this.unisonVoices = clamp(params.unisonVoices ?? this.unisonVoices, 1, 4);
-    this.unisonDetune = params.unisonDetune ?? this.unisonDetune;
   }
 
-  nextSample() {
+  nextSample(bendMul, modWheel) {
     if (!this.active) return 0.0;
 
-    // Smooth LFO depth changes to prevent clicks
-    this.lfoDepthSmoothed = this.lfoDepth + (this.lfoDepthSmoothed - this.lfoDepth) * this.lfoSmoothCoeff;
-
-    let lfoValue = 0.0;
-    if (this.lfoDepthSmoothed > 0.001 && this.lfoRate > 0.0) {
-      const lfoPhase = (this.lfoPhase + this.lfoRate / this.sampleRate) % 1.0;
-      this.lfoPhase = lfoPhase;
-      lfoValue = Math.sin(TWO_PI * lfoPhase) * this.lfoDepthSmoothed;
+    // Glide toward the target frequency
+    if (this.glideCoeff > 0 && this.frequency !== this.targetFrequency) {
+      this.frequency = this.targetFrequency + (this.frequency - this.targetFrequency) * this.glideCoeff;
+      if (Math.abs(this.frequency - this.targetFrequency) < 0.01) {
+        this.frequency = this.targetFrequency;
+      }
+    } else if (this.glideCoeff === 0) {
+      this.frequency = this.targetFrequency;
     }
 
-    let pitchMultiplier = 1.0;
-    if (this.lfoTarget === 1 && this.lfoDepthSmoothed > 0.001) {
-      const semitones = lfoValue * 2.0;
-      pitchMultiplier = Math.pow(2, semitones / 12.0);
+    const envValue = this.envelope.next(this.useADSR);
+    const routes = this.routes;
+
+    // --- Evaluate modulation sources (only the ones routed) ---
+    const lfo1Value = routes.usesLfo1 ? this.lfo1.next() : 0.0;
+    const lfo2Value = routes.usesLfo2 ? this.lfo2.next() : 0.0;
+    const modEnvValue = routes.usesModEnv ? this.modEnvelope.next(true) : 0.0;
+
+    // --- Accumulate routed modulation per destination ---
+    let pitchSemis = 0.0;
+    let cutoffOct = 0.0;
+    let ampOffset = 0.0;
+    let fmIndexAdd = 0.0; // radians
+    let detuneAdd = 0.0; // cents
+
+    for (let i = 0; i < routes.count; i++) {
+      let value;
+      switch (routes.src[i]) {
+        case MOD_SRC.LFO1: value = lfo1Value; break;
+        case MOD_SRC.LFO2: value = lfo2Value; break;
+        case MOD_SRC.AMP_ENV: value = envValue; break;
+        case MOD_SRC.MOD_ENV: value = modEnvValue; break;
+        case MOD_SRC.VELOCITY: value = this.velocity; break;
+        case MOD_SRC.KEY_TRACK: value = this.keyTrack; break;
+        case MOD_SRC.MOD_WHEEL: value = modWheel; break;
+        default: value = 0.0; break;
+      }
+      const target = routes.depth[i];
+      const smoothed = target + (routes.depthSmoothed[i] - target) * this.depthSmoothCoeff;
+      routes.depthSmoothed[i] = smoothed;
+      const amount = value * smoothed;
+      switch (routes.dst[i]) {
+        case MOD_DST.PITCH: pitchSemis += amount * 12.0; break;
+        case MOD_DST.CUTOFF: cutoffOct += amount * 4.0; break;
+        case MOD_DST.AMP: ampOffset += amount; break;
+        case MOD_DST.FM_INDEX: fmIndexAdd += amount * 10.0; break;
+        case MOD_DST.DETUNE: detuneAdd += amount * 50.0; break;
+        default: break;
+      }
+    }
+
+    // --- Oscillator section ---
+    let pitchMultiplier = bendMul;
+    if (pitchSemis !== 0.0) {
+      pitchMultiplier *= Math.pow(2, pitchSemis / 12.0);
     }
 
     const baseFrequency = this.frequency * pitchMultiplier;
     const baseDt = baseFrequency / this.sampleRate;
+
     let fmOffset = 0.0;
-    if (this.useFM) {
+    const effFmIndex = (this.useFM ? this.fmIndex : 0.0) + fmIndexAdd / TWO_PI;
+    if (effFmIndex !== 0.0) {
       const modPhase = (this.modPhase + (this.fmRatio * baseDt)) % 1.0;
       this.modPhase = modPhase;
-      fmOffset = Math.sin(TWO_PI * modPhase) * this.fmIndex;
+      fmOffset = Math.sin(TWO_PI * modPhase) * effFmIndex;
     }
 
     let oscSum = 0.0;
     const unison = this.unisonVoices;
+    const effDetune = this.unisonDetune + detuneAdd;
     for (let i = 0; i < unison; i++) {
-      const detune = (i - (unison - 1) / 2) * this.unisonDetune;
+      const detune = (i - (unison - 1) / 2) * effDetune;
       const detuneRatio = detune === 0 ? 1.0 : Math.pow(2, detune / 1200.0);
       const phase = this.unisonPhases[i];
       const phaseWithMod = (phase + fmOffset) % 1.0;
-      oscSum += waveformSample(this.waveform, phaseWithMod, baseDt * detuneRatio);
+      oscSum += waveformSample(this.waveform, phaseWithMod < 0 ? phaseWithMod + 1.0 : phaseWithMod, baseDt * detuneRatio);
       this.unisonPhases[i] = (phase + baseDt * detuneRatio) % 1.0;
     }
 
     let sample = oscSum / unison;
 
-    const envValue = this.envelope.next(this.useADSR);
+    // --- Amplitude section ---
     sample *= envValue * this.velocity;
-
-    if (this.lfoTarget === 2 && this.lfoDepthSmoothed > 0.001) {
-      sample *= Math.max(0.0, 1.0 + lfoValue);
+    if (ampOffset !== 0.0) {
+      sample *= Math.max(0.0, 1.0 + ampOffset);
     }
 
+    // --- Filter section ---
     if (this.useFilter) {
-      if (this.lfoTarget === 3 && this.lfoDepthSmoothed > 0.001) {
-        const modCutoff = this.filter.cutoff * Math.pow(2, lfoValue * 4.0 / 12.0);
+      if (cutoffOct !== 0.0) {
+        const modCutoff = this.filter.targetCutoff * Math.pow(2, cutoffOct);
         sample = this.filter.process(sample, modCutoff);
       } else {
         sample = this.filter.process(sample);
@@ -467,6 +727,14 @@ class SynthProcessor extends AudioWorkletProcessor {
       ...(paramDefaults || {})
     };
     this.frameCounter = 0;
+    this.lastFrequency = 0; // for glide
+    // Performance state (not part of presets)
+    this.pitchBendTarget = 0.0; // semitones
+    this.pitchBendSmoothed = 0.0;
+    this.modWheelTarget = 0.0; // 0..1
+    this.modWheelSmoothed = 0.0;
+    // ~5ms smoothing for performance controllers
+    this.perfSmoothCoeff = Math.exp(-1.0 / (0.005 * sampleRate));
     this.port.onmessage = (event) => {
       const data = event.data;
       if (!data || !data.type) return;
@@ -482,6 +750,12 @@ class SynthProcessor extends AudioWorkletProcessor {
           break;
         case 'setParams':
           this.setParams(data.params || {});
+          break;
+        case 'pitchBend':
+          this.pitchBendTarget = clamp(Number(data.value) || 0, -24, 24);
+          break;
+        case 'modWheel':
+          this.modWheelTarget = clamp(Number(data.value) || 0, 0, 1);
           break;
         default:
           break;
@@ -511,8 +785,10 @@ class SynthProcessor extends AudioWorkletProcessor {
       waveform,
       velocity,
       params: this.params,
-      frame: this.frameCounter
+      frame: this.frameCounter,
+      glideFrom: this.lastFrequency
     });
+    this.lastFrequency = frequency;
   }
 
   noteOff(noteId) {
@@ -586,10 +862,20 @@ class SynthProcessor extends AudioWorkletProcessor {
     const mixGain = 0.2;
 
     for (let i = 0; i < frameCount; i++) {
+      // Smooth performance controllers
+      this.pitchBendSmoothed = this.pitchBendTarget
+        + (this.pitchBendSmoothed - this.pitchBendTarget) * this.perfSmoothCoeff;
+      this.modWheelSmoothed = this.modWheelTarget
+        + (this.modWheelSmoothed - this.modWheelTarget) * this.perfSmoothCoeff;
+
+      const bendMul = (this.pitchBendSmoothed > 0.0005 || this.pitchBendSmoothed < -0.0005)
+        ? Math.pow(2, this.pitchBendSmoothed / 12.0)
+        : 1.0;
+
       let sample = 0.0;
       for (const voice of this.voices) {
         if (voice.active) {
-          sample += voice.nextSample();
+          sample += voice.nextSample(bendMul, this.modWheelSmoothed);
         }
       }
       sample *= mixGain;

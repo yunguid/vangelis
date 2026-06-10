@@ -137,9 +137,13 @@ const REVERB_MODE_CONFIG = {
 };
 
 export function paramsSignature(params) {
-  return Object.values(params).map((value) =>
-    typeof value === 'number' ? value.toFixed(4) : String(value)
-  ).join('|');
+  return Object.values(params).map((value) => {
+    if (typeof value === 'number') return value.toFixed(4);
+    // Arrays/objects (e.g. modRoutes) need deep serialization or edits
+    // would be deduped away as "[object Object]".
+    if (value && typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  }).join('|');
 }
 
 export function applyGlobalParams({

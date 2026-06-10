@@ -1,7 +1,8 @@
 import React from 'react';
-import RaylibWaveCandy from './RaylibWaveCandy.jsx';
 import WaveCandyCanvas from './WaveCandyCanvas.jsx';
 
-const WaveCandy = () => <RaylibWaveCandy fallback={<WaveCandyCanvas />} />;
+// The Raylib/WASM visualizer was retired in favor of the Canvas suite —
+// see PROGRESS.md ("retire the Raylib/WASM WaveCandy path") for rationale.
+const WaveCandy = () => <WaveCandyCanvas />;
 
 export default WaveCandy;

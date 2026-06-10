@@ -3,13 +3,19 @@ import MidiTab from './MidiTab.jsx';
 import SamplesTab from './SamplesTab.jsx';
 import SoundTab from './SoundTab.jsx';
 import VoiceTab from './VoiceTab.jsx';
+import {
+  useMidiTransport,
+  useSoundControls,
+  useVoicePhrase
+} from '../../context/SynthContexts.jsx';
 import './Sidebar.css';
 
 const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
 
 /**
  * Collapsed sidebar rail with expandable panel
- * Supports multiple tabs: MIDI, Samples, Sound
+ * Supports multiple tabs: MIDI, Samples, Voice, Sound
+ * MIDI transport, voice phrase, and sound-control state come from contexts.
  */
 const Sidebar = ({
   isOpen,
@@ -18,42 +24,45 @@ const Sidebar = ({
   activeTab,
   onTabChange = () => {},
   disabled = false,
-  // MIDI props
-  isPlaying,
-  isPaused,
-  progress,
-  currentMidi,
-  tempoFactor,
-  onPlay,
-  onPause,
-  onResume,
-  onStop,
-  onTempoChange,
   // Samples props
   onSampleSelect,
-  activeSampleId,
-  // Voice props
-  voiceText,
-  voicePreviewChunks,
-  voiceStatus,
-  voicePreparing,
-  voiceGenerating,
-  voiceError,
-  onVoiceTextChange,
-  onVoicePresetSelect,
-  onVoiceRandomize,
-  onVoiceToggle,
-  onVoiceClear,
-  // Sound props
-  waveformType,
-  onWaveformChange,
-  audioParams,
-  onParamChange,
-  onParamsChange,
-  transportBpm,
-  controlSections,
-  onControlSectionToggle
+  activeSampleId
 }) => {
+  const {
+    isPlaying,
+    isPaused,
+    progress,
+    currentMidi,
+    tempoFactor,
+    onPlay,
+    onPause,
+    onResume,
+    onStop,
+    onTempoChange
+  } = useMidiTransport();
+  const {
+    voiceText,
+    voicePreviewChunks,
+    voiceStatus,
+    voicePreparing,
+    voiceGenerating,
+    voiceError,
+    onVoiceTextChange,
+    onVoicePresetSelect,
+    onVoiceRandomize,
+    onVoiceToggle,
+    onVoiceClear
+  } = useVoicePhrase();
+  const {
+    waveformType,
+    onWaveformChange,
+    audioParams,
+    onParamChange,
+    onParamsChange,
+    transportBpm,
+    controlSections,
+    onControlSectionToggle
+  } = useSoundControls();
   // Close on escape key
   useEffect(() => {
     const handleKeyDown = (e) => {

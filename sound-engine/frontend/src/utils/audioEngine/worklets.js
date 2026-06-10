@@ -117,6 +117,22 @@ export class SynthWorklet {
       type: 'allNotesOff'
     });
   }
+
+  setPitchBend(semitones) {
+    if (!this.node) return;
+    this.node.port.postMessage({
+      type: 'pitchBend',
+      value: semitones
+    });
+  }
+
+  setModWheel(value) {
+    if (!this.node) return;
+    this.node.port.postMessage({
+      type: 'modWheel',
+      value
+    });
+  }
 }
 
 class BaseEffectWorklet {

@@ -547,6 +547,14 @@ class AudioEngine {
     this.markVoiceStopped(noteId);
   }
 
+  setPitchBend(semitones) {
+    this.worklet.setPitchBend(semitones);
+  }
+
+  setModWheel(value) {
+    this.worklet.setModWheel(value);
+  }
+
   stopAllNotes() {
     this.worklet.allNotesOff();
     if (this.samplePool) {
