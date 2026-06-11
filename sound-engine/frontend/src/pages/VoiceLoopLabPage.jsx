@@ -4,18 +4,20 @@ import Sidebar from '../components/Sidebar';
 import { fetchJson } from '../utils/fetchJson.js';
 import { encodeWav } from '../utils/audioEngine/wav.js';
 import { renderVoiceScore } from '../utils/voicePhrase.js';
+import { LOOPBOOK, STARTER_LOOP } from '../utils/voiceLoopbook.js';
 import './VoiceLoopLabPage.css';
 
 const KEY_OPTIONS = ['F# minor', 'C# minor', 'A# minor', 'G# minor', 'D# minor', 'F minor', 'A dorian', 'E minor', 'D lydian'];
 const DENSITY_OPTIONS = ['very high', 'high', 'syncopated', 'wide-open'];
 const CARRIER_OPTIONS = ['AA', 'AW', 'ER', 'IY', 'AE', 'OW', 'AY', 'UW'];
 const GLIDE_OPTIONS = ['low', 'medium', 'high'];
-const STARTER_SCORE = 'r243.2 s1.14 bF#2 ( W ER ) bA2 ( K IH T ) bF#3 ( HH AA R ) bA3 ( D ER ) bC#4 ( M EY ) bA3 ( K IH T ) bF#3 ( B EH ) bA3 ( T ER ) bE2 ( D UW ) bE3 ( W IH T ) bA3 ( F AE S ) bE3 ( T ER ) bB3 ( M EY K ) bA3 ( S AH S ) bG#3 ( S T R AO NG ) bA3 ( G ER ) bEb2 ( M AO R ) bEb3 ( DH AE ) bF#4 ( N EH ) bEb4 ( V ER ) bB4 v8 w8 ( AW ) bA4 ( ER ) bF#4 ( AE F T ) bEb4 ( ER R ) bD3 v12 ( AW ) bD3 ( ER W ) v w bF#3 ( ER K ) bA3 ( IH Z N ) bF#2 s0.8 ( EH V ) bF#1 ( ER ) ( OW V ) r115 ER';
+const STARTER_SCORE = STARTER_LOOP.score;
 const RANDOM_SEED_PARTS = {
-  surfaces: ['chrome vowel engine', 'glass robot choir', 'neon throat sequencer', 'burnt tape vocoder', 'midnight arcade cantor'],
-  motions: ['mirror arpeggio', 'stuttered octave climb', 'falling staircase loop', 'fast call and response', 'syncopated spiral pattern'],
-  phonemes: ['AA ER OW IY', 'AW AA AE ER', 'IY OW AA AY', 'ER AA UW OW', 'AE IY AA ER'],
-  gestures: ['tiny rests', 'wide jumps', 'late accents', 'breathy turns', 'double-time answers']
+  feelings: ['aching and luminous', 'euphoric and weightless', 'lonely chrome romance', 'hopeful sunrise drive', 'velvet midnight cruise', 'bittersweet arcade glow'],
+  motions: ['low motif lifting to a bright high answer', 'falling staircase that resolves home', 'call and response between bass and ceiling', 'slow arpeggio spiralling upward', 'pulsing octave groove with a soaring lift'],
+  hooks: ['work it harder', 'neon never sleeps', 'glass cathedral rising', 'mercury rain falling', 'ghost in the machine', 'velvet circuitry', 'aurora breaks the dawn', 'midnight engine humming'],
+  carriers: ['carrier AA', 'carrier ER', 'carrier OW', 'carrier IY', 'carrier AW'],
+  gestures: ['recurring 4-note law', 'wide resolved leaps', 'breathy turnarounds', 'late accents on the lift', 'a held shimmering ceiling note']
 };
 
 function pickRandom(values) {
@@ -23,16 +25,12 @@ function pickRandom(values) {
 }
 
 function buildRandomSeed() {
-  const motif = Array.from({ length: 8 }, () => Math.floor(Math.random() * 9)).join('-');
-  const code = Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
-
   return [
-    pickRandom(RANDOM_SEED_PARTS.surfaces),
+    pickRandom(RANDOM_SEED_PARTS.hooks),
+    pickRandom(RANDOM_SEED_PARTS.feelings),
     pickRandom(RANDOM_SEED_PARTS.motions),
-    `phonemes ${pickRandom(RANDOM_SEED_PARTS.phonemes)}`,
-    pickRandom(RANDOM_SEED_PARTS.gestures),
-    `motif ${motif}`,
-    `seed ${code}`
+    pickRandom(RANDOM_SEED_PARTS.carriers),
+    pickRandom(RANDOM_SEED_PARTS.gestures)
   ].join(' / ');
 }
 
@@ -162,14 +160,15 @@ function stopSource(runtimeRef) {
 
 const VoiceLoopLabPage = () => {
   const [form, setForm] = React.useState({
-    seed: 'work it harder better faster stronger',
-    key: 'F# minor',
-    bpm: 120,
+    seed: STARTER_LOOP.blurb,
+    key: STARTER_LOOP.key,
+    bpm: STARTER_LOOP.bpm,
     density: 'very high',
     carrier: 'AA',
     glide: 'medium'
   });
   const [score, setScore] = React.useState(STARTER_SCORE);
+  const [activeLoopId, setActiveLoopId] = React.useState(STARTER_LOOP.id);
   const [rendered, setRendered] = React.useState(null);
   const [controls, setControls] = React.useState({
     speed: 1,
@@ -182,9 +181,10 @@ const VoiceLoopLabPage = () => {
     vibratoDepth: 1.5,
     vibratoRate: 5,
     tremoloDepth: 0.04,
-    tremoloRate: 5
+    tremoloRate: 5,
+    ...STARTER_LOOP.controls
   });
-  const [meta, setMeta] = React.useState({ source: 'starter', warning: '' });
+  const [meta, setMeta] = React.useState({ source: 'loopbook', warning: '', notes: STARTER_LOOP.notes });
   const [generating, setGenerating] = React.useState(false);
   const [recording, setRecording] = React.useState(false);
   const [generationStatus, setGenerationStatus] = React.useState({
@@ -358,7 +358,8 @@ const VoiceLoopLabPage = () => {
 	      setMeta({
 	        source: result.source || 'openai',
 	        model: result.model || '',
-	        warning: result.warning || ''
+	        warning: result.warning || '',
+	        notes: result.loop?.notes || ''
 	      });
 	      setGenerationStatus({
 	        tone: 'ready',
@@ -376,8 +377,25 @@ const VoiceLoopLabPage = () => {
     }
   }, []);
 
+  const handleLoadLoop = React.useCallback((loop) => {
+    setScore(loop.score);
+    setRendered(null);
+    setActiveLoopId(loop.id);
+    setError('');
+    setForm((current) => ({
+      ...current,
+      seed: loop.blurb,
+      key: loop.key,
+      bpm: loop.bpm
+    }));
+    setControls((current) => ({ ...current, ...loop.controls }));
+    setMeta({ source: 'loopbook', warning: '', notes: loop.notes });
+    setGenerationStatus({ tone: 'ready', label: loop.title });
+  }, []);
+
   const handleGenerate = async (event) => {
     event.preventDefault();
+    setActiveLoopId(null);
     await generateLoop(form);
   };
 
@@ -619,7 +637,32 @@ const VoiceLoopLabPage = () => {
           </form>
 
           <section className="voice-loop-stage" aria-label="Klattsch score loop">
+            <div className="voice-loop-loopbook" aria-label="Loopbook">
+              <div className="voice-loop-loopbook__head">
+                <h2 className="voice-loop-loopbook__title">Loopbook</h2>
+                <span className="voice-loop-loopbook__hint">curated melodic loops · click to load</span>
+              </div>
+              <div className="voice-loop-loopbook__chips">
+                {LOOPBOOK.map((loop) => (
+                  <button
+                    key={loop.id}
+                    type="button"
+                    className={`voice-loop-chip${activeLoopId === loop.id ? ' is-active' : ''}`}
+                    onClick={() => handleLoadLoop(loop)}
+                    disabled={generating || recording}
+                    title={loop.notes}
+                  >
+                    <span className="voice-loop-chip__title">{loop.title}</span>
+                    <span className="voice-loop-chip__key">{loop.key} · {loop.bpm}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="voice-loop-readout">
+              {meta.notes && (
+                <p className="voice-loop-notes" title={meta.notes}>{meta.notes}</p>
+              )}
               <div className="voice-loop-stats" aria-label="Loop stats">
                 <span>{events.length} events</span>
                 <span>{rendered ? `${rendered.duration.toFixed(2)}s` : 'rendering'}</span>
@@ -634,7 +677,8 @@ const VoiceLoopLabPage = () => {
               onChange={(event) => {
                 setScore(event.target.value);
                 setRendered(null);
-                setMeta({ source: 'manual', warning: '' });
+                setActiveLoopId(null);
+                setMeta({ source: 'manual', warning: '', notes: '' });
               }}
               spellCheck={false}
             />

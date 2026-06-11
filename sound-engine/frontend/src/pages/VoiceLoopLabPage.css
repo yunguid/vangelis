@@ -251,9 +251,108 @@
   box-shadow: 0 0 0 1px rgba(215, 153, 33, 0.18);
 }
 
+.voice-loop-loopbook {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(168, 153, 132, 0.14);
+}
+
+.voice-loop-loopbook__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.voice-loop-loopbook__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(235, 219, 178, 0.92);
+}
+
+.voice-loop-loopbook__hint {
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  color: rgba(235, 219, 178, 0.46);
+}
+
+.voice-loop-loopbook__chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.voice-loop-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-height: 50px;
+  padding: 8px 10px;
+  border: 1px solid rgba(168, 153, 132, 0.2);
+  border-radius: 8px;
+  background: rgba(29, 32, 33, 0.72);
+  color: rgba(235, 219, 178, 0.92);
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease, border-color 100ms ease, transform 100ms ease;
+}
+
+.voice-loop-chip:hover:not(:disabled),
+.voice-loop-chip:focus-visible:not(:disabled) {
+  background: rgba(60, 56, 54, 0.82);
+  border-color: rgba(215, 153, 33, 0.34);
+  transform: translateY(-1px);
+}
+
+.voice-loop-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.voice-loop-chip.is-active {
+  background: rgba(215, 153, 33, 0.18);
+  border-color: rgba(250, 189, 47, 0.5);
+}
+
+.voice-loop-chip__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.voice-loop-chip__key {
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(235, 219, 178, 0.5);
+}
+
+.voice-loop-chip.is-active .voice-loop-chip__key {
+  color: rgba(250, 189, 47, 0.72);
+}
+
 .voice-loop-readout {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.voice-loop-notes {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: rgba(235, 219, 178, 0.66);
+  font-style: italic;
 }
 
 .voice-loop-stats {

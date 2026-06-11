@@ -1,22 +1,61 @@
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const DEFAULT_MODEL = 'gpt-5.5';
 
-const NOTES = ['C', 'C#', 'D', 'D#', 'F', 'G', 'G#', 'A#'];
 const PHONEME_GROUPS = ['AA', 'AW', 'ER', 'IY', 'AE', 'OW', 'AY', 'UW'];
 const CARRIER_OPTIONS = new Set(PHONEME_GROUPS);
 const GLIDE_OPTIONS = new Set(['low', 'medium', 'high']);
-const ROOTS = {
-  'F# minor': ['F#3', 'G#3', 'A3', 'C#4', 'E4', 'F#4', 'G#4', 'A4', 'C#5'],
-  'C# minor': ['C#3', 'D#3', 'E3', 'G#3', 'B3', 'C#4', 'D#4', 'E4', 'G#4', 'C#5'],
-  'A# minor': ['A#2', 'C3', 'C#3', 'D#3', 'F3', 'F#3', 'G#3', 'A#3', 'C4', 'C#4', 'D#4', 'F4', 'F#4', 'G#4', 'A#4', 'C5', 'C#5', 'D#5', 'F5'],
-  'G# minor': ['G#2', 'A#2', 'B2', 'C#3', 'D#3', 'E3', 'F#3', 'G#3', 'B3', 'C#4', 'D#4', 'E4', 'F#4', 'G#4', 'B4', 'C#5', 'D#5'],
-  'D# minor': ['D#3', 'F3', 'F#3', 'G#3', 'A#3', 'B3', 'C#4', 'D#4', 'F#4', 'G#4', 'A#4', 'B4', 'C#5', 'D#5', 'F#5'],
-  'F minor': ['F2', 'G2', 'G#2', 'A#2', 'C3', 'C#3', 'D#3', 'F3', 'G#3', 'A#3', 'C4', 'C#4', 'D#4', 'F4', 'G#4', 'C5'],
-  'A dorian': ['A2', 'B2', 'C3', 'D3', 'E3', 'F#3', 'G3', 'A3', 'C4', 'E4', 'G4'],
-  'E minor': ['E2', 'F#2', 'G2', 'A2', 'B2', 'C3', 'D3', 'E3', 'G3', 'B3', 'D4'],
-  'D lydian': ['D3', 'E3', 'F#3', 'G#3', 'A3', 'B3', 'C#4', 'D4', 'F#4', 'A4']
+
+// Keys as a root MIDI note plus an ascending scale (semitone offsets). The
+// melody is spelled by walking scale degrees, so every generated line stays in
+// key and the corpus never drifts into atonal confetti.
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_SEMITONES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const MINOR = [0, 2, 3, 5, 7, 8, 10];
+const DORIAN = [0, 2, 3, 5, 7, 9, 10];
+const LYDIAN = [0, 2, 4, 6, 7, 9, 11];
+
+function noteToMidi(name) {
+  const m = name.match(/^([A-G])([b#]?)(-?\d+)$/);
+  if (!m) return null;
+  let semi = NOTE_SEMITONES[m[1]];
+  if (m[2] === '#') semi += 1;
+  else if (m[2] === 'b') semi -= 1;
+  return (parseInt(m[3], 10) + 1) * 12 + semi;
+}
+
+function midiToNote(midi) {
+  const rounded = Math.round(midi);
+  const octave = Math.floor(rounded / 12) - 1;
+  return `${NOTE_NAMES[((rounded % 12) + 12) % 12]}${octave}`;
+}
+
+const KEYS = {
+  'F# minor': { root: noteToMidi('F#3'), scale: MINOR },
+  'C# minor': { root: noteToMidi('C#3'), scale: MINOR },
+  'A# minor': { root: noteToMidi('A#2'), scale: MINOR },
+  'G# minor': { root: noteToMidi('G#2'), scale: MINOR },
+  'D# minor': { root: noteToMidi('D#3'), scale: MINOR },
+  'F minor': { root: noteToMidi('F3'), scale: MINOR },
+  'E minor': { root: noteToMidi('E3'), scale: MINOR },
+  'A dorian': { root: noteToMidi('A2'), scale: DORIAN },
+  'D lydian': { root: noteToMidi('D3'), scale: LYDIAN }
 };
-const CONSONANT_GROUPS = ['( HH AA )', '( V OW )', '( R AA )', '( D ER )', '( M IY )', '( T AA )'];
+
+// Map a scale degree (can be negative / above the octave) to a MIDI note.
+function degreeToMidi(key, degree) {
+  const len = key.scale.length;
+  const octave = Math.floor(degree / len);
+  const step = ((degree % len) + len) % len;
+  return key.root + octave * 12 + key.scale[step];
+}
+
+// Articulation comes from consonant onsets/codas riding a stable carrier vowel
+// — the "harder / better / faster" groove. The carrier vowel is substituted in
+// so the sung colour stays consistent while the consonants give it rhythm.
+const ONSETS = ['HH', 'M', 'N', 'L', 'R', 'W', 'V', 'D', 'B', 'S', 'T', 'F'];
+const CODAS = ['R', 'N', 'L', 'S', 'T', '', '', ''];
+// A few fixed pivot syllables for colour hits at lifts and turnarounds.
+const PIVOTS = ['Y UW', 'OW V ER', 'AA R', 'EY K', 'IH T', 'AW ER'];
 
 const LOOP_SCHEMA = {
   type: 'object',
@@ -25,7 +64,7 @@ const LOOP_SCHEMA = {
   properties: {
     score: {
       type: 'string',
-      description: 'A klattsch score string beginning with rNN and containing note directives like bC5 ( AA ).'
+      description: 'A klattsch score string beginning with rNN and containing note directives like bC#4 ( HH AA R ).'
     },
     bpm: { type: 'number' },
     bars: { type: 'number' },
@@ -34,20 +73,20 @@ const LOOP_SCHEMA = {
 };
 
 const AVOID_SHAPES = [
-  'four notes, pause, four notes, pause',
-  'root-third-fifth chord spelling blocks',
-  'ABAB pitch ping-pong',
-  'copy-pasted transposition squares',
-  'straight ladder scales up or down',
-  'constant r50-r60 stutter streams',
-  'vowel-per-note confetti',
-  'mostly OW/ER/AW mood coloring with no melody',
-  'AE/IY alternation as the main sound',
-  'generic DAW arpeggiator output',
-  'speech-like word syllables instead of a smooth carrier vowel',
-  'busy high-register chatter with no low anchor',
-  'too many rests or chopped silence',
-  'pleasant but forgettable chord exercises'
+  'a flat chant stuck on one or two pitches',
+  'one vowel per note with no consonant articulation (vowel confetti)',
+  'a melody that never returns to the root or tonic',
+  'random notes with no recurring motif',
+  'straight ladder scales running all the way up or down',
+  'four notes, pause, four notes, pause blocks',
+  'root-third-fifth chord spelling in stacked blocks',
+  'ABAB pitch ping-pong between just two notes',
+  'copy-pasted transposition squares with no variation',
+  'constant r50-r70 stutter with no melodic line',
+  'busy high-register chatter with no low bass anchor',
+  'sticky pitch deltas (AA+12) that make the whole loop drift sharp',
+  'changing the carrier vowel on every single note',
+  'pleasant but forgettable chord exercises that do not hook'
 ];
 
 function coerceText(value, fallback) {
@@ -68,8 +107,8 @@ function coerceChoice(value, options, fallback) {
   return options.has(normalized) ? normalized : fallback;
 }
 
-function chooseScale(value) {
-  return ROOTS[value] ? value : 'F# minor';
+function chooseKey(value) {
+  return KEYS[value] ? value : 'F# minor';
 }
 
 function hashString(value = '') {
@@ -92,69 +131,89 @@ function seededRandom(seed) {
   };
 }
 
-function buildCarrierGroup(carrier, random, glide) {
-  const glideChance = glide === 'high' ? 0.22 : glide === 'low' ? 0.06 : 0.12;
-  const stressChance = glide === 'high' ? 0.12 : 0.06;
-
-  if (random() < glideChance) {
-    const lift = glide === 'high' ? 18 : glide === 'low' ? 6 : 12;
-    return `( ${carrier}(+${lift}) )`;
-  }
-
-  if (random() < stressChance) {
-    return `( ${carrier}! )`;
-  }
-
-  return `( ${carrier} )`;
+function pick(random, list) {
+  return list[Math.floor(random() * list.length) % list.length];
 }
 
-function buildScore({ key = 'F# minor', bpm = 144, density = 'high', phrase = '', carrier = 'AA', glide = 'medium' } = {}) {
-  const scaleKey = chooseScale(key);
-  const pool = ROOTS[scaleKey];
-  const dense = density === 'very high' ? 1 : density === 'wide-open' ? 3 : 2;
-  const rate = Math.round(coerceNumber(bpm, 144, 90, 180));
+// Build one sung syllable as consonant-onset + carrier vowel + optional coda.
+function makeSyllable(random, carrier, { lead = true, weight = 0.5 } = {}) {
+  const onset = lead && random() < 0.85 ? `${pick(random, ONSETS)} ` : '';
+  const coda = random() < weight ? ` ${pick(random, CODAS)}` : '';
+  return `${onset}${carrier}${coda}`.replace(/\s+/g, ' ').trim();
+}
+
+// The melodic engine: a recurring motif is the "law" of the loop. We state a
+// low/mid motif, answer it up high, and resolve back to the tonic so the loop
+// seam is seamless.
+const MOTIFS = [
+  [0, 2, 4, 2],
+  [0, 4, 7, 4],
+  [7, 4, 2, 0],
+  [0, 2, 3, 0],
+  [4, 2, 0, -3],
+  [0, -3, 0, 4]
+];
+
+function buildScore({ key = 'F# minor', bpm = 124, density = 'high', phrase = '', carrier = 'AA', glide = 'medium' } = {}) {
+  const keyName = chooseKey(key);
+  const keyData = KEYS[keyName];
+  const rate = Math.round(coerceNumber(bpm, 124, 90, 180) <= 0 ? 124 : (60000 / coerceNumber(bpm, 124, 90, 180)) / 2);
   const safeCarrier = coerceChoice(carrier, CARRIER_OPTIONS, 'AA');
   const safeGlide = coerceChoice(glide, GLIDE_OPTIONS, 'medium');
-  const random = seededRandom(hashString(`${scaleKey}:${density}:${rate}:${phrase}:${safeCarrier}:${safeGlide}`));
-  const shapes = [
-    [8, 6, 3, 0, 1, 2, 3, 5],
-    [0, 2, 3, 5, 2, 3, 5, 7],
-    [6, 5, 4, 3, 5, 6, 7, 8],
-    [2, 4, 6, 8, 6, 4, 3, 1],
-    [5, 2, 3, 5, 6, 3, 1, 0]
-  ];
-  const cells = [];
-  const passes = density === 'wide-open' ? 2 : 3;
+  const random = seededRandom(hashString(`${keyName}:${density}:${bpm}:${phrase}:${safeCarrier}:${safeGlide}`));
 
-  for (let pass = 0; pass < passes; pass += 1) {
-    for (let section = 0; section < shapes.length; section += 1) {
-      const shape = shapes[section];
-      const shift = Math.floor(random() * shape.length);
-      const invert = random() > 0.72;
-      for (let index = 0; index < shape.length; index += 1) {
-        if (dense > 1 && (index + section) % dense === 1) continue;
-        const shapeIndex = invert ? shape.length - 1 - index : index;
-        const noteIndex = shape[(shapeIndex + pass + shift) % shape.length] % pool.length;
-        const note = pool[noteIndex];
-        const groupPool = random() > 0.9 ? CONSONANT_GROUPS : null;
-        const group = groupPool
-          ? groupPool[(section + index + pass + shift) % groupPool.length]
-          : buildCarrierGroup(safeCarrier, random, safeGlide);
-        cells.push(`b${note} ${group}`);
+  const motif = pick(random, MOTIFS);
+  const repeats = density === 'wide-open' ? 2 : density === 'very high' ? 4 : 3;
+  const codaWeight = density === 'very high' ? 0.6 : density === 'wide-open' ? 0.3 : 0.45;
+  const ornamentChance = safeGlide === 'high' ? 0.32 : safeGlide === 'low' ? 0.06 : 0.16;
+
+  const cells = [];
+  const emit = (midi, syllable) => {
+    cells.push(`b${midiToNote(midi)} ( ${syllable} )`);
+  };
+
+  // Bass anchor pickup: tonic dropped an octave, two articulated hits.
+  emit(degreeToMidi(keyData, 0) - 12, makeSyllable(random, safeCarrier, { weight: 0.7 }));
+  emit(degreeToMidi(keyData, 2) - 12, makeSyllable(random, safeCarrier, { weight: 0.4 }));
+
+  // State the motif, walking it up then back down the scale so the line
+  // arches instead of climbing monotonically into a shrill register.
+  const arch = [0, 2, 3, 4, 2, 1];
+  for (let r = 0; r < repeats; r += 1) {
+    const transpose = arch[r % arch.length];
+    for (let i = 0; i < motif.length; i += 1) {
+      const midi = degreeToMidi(keyData, motif[i] + transpose);
+      if (random() < ornamentChance) {
+        // Transient Hz bend on the carrier vowel — springs back, no drift.
+        const onset = random() < 0.85 ? `${pick(random, ONSETS)} ` : '';
+        const bend = 8 + Math.floor(random() * 18);
+        emit(midi, `${onset}${safeCarrier}(+${bend})`);
+      } else {
+        emit(midi, makeSyllable(random, safeCarrier, { weight: codaWeight }));
       }
-      const turnaround = pool[(section * 2 + pass) % pool.length];
-      cells.push(`b${turnaround} ${buildCarrierGroup(safeCarrier, random, safeGlide)}`);
     }
   }
 
-  return `r${rate} ${cells.join(' ')}`;
+  // High answer: climb to a bright degree, shimmer, then step down with a pivot.
+  const peak = degreeToMidi(keyData, 7 + Math.min(repeats, 2));
+  cells.push(`v${safeGlide === 'high' ? 6 : 4} b${midiToNote(peak)} ( ${pick(random, PIVOTS)} )`);
+  cells.push(`b${midiToNote(degreeToMidi(keyData, 6 + repeats))} ( ${makeSyllable(random, safeCarrier, { weight: 0.3 })} )`);
+  cells.push(`b${midiToNote(degreeToMidi(keyData, 4 + repeats))} ( ${makeSyllable(random, safeCarrier, { weight: 0.5 })} )`);
+  cells.push(`v b${midiToNote(degreeToMidi(keyData, 2))} ( ${pick(random, PIVOTS)} )`);
+
+  // Resolution back to the tonic for a seamless loop seam.
+  emit(degreeToMidi(keyData, 0), makeSyllable(random, safeCarrier, { weight: 0.3 }));
+  cells.push(`s1.1 b${midiToNote(degreeToMidi(keyData, 0) - 12)} ( ${safeCarrier} V ER )`);
+
+  return `r${rate} s1.04 g0.8 ${cells.join(' ')}`;
 }
 
 function fallbackLoop(options = {}) {
-  const bpm = Math.round(coerceNumber(options.bpm, 144, 90, 180));
+  const bpm = Math.round(coerceNumber(options.bpm, 124, 90, 180));
+  const key = coerceText(options.key, 'F# minor');
   return {
     score: buildScore({
-      key: coerceText(options.key, 'F# minor'),
+      key,
       bpm,
       density: coerceText(options.density, 'high'),
       phrase: coerceText(options.phrase || options.mood, ''),
@@ -163,7 +222,7 @@ function fallbackLoop(options = {}) {
     }),
     bpm,
     bars: 8,
-    notes: 'Klattsch score loop built from fast note directives and vowel phoneme groups.'
+    notes: `${chooseKey(key)} motif loop: low anchor states the law, lifts to a high answer, resolves home.`
   };
 }
 
@@ -248,11 +307,11 @@ async function generatePhraseLoop(request = {}, env = process.env) {
   const apiKey = env.OPENAI_API_KEY;
   const model = env.OPENAI_MUSIC_MODEL || DEFAULT_MODEL;
   const normalizedRequest = {
-    phrase: coerceText(request.phrase, 'AA'),
+    phrase: coerceText(request.phrase, 'work it harder'),
     variation: coerceText(request.variation, ''),
-    mood: coerceText(request.mood, 'state of the art 1980 speech synth arpeggio'),
+    mood: coerceText(request.mood, 'beautiful late-night electronic vocal loop'),
     key: coerceText(request.key, 'F# minor'),
-    bpm: coerceNumber(request.bpm, 144, 90, 180),
+    bpm: coerceNumber(request.bpm, 124, 90, 180),
     density: coerceText(request.density, 'very high'),
     carrier: coerceChoice(request.carrier, CARRIER_OPTIONS, 'AA'),
     glide: coerceChoice(request.glide, GLIDE_OPTIONS, 'medium')
@@ -271,24 +330,31 @@ async function generatePhraseLoop(request = {}, env = process.env) {
     body: JSON.stringify({
       model,
       reasoning: { effort: 'low' },
-      prompt_cache_key: 'vangelis-klattsch-score-v6',
+      prompt_cache_key: 'vangelis-klattsch-score-v7',
       max_output_tokens: 9000,
       instructions: [
-        'Generate original klattsch score strings for a retro browser speech synthesizer that should feel like a melodic electronic vocal loop.',
-        'Klattsch syntax is whitespace-separated. Use rN for per-phoneme duration in ms, pN for exact pauses, bNote for absolute pitch, parenthesized groups for one sung syllable slot, stress markers like AA!, transient pitch ornaments like AA(+12), and ARPABET phonemes only.',
-        'The target feel is beautiful, emotional, cruising, and smooth: late-night electronic motion, gliding momentum, a little melancholy, a little lift, and a loop that can run for minutes without getting annoying.',
-        'Think in shapes first. Make one long melodic ribbon with a low anchor, a mid-register cruise, a high answering lift, and a clean return to the downbeat.',
-        'Before writing the score, internally choose a clear 4-bar or 8-bar harmonic map. Favor emotional electronic progressions such as i-VI-III-VII, i-v-VI-iv, i-III-VII-IV, i-VI-iv-V, dorian i-IV-v-VII, or lydian I-II-vii-I.',
-        'Use note directives from roughly bG2 through bG#5. Wide octave displacement is good when it feels smooth and resolved. Chromatic neighbor turns are good when they add electronic emotion rather than randomness.',
-        'The request includes carrier. Most of the loop should ride that carrier vowel as the sung voice color. Use vowel changes as rare color hits at pivots, lifts, or turnarounds. Do not change vowel on every note.',
-        'The request includes glide. For glide=low, use very few pitch ornaments or stress marks. For glide=medium, add occasional transient ornaments at emotional turns. For glide=high, use more AA(+N)-style ornaments, but keep the melody smooth and resolved.',
-        'One 4/4 bar can be treated as 1920 ms at 125 BPM. Quarter = 480 ms, eighth = 240 ms, sixteenth = 120 ms. For other BPM values, scale millisecond flags by 125 / BPM.',
-        'Use r90-r120 as the main pulse, with occasional p40-p160 only where the phrase needs breath. Return 96-192 note events unless the density request is wide-open.',
-        'Use expressive directives sparingly at musical moments: h0.03-h0.12 for breath before a phrase, s0.95-s1.14 for voice size changes, t0.05-t0.35 for brighter lifts, g0.65-g0.95 for emotional push, v2-v7 and w4-w7 for held shimmer, m0.05-m0.18 and n4-n9 for electronic tremolo.',
-        `Avoid these output shapes:\n- ${AVOID_SHAPES.join('\n- ')}`,
-        'If the score starts to resemble any avoided shape, change the contour before finalizing. Keep the final loop smooth, emotional, melodic, and cruising.',
-        'The notes field should briefly name the harmonic map and emotional contour, for example: "F# minor i-VI-III-VII, lonely low motif opens into bright high answer."',
-        'Avoid prose, comments, lyrics, real song quotes, or explanations inside the score.'
+        'You write original klattsch scores for a retro parallel-formant speech synth. The result must feel like a beautiful, hypnotic electronic VOCAL loop — Daft Punk "Harder, Better, Faster, Stronger" is the north star: rhythmic consonants articulating an emotional, melodic vocal line that can loop for minutes without getting old.',
+        'KLATTSCH GRAMMAR (whitespace separated):',
+        '- rN sets ms per rhythmic slot. A parenthesized group ( ... ) is ONE sung syllable that occupies ONE slot; the phonemes inside it share that slot. So ( HH AA R ) is a single sung "har", not three notes.',
+        '- bNote sets the absolute pitch for what follows, e.g. bC#4. THE MELODY IS THE SEQUENCE OF bNote VALUES, one per group. Put a bNote before (almost) every group.',
+        '- Pitch ornaments are in Hz, not semitones. AA(+20) inside a group is a transient upward bend that springs back. AA+20 WITHOUT parentheses is sticky and permanently raises pitch — do NOT use sticky deltas, they make the loop drift sharp.',
+        '- ARPABET phonemes only. Stress a syllable with ! e.g. AA!. Pause with pN (ms) sparingly.',
+        '- Expressive directives: s scale/voice-size, v vibrato depth, w vibrato rate, m tremolo, n tremolo rate, h breath, t brightness, g glottal effort. A BARE letter (just v, or s) RESETS that knob to baseline — use that to end a swell.',
+        'COMPOSITION METHOD:',
+        '1. Pick a 4-bar harmonic map in the requested key (e.g. minor i-VI-III-VII, i-v-VI-iv, dorian i-IV-v-VII, lydian I-II-vii-I).',
+        '2. Invent ONE 3-4 note melodic motif (the "law"). State it low, then repeat it transposed up the scale for lift. A recurring motif is what makes a loop mesmerizing.',
+        '3. Anchor the loop with a low bass note (around bG2-bA2) at phrase starts, cruise in the mid register (bC3-bC4), and reach a bright high answer (bC4-bG#4) once per loop.',
+        '4. Resolve the last group back to the tonic so the loop seam is seamless.',
+        'VOICE / ARTICULATION:',
+        '- Ride the requested carrier vowel as the main sung colour. Articulate the groove with consonant onsets and codas (HH, M, N, L, R, W, V, D, B, S, T and codas R, N, L, S, T) the way "harder/better/faster/stronger" does. Do NOT change the vowel every note — change it only at pivots, lifts, and turnarounds.',
+        '- Short evocative robot-vocal phrasing is welcome (e.g. broken into syllable groups), but never quote real copyrighted lyrics.',
+        'GLIDE: low = almost no ornaments; medium = a few transient AA(+N) bends at emotional turns; high = more bends, still smooth and resolved.',
+        'TIMING: one 4/4 bar ~ 1920 ms at 125 BPM (quarter 480, eighth 240, sixteenth 120). Set r near 60000/BPM/2 for an eighth-note pulse. Return 24-64 groups (fewer if density is wide-open).',
+        `AVOID these shapes:\n- ${AVOID_SHAPES.join('\n- ')}`,
+        'If the line starts resembling any avoided shape, rewrite the contour before finalizing.',
+        'WORKED EXAMPLE (F# minor, do not copy verbatim): r236 s1.05 g0.8 bF#2 ( W ER K ) bC#3 ( IH T ) bF#3 ( HH AA R ) bA3 ( D ER ) bC#4 ( B EH ) bB3 ( T ER ) bA3 ( F AE S ) bF#3 ( T ER ) bE3 ( S T R AO NG ) bC#3 ( G ER ) ... v4 bF#4 ( AW ER ) ... s1.1 bF#2 ( OW V ER )',
+        'The notes field briefly names the harmonic map and emotional contour, e.g. "F# minor i-III-VII, low motif lifts to a bright high answer and resolves home."',
+        'Output only valid JSON for the schema. No prose, comments, or lyrics inside the score.'
       ].join('\n'),
       input: JSON.stringify(normalizedRequest),
       text: {
