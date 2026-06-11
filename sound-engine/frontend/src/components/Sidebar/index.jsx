@@ -61,7 +61,9 @@ const Sidebar = ({
     onParamsChange,
     transportBpm,
     controlSections,
-    onControlSectionToggle
+    onControlSectionToggle,
+    activePresetName,
+    onPresetApplied
   } = useSoundControls();
   // Close on escape key
   useEffect(() => {
@@ -106,6 +108,21 @@ const Sidebar = ({
 
   const tabs = [
     {
+      id: 'sound',
+      label: 'Sound',
+      icon: (
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="6" y1="5" x2="6" y2="19" />
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="18" y1="5" x2="18" y2="19" />
+          <circle cx="6" cy="9" r="2.2" fill="currentColor" stroke="none" />
+          <circle cx="12" cy="15" r="2.2" fill="currentColor" stroke="none" />
+          <circle cx="18" cy="8" r="2.2" fill="currentColor" stroke="none" />
+        </svg>
+      ),
+      isActive: false
+    },
+    {
       id: 'midi',
       label: 'MIDI',
       icon: (
@@ -136,21 +153,6 @@ const Sidebar = ({
         </svg>
       ),
       isActive: !disabled && !!voiceStatus?.enabled
-    },
-    {
-      id: 'sound',
-      label: 'Sound',
-      icon: (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="6" y1="5" x2="6" y2="19" />
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="18" y1="5" x2="18" y2="19" />
-          <circle cx="6" cy="9" r="2.2" fill="currentColor" stroke="none" />
-          <circle cx="12" cy="15" r="2.2" fill="currentColor" stroke="none" />
-          <circle cx="18" cy="8" r="2.2" fill="currentColor" stroke="none" />
-        </svg>
-      ),
-      isActive: false
     }
   ];
   const activePanel = tabs.find((tab) => tab.id === activeTab) || tabs[0];
@@ -167,7 +169,7 @@ const Sidebar = ({
       ? (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
       : activeTab === 'voice'
         ? (voiceStatus?.enabled ? 'Voice on' : 'Voice off')
-        : `Waveform: ${waveformType}`;
+        : (activePresetName ? `Patch: ${activePresetName}` : `Waveform: ${waveformType}`);
 
   return (
     <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''} ${disabled ? 'sidebar-container--disabled' : ''}`}>
@@ -259,6 +261,8 @@ const Sidebar = ({
               transportBpm={transportBpm}
               sections={controlSections}
               onSectionToggle={onControlSectionToggle}
+              onPresetApplied={onPresetApplied}
+              activePresetName={activePresetName}
             />
           )}
         </div>

@@ -191,7 +191,68 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
     ...(libraryPlaybackProfiles[entry.id] || {})
   }));
 
+  // Original in-house cues, composed for the synth presets — see
+  // scripts/generate_original_midis.mjs. No soundSetId so they play
+  // through whatever preset is currently loaded.
+  const originalFiles = [
+    {
+      id: 'original-neon-rain',
+      name: 'Neon Rain (Synth Blues)',
+      path: toBuiltInPath('originals/original-neon-rain.mid'),
+      composer: 'Vangelis Studio Original'
+    },
+    {
+      id: 'original-elegy-for-replicants',
+      name: 'Elegy for Replicants (Ambient)',
+      path: toBuiltInPath('originals/original-elegy-for-replicants.mid'),
+      composer: 'Vangelis Studio Original'
+    },
+    {
+      id: 'original-sea-of-dunes',
+      name: 'Sea of Dunes (Drone)',
+      path: toBuiltInPath('originals/original-sea-of-dunes.mid'),
+      composer: 'Vangelis Studio Original'
+    },
+    {
+      id: 'original-escape-velocity',
+      name: 'Escape Velocity (Chase)',
+      path: toBuiltInPath('originals/original-escape-velocity.mid'),
+      composer: 'Vangelis Studio Original'
+    },
+    {
+      id: 'original-green-memories',
+      name: 'Green Memories (Ballad)',
+      path: toBuiltInPath('originals/original-green-memories.mid'),
+      composer: 'Vangelis Studio Original'
+    },
+    {
+      id: 'original-rain-on-chrome',
+      name: 'Rain on Chrome (Sequence)',
+      path: toBuiltInPath('originals/original-rain-on-chrome.mid'),
+      composer: 'Vangelis Studio Original'
+    },
+    {
+      id: 'original-offworld-anthem',
+      name: 'Offworld Anthem (Fanfare)',
+      path: toBuiltInPath('originals/original-offworld-anthem.mid'),
+      composer: 'Vangelis Studio Original'
+    },
+    {
+      id: 'original-vapor-lights',
+      name: 'Vapor Lights (Blues II)',
+      path: toBuiltInPath('originals/original-vapor-lights.mid'),
+      composer: 'Vangelis Studio Original'
+    }
+  ];
+
   return [
+    ...originalFiles,
+    {
+      id: 'vangelis-to-the-unknown-man',
+      name: 'To the Unknown Man',
+      path: toBuiltInPath('to-the-unknown-man.mid'),
+      composer: 'Vangelis'
+    },
     ...russianFiles,
     // Rachmaninoff Piano Concerto No. 2
     {

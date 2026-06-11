@@ -11,7 +11,9 @@ const SoundTab = ({
   onParamsChange,
   transportBpm,
   sections,
-  onSectionToggle
+  onSectionToggle,
+  onPresetApplied,
+  activePresetName
 }) => (
   <div className="sound-tab">
     <div className="sound-tab__surface">
@@ -23,9 +25,11 @@ const SoundTab = ({
       <PresetShelf
         waveformType={currentWaveform}
         audioParams={audioParams}
+        activePresetName={activePresetName}
         onApply={(preset) => {
           if (preset.waveformType) onWaveformChange?.(preset.waveformType);
           if (preset.audioParams) onParamsChange?.(preset.audioParams);
+          onPresetApplied?.(preset.name);
         }}
       />
       <AudioControls

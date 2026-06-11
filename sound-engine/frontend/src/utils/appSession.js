@@ -10,7 +10,7 @@ const DEFAULT_CONTROL_SECTIONS = Object.freeze({
 });
 
 const VALID_SIDEBAR_TABS = new Set(['midi', 'samples', 'voice', 'sound']);
-const coerceSidebarTab = (value) => (VALID_SIDEBAR_TABS.has(value) ? value : 'midi');
+const coerceSidebarTab = (value) => (VALID_SIDEBAR_TABS.has(value) ? value : 'sound');
 
 const coerceSampleSelection = (value) => {
   if (!value || typeof value !== 'object') return null;
@@ -45,7 +45,7 @@ export const getDefaultSessionState = () => ({
   waveformType: null,
   audioParams: null,
   controlSections: DEFAULT_CONTROL_SECTIONS,
-  sidebarTab: 'midi',
+  sidebarTab: 'sound',
   sidebarOpen: false,
   activeSampleId: null,
   sampleSelection: null,

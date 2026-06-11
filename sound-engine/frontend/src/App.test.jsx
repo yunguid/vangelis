@@ -17,7 +17,14 @@ vi.mock('./utils/audioEngine.js', () => ({
     getAnalysisNodes: vi.fn(() => null),
     loadCustomSample: vi.fn(() => Promise.resolve({ duration: 1, channels: 2 })),
     clearCustomSample: vi.fn(),
-    toggleRecording: vi.fn()
+    setCustomSampleBaseNote: vi.fn(),
+    setTransportTempo: vi.fn(),
+    toggleRecording: vi.fn(),
+    getVoicePhraseStatus: vi.fn(() => ({ enabled: false, nextIndex: 0, lastChunk: null })),
+    subscribeVoicePhrase: vi.fn(() => () => {}),
+    setVoicePhrase: vi.fn(() => Promise.resolve({ chunkCount: 0 })),
+    setVoicePhraseEnabled: vi.fn(),
+    clearVoicePhrase: vi.fn()
   },
 }));
 
@@ -60,7 +67,8 @@ describe('App', () => {
 
   it('shows waveform type', () => {
     render(<App />);
-    expect(screen.getByText(/Waveform:/)).toBeInTheDocument();
+    // Appears in the keyboard legend and the Sound panel subtitle.
+    expect(screen.getAllByText(/Waveform:/).length).toBeGreaterThan(0);
   });
 
   it('has keyboard shortcuts button', () => {

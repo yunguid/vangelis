@@ -143,7 +143,7 @@ const App = () => {
   const [sampleInfo, setSampleInfo] = useState(null);
   const [sampleLoading, setSampleLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(() => initialSession.sidebarOpen || false);
-  const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'midi');
+  const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'sound');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
   const [voiceText, setVoiceText] = useState(() => initialSession.voiceText || DEFAULT_VOICE_TEXT);
@@ -153,6 +153,7 @@ const App = () => {
   const [voiceStatus, setVoiceStatus] = useState(() => audioEngine.getVoicePhraseStatus());
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [notice, setNotice] = useState('');
+  const [activePresetName, setActivePresetName] = useState(null);
   const [controlSections, setControlSections] = useState(() => (
     initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
   ));
@@ -535,7 +536,13 @@ const App = () => {
 
   const handleResetSound = useCallback(() => {
     setAudioParams(sanitizeAudioParams(AUDIO_PARAM_DEFAULTS));
+    setActivePresetName(null);
     pushNotice('Sound reset to dry defaults.');
+  }, [pushNotice]);
+
+  const handlePresetApplied = useCallback((presetName) => {
+    setActivePresetName(presetName || null);
+    if (presetName) pushNotice(`Patch loaded: ${presetName}`);
   }, [pushNotice]);
 
   const handleControlSectionToggle = useCallback((section) => {
@@ -599,8 +606,18 @@ const App = () => {
     onParamsChange: handleAudioParamsChange,
     transportBpm,
     controlSections,
-    onControlSectionToggle: handleControlSectionToggle
-  }), [waveformType, audioParams, transportBpm, controlSections, handleControlSectionToggle]);
+    onControlSectionToggle: handleControlSectionToggle,
+    activePresetName,
+    onPresetApplied: handlePresetApplied
+  }), [
+    waveformType,
+    audioParams,
+    transportBpm,
+    controlSections,
+    handleControlSectionToggle,
+    activePresetName,
+    handlePresetApplied
+  ]);
 
   const midiTransportValue = useMemo(() => ({
     isPlaying: midiPlayback.isPlaying,
@@ -656,7 +673,9 @@ const App = () => {
     ? `Voice: ${voiceStatus.lastChunk?.label || voicePreviewChunks[voiceStatus.nextIndex]?.label || voicePreviewChunks[0]?.label || 'armed'}`
     : sampleInfo
       ? `Sample: ${sampleInfo.name}`
-      : `Waveform: ${waveformType}`;
+      : activePresetName
+        ? `Patch: ${activePresetName}`
+        : `Waveform: ${waveformType}`;
 
   return (
     <ErrorBoundary>

@@ -153,3 +153,38 @@ command runner was down for most of this cycle. Next actions, in order:
 3. `npx vitest run` + `npm run build`
 4. Browser verification (load app, play notes, check shader + mod matrix)
 5. Delete `sound-engine/audio-engine/` + `public/pkg/`, then commit in logical chunks + push.
+
+### Cycle 2 (2026-06-11) — factory preset bank, preset UX, original MIDI corpus
+User directive: 10–20 production-grade presets (Vangelis/Blade Runner, Mike Dean),
+better sound-loading sidebar UX, more songs in the library. Push to main as work lands.
+
+- **Preset bank (20 patches)**: `utils/presetStorage.js` rewritten. The 4 demo patches are
+  replaced by a categorized bank (Leads / Pads & Strings / Bass / Keys & Bells /
+  Motion & Texture) designed against the actual worklet: CS-80-style brass (mod-env filter
+  bloom + LFO1 vibrato + wheel→cutoff), Blade Runner Blues solo lead (0.22s glide, breathing
+  LFO2 cutoff, tape delay '1/4.' into ambient verb), 808 sub (mod-env→pitch knock),
+  reese (3-voice ±26¢ + LFO2→detune swirl), FM e-piano/bells (mod-env+velocity→FM index,
+  key-track tames the top), S&H acid, BP formant pad, wow/flutter lo-fi keys, etc.
+  Conventions: every patch spreads over a fully-specified CLEAN_PATCH (deterministic
+  switching, nothing leaks between presets); `lfoDepth: 0` always (never trip the legacy
+  implicit route); volume/pan left untouched (user's master). Depth math documented in-file
+  (pitch ±12st, cutoff ±4oct, FM ±10rad, detune ±50¢ at |depth|=1).
+- **Preset tests**: `utils/presetStorage.test.js` — unique ids/names, valid categories,
+  every numeric param inside AUDIO_PARAM_RANGES, enums survive sanitize, no mod route
+  dropped by sanitizeModRoutes, ≤8 routes, lfoDepth==0.
+- **PresetShelf UX**: category groups, ‹/› cycling transport with active-patch readout +
+  description, active highlight (aria-pressed), highlight survives remount by re-deriving
+  from app-level patch name; save row moved under "Your presets" with empty-state hint.
+- **Patch name surfaced**: App tracks `activePresetName` (cleared on Reset), shown in the
+  keyboard legend and sidebar Sound subtitle; "Patch loaded: X" notice on apply.
+- **Sidebar**: Sound tab promoted to first rail position and made the default tab
+  (appSession default + coercion fallback both now 'sound').
+- **Original MIDI corpus**: `scripts/generate_original_midis.mjs` — 8 pieces composed
+  from scratch in-script (deterministic, seeded humanization; @tonejs/midi): Neon Rain
+  (C#m synth blues), Vapor Lights (Gm blues II), Elegy for Replicants, Sea of Dunes,
+  Escape Velocity, Green Memories, Rain on Chrome, Offworld Anthem. Registered in
+  `getBuiltInMidiFiles` without soundSetId so they play through the active synth preset.
+  Also surfaced the orphaned `to-the-unknown-man.mid` already in public/midi.
+- **Verification status**: edit-complete; exec (node generator, build, vitest, git) blocked
+  by the same sandbox classifier outage as Cycle 1 — ship checklist: generate originals →
+  build → vitest → commit → push HEAD:main.
