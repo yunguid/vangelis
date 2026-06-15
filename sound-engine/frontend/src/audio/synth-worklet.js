@@ -2,6 +2,8 @@ const TWO_PI = Math.PI * 2;
 const MAX_VOICES = 24;
 const MIN_GAIN = 0.0001;
 const MAX_MOD_ROUTES = 8;
+const FILTER_MAX_CUTOFF_RATIO = 0.35;
+const VOICE_SAMPLE_LIMIT = 8.0;
 
 const WAVEFORMS = Object.freeze({
   SINE: 0,
@@ -311,15 +313,19 @@ class StateVariableFilter {
     this.smoothCoeff = Math.exp(-1.0 / (0.01 * sampleRate));
   }
 
+  getMaxCutoff() {
+    return this.sampleRate * FILTER_MAX_CUTOFF_RATIO;
+  }
+
   setParams({ cutoff, resonance, mode }) {
-    if (typeof cutoff === 'number') {
-      this.targetCutoff = clamp(cutoff, 20, this.sampleRate * 0.45);
+    if (typeof cutoff === 'number' && Number.isFinite(cutoff)) {
+      this.targetCutoff = clamp(cutoff, 20, this.getMaxCutoff());
     }
-    if (typeof resonance === 'number') {
+    if (typeof resonance === 'number' && Number.isFinite(resonance)) {
       this.resonance = clamp(resonance, 0.1, 10.0);
     }
-    if (typeof mode === 'number') {
-      this.mode = mode;
+    if (typeof mode === 'number' && Number.isFinite(mode)) {
+      this.mode = Math.floor(clamp(mode, 0, 3));
     }
   }
 
@@ -331,8 +337,8 @@ class StateVariableFilter {
 
   process(input, cutoffOverride) {
     // Apply one-pole smoothing to cutoff to prevent zipper noise
-    const targetCutoff = typeof cutoffOverride === 'number'
-      ? clamp(cutoffOverride, 20, this.sampleRate * 0.45)
+    const targetCutoff = typeof cutoffOverride === 'number' && Number.isFinite(cutoffOverride)
+      ? clamp(cutoffOverride, 20, this.getMaxCutoff())
       : this.targetCutoff;
 
     // Smooth the cutoff frequency
@@ -345,16 +351,28 @@ class StateVariableFilter {
     const hp = input - this.lp - q * this.bp;
     this.bp = this.bp + f * hp;
 
+    let output;
     switch (this.mode) {
       case 1:
-        return hp; // high-pass
+        output = hp; // high-pass
+        break;
       case 2:
-        return this.bp; // band-pass
+        output = this.bp; // band-pass
+        break;
       case 3:
-        return input - q * this.bp; // notch
+        output = input - q * this.bp; // notch
+        break;
       default:
-        return this.lp; // low-pass
+        output = this.lp; // low-pass
+        break;
     }
+
+    if (!Number.isFinite(output) || !Number.isFinite(this.lp) || !Number.isFinite(this.bp)) {
+      this.reset();
+      return 0.0;
+    }
+
+    return clamp(output, -VOICE_SAMPLE_LIMIT, VOICE_SAMPLE_LIMIT);
   }
 }
 
@@ -712,7 +730,14 @@ class Voice {
       this.noteId = null;
     }
 
-    return sample;
+    if (!Number.isFinite(sample)) {
+      this.filter.reset();
+      this.active = false;
+      this.noteId = null;
+      return 0.0;
+    }
+
+    return clamp(sample, -VOICE_SAMPLE_LIMIT, VOICE_SAMPLE_LIMIT);
   }
 }
 
@@ -879,6 +904,7 @@ class SynthProcessor extends AudioWorkletProcessor {
         }
       }
       sample *= mixGain;
+      sample = Number.isFinite(sample) ? Math.tanh(sample) : 0.0;
       left[i] = sample;
       if (right) {
         right[i] = sample;

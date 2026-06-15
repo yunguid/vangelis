@@ -19,6 +19,8 @@ globalThis.registerProcessor = (_name, cls) => {
 };
 
 await import('../src/audio/synth-worklet.js');
+const { FACTORY_PRESETS } = await import('../src/utils/presetStorage.js');
+const { sanitizeAudioParams, toWorkletParams } = await import('../src/utils/audioParams.js');
 
 let failures = 0;
 function check(name, cond, detail = '') {
@@ -238,6 +240,28 @@ function msg(proc, data) {
 }
 
 // --- 9. Voice stealing under flood ---
+{
+  console.log('factory presets:');
+  for (const preset of FACTORY_PRESETS) {
+    const params = toWorkletParams(sanitizeAudioParams(preset.audioParams));
+    const proc = makeProc(params);
+    msg(proc, { type: 'setParams', params });
+    for (let i = 0; i < 18; i++) {
+      msg(proc, {
+        type: 'noteOn',
+        noteId: `${preset.id}-${i}`,
+        frequency: 130.81 * Math.pow(2, i / 12),
+        waveform: preset.waveformType,
+        velocity: 0.95
+      });
+      render(proc, 3);
+    }
+    const r = render(proc, 80);
+    check(`${preset.name} stays finite and bounded`, r.allFinite && r.peak <= 1.0, `peak=${r.peak}`);
+  }
+}
+
+// --- 10. Voice stealing under flood ---
 {
   console.log('voice stealing:');
   const proc = makeProc();
