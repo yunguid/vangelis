@@ -137,7 +137,7 @@
   font-size: clamp(0.8rem, 1.2vw, 1rem);
   letter-spacing: 0.18em;
   color: var(--color-text-secondary);
-  text-transform: uppercase;
+  text-transform: none;
   opacity: 0.92;
 }
 
@@ -223,6 +223,6 @@
   color: var(--color-text-primary);
   font-size: 0.72rem;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
+  text-transform: none;
   box-shadow: var(--shadow-floating);
 }

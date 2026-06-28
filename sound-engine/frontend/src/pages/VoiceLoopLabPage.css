@@ -61,7 +61,7 @@
   color: rgba(235, 219, 178, 0.58);
   font-size: 0.68rem;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .voice-loop-dice {
@@ -272,7 +272,7 @@
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
+  text-transform: none;
   color: rgba(235, 219, 178, 0.92);
 }
 
@@ -330,7 +330,7 @@
 .voice-loop-chip__key {
   font-size: 0.62rem;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
+  text-transform: none;
   color: rgba(235, 219, 178, 0.5);
 }
 
