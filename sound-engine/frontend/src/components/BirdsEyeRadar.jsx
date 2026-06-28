@@ -377,7 +377,7 @@ const BirdsEyeRadar = ({
   }, [midiRange.max, midiRange.min]);
 
   return (
-    <section className="birds-eye-radar panel elevated" aria-label="Bird's-eye MIDI radar">
+    <section className="birds-eye-radar" aria-label="Bird's-eye MIDI radar">
       <div className="birds-eye-radar__stage">
         <canvas ref={canvasRef} className="birds-eye-radar__canvas" />
         {!currentMidi && (

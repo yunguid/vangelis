@@ -18,3 +18,8 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+#root,
+#root * {
+  text-transform: none !important;
+}

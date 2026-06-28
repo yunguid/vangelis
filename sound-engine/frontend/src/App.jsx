@@ -669,14 +669,6 @@ const App = () => {
     handleVoiceClear
   ]);
 
-  const keyboardLabel = voiceStatus.enabled
-    ? `Voice: ${voiceStatus.lastChunk?.label || voicePreviewChunks[voiceStatus.nextIndex]?.label || voicePreviewChunks[0]?.label || 'armed'}`
-    : sampleInfo
-      ? `Sample: ${sampleInfo.name}`
-      : activePresetName
-        ? `Patch: ${activePresetName}`
-        : `Waveform: ${waveformType}`;
-
   return (
     <ErrorBoundary>
       <div className="app-stage">
@@ -698,13 +690,7 @@ const App = () => {
 
           <main className="zone-center content-primary" aria-label="Keyboard area">
             <WaveCandy />
-            <div className="keyboard-surface tier-focus" role="region" aria-label="Virtual keyboard">
-              <div className="keyboard-header">
-                <span className="keyboard-legend">
-                  {keyboardLabel}
-                  {isRecording && <span className="recording-indicator"> [REC]</span>}
-                </span>
-              </div>
+            <div className="keyboard-surface" role="region" aria-label="Virtual keyboard">
               <div className="keyboard-region">
                 {midiPlayback.currentMidi && (
                   <BirdsEyeRadar
@@ -726,9 +712,6 @@ const App = () => {
                     <span>Audio engine warms now.</span>
                   </div>
                 )}
-                <div className="keyboard-hints">
-                  <span className="keyboard-hint">Press Shift + / for keys.</span>
-                </div>
               </div>
             </div>
           </main>
