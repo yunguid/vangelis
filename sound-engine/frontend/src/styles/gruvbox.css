@@ -40,6 +40,9 @@ body {
 .panel,
 .panel.elevated,
 .controls-surface,
+.keyboard-surface,
+.birds-eye-radar,
+.birds-eye-radar__stage,
 .shortcuts-card,
 .shortcuts-overlay,
 .app-notice,
@@ -84,23 +87,13 @@ body {
   border-color: rgba(215, 153, 33, 0.32) !important;
 }
 
+.keyboard-surface,
+.birds-eye-radar,
+.birds-eye-radar__stage,
 .wave-candy__canvas,
 .candy-canvas {
   background: rgba(29, 32, 33, 0.96) !important;
   border-color: rgba(168, 153, 132, 0.18) !important;
-  box-shadow: none !important;
-}
-
-.wave-candy,
-.candy-tile,
-.keyboard-surface,
-.birds-eye-radar {
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-.birds-eye-radar__stage {
-  border: 0 !important;
   box-shadow: none !important;
 }
 

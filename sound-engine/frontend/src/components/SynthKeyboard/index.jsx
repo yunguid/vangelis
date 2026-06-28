@@ -11,6 +11,7 @@ import { useNotePlayback } from './hooks/useNotePlayback';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
 import { usePointerInput } from './hooks/usePointerInput';
 import Key from './components/Key';
+import KeyboardMeta from './components/KeyboardMeta';
 import { getNoteMeta } from './utils/noteMeta';
 
 const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = new Set() }) => {
@@ -42,7 +43,7 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
   }, [octaveOffset]);
 
   // Visual feedback (RAF-batched updates)
-  const { scheduleVisualUpdate, updateVelocityDisplay } = useVisualFeedback(keyElementsRef);
+  const { scheduleVisualUpdate, updateVelocityDisplay, velocityDisplay } = useVisualFeedback(keyElementsRef);
 
   // Audio playback
   const { startNote, stopNote, switchPointerNote, pointerToNoteRef } = useNotePlayback({
@@ -150,6 +151,8 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
           />
         ))}
       </div>
+
+      <KeyboardMeta octaveOffset={octaveOffset} velocityDisplay={velocityDisplay} />
     </div>
   );
 };

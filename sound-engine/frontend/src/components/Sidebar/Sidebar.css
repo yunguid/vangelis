@@ -301,7 +301,7 @@
   color: rgba(196, 212, 229, 0.46);
   font-size: 0.58rem;
   letter-spacing: 0.06em;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .voice-tab__typing--on {
@@ -390,7 +390,7 @@
   color: rgba(190, 208, 226, 0.48);
   font-size: 0.58rem;
   letter-spacing: 0.06em;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .voice-tab__toolbar {
@@ -951,7 +951,7 @@
   color: rgba(209, 224, 241, 0.78);
   font-size: 0.5rem;
   letter-spacing: 0.07em;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .samples-tab__starter-family-btn--active {
@@ -996,7 +996,7 @@
 .samples-tab__starter-family {
   font-size: 0.52rem;
   letter-spacing: 0.07em;
-  text-transform: none;
+  text-transform: uppercase;
   color: rgba(190, 209, 228, 0.72);
 }
 

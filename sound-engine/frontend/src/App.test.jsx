@@ -65,9 +65,10 @@ describe('App', () => {
     expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument();
   });
 
-  it('does not show keyboard waveform label', () => {
+  it('shows waveform type', () => {
     render(<App />);
-    expect(screen.queryByText(/Waveform:/)).not.toBeInTheDocument();
+    // Appears in the keyboard legend and the Sound panel subtitle.
+    expect(screen.getAllByText(/Waveform:/).length).toBeGreaterThan(0);
   });
 
   it('has keyboard shortcuts button', () => {
@@ -96,9 +97,9 @@ describe('App', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('does not show keyboard hints', () => {
+  it('shows keyboard hints', () => {
     render(<App />);
-    expect(screen.queryByText(/Press Shift \+ \/ for keys\./)).not.toBeInTheDocument();
+    expect(screen.getByText(/Press Shift \+ \/ for keys\./)).toBeInTheDocument();
   });
 
   it('does not show local save reassurance copy', () => {

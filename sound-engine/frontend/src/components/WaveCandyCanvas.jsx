@@ -439,7 +439,7 @@ const WaveCandyCanvas = () => {
   }, []);
 
   return (
-    <section className="wave-candy" aria-label="Wave Candy visualizer">
+    <section className="wave-candy panel elevated" aria-label="Wave Candy visualizer">
       <div className="wave-candy-grid">
         <div className="candy-tile">
           <span className="candy-label">Spectrogram</span>

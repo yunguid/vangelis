@@ -58,7 +58,7 @@
   justify-content: center;
   font-size: 0.74rem;
   letter-spacing: 0.1em;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .pipeline-card {
@@ -106,7 +106,7 @@
 .pipeline-form__divider span {
   font-size: 0.74rem;
   letter-spacing: 0.1em;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .pipeline-chip {
@@ -377,7 +377,7 @@
   color: var(--color-text-secondary);
   font-size: 0.74rem;
   letter-spacing: 0.08em;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .pipeline-progress__percent {
@@ -480,7 +480,7 @@
   border-radius: 999px;
   font: inherit;
   letter-spacing: 0.08em;
-  text-transform: none;
+  text-transform: uppercase;
   display: inline-flex;
   align-items: center;
   justify-content: center;

@@ -18,16 +18,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-html,
-body,
-#root,
-.app-stage,
-.app-shell {
-  background: var(--color-bg-deep) !important;
-}
-
-#root,
-#root * {
-  text-transform: none !important;
-}

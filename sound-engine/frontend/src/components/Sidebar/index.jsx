@@ -169,7 +169,7 @@ const Sidebar = ({
       ? (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
       : activeTab === 'voice'
         ? (voiceStatus?.enabled ? 'Voice on' : 'Voice off')
-        : (activePresetName || waveformType);
+        : (activePresetName ? `Patch: ${activePresetName}` : `Waveform: ${waveformType}`);
 
   return (
     <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''} ${disabled ? 'sidebar-container--disabled' : ''}`}>
