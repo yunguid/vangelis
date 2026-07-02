@@ -240,3 +240,21 @@ Prophet/Jupiter/OB/PPG/Fairlight/Juno/2600/Memorymoog + hyperpop/trap/rage), the
   bench 714.8us/block vs 2667us budget = 3.7x headroom.
 - Next: 25 new original MIDIs matched to presets (generator script), then the
   in-app audible verification pass over everything.
+
+### Cycle 3c (2026-07-02) — 25 new original MIDI cues (corpus now 33)
+- generate_original_midis.mjs: 25 new pieces matched to the new presets —
+  Scream at the Sky (lead ballad), Chrome Canyon Run (synth rock), Sugar Crash
+  Angel + Pixel Heartbreak (hyperpop), Red Mist + Concrete Teeth (rage), Trap
+  Door + Alarm District (trap), Analog Sunrise, Velvet Horizon, Strings of Io,
+  West Coast Wall, Ghost Frequency, Airborne Cathedral, Night Drive Basement
+  (synthwave), Acid Perimeter (acid), Low Tide Fog, Glass Elevator, Bells for
+  Rachael, 2AM Lullaby, Chime Orbit, Shimmer Bloom, Ribbon in the Rain (glide
+  gestures), Gulls Over Voltage Bay, Cathedral of Wires. All deterministic
+  (seeded humanization), generated into public/midi/originals/.
+- midiParser.js: originalFiles refactored to an ORIGINAL_CUES table (33 cues).
+- midiParser.test.js: corpus tests — >= 30 cues registered, hyperpop/trap/rage
+  names present, every cue exists on disk and parses via @tonejs/midi with
+  > 10 notes and > 10 s duration.
+- 321/321 vitest pass. Remaining: in-app end-to-end verification pass
+  (dev server + browser: presets audibly clean, MIDIs load/play), then final
+  summary and loop stop.

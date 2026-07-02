@@ -194,56 +194,47 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   // Original in-house cues, composed for the synth presets — see
   // scripts/generate_original_midis.mjs. No soundSetId so they play
   // through whatever preset is currently loaded.
-  const originalFiles = [
-    {
-      id: 'original-neon-rain',
-      name: 'Neon Rain (Synth Blues)',
-      path: toBuiltInPath('originals/original-neon-rain.mid'),
-      composer: 'Vangelis Studio Original'
-    },
-    {
-      id: 'original-elegy-for-replicants',
-      name: 'Elegy for Replicants (Ambient)',
-      path: toBuiltInPath('originals/original-elegy-for-replicants.mid'),
-      composer: 'Vangelis Studio Original'
-    },
-    {
-      id: 'original-sea-of-dunes',
-      name: 'Sea of Dunes (Drone)',
-      path: toBuiltInPath('originals/original-sea-of-dunes.mid'),
-      composer: 'Vangelis Studio Original'
-    },
-    {
-      id: 'original-escape-velocity',
-      name: 'Escape Velocity (Chase)',
-      path: toBuiltInPath('originals/original-escape-velocity.mid'),
-      composer: 'Vangelis Studio Original'
-    },
-    {
-      id: 'original-green-memories',
-      name: 'Green Memories (Ballad)',
-      path: toBuiltInPath('originals/original-green-memories.mid'),
-      composer: 'Vangelis Studio Original'
-    },
-    {
-      id: 'original-rain-on-chrome',
-      name: 'Rain on Chrome (Sequence)',
-      path: toBuiltInPath('originals/original-rain-on-chrome.mid'),
-      composer: 'Vangelis Studio Original'
-    },
-    {
-      id: 'original-offworld-anthem',
-      name: 'Offworld Anthem (Fanfare)',
-      path: toBuiltInPath('originals/original-offworld-anthem.mid'),
-      composer: 'Vangelis Studio Original'
-    },
-    {
-      id: 'original-vapor-lights',
-      name: 'Vapor Lights (Blues II)',
-      path: toBuiltInPath('originals/original-vapor-lights.mid'),
-      composer: 'Vangelis Studio Original'
-    }
+  const ORIGINAL_CUES = [
+    ['original-neon-rain', 'Neon Rain (Synth Blues)'],
+    ['original-elegy-for-replicants', 'Elegy for Replicants (Ambient)'],
+    ['original-sea-of-dunes', 'Sea of Dunes (Drone)'],
+    ['original-escape-velocity', 'Escape Velocity (Chase)'],
+    ['original-green-memories', 'Green Memories (Ballad)'],
+    ['original-rain-on-chrome', 'Rain on Chrome (Sequence)'],
+    ['original-offworld-anthem', 'Offworld Anthem (Fanfare)'],
+    ['original-vapor-lights', 'Vapor Lights (Blues II)'],
+    ['original-scream-at-the-sky', 'Scream at the Sky (Lead Ballad)'],
+    ['original-chrome-canyon-run', 'Chrome Canyon Run (Synth Rock)'],
+    ['original-sugar-crash-angel', 'Sugar Crash Angel (Hyperpop)'],
+    ['original-red-mist', 'Red Mist (Rage)'],
+    ['original-analog-sunrise', 'Analog Sunrise (Anthem)'],
+    ['original-velvet-horizon', 'Velvet Horizon (Chorale)'],
+    ['original-strings-of-io', 'Strings of Io (Elegy)'],
+    ['original-west-coast-wall', 'West Coast Wall (80s)'],
+    ['original-ghost-frequency', 'Ghost Frequency (Spectral)'],
+    ['original-airborne-cathedral', 'Airborne Cathedral (Air)'],
+    ['original-night-drive-basement', 'Night Drive Basement (Synthwave)'],
+    ['original-trap-door', 'Trap Door (Trap)'],
+    ['original-concrete-teeth', 'Concrete Teeth (Rage Bass)'],
+    ['original-acid-perimeter', 'Acid Perimeter (Acid)'],
+    ['original-low-tide-fog', 'Low Tide Fog (Deep Drone)'],
+    ['original-glass-elevator', 'Glass Elevator (Comping)'],
+    ['original-bells-for-rachael', 'Bells for Rachael (Bell Ballad)'],
+    ['original-pixel-heartbreak', 'Pixel Heartbreak (Hyperpop)'],
+    ['original-2am-lullaby', '2AM Lullaby (EP Ballad)'],
+    ['original-chime-orbit', 'Chime Orbit (Arpeggio)'],
+    ['original-alarm-district', 'Alarm District (Trap)'],
+    ['original-shimmer-bloom', 'Shimmer Bloom (Texture)'],
+    ['original-ribbon-in-the-rain', 'Ribbon in the Rain (Gesture)'],
+    ['original-gulls-over-voltage-bay', 'Gulls Over Voltage Bay (Ambient)'],
+    ['original-cathedral-of-wires', 'Cathedral of Wires (Drone Mass)']
   ];
+  const originalFiles = ORIGINAL_CUES.map(([id, name]) => ({
+    id,
+    name,
+    path: toBuiltInPath(`originals/${id}.mid`),
+    composer: 'Vangelis Studio Original'
+  }));
 
   return [
     ...originalFiles,

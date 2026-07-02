@@ -74,3 +74,30 @@ describe('getBuiltInMidiFiles', () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe('original cues corpus', () => {
+  const originalsDir = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..', '..', 'public', 'midi', 'originals'
+  );
+  const originals = getBuiltInMidiFiles('/').filter((file) => file.id.startsWith('original-'));
+
+  it('registers a full corpus with modern-genre coverage', () => {
+    expect(originals.length).toBeGreaterThanOrEqual(30);
+    for (const label of ['Hyperpop', 'Trap', 'Rage']) {
+      expect(originals.some((file) => file.name.includes(label)), label).toBe(true);
+    }
+  });
+
+  it('every registered original cue exists on disk and parses as real MIDI', async () => {
+    const { Midi } = await import('@tonejs/midi');
+    for (const file of originals) {
+      const diskPath = path.join(originalsDir, `${file.id}.mid`);
+      expect(fs.existsSync(diskPath), file.id).toBe(true);
+      const midi = new Midi(fs.readFileSync(diskPath));
+      const noteCount = midi.tracks.reduce((sum, track) => sum + track.notes.length, 0);
+      expect(noteCount, file.id).toBeGreaterThan(10);
+      expect(midi.duration, file.id).toBeGreaterThan(10);
+    }
+  });
+});
