@@ -21,7 +21,21 @@ describe('FACTORY_PRESETS', () => {
   });
 
   it('offers a production-size bank', () => {
-    expect(FACTORY_PRESETS.length).toBeGreaterThanOrEqual(12);
+    expect(FACTORY_PRESETS.length).toBeGreaterThanOrEqual(40);
+  });
+
+  it('covers every category with a played-in set', () => {
+    for (const category of PRESET_CATEGORIES) {
+      const inCategory = FACTORY_PRESETS.filter((p) => p.category === category);
+      expect(inCategory.length, category).toBeGreaterThanOrEqual(4);
+    }
+  });
+
+  it('includes the modern-genre patches (hyperpop / trap / rage)', () => {
+    for (const genre of ['hyperpop', 'trap', 'rage']) {
+      const matches = FACTORY_PRESETS.filter((p) => p.id.includes(genre));
+      expect(matches.length, genre).toBeGreaterThanOrEqual(1);
+    }
   });
 
   it.each(FACTORY_PRESETS.map((preset) => [preset.name, preset]))(
@@ -60,6 +74,36 @@ describe('FACTORY_PRESETS', () => {
 
       // Matrix-era patches must not trigger the legacy single-LFO route.
       expect(params.lfoDepth).toBe(0);
+    }
+  );
+
+  it.each(FACTORY_PRESETS.map((preset) => [preset.name, preset]))(
+    '%s stays inside musically-stable modulation bounds',
+    (_name, preset) => {
+      const params = preset.audioParams;
+      const routes = params.modRoutes ?? [];
+      const sumDepths = (dst, positiveOnly = true) => routes
+        .filter((r) => r.dst === dst)
+        .reduce((acc, r) => acc + (positiveOnly ? Math.max(0, r.depth) : Math.abs(r.depth)), 0);
+
+      // Resonance: the TPT filter is unconditionally stable, but beyond ~6
+      // the self-oscillation dominates the note — keep factory patches tame.
+      expect(params.filterResonance).toBeLessThanOrEqual(6);
+
+      // Worst-case cutoff push (all positive routes at full tilt): <= 1.3
+      // (~5.2 octaves) so the sound brightens without pinning at the ceiling.
+      expect(sumDepths(1)).toBeLessThanOrEqual(1.3);
+
+      // Worst-case FM index: base + routed (10 rad per unit depth) <= 30 rad,
+      // matching the engine's fmIndex range ceiling.
+      const worstFm = (params.useFM ? params.fmIndex : 0) + sumDepths(3) * 10;
+      expect(worstFm).toBeLessThanOrEqual(30);
+
+      // Pitch routes stay expressive, not chaotic: total |depth| <= 0.5 (6 st).
+      expect(sumDepths(0, false)).toBeLessThanOrEqual(0.5);
+
+      // Amp routes are tremolo-scale, never gating the voice off.
+      expect(sumDepths(2, false)).toBeLessThanOrEqual(0.5);
     }
   );
 });

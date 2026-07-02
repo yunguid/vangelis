@@ -223,3 +223,20 @@ sample in the TPT SVF costs ~vs old, still ample).
 **Next:** in-app audible verify of all 20 presets, then new preset batches (CS-80/
 Prophet/Jupiter/OB/PPG/Fairlight/Juno/2600/Memorymoog + hyperpop/trap/rage), then
 20–30 new original MIDIs matched to them.
+
+### Cycle 3b (2026-07-02) — 25 new factory presets (bank now 45)
+- New patches per category (5 each): Leads — Jexus Scream (CS-80 wail), Prophet Sync
+  Sting, Hyperpop Supersaw, Rage Siren, Memorymoog Fifths. Pads — CS-80 Velvet,
+  Jupiter Strings, Oberheim Wall, PPG Ghost Choir, Fairlight Air. Bass — Juno Punch,
+  Trap Door 808, Rage Growl, 2600 Acid Wire, Taurus Fog. Keys — Prophet Glass,
+  Fairlight Bell Choir, Hyperpop Pluck, Lullaby EP, Jupiter Chime. Motion — Trap
+  Alarm, Hyperpop Shimmer, Ribbon Fall (CS-80 ribbon), Voltage Gulls, Cathedral of
+  Wires. Genres covered: classic CS-80/Prophet/Jupiter/OB/PPG/Fairlight/Juno/2600/
+  Memorymoog + hyperpop/trap/rage.
+- presetStorage.test.js extended: bank >= 40, >= 4 patches per category, hyperpop/
+  trap/rage ids present, and per-patch stability bounds (resonance <= 6, worst-case
+  cutoff-route sum <= 1.3, base+routed FM <= 30 rad, pitch/amp route sums <= 0.5).
+- Verification: 319/319 vitest (49 worklet render tests cover all 45 presets),
+  bench 714.8us/block vs 2667us budget = 3.7x headroom.
+- Next: 25 new original MIDIs matched to presets (generator script), then the
+  in-app audible verification pass over everything.
