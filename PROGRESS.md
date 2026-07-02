@@ -188,3 +188,38 @@ better sound-loading sidebar UX, more songs in the library. Push to main as work
 - **Verification status**: edit-complete; exec (node generator, build, vitest, git) blocked
   by the same sandbox classifier outage as Cycle 1 — ship checklist: generate originals →
   build → vitest → commit → push HEAD:main.
+
+### Cycle 3 (2026-07-02) — root-cause & fix of the "sparkling"/crackling artifacts
+Loop mission: fix broken presets, then 20–30 new presets + 20–30 new MIDIs, all verified.
+
+**Root causes found (engine, not preset values):**
+1. **Chamberlin SVF blowup** — `f = 2sin(pi*fc/fs)` with fc clamped at 0.35*fs gives
+   f≈1.78, far past the Chamberlin stability bound (worse with resonance). Mod routes
+   (MOD_ENV/VEL/KEY/WHEEL→CUTOFF sum to +4oct on several patches) slam cutoff into the
+   ceiling, the state explodes, the NaN guard hard-resets to a run of exact zeros, and
+   the explode/reset cycle repeats = the "sparkle". Fix: replaced with a
+   topology-preserving-transform (Simper) SVF — unconditionally stable at any cutoff <
+   Nyquist and any damping; resonance now also one-pole smoothed.
+2. **Voice-steal clicks** — stealVoice() armed a 10ms fade, but noteOn() immediately
+   called start(), which reset `isBeingStolen` and hard-reset a live phase = click on
+   every steal (constant crackle under busy MIDI playback). Same for same-noteId
+   retriggers. Fix: `queueStart()` pends the note, the ~5ms fade completes, then the
+   voice restarts; stealVoice() now deprioritizes voices with pending notes.
+3. **FM aliasing at high notes** — e.g. Glass Bells (fmIndex 6rad + MOD_ENV 0.55 +
+   VEL 0.3 routed to FM, ratio 3.5) pushes PM sidebands ~45kHz at C6 → aliased
+   inharmonic "sparkle". Fix: Carson-rule cap on effective index
+   (I_rad ≤ (0.42fs − fc)/fm − 1) + polyBLEP transition band widened by the
+   per-sample PM phase deviation for saw/square/triangle carriers.
+
+**Verification:** new offline render suite `src/audio/synth-worklet.test.js` runs the
+real worklet (bench-style global stubs) over every factory preset across 5 octaves:
+finite, |s|≤1, no exact-zero dropout runs mid-sustain, release decays to silence; plus
+regressions for max-res cutoff-slam, extreme FM stacking, 40-note steal flood
+(maxJump < 0.25 on sines), same-note retrigger. 197/197 vitest pass;
+`scripts/test_synth_worklet.mjs` ALL PASS; bench: 733us/128-frame block at worst-case
+24 voices ×4 unison FM+filter (budget 2667us) = 3.6x realtime headroom (tan() per
+sample in the TPT SVF costs ~vs old, still ample).
+
+**Next:** in-app audible verify of all 20 presets, then new preset batches (CS-80/
+Prophet/Jupiter/OB/PPG/Fairlight/Juno/2600/Memorymoog + hyperpop/trap/rage), then
+20–30 new original MIDIs matched to them.

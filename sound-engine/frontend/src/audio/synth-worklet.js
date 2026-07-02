@@ -299,14 +299,19 @@ class LFO {
   }
 }
 
+// Topology-preserving-transform (Simper/Cytomic) state-variable filter.
+// Unlike the Chamberlin SVF this discretization is unconditionally stable for
+// any cutoff below Nyquist and any damping >= 0, so modulation can slam the
+// cutoff against its ceiling without the state exploding into crackle.
 class StateVariableFilter {
   constructor(sampleRate) {
     this.sampleRate = sampleRate;
     this.cutoff = 18000;
     this.targetCutoff = 18000;
     this.resonance = 0.7;
-    this.lp = 0.0;
-    this.bp = 0.0;
+    this.resonanceSmoothed = 0.7;
+    this.ic1eq = 0.0;
+    this.ic2eq = 0.0;
     this.mode = 0; // 0=lowpass
     // Smoothing coefficient (higher = slower smoothing)
     // ~10ms smoothing at 44100 Hz
@@ -330,44 +335,51 @@ class StateVariableFilter {
   }
 
   reset() {
-    this.lp = 0.0;
-    this.bp = 0.0;
+    this.ic1eq = 0.0;
+    this.ic2eq = 0.0;
     this.cutoff = this.targetCutoff;
+    this.resonanceSmoothed = this.resonance;
   }
 
   process(input, cutoffOverride) {
-    // Apply one-pole smoothing to cutoff to prevent zipper noise
+    // Apply one-pole smoothing to cutoff/resonance to prevent zipper noise
     const targetCutoff = typeof cutoffOverride === 'number' && Number.isFinite(cutoffOverride)
       ? clamp(cutoffOverride, 20, this.getMaxCutoff())
       : this.targetCutoff;
 
-    // Smooth the cutoff frequency
     this.cutoff = targetCutoff + (this.cutoff - targetCutoff) * this.smoothCoeff;
+    this.resonanceSmoothed = this.resonance
+      + (this.resonanceSmoothed - this.resonance) * this.smoothCoeff;
 
-    const f = 2.0 * Math.sin(Math.PI * this.cutoff / this.sampleRate);
-    const q = 1.0 / this.resonance;
+    const g = Math.tan(Math.PI * this.cutoff / this.sampleRate);
+    const k = 1.0 / this.resonanceSmoothed;
+    const a1 = 1.0 / (1.0 + g * (g + k));
+    const a2 = g * a1;
+    const a3 = g * a2;
 
-    this.lp = this.lp + f * this.bp;
-    const hp = input - this.lp - q * this.bp;
-    this.bp = this.bp + f * hp;
+    const v3 = input - this.ic2eq;
+    const v1 = a1 * this.ic1eq + a2 * v3;
+    const v2 = this.ic2eq + a2 * this.ic1eq + a3 * v3;
+    this.ic1eq = 2.0 * v1 - this.ic1eq;
+    this.ic2eq = 2.0 * v2 - this.ic2eq;
 
     let output;
     switch (this.mode) {
       case 1:
-        output = hp; // high-pass
+        output = input - k * v1 - v2; // high-pass
         break;
       case 2:
-        output = this.bp; // band-pass
+        output = v1; // band-pass
         break;
       case 3:
-        output = input - q * this.bp; // notch
+        output = input - k * v1; // notch
         break;
       default:
-        output = this.lp; // low-pass
+        output = v2; // low-pass
         break;
     }
 
-    if (!Number.isFinite(output) || !Number.isFinite(this.lp) || !Number.isFinite(this.bp)) {
+    if (!Number.isFinite(output) || !Number.isFinite(this.ic1eq) || !Number.isFinite(this.ic2eq)) {
       this.reset();
       return 0.0;
     }
@@ -458,6 +470,7 @@ class Voice {
     this.waveform = WAVEFORMS.SINE;
     this.phase = 0.0;
     this.modPhase = 0.0;
+    this.prevFmOffset = 0.0;
     this.envelope = new Envelope(sampleRate);
     this.modEnvelope = new Envelope(sampleRate);
     this.filter = new StateVariableFilter(sampleRate);
@@ -478,8 +491,11 @@ class Voice {
     // Voice stealing fade-out
     this.isBeingStolen = false;
     this.stealFadeGain = 1.0;
-    // Fade-out rate: complete in ~10ms at 44100 Hz
-    this.stealFadeRate = 1.0 / (0.01 * sampleRate);
+    // Fade-out rate: complete in ~5ms at 44100 Hz
+    this.stealFadeRate = 1.0 / (0.005 * sampleRate);
+    // Note waiting for the steal fade to finish before it starts (click-free
+    // steal/retrigger: never hard-reset a phase that is still audible).
+    this.pendingStart = null;
   }
 
   applyParams(params) {
@@ -544,6 +560,20 @@ class Voice {
       : 0.0;
   }
 
+  // Click-free (re)start of an audibly-active voice: fade the current signal
+  // out in ~5ms, then start the new note. Inactive voices start immediately.
+  queueStart(startData) {
+    if (!this.active) {
+      this.start(startData);
+      return;
+    }
+    this.pendingStart = startData;
+    if (!this.isBeingStolen) {
+      this.stealFadeGain = 1.0;
+      this.isBeingStolen = true;
+    }
+  }
+
   start({ noteId, frequency, waveform, velocity, params, frame, glideFrom }) {
     this.noteId = noteId;
     this.targetFrequency = frequency;
@@ -553,10 +583,12 @@ class Voice {
     // Reset steal fade state
     this.isBeingStolen = false;
     this.stealFadeGain = 1.0;
+    this.pendingStart = null;
 
     const phaseOffset = (params.phaseOffsetDeg ?? 0) / 360.0;
     this.phase = phaseOffset % 1.0;
     this.modPhase = 0.0;
+    this.prevFmOffset = 0.0;
 
     // Velocity curve: exponent 2^(2*curve); curve<0 = soft (compressed),
     // curve>0 = hard (expanded), 0 = linear.
@@ -675,12 +707,28 @@ class Voice {
     const baseDt = baseFrequency / this.sampleRate;
 
     let fmOffset = 0.0;
-    const effFmIndex = (this.useFM ? this.fmIndex : 0.0) + fmIndexAdd / TWO_PI;
+    let effFmIndex = (this.useFM ? this.fmIndex : 0.0) + fmIndexAdd / TWO_PI;
     if (effFmIndex !== 0.0) {
+      // Carson-rule anti-alias cap: the highest significant PM sideband sits
+      // near fc + (I+1)*fm with I in radians. Keeping it below ~0.42*fs stops
+      // bright FM patches from sparkling with aliased partials at high notes.
+      const fmFreq = this.fmRatio * baseFrequency;
+      if (fmFreq > 0) {
+        const maxIndexCycles = Math.max(
+          0.0,
+          (0.42 * this.sampleRate - baseFrequency) / fmFreq - 1.0
+        ) / TWO_PI;
+        effFmIndex = clamp(effFmIndex, -maxIndexCycles, maxIndexCycles);
+      }
       const modPhase = (this.modPhase + (this.fmRatio * baseDt)) % 1.0;
       this.modPhase = modPhase;
       fmOffset = Math.sin(TWO_PI * modPhase) * effFmIndex;
     }
+    // Phase modulation raises the instantaneous frequency; widen the polyBLEP
+    // transition band by the per-sample phase deviation so saw/square/triangle
+    // carriers stay anti-aliased under FM.
+    const fmRate = Math.abs(fmOffset - this.prevFmOffset);
+    this.prevFmOffset = fmOffset;
 
     let oscSum = 0.0;
     const unison = this.unisonVoices;
@@ -690,7 +738,8 @@ class Voice {
       const detuneRatio = detune === 0 ? 1.0 : Math.pow(2, detune / 1200.0);
       const phase = this.unisonPhases[i];
       const phaseWithMod = (phase + fmOffset) % 1.0;
-      oscSum += waveformSample(this.waveform, phaseWithMod < 0 ? phaseWithMod + 1.0 : phaseWithMod, baseDt * detuneRatio);
+      const dt = Math.min(0.45, baseDt * detuneRatio + fmRate);
+      oscSum += waveformSample(this.waveform, phaseWithMod < 0 ? phaseWithMod + 1.0 : phaseWithMod, dt);
       this.unisonPhases[i] = (phase + baseDt * detuneRatio) % 1.0;
     }
 
@@ -720,6 +769,11 @@ class Voice {
         this.active = false;
         this.noteId = null;
         this.isBeingStolen = false;
+        const pending = this.pendingStart;
+        this.pendingStart = null;
+        if (pending) {
+          this.start(pending);
+        }
         return 0.0;
       }
       sample *= this.stealFadeGain;
@@ -804,7 +858,9 @@ class SynthProcessor extends AudioWorkletProcessor {
       targetVoice = this.stealVoice();
     }
     if (!targetVoice) return;
-    targetVoice.start({
+    // queueStart fades a still-audible voice before restarting it, so steals
+    // and same-note retriggers never hard-reset a live phase (no clicks).
+    targetVoice.queueStart({
       noteId,
       frequency,
       waveform,
@@ -853,6 +909,12 @@ class SynthProcessor extends AudioWorkletProcessor {
       // Prefer: releasing > oldest > loudest
       let score = 0;
 
+      // A voice already fading toward a queued note is the worst candidate:
+      // re-stealing it would silently drop that queued note.
+      if (voice.pendingStart) {
+        score += 200000;
+      }
+
       // Voices in release phase are best candidates
       if (voice.envelope.stage === ENV_STAGE.RELEASE) {
         score -= 100000;
@@ -870,12 +932,8 @@ class SynthProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // Apply quick fade-out to stolen voice (~10ms)
-    if (candidate && candidate.active) {
-      candidate.stealFadeGain = 1.0;
-      candidate.isBeingStolen = true;
-    }
-
+    // Caller queues the note via queueStart, which fades the stolen voice
+    // out before restarting it.
     return candidate;
   }
 

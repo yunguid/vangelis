@@ -1,0 +1,241 @@
+import { beforeAll, describe, expect, it } from 'vitest';
+import { FACTORY_PRESETS } from '../utils/presetStorage.js';
+import { sanitizeAudioParams, toWorkletParams } from '../utils/audioParams.js';
+
+/**
+ * Offline render regression suite: instantiates the real AudioWorklet
+ * processor (globals stubbed, same trick as scripts/bench_synth_worklet.mjs)
+ * and renders every factory preset end to end. Guards against the artifact
+ * classes that used to "sparkle": filter blowup/reset dropouts, voice-steal
+ * clicks, FM aliasing blowups and stuck self-oscillation.
+ */
+
+const SAMPLE_RATE = 48000;
+const BLOCK = 128;
+
+let ProcessorClass = null;
+
+beforeAll(async () => {
+  globalThis.sampleRate = SAMPLE_RATE;
+  globalThis.AudioWorkletProcessor = class {
+    constructor() {
+      this.port = { onmessage: null, postMessage() {} };
+    }
+  };
+  globalThis.registerProcessor = (_name, cls) => {
+    ProcessorClass = cls;
+  };
+  await import('./synth-worklet.js');
+});
+
+const midiToFreq = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
+
+const makeProcessor = (audioParams) => new ProcessorClass({
+  processorOptions: {
+    paramDefaults: toWorkletParams(sanitizeAudioParams(audioParams))
+  }
+});
+
+const renderSeconds = (proc, seconds, sink) => {
+  const left = new Float32Array(BLOCK);
+  const right = new Float32Array(BLOCK);
+  const outputs = [[left, right]];
+  const blocks = Math.ceil((seconds * SAMPLE_RATE) / BLOCK);
+  for (let b = 0; b < blocks; b++) {
+    proc.process([], outputs);
+    if (sink) sink(left);
+  }
+};
+
+class RenderStats {
+  constructor() {
+    this.nonFinite = 0;
+    this.maxAbs = 0;
+    this.exactZeroRuns = 0;
+    this.zeroRun = 0;
+    this.prev = 0;
+    this.maxJump = 0;
+    this.sumSquares = 0;
+    this.count = 0;
+  }
+
+  get sink() {
+    return (block) => {
+      for (let i = 0; i < block.length; i++) {
+        const s = block[i];
+        if (!Number.isFinite(s)) this.nonFinite++;
+        const abs = Math.abs(s);
+        if (abs > this.maxAbs) this.maxAbs = abs;
+        const jump = Math.abs(s - this.prev);
+        if (jump > this.maxJump) this.maxJump = jump;
+        this.prev = s;
+        // The old Chamberlin filter blew up and hard-reset to a run of exact
+        // zeros mid-note; count runs of >= 8 consecutive exact zeros.
+        if (s === 0) {
+          this.zeroRun++;
+          if (this.zeroRun === 8) this.exactZeroRuns++;
+        } else {
+          this.zeroRun = 0;
+        }
+        this.sumSquares += s * s;
+        this.count++;
+      }
+    };
+  }
+
+  get rms() {
+    return this.count ? Math.sqrt(this.sumSquares / this.count) : 0;
+  }
+}
+
+const noteOn = (proc, noteId, midi, waveform, velocity = 0.9) => {
+  proc.port.onmessage({
+    data: {
+      type: 'noteOn',
+      noteId,
+      frequency: midiToFreq(midi),
+      waveform,
+      velocity
+    }
+  });
+};
+
+const noteOff = (proc, noteId) => {
+  proc.port.onmessage({ data: { type: 'noteOff', noteId } });
+};
+
+describe('factory presets render cleanly through the worklet', () => {
+  it.each(FACTORY_PRESETS.map((preset) => [preset.name, preset]))(
+    '%s: bounded, dropout-free, decaying to silence',
+    (_name, preset) => {
+      const proc = makeProcessor(preset.audioParams);
+      const params = sanitizeAudioParams(preset.audioParams);
+      const wave = preset.waveformType;
+
+      // Wide register spread incl. extremes where aliasing/instability bites.
+      const notes = [36, 55, 67, 79, 96];
+      notes.forEach((midi, idx) => noteOn(proc, `n${idx}`, midi, wave));
+
+      const attackSettle = Math.min(params.attack + 0.4, 3.0);
+      const settle = new RenderStats();
+      renderSeconds(proc, attackSettle, settle.sink);
+
+      const sustain = new RenderStats();
+      renderSeconds(proc, 0.6, sustain.sink);
+
+      notes.forEach((_, idx) => noteOff(proc, `n${idx}`));
+      const earlyRelease = new RenderStats();
+      renderSeconds(proc, Math.min(params.release * 0.5 + 0.1, 1.5), earlyRelease.sink);
+
+      const tail = new RenderStats();
+      renderSeconds(proc, Math.min(params.release * 1.4 + 0.3, 5.5), tail.sink);
+      const tailEnd = new RenderStats();
+      renderSeconds(proc, 0.15, tailEnd.sink);
+
+      for (const stats of [settle, sustain, earlyRelease, tail, tailEnd]) {
+        expect(stats.nonFinite).toBe(0);
+        expect(stats.maxAbs).toBeLessThanOrEqual(1.0);
+      }
+
+      // The preset must actually make sound (plucks with sustain=0 have
+      // already decayed by the sustain window; the settle window covers them).
+      expect(Math.max(settle.rms, sustain.rms)).toBeGreaterThan(0.005);
+      // ...without the filter-reset dropouts the old SVF produced (plucks
+      // with sustain~0 reach true silence here, which is not a dropout)...
+      if (params.sustain > 0.05) {
+        expect(sustain.exactZeroRuns).toBe(0);
+      }
+      // ...and must decay toward silence instead of self-oscillating forever.
+      expect(tailEnd.rms).toBeLessThan(Math.max(0.02, earlyRelease.rms * 0.35));
+    }
+  );
+});
+
+describe('engine artifact regressions', () => {
+  it('survives max resonance with cutoff slammed by a square LFO (old SVF blowup)', () => {
+    const proc = makeProcessor({
+      useFilter: true,
+      filterCutoff: 8000,
+      filterResonance: 10,
+      filterMode: 0,
+      lfo1Shape: 2,
+      lfoRate: 8,
+      modRoutes: [
+        { src: 0, dst: 1, depth: 1 },
+        { src: 3, dst: 1, depth: 1 }
+      ],
+      attack: 0.005,
+      decay: 0.2,
+      sustain: 0.9,
+      release: 0.3
+    });
+    noteOn(proc, 'stress', 88, 'Square', 1);
+    noteOn(proc, 'stress2', 100, 'Sawtooth', 1);
+    const stats = new RenderStats();
+    renderSeconds(proc, 2.0, stats.sink);
+    expect(stats.nonFinite).toBe(0);
+    expect(stats.maxAbs).toBeLessThanOrEqual(1.0);
+    expect(stats.exactZeroRuns).toBe(0);
+    expect(stats.rms).toBeGreaterThan(0.001);
+  });
+
+  it('extreme FM stacking stays bounded at the top of the keyboard', () => {
+    const proc = makeProcessor({
+      useFM: true,
+      fmRatio: 8,
+      fmIndex: 30,
+      modRoutes: [
+        { src: 4, dst: 3, depth: 1 },
+        { src: 3, dst: 3, depth: 1 }
+      ],
+      attack: 0.005,
+      decay: 0.3,
+      sustain: 0.8,
+      release: 0.2
+    });
+    noteOn(proc, 'fmHigh', 108, 'Sine', 1);
+    noteOn(proc, 'fmSaw', 103, 'Sawtooth', 1);
+    const stats = new RenderStats();
+    renderSeconds(proc, 1.0, stats.sink);
+    expect(stats.nonFinite).toBe(0);
+    expect(stats.maxAbs).toBeLessThanOrEqual(1.0);
+  });
+
+  it('voice-steal flood does not click (no hard phase resets)', () => {
+    const proc = makeProcessor({
+      attack: 0.01,
+      decay: 0.1,
+      sustain: 0.9,
+      release: 0.4,
+      useFilter: false,
+      useFM: false
+    });
+    const stats = new RenderStats();
+    // 40 sine notes into a 24-voice pool forces steals mid-render. Sines at
+    // these frequencies move < ~0.1 per sample, so any hard reset of a live
+    // phase shows up as an outsized sample-to-sample jump.
+    for (let i = 0; i < 40; i++) {
+      noteOn(proc, `flood-${i}`, 45 + (i % 24), 'Sine', 1);
+      renderSeconds(proc, 0.02, stats.sink);
+    }
+    renderSeconds(proc, 0.3, stats.sink);
+    expect(stats.nonFinite).toBe(0);
+    expect(stats.maxJump).toBeLessThan(0.25);
+  });
+
+  it('same-note retrigger does not click', () => {
+    const proc = makeProcessor({
+      attack: 0.01,
+      decay: 0.2,
+      sustain: 0.8,
+      release: 0.5
+    });
+    const stats = new RenderStats();
+    for (let i = 0; i < 12; i++) {
+      noteOn(proc, 'same-note', 57, 'Sine', 1);
+      renderSeconds(proc, 0.05, stats.sink);
+    }
+    expect(stats.nonFinite).toBe(0);
+    expect(stats.maxJump).toBeLessThan(0.2);
+  });
+});
