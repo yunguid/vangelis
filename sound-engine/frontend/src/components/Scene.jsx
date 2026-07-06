@@ -20,6 +20,8 @@ uniform float uBass;   // 0..1 smoothed band energies
 uniform float uMid;
 uniform float uHigh;
 uniform float uLevel;  // overall loudness 0..1
+uniform float uPulse;  // 0..1 transient (bass onset), fast decay
+uniform float uMorph;  // ever-advancing phase; music makes it run faster
 
 float hash(vec2 p) {
   p = fract(p * vec2(234.34, 435.345));
@@ -49,32 +51,62 @@ float fbm(vec2 p) {
   return v;
 }
 
+mat2 rot(float a) {
+  float c = cos(a);
+  float s = sin(a);
+  return mat2(c, -s, s, c);
+}
+
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
   vec2 p = (gl_FragCoord.xy * 2.0 - uRes) / min(uRes.x, uRes.y);
 
-  float t = uTime * 0.04;
+  float t = uTime * 0.045;
 
-  // Domain-warped aurora bands; bass pushes the warp, mids speed the drift
+  // Slow scene-state oscillators on incommensurate periods: the composition
+  // (rotation, zoom, palette, drift direction) keeps evolving and never loops.
+  float m1 = sin(uMorph * 0.31 + sin(uMorph * 0.113) * 1.7);
+  float m2 = cos(uMorph * 0.171 + 2.3);
+
+  p = rot(uMorph * 0.05 + uBass * 0.1) * p;
+  float zoom = 1.1 + 0.22 * m2 + uLevel * 0.15;
+  vec2 q = p * zoom;
+
+  // Domain-warped aurora bands; bass and transients push the warp,
+  // mids speed the drift, the morph phase bends its direction over time.
   vec2 warp = vec2(
-    fbm(p * 1.4 + vec2(t, -t * 0.7)),
-    fbm(p * 1.4 + vec2(-t * 0.8, t * 0.6) + 5.0)
+    fbm(q * 1.4 + vec2(t * (1.0 + 0.4 * m1), -t * 0.7)),
+    fbm(q * 1.4 + vec2(-t * 0.8, t * 0.6) + 5.0 + uMorph * 0.02)
   );
-  float w = 0.6 + uBass * 1.2;
-  float field = fbm(p * 1.1 + warp * w + vec2(0.0, t * (0.5 + uMid)));
+  float w = 0.6 + uBass * 1.4 + uPulse * 0.7;
+  float field = fbm(q * 1.1 + warp * w + vec2(0.0, t * (0.5 + uMid)));
 
-  // Gruvbox palette: charcoal base -> ember orange mids -> aqua highs
-  vec3 base = vec3(0.085, 0.09, 0.085);
-  vec3 ember = vec3(0.55, 0.28, 0.06);
-  vec3 aqua = vec3(0.18, 0.34, 0.24);
+  // Counter-current layer drifting the other way for depth
+  float field2 = fbm(q * 2.3 - warp * 0.7 - vec2(t * 0.9, t * 0.35));
+
+  // Transients ring a shockwave out from the center
+  float r = length(p);
+  field += uPulse * 0.32 * sin(r * 13.0 - uTime * 6.0) * exp(-r * 1.6);
+
+  // Palette morphs between ember/moss and magenta-ember/steel-blue
+  vec3 base = vec3(0.075, 0.082, 0.09);
+  float mixAmt = 0.5 + 0.5 * m1;
+  vec3 ember = mix(vec3(0.55, 0.28, 0.06), vec3(0.52, 0.14, 0.18), mixAmt);
+  vec3 aqua = mix(vec3(0.18, 0.34, 0.24), vec3(0.1, 0.26, 0.4), 1.0 - mixAmt * 0.8);
 
   float glow = smoothstep(0.35, 0.95, field);
   vec3 col = base;
-  col += ember * glow * (0.22 + uBass * 0.85);
-  col += aqua * smoothstep(0.55, 1.0, field) * (0.18 + uHigh * 1.0);
+  col += ember * glow * (0.22 + uBass * 0.9 + uPulse * 0.3);
+  col += aqua * smoothstep(0.55, 1.0, field) * (0.18 + uHigh * 1.1);
+  col += ember * 0.35 * smoothstep(0.6, 1.0, field2) * (0.15 + uMid * 0.7);
+
+  // High frequencies scatter tiny hot grains; silence scatters none
+  float grain = noise(q * 26.0 + vec2(t * 3.0, -t * 2.0));
+  float sparkle = step(1.001 - uHigh * 0.05, grain);
+  col += vec3(0.9, 0.75, 0.5) * sparkle * uHigh * 0.55;
 
   // Loudness lifts the whole scene slightly
-  col *= 0.85 + uLevel * 0.5;
+  col *= 0.85 + uLevel * 0.55;
 
   // Horizon gradient + vignette to keep the UI readable
   col *= mix(1.0, 0.55, uv.y);
@@ -150,12 +182,15 @@ const Scene = () => {
       return undefined;
     }
     gl.useProgram(program);
+    window.__sceneShaderOk = true; // verification probe
     const uRes = gl.getUniformLocation(program, 'uRes');
     const uTime = gl.getUniformLocation(program, 'uTime');
     const uBass = gl.getUniformLocation(program, 'uBass');
     const uMid = gl.getUniformLocation(program, 'uMid');
     const uHigh = gl.getUniformLocation(program, 'uHigh');
     const uLevel = gl.getUniformLocation(program, 'uLevel');
+    const uPulse = gl.getUniformLocation(program, 'uPulse');
+    const uMorph = gl.getUniformLocation(program, 'uMorph');
 
     // Cap DPR: a soft background does not need retina resolution
     const dprCap = 1.25;
@@ -184,6 +219,13 @@ const Scene = () => {
       smooth[key] += (target - smooth[key]) * k;
       return smooth[key];
     };
+    // Transient detector (bass onsets ring the shader's shockwave) and a
+    // morph phase that always creeps forward but runs faster with the music,
+    // so the scene composition keeps evolving instead of looping.
+    let prevBass = 0;
+    let pulse = 0;
+    let morphPhase = Math.random() * 100;
+    let lastFrameTime = performance.now();
 
     const onLost = (e) => {
       e.preventDefault();
@@ -218,13 +260,24 @@ const Scene = () => {
         level = (bass + mid + high) / 3;
       }
 
+      const now = performance.now();
+      const dt = Math.min((now - lastFrameTime) / 1000, 0.1);
+      lastFrameTime = now;
+
+      const onset = Math.max(0, (bass - prevBass) * 6);
+      prevBass = bass;
+      pulse = Math.min(1, Math.max(pulse * Math.exp(-dt * 5), onset));
+      morphPhase += dt * (0.06 + level * 0.5);
+
       resize();
       gl.uniform2f(uRes, canvas.width, canvas.height);
-      gl.uniform1f(uTime, (performance.now() - start) / 1000);
+      gl.uniform1f(uTime, (now - start) / 1000);
       gl.uniform1f(uBass, follow('bass', bass));
       gl.uniform1f(uMid, follow('mid', mid));
       gl.uniform1f(uHigh, follow('high', high));
       gl.uniform1f(uLevel, follow('level', level));
+      gl.uniform1f(uPulse, pulse);
+      gl.uniform1f(uMorph, morphPhase);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
     raf = requestAnimationFrame(frame);
@@ -234,11 +287,9 @@ const Scene = () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
       canvas.removeEventListener('webglcontextlost', onLost);
-      try {
-        gl.getExtension('WEBGL_lose_context')?.loseContext();
-      } catch {
-        // best effort cleanup
-      }
+      // Do NOT force-lose the context here: the canvas element survives a
+      // StrictMode remount, and a force-lost context stays dead on the next
+      // mount (shader compiles fail with a null info log, killing the scene).
     };
   }, []);
 

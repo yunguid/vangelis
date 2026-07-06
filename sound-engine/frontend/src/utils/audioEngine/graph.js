@@ -100,6 +100,12 @@ export function createAudioGraph(ctx, distortionCache) {
   rightAnalyser.connect(silentGain);
   silentGain.connect(ctx.destination);
 
+  if (typeof window !== 'undefined') {
+    // Verification probe: lets dev tooling sample the master output
+    // (time-domain taps for NaN/level/click checks).
+    window.__vangelisAudioProbe = { ctx, analyser };
+  }
+
   return {
     inputBus,
     headroom,

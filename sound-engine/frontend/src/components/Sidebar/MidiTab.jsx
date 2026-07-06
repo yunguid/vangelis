@@ -30,6 +30,14 @@ const MidiTab = ({
     return `${file.name} ${file.composer}`.toLowerCase().includes(query);
   });
 
+  // Split "Title (Tag)" so the tag renders as a badge chip.
+  const splitTag = (name) => {
+    const match = /^(.*?)\s*\(([^)]+)\)$/.exec(name);
+    return match ? { title: match[1], tag: match[2] } : { title: name, tag: null };
+  };
+  const originals = filteredFiles.filter((file) => file.id.startsWith('original-'));
+  const classics = filteredFiles.filter((file) => !file.id.startsWith('original-'));
+
   const loadMidiWithFallback = useCallback(async (file) => {
     try {
       return await parseMidiFile(file.path);
@@ -129,23 +137,40 @@ const MidiTab = ({
             <div className="midi-tab__skeleton-row" />
           </div>
         ) : (
-          <ul className="midi-tab__list">
-            {filteredFiles.map((file) => (
-              <li key={file.id} className="midi-tab__item">
-                <button
-                  type="button"
-                  className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
-                  onClick={() => handleLoadBuiltIn(file)}
-                  disabled={isLoading}
-                >
-                  <span className="midi-tab__file-name">{file.name}</span>
-                  <span className="midi-tab__file-composer">{file.composer}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          [
+            { key: 'originals', title: 'Originals', files: originals },
+            { key: 'classics', title: 'Classics', files: classics }
+          ].filter((group) => group.files.length > 0).map((group) => (
+            <div key={group.key} className="midi-tab__group">
+              <div className="midi-tab__group-header">
+                <h4 className="midi-tab__group-title">{group.title}</h4>
+                <span className="midi-tab__group-count">{group.files.length}</span>
+              </div>
+              <ul className="midi-tab__list">
+                {group.files.map((file) => {
+                  const { title, tag } = splitTag(file.name);
+                  return (
+                    <li key={file.id} className="midi-tab__item">
+                      <button
+                        type="button"
+                        className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
+                        onClick={() => handleLoadBuiltIn(file)}
+                        disabled={isLoading}
+                      >
+                        <span className="midi-tab__file-title-row">
+                          <span className="midi-tab__file-name">{title}</span>
+                          {tag && <span className="midi-tab__badge">{tag}</span>}
+                        </span>
+                        <span className="midi-tab__file-composer">{file.composer}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))
         )}
-        {filteredFiles.length === 0 && (
+        {filteredFiles.length === 0 && !isLoading && (
           <div className="midi-tab__empty">
             No matches for “{searchQuery.trim()}”.
           </div>

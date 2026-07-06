@@ -1,18 +1,9 @@
 import React from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
-import {
-  HOME_HREF,
-  MIDI_PIPELINE_HREF,
-  STUDY_SONGS_HREF,
-  VOICE_LOOP_HREF
-} from '../utils/routes.js';
 
-const NAV_ITEMS = [
-  { id: 'studio', label: 'Keyboard', href: HOME_HREF },
-  { id: 'voice-loop', label: 'Voice loop', href: VOICE_LOOP_HREF },
-  { id: 'pipeline', label: 'MIDI pipeline', href: MIDI_PIPELINE_HREF },
-  { id: 'studies', label: 'Library', href: STUDY_SONGS_HREF }
-];
+// The app is keyboard-first now: the voice-loop / MIDI-pipeline / library
+// pages are hidden from navigation (routes still exist if linked directly).
+const NAV_ITEMS = [];
 
 const AppHeader = ({
   activeSection,
@@ -121,21 +112,23 @@ const AppHeader = ({
       </div>
 
       <div className="header-controls">
-        <nav className="header-nav" aria-label="Primary">
-          {NAV_ITEMS.map((item) => {
-            const isActive = item.id === activeSection;
-            return (
-              <a
-                key={item.id}
-                className={`button-link button-link--nav ${isActive ? 'is-active' : ''}`}
-                href={item.href}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                {item.label}
-              </a>
-            );
-          })}
-        </nav>
+        {NAV_ITEMS.length > 0 && (
+          <nav className="header-nav" aria-label="Primary">
+            {NAV_ITEMS.map((item) => {
+              const isActive = item.id === activeSection;
+              return (
+                <a
+                  key={item.id}
+                  className={`button-link button-link--nav ${isActive ? 'is-active' : ''}`}
+                  href={item.href}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              );
+            })}
+          </nav>
+        )}
 
         {showHeaderActions && (
           <div className="header-actions">

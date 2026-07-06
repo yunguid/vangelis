@@ -258,3 +258,41 @@ Prophet/Jupiter/OB/PPG/Fairlight/Juno/2600/Memorymoog + hyperpop/trap/rage), the
 - 321/321 vitest pass. Remaining: in-app end-to-end verification pass
   (dev server + browser: presets audibly clean, MIDIs load/play), then final
   summary and loop stop.
+
+### Cycle 4 (2026-07-06) — keyboard-first UI, 25 more cues (58), dynamic scene
+User directives: 20-30 more melodies, sidebar redesign, hide non-keyboard pages
+(+ voice tab), more dynamic/less repetitive background visualization.
+
+- **Pages hidden**: AppHeader NAV_ITEMS emptied (voice-loop / MIDI-pipeline /
+  library unlinked; routes still exist). Voice tab removed from the sidebar
+  rail (VoiceTab unwired in Sidebar/index.jsx; appSession coerces stored
+  'voice' tab to 'sound').
+- **25 more original cues (corpus 58)**: wave-4 in generate_original_midis.mjs
+  via data-driven chordCue/cellCue builders + bespoke trap pieces — Neon
+  Cathedral, Static Bloom + Halogen Heart + Glitter Riot (hyperpop), Midnight
+  Slide + Black Ice (trap), Adrenaline Red + Teeth Grinder (rage), Tokyo
+  Monorail (synthwave), Copper Wires (acid), Zero Gravity Waltz, drones/pads/
+  ballads, etc. All registered in ORIGINAL_CUES; corpus tests green.
+- **Sidebar redesign**: rail is a centered dock with labeled pill buttons and
+  orange active glow; wider glass panel (radial accent glow, hairline border,
+  uppercase title + status chip w/ glowing dot, accent scrollbars); MIDI tab
+  groups the library into Originals/Classics with counts and parses "(Tag)"
+  name suffixes into genre badge chips; player card upgraded (round accent
+  play button, glowing progress); preset shelf transport/readout glassed up,
+  category headers accented, active chip gradient. Dead voice-tab CSS removed.
+- **Scene shader more dynamic**: ever-advancing morph phase (runs faster with
+  music) drives slow domain rotation, breathing zoom and palette morphing on
+  incommensurate periods (never loops); bass-onset detector rings a radial
+  shockwave (uPulse); counter-current second fbm layer; high-band sparkle
+  grains. FIXED a real bug: cleanup called loseContext() on the persistent
+  canvas, so StrictMode remounts got a dead context and the shader silently
+  fell back to the static gradient (the "repetitive background" was partly
+  this). Added window.__sceneShaderOk + window.__vangelisAudioProbe probes.
+- **Verification**: 321/321 vitest, production build OK. In-app (preview
+  browser, 44.1kHz): all 45 presets swept through the real graph playing a
+  5-note chord + release — 0 NaN, max |sample| 0.240, no silent patches;
+  Sugar Crash Angel (Hyperpop) played 12s continuously with progress tracking
+  and zero console errors; shader compiles and runs after reload; header nav
+  gone; rail = Sound/MIDI/Samples only.
+- Note: user's message ended mid-sentence ("we should load more songs from") —
+  interpreted as growing the built-in library, which the 58-cue corpus does.
