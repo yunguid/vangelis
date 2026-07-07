@@ -1,4 +1,5 @@
 import { clamp } from './math.js';
+import { DEFAULT_PARAMS as ENGINE_DEFAULTS } from '../audio/dsp/constants.js';
 
 export const MICRO_FADE_TIME = 0.005;
 export const DEFAULT_TRANSPORT_TEMPO = 120;
@@ -168,37 +169,39 @@ export const AUDIO_PARAM_DEFAULTS = {
   delayMotion: 0.3,
   distortion: 0,
   volume: 0.68,
-  useADSR: true,
-  attack: 0.012,
-  decay: 0.18,
-  sustain: 0.76,
-  release: 0.42,
-  useFM: false,
-  fmRatio: 2,
-  fmIndex: 2,
   pan: 0.5,
-  phaseOffset: 0,
-  useFilter: false,
-  filterCutoff: 18000,
-  filterResonance: 0.7,
-  filterMode: 0,
-  lfoRate: 0,
-  lfoDepth: 0,
-  lfoTarget: 0,
-  unisonVoices: 1,
-  unisonDetune: 0,
+  // Synth-engine defaults come from the engine itself (dsp/constants.js) —
+  // one source of truth; only the phaseOffsetDeg -> phaseOffset name differs.
+  useADSR: ENGINE_DEFAULTS.useADSR,
+  attack: ENGINE_DEFAULTS.attack,
+  decay: ENGINE_DEFAULTS.decay,
+  sustain: ENGINE_DEFAULTS.sustain,
+  release: ENGINE_DEFAULTS.release,
+  useFM: ENGINE_DEFAULTS.useFM,
+  fmRatio: ENGINE_DEFAULTS.fmRatio,
+  fmIndex: ENGINE_DEFAULTS.fmIndex,
+  phaseOffset: ENGINE_DEFAULTS.phaseOffsetDeg,
+  useFilter: ENGINE_DEFAULTS.useFilter,
+  filterCutoff: ENGINE_DEFAULTS.filterCutoff,
+  filterResonance: ENGINE_DEFAULTS.filterResonance,
+  filterMode: ENGINE_DEFAULTS.filterMode,
+  lfoRate: ENGINE_DEFAULTS.lfoRate,
+  lfoDepth: ENGINE_DEFAULTS.lfoDepth,
+  lfoTarget: ENGINE_DEFAULTS.lfoTarget,
+  unisonVoices: ENGINE_DEFAULTS.unisonVoices,
+  unisonDetune: ENGINE_DEFAULTS.unisonDetune,
   // Modulation matrix
-  lfo1Shape: 0,
-  lfo2Shape: 0,
-  lfo2Rate: 0,
-  modAttack: 0.05,
-  modDecay: 0.3,
-  modSustain: 0.5,
-  modRelease: 0.4,
-  modRoutes: [],
+  lfo1Shape: ENGINE_DEFAULTS.lfo1Shape,
+  lfo2Shape: ENGINE_DEFAULTS.lfo2Shape,
+  lfo2Rate: ENGINE_DEFAULTS.lfo2Rate,
+  modAttack: ENGINE_DEFAULTS.modAttack,
+  modDecay: ENGINE_DEFAULTS.modDecay,
+  modSustain: ENGINE_DEFAULTS.modSustain,
+  modRelease: ENGINE_DEFAULTS.modRelease,
+  modRoutes: [], // fresh array — never share the engine default's reference
   // Playability
-  glideTime: 0,
-  velocityCurve: 0
+  glideTime: ENGINE_DEFAULTS.glideTime,
+  velocityCurve: ENGINE_DEFAULTS.velocityCurve
 };
 
 export const MOD_SOURCE_OPTIONS = [

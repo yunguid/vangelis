@@ -52,11 +52,14 @@ export const LFO_SHAPES = Object.freeze({
   SAMPLE_HOLD: 5
 });
 
+// Single source of truth for engine parameter defaults. The UI layer's
+// AUDIO_PARAM_DEFAULTS (utils/audioParams.js) derives its synth subset from
+// this object — never restate these values elsewhere.
 export const DEFAULT_PARAMS = {
-  attack: 0.01,
-  decay: 0.1,
-  sustain: 0.8,
-  release: 0.3,
+  attack: 0.012,
+  decay: 0.18,
+  sustain: 0.76,
+  release: 0.42,
   useADSR: true,
   useFM: false,
   fmRatio: 2.0,

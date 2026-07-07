@@ -1,7 +1,7 @@
 // One polyphonic voice: oscillator stack (unison + FM), dual envelopes, dual
 // LFOs, per-voice SVF, mod-matrix evaluation, glide, and click-free stealing.
 
-import { TWO_PI, WAVEFORMS, MOD_SRC, MOD_DST, MIN_GAIN, VOICE_SAMPLE_LIMIT, clamp } from './constants.js';
+import { TWO_PI, WAVEFORMS, MOD_SRC, MOD_DST, MIN_GAIN, VOICE_SAMPLE_LIMIT, DEFAULT_PARAMS, clamp } from './constants.js';
 import { waveformSample, normalizeWaveform } from './oscillator.js';
 import { Envelope } from './envelope.js';
 import { LFO } from './lfo.js';
@@ -52,16 +52,16 @@ export class Voice {
   applyParams(params) {
     this.useADSR = params.useADSR !== false;
     this.envelope.setADSR(
-      params.attack ?? 0.01,
-      params.decay ?? 0.1,
-      params.sustain ?? 0.8,
-      params.release ?? 0.3
+      params.attack ?? DEFAULT_PARAMS.attack,
+      params.decay ?? DEFAULT_PARAMS.decay,
+      params.sustain ?? DEFAULT_PARAMS.sustain,
+      params.release ?? DEFAULT_PARAMS.release
     );
     this.modEnvelope.setADSR(
-      params.modAttack ?? 0.05,
-      params.modDecay ?? 0.3,
-      params.modSustain ?? 0.5,
-      params.modRelease ?? 0.4
+      params.modAttack ?? DEFAULT_PARAMS.modAttack,
+      params.modDecay ?? DEFAULT_PARAMS.modDecay,
+      params.modSustain ?? DEFAULT_PARAMS.modSustain,
+      params.modRelease ?? DEFAULT_PARAMS.modRelease
     );
 
     this.useFM = !!params.useFM;

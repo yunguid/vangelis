@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B2 | Single source of truth for defaults: `DEFAULT_PARAMS` (worklet) disagrees with `AUDIO_PARAM_DEFAULTS` (audioParams.js) — attack 0.01 vs 0.012, decay 0.1 vs 0.18, sustain 0.8 vs 0.76, release 0.3 vs 0.42. Derive one from the other (post-B1). | H/M | G1-G4 bit-exact (app always sends full params) |
 | B3 | Dedup mod-matrix enums + MAX_MOD_ROUTES, triplicated across synth-worklet.js, audioParams.js, presetStorage.js. | M/L | G1, G2 |
 | B4 | Table-drive `sanitizeAudioParams` from `AUDIO_PARAM_RANGES` (~130 lines of hand-written clamps; per-param drift risk). | M/M | G1, G4 bit-exact |
 | B5 | `pan` is silently pinned to 0.5 in sanitizeAudioParams (audioParams.js:495) — dead param or bug; decide, fix or remove. | M/L | G1 |
@@ -121,3 +120,19 @@ BLEP residual continuity, route compiler validation/legacy mapping). G1 356/356.
 G3 7.4x (baseline 5.7x). G5 unchanged. B2/B3 now unblocked.
 
 `ITERATION 2: B1 worklet decomposition — G1..G5 pass (G4 bit-exact) — backlog: 13 items`
+
+### Iteration 3 — B2: single source of truth for defaults — 2026-07-07
+`DEFAULT_PARAMS` (dsp/constants.js) is now the canonical engine defaults, updated to the
+values the app actually ships (attack 0.012, decay 0.18, sustain 0.76, release 0.42 —
+the old worklet-side values were dead code, only reachable by headless partial-param
+construction). `AUDIO_PARAM_DEFAULTS` derives its entire synth subset from it (only the
+phaseOffsetDeg→phaseOffset name maps); the third hidden copy — magic-number fallbacks in
+`Voice.applyParams` — now references DEFAULT_PARAMS. New vitest pin:
+`WORKLET_PARAM_DEFAULTS` must deep-equal `DEFAULT_PARAMS`, so drift is a test failure.
+`modRoutes` deliberately kept as a fresh `[]` per object (no shared mutable reference).
+
+Note: `CLEAN_PATCH` in presetStorage.js is preset *content* (deliberately different
+values), not a defaults duplicate — left alone. G1 357/357 + smoke ALL PASS.
+G4 225/225 bit-exact (presets fully specify params). G3 7.7x. G2 pass.
+
+`ITERATION 3: B2 defaults dedup — G1..G5 pass (G4 bit-exact) — backlog: 12 items`

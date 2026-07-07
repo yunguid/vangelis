@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ENV_STAGE, LFO_SHAPES, MOD_SRC, MOD_DST, WAVEFORMS } from './constants.js';
+import { DEFAULT_PARAMS, ENV_STAGE, LFO_SHAPES, MOD_SRC, MOD_DST, WAVEFORMS } from './constants.js';
+import { WORKLET_PARAM_DEFAULTS } from '../../utils/audioParams.js';
 import { polyBlep, polyBlamp, waveformSample, normalizeWaveform } from './oscillator.js';
 import { Envelope } from './envelope.js';
 import { LFO } from './lfo.js';
@@ -7,6 +8,15 @@ import { StateVariableFilter } from './svf.js';
 import { compileModRoutes } from './mod-routes.js';
 
 const SR = 48000;
+
+describe('parameter defaults', () => {
+  it('UI-derived worklet defaults agree with the engine source of truth', () => {
+    // B2 regression pin: DEFAULT_PARAMS (dsp/constants.js) is canonical;
+    // AUDIO_PARAM_DEFAULTS derives from it, and the round trip through
+    // toWorkletParams must reproduce it exactly.
+    expect(WORKLET_PARAM_DEFAULTS).toEqual(DEFAULT_PARAMS);
+  });
+});
 
 describe('oscillator', () => {
   it('normalizeWaveform maps names, numbers, and garbage', () => {
