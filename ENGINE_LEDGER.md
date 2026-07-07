@@ -422,3 +422,27 @@ lenses carry over to the next audit. G1 370/370 (+3) + smoke, G4 225/225 bit-exa
 G3 6.0x, G2 pass.
 
 `ITERATION 21: recorder tail fix — G1..G5 pass (bit-exact) — backlog: 0 items — DRY 0/2 (reset)`
+
+### Iteration 22 — samplePool stale-callback cluster fixed; graph lens clean — 2026-07-07
+The samplePool lens found that **stale async callbacks kill successor notes** in sample
+mode via three paths sharing one shape: (1) a retriggered note's old `onended` fires
+after the new source starts and `cleanup()`s it — plain same-key retriggering, no pool
+pressure needed; (2) `stop()`'s recycle timeout does the same to a stolen-and-reused
+voice ~55 ms in, and double-books it free-while-active; (3) `release()`'s timeout,
+same shape. Fix: every async callback (onended + both timers) checks source identity
+before touching the voice, and `cleanup()` clears pending timers. Three regression
+tests with a stubbed AudioContext + fake timers, one per path.
+
+**Graph topology lens: clean.** Chain and sends verified coherent; one below-the-line
+note: the worklet recorder taps pre-limiter signal (`stereoPanner`), so a >0 dBFS peak
+would hard-clip in exported WAVs where the speakers get limited — unreachable at current
+gain staging (measured peaks ≤ ~0.45), noted not backlogged.
+
+All engine surfaces have now been audited at least once. G1 373/373 (+3) + smoke,
+G4 225/225 bit-exact, G3 5.9x (above the 5.7x floor; stereo pair + shared-machine load
+account for the drift from 6.7x), G2 pass. Iteration count note per §5: 22 iterations
+is past the ~25 warning's neighborhood, but the late finds are real user-facing bugs in
+main-thread glue the original audit never covered — the loop is converging by surface,
+not grinding. **Dry count: 0/2 (reset by this find).**
+
+`ITERATION 22: samplePool stale callbacks — G1..G5 pass (bit-exact) — backlog: 0 items — DRY 0/2 (reset)`

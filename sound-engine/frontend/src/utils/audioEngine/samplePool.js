@@ -27,6 +27,12 @@ class SampleVoice {
     this.state = VOICE_STATE.IDLE;
     this.startTime = 0;
     this.velocity = 1;
+    // Pending async work for the CURRENT source. Every async callback
+    // (onended, recycle/state timers) must check it still owns the voice —
+    // a stale callback from a stolen/retriggered note otherwise calls
+    // cleanup() on its successor and kills it mid-attack.
+    this.stateTimer = null;
+    this.recycleTimer = null;
   }
 
   startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop }) {
@@ -73,14 +79,18 @@ class SampleVoice {
     this.state = VOICE_STATE.ATTACK;
     this.bufferSource.start(now);
 
-    this.bufferSource.onended = () => {
+    const source = this.bufferSource;
+    source.onended = () => {
+      if (this.bufferSource !== source) return; // stale: voice was restarted
       if (!loop) {
         this.cleanup();
         this.onRecycle(this);
       }
     };
 
-    setTimeout(() => {
+    this.stateTimer = setTimeout(() => {
+      this.stateTimer = null;
+      if (this.bufferSource !== source) return;
       if (this.state === VOICE_STATE.ATTACK) {
         this.state = VOICE_STATE.SUSTAIN;
       }
@@ -107,15 +117,19 @@ class SampleVoice {
 
     const stopTime = now + release + 0.05;
 
-    if (this.bufferSource) {
+    const source = this.bufferSource;
+    if (source) {
       try {
-        this.bufferSource.stop(stopTime);
+        source.stop(stopTime);
       } catch (e) {
         // Ignore
       }
     }
 
-    setTimeout(() => {
+    if (this.recycleTimer) clearTimeout(this.recycleTimer);
+    this.recycleTimer = setTimeout(() => {
+      this.recycleTimer = null;
+      if (this.bufferSource !== source) return; // stale: voice was restarted
       this.cleanup();
       this.onRecycle(this);
     }, (release + 0.1) * 1000);
@@ -130,13 +144,25 @@ class SampleVoice {
     gainParam.setValueAtTime(Math.max(gainParam.value, MINIMUM_GAIN), now);
     safeExponentialRamp(gainParam, MINIMUM_GAIN, now + MICRO_FADE_TIME);
 
-    setTimeout(() => {
+    const source = this.bufferSource;
+    if (this.recycleTimer) clearTimeout(this.recycleTimer);
+    this.recycleTimer = setTimeout(() => {
+      this.recycleTimer = null;
+      if (this.bufferSource !== source) return; // stale: voice was restarted
       this.cleanup();
       this.onRecycle(this);
     }, MICRO_FADE_TIME * 1000 + 50);
   }
 
   cleanup() {
+    if (this.stateTimer) {
+      clearTimeout(this.stateTimer);
+      this.stateTimer = null;
+    }
+    if (this.recycleTimer) {
+      clearTimeout(this.recycleTimer);
+      this.recycleTimer = null;
+    }
     if (this.bufferSource) {
       try {
         this.bufferSource.stop();
