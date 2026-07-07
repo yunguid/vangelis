@@ -82,4 +82,22 @@ describe('MidiTab', () => {
     expect(onPlay.mock.calls[0][0].soundSetId).toBeUndefined();
     expect(onPlay.mock.calls[0][0].layerFamilies).toBeUndefined();
   });
+
+  it('renders original cues with a clean title, no tag badge, and no composer byline', () => {
+    getBuiltInMidiFiles.mockReturnValue([
+      {
+        id: 'original-neon-rain',
+        name: 'Neon Rain (Synth Blues)',
+        path: '/midi/originals/original-neon-rain.mid'
+      }
+    ]);
+
+    render(<MidiTab {...defaultProps()} />);
+
+    expect(screen.getByText('Neon Rain')).toBeInTheDocument();
+    expect(screen.queryByText('Synth Blues')).not.toBeInTheDocument();
+    expect(screen.queryByText('(Synth Blues)')).not.toBeInTheDocument();
+    expect(document.querySelector('.midi-tab__badge')).not.toBeInTheDocument();
+    expect(document.querySelector('.midi-tab__file-composer')).not.toBeInTheDocument();
+  });
 });

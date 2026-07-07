@@ -27,13 +27,13 @@ const MidiTab = ({
   const filteredFiles = builtInFiles.filter((file) => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;
-    return `${file.name} ${file.composer}`.toLowerCase().includes(query);
+    return `${file.name} ${file.composer || ''}`.toLowerCase().includes(query);
   });
 
-  // Split "Title (Tag)" so the tag renders as a badge chip.
+  // Strip a trailing "(Tag)" so the row title displays cleanly.
   const splitTag = (name) => {
     const match = /^(.*?)\s*\(([^)]+)\)$/.exec(name);
-    return match ? { title: match[1], tag: match[2] } : { title: name, tag: null };
+    return match ? { title: match[1] } : { title: name };
   };
   const originals = filteredFiles.filter((file) => file.id.startsWith('original-'));
   const classics = filteredFiles.filter((file) => !file.id.startsWith('original-'));
@@ -148,7 +148,7 @@ const MidiTab = ({
               </div>
               <ul className="midi-tab__list">
                 {group.files.map((file) => {
-                  const { title, tag } = splitTag(file.name);
+                  const { title } = splitTag(file.name);
                   return (
                     <li key={file.id} className="midi-tab__item">
                       <button
@@ -159,9 +159,10 @@ const MidiTab = ({
                       >
                         <span className="midi-tab__file-title-row">
                           <span className="midi-tab__file-name">{title}</span>
-                          {tag && <span className="midi-tab__badge">{tag}</span>}
                         </span>
-                        <span className="midi-tab__file-composer">{file.composer}</span>
+                        {file.composer && (
+                          <span className="midi-tab__file-composer">{file.composer}</span>
+                        )}
                       </button>
                     </li>
                   );

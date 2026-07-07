@@ -106,3 +106,18 @@ tag chips, per-row "Vangelis Studio Original" bylines, pill filter chips all con
 on screen.
 
 `ITERATION 0: apparatus — census baseline 228 tells — backlog: 9 items`
+
+### Iteration 1 — P1+P2: MIDI browser rows stripped — 2026-07-07
+Tag chips and the "Vangelis Studio Original" byline are gone from every song row.
+`splitTag` keeps cleaning `(Tag)` out of displayed titles (data untouched until P5);
+composer renders only when present; the dead `.midi-tab__badge` pill CSS deleted.
+Implementer caught a consequential latent bug unprompted: the search filter
+interpolated `undefined` composer as literal text ("undefined" would have matched all
+originals) — guarded. One new test pins the stripped rows.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. Two judgment calls
+reviewed and approved (search-string guard, JSDoc optionality). Census 228 → 225
+(chips −1, pills −1, studioOriginal 1 → 0). Orchestrator verified: G1 374/374 (+1),
+G2 clean, G3 225/225 bit-exact, G4 screenshot confirms clean rows, G5 225.
+
+`ITERATION 1: P1+P2 rows stripped — census 225 — backlog: 7 items`

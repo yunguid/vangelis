@@ -33,7 +33,7 @@ import { withBase } from './baseUrl.js';
  * @property {string} id - Unique identifier
  * @property {string} name - Display name
  * @property {string} path - Path to MIDI file
- * @property {string} composer - Composer name
+ * @property {string} [composer] - Composer name, if known
  * @property {string|null} [soundSetId] - Optional built-in sound set id for samples
  * @property {string[]} [layerFamilies] - Optional forced layer families (e.g. ['piano', 'strings'])
  * @property {string} [sourceUrl] - Optional source URL for MIDI file metadata
@@ -257,8 +257,7 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   const originalFiles = ORIGINAL_CUES.map(([id, name]) => ({
     id,
     name,
-    path: toBuiltInPath(`originals/${id}.mid`),
-    composer: 'Vangelis Studio Original'
+    path: toBuiltInPath(`originals/${id}.mid`)
   }));
 
   return [
