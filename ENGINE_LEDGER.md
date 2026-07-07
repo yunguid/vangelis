@@ -370,3 +370,25 @@ All gates green (G1 365/365 + smoke, G4 225/225 bit-exact + 7 fx cases, G3 6.1x,
 G5 heap −19 KB, G2 pass). **Dry count: 1 of 2.**
 
 `ITERATION 18: dry-well audit #1 — G1..G5 pass — backlog: 0 items — DRY 1/2`
+
+### Iteration 19 — dry-well audit #2 found a real defect: protocol hardening — 2026-07-07
+**The well was not dry — dry counter resets to 0.** A hostile message-protocol fuzz
+(new lens) showed every attack survived *individually*, but one garbage `setParams`
+(e.g. `attack: 'abc'`) merged raw into `this.params` and **permanently silenced the
+synth** — NaN envelope coefficients kill every voice at birth, no error surfaces, and
+nothing short of overwriting every key recovers. Silent total failure from a single
+malformed message.
+
+Fix: `sanitizeIncomingParams` at the worklet boundary (numeric keys accept only finite
+numbers, booleans coerce, modRoutes must be an array, unknown keys drop — range clamping
+stays downstream in the DSP where it already lives) applied to both setParams and
+constructor paramDefaults; `noteOn` rejects non-finite/non-positive frequencies at the
+door. The full attack battery + recovery contract is pinned as
+`synth-worklet.protocol.test.js` (the recovery assertion is the one that failed
+pre-fix). The UI-param-path and MIDI-input lenses were not completed this iteration —
+they carry over to the next dry audit.
+
+G1 367/367 (+2) + smoke. G4 225/225 bit-exact (valid params pass the guard unchanged).
+G3 6.0x. G2 pass.
+
+`ITERATION 19: protocol hardening — G1..G5 pass (G4 bit-exact) — backlog: 0 items — DRY 0/2 (reset)`

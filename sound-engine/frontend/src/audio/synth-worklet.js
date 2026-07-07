@@ -11,6 +11,31 @@ import { Voice } from './dsp/voice.js';
 import { DCBlocker } from './dsp/dc-blocker.js';
 import { compileModRoutes } from './dsp/mod-routes.js';
 
+// Boundary guard: the audio thread must survive a hostile or buggy client.
+// Numeric keys accept only finite numbers, booleans coerce, modRoutes must be
+// an array, unknown keys drop. Without this, one malformed setParams message
+// (e.g. attack: 'abc') poisons the merged param object and permanently
+// silences the synth — every voice dies at birth on NaN envelope coefficients
+// with no error surfaced anywhere. Range clamping stays downstream in the
+// DSP; this guard is about types and finiteness only.
+function sanitizeIncomingParams(params, base) {
+  const next = { ...base };
+  if (!params || typeof params !== 'object') return next;
+  for (const key of Object.keys(params)) {
+    if (!(key in DEFAULT_PARAMS)) continue;
+    const def = DEFAULT_PARAMS[key];
+    const value = params[key];
+    if (typeof def === 'number') {
+      if (typeof value === 'number' && Number.isFinite(value)) next[key] = value;
+    } else if (typeof def === 'boolean') {
+      next[key] = !!value;
+    } else if (Array.isArray(def)) {
+      if (Array.isArray(value)) next[key] = value;
+    }
+  }
+  return next;
+}
+
 function softClip(sample) {
   if (!Number.isFinite(sample)) return 0.0;
   const mag = Math.abs(sample);
@@ -24,10 +49,7 @@ class SynthProcessor extends AudioWorkletProcessor {
     super();
     this.sampleRate = sampleRate;
     const paramDefaults = options?.processorOptions?.paramDefaults;
-    this.params = {
-      ...DEFAULT_PARAMS,
-      ...(paramDefaults || {})
-    };
+    this.params = sanitizeIncomingParams(paramDefaults, DEFAULT_PARAMS);
     // Routes compile once per setParams into this shared box; voices hold a
     // reference and never allocate route state themselves (params.lfoRate/
     // lfoDepth/lfoTarget double as the legacy-LFO mapping input).
@@ -75,7 +97,7 @@ class SynthProcessor extends AudioWorkletProcessor {
   }
 
   noteOn({ noteId, frequency, waveform, velocity }) {
-    if (!frequency) return;
+    if (!Number.isFinite(frequency) || frequency <= 0) return;
     let targetVoice = null;
     for (const voice of this.voices) {
       if (voice.active && voice.noteId === noteId) {
@@ -142,10 +164,7 @@ class SynthProcessor extends AudioWorkletProcessor {
   }
 
   setParams(params) {
-    this.params = {
-      ...this.params,
-      ...params
-    };
+    this.params = sanitizeIncomingParams(params, this.params);
     this.routesBox.compiled = compileModRoutes(this.params.modRoutes, this.params);
     for (const voice of this.voices) {
       voice.updateParams(this.params);
