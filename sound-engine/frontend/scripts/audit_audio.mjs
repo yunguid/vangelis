@@ -86,12 +86,15 @@ globalThis.AudioWorkletProcessor = class {
     this.port = { onmessage: null, postMessage() {} };
   }
 };
-let ProcessorClass = null;
-globalThis.registerProcessor = (_name, cls) => {
-  ProcessorClass = cls;
+const PROCESSORS = {};
+globalThis.registerProcessor = (name, cls) => {
+  PROCESSORS[name] = cls;
 };
 
 await import('../src/audio/synth-worklet.js');
+await import('../src/audio/delay-worklet.js');
+await import('../src/audio/reverb-worklet.js');
+const ProcessorClass = PROCESSORS['vangelis-synth'];
 const { FACTORY_PRESETS } = await import('../src/utils/presetStorage.js');
 const { sanitizeAudioParams, toWorkletParams } = await import('../src/utils/audioParams.js');
 
@@ -412,6 +415,157 @@ const ALIAS_CASES = [
   ['fm-sine', 'sine', { useFM: true, fmRatio: 2, fmIndex: 6 }]
 ];
 
+// --- FX worklets (delay + reverb): stereo golden renders -----------------------
+// Self-contained param sets (independent of app-default drift). Stimulus: a
+// 0.3 s, 220 Hz, half-amplitude sine burst with 5 ms fades, then silence —
+// excites feedback paths and exposes tails. Both channels captured; the
+// interchannel correlation pins stereo width behavior.
+
+const FX_LEN_SEC = 4.0;
+const FX_CASES = [
+  ['delay-digital', 'vangelis-delay', {
+    enabled: true, inputLeft: 1, inputRight: 1, timeLeft: 0.24, timeRight: 0.31,
+    feedback: 0.45, crossfeed: 0, lowCut: 120, highCut: 6800, drive: 0.05,
+    modRate: 0.5, modDepth: 0.0004, flutterRate: 4, flutterDepth: 0.00002,
+    width: 0.7, ducking: 0.12, duckRelease: 0.18
+  }],
+  ['delay-tape', 'vangelis-delay', {
+    enabled: true, inputLeft: 1, inputRight: 1, timeLeft: 0.34, timeRight: 0.34,
+    feedback: 0.55, crossfeed: 0.08, lowCut: 180, highCut: 4200, drive: 0.18,
+    modRate: 0.17, modDepth: 0.0012, flutterRate: 5.2, flutterDepth: 0.0004,
+    width: 0.6, ducking: 0.18, duckRelease: 0.2
+  }],
+  ['delay-pingpong', 'vangelis-delay', {
+    enabled: true, inputLeft: 1, inputRight: 0, timeLeft: 0.28, timeRight: 0.28,
+    feedback: 0.35, crossfeed: 0.5, lowCut: 150, highCut: 6400, drive: 0.03,
+    modRate: 0.3, modDepth: 0.0003, flutterRate: 4, flutterDepth: 0.00002,
+    width: 1, ducking: 0.12, duckRelease: 0.18
+  }],
+  ['delay-stress', 'vangelis-delay', {
+    // Worst legal settings: max feedback + crossfeed + drive. Bounded-ness is
+    // the gate; whether it self-oscillates is recorded, not asserted.
+    enabled: true, inputLeft: 1, inputRight: 1, timeLeft: 0.2, timeRight: 0.26,
+    feedback: 0.96, crossfeed: 0.96, lowCut: 90, highCut: 5400, drive: 0.4,
+    modRate: 0.5, modDepth: 0.0005, flutterRate: 4, flutterDepth: 0.0001,
+    width: 0.7, ducking: 0, duckRelease: 0.18
+  }],
+  ['reverb-hall', 'vangelis-reverb', {
+    enabled: true, variant: 'hall', preDelay: 0.018, size: 0.58, decay: 0.52,
+    damping: 0.42, lowCut: 120, highCut: 9200, width: 0.82, diffusion: 0.72,
+    modRate: 0.16, modDepth: 0.0004, earlyLevel: 0.34
+  }],
+  ['reverb-plate', 'vangelis-reverb', {
+    enabled: true, variant: 'plate', preDelay: 0.008, size: 0.4, decay: 0.6,
+    damping: 0.3, lowCut: 140, highCut: 10500, width: 0.9, diffusion: 0.8,
+    modRate: 0.22, modDepth: 0.0005, earlyLevel: 0.4
+  }],
+  ['reverb-ambient-max', 'vangelis-reverb', {
+    // Near-maximal tail: stability + no-growth is the gate.
+    enabled: true, variant: 'ambient', preDelay: 0.03, size: 0.9, decay: 0.95,
+    damping: 0.25, lowCut: 90, highCut: 8000, width: 1, diffusion: 0.85,
+    modRate: 0.12, modDepth: 0.0006, earlyLevel: 0.25
+  }]
+];
+
+function renderFxCase(name, processorName, fxParams) {
+  reseed(`fx|${name}`);
+  const Processor = PROCESSORS[processorName];
+  const proc = new Processor({ processorOptions: { paramDefaults: fxParams } });
+  proc.port.onmessage({ data: { type: 'setParams', params: fxParams } });
+
+  const totalBlocks = Math.ceil((FX_LEN_SEC * SR) / BLOCK);
+  const outL = new Float32Array(totalBlocks * BLOCK);
+  const outR = new Float32Array(totalBlocks * BLOCK);
+  const inL = new Float32Array(BLOCK);
+  const inR = new Float32Array(BLOCK);
+  const left = new Float32Array(BLOCK);
+  const right = new Float32Array(BLOCK);
+  const inputs = [[inL, inR]];
+  const outputs = [[left, right]];
+
+  const burstSamples = Math.round(0.3 * SR);
+  const fadeSamples = Math.round(0.005 * SR);
+  for (let b = 0; b < totalBlocks; b++) {
+    for (let i = 0; i < BLOCK; i++) {
+      const n = b * BLOCK + i;
+      let s = 0;
+      if (n < burstSamples) {
+        const env = Math.min(1, n / fadeSamples, (burstSamples - n) / fadeSamples);
+        s = 0.5 * env * Math.sin((TWO_PI_AUDIT * 220 * n) / SR);
+      }
+      inL[i] = s;
+      inR[i] = s;
+    }
+    proc.process(inputs, outputs);
+    outL.set(left, b * BLOCK);
+    outR.set(right, b * BLOCK);
+  }
+  return { outL, outR };
+}
+
+const TWO_PI_AUDIT = Math.PI * 2;
+
+function stereoCorrelation(a, b) {
+  let ab = 0;
+  let aa = 0;
+  let bb = 0;
+  for (let i = 0; i < a.length; i++) {
+    ab += a[i] * b[i];
+    aa += a[i] * a[i];
+    bb += b[i] * b[i];
+  }
+  const denom = Math.sqrt(aa * bb);
+  return denom < 1e-12 ? 1 : ab / denom;
+}
+
+const FX_GOLDEN_DIR = join(GOLDEN_DIR, '..', 'fx');
+
+// Called from the main flow below (needs `failures` initialized).
+function runFxSection() {
+  mkdirSync(FX_GOLDEN_DIR, { recursive: true });
+  for (const [name, processorName, fxParams] of FX_CASES) {
+  const { outL, outR } = renderFxCase(name, processorName, fxParams);
+  const record = {
+    name,
+    sr: SR,
+    correlation: Number(stereoCorrelation(outL, outR).toFixed(4)),
+    channels: {
+      left: { hash: hashSamples(outL), ...measure(outL), bands: fingerprint(outL) },
+      right: { hash: hashSamples(outR), ...measure(outR), bands: fingerprint(outR) }
+    }
+  };
+  if (!record.channels.left.finite || !record.channels.right.finite) {
+    failures.push(`fx/${name}: non-finite output`);
+  }
+
+  const goldenPath = join(FX_GOLDEN_DIR, `${name}.json`);
+  if (BLESS) {
+    writeFileSync(goldenPath, JSON.stringify(record));
+  } else if (!existsSync(goldenPath)) {
+    failures.push(`fx/${name}: no golden reference (run --bless to create)`);
+  } else {
+    const golden = JSON.parse(readFileSync(goldenPath, 'utf8'));
+    for (const ch of ['left', 'right']) {
+      const fresh = record.channels[ch];
+      const probs = comparePhrase(`fx-${name}`, ch, fresh, fresh.bands,
+        { phrases: { [ch]: golden.channels[ch] } });
+      failures.push(...probs);
+    }
+    if (Math.abs(record.correlation - golden.correlation) > 0.05) {
+      failures.push(`fx/${name}: stereo correlation ${golden.correlation} -> ${record.correlation}`);
+    }
+  }
+  }
+
+  // Determinism self-check on the densest FDN case
+  const detA = renderFxCase('reverb-hall', 'vangelis-reverb', FX_CASES[4][2]);
+  const detB = renderFxCase('reverb-hall', 'vangelis-reverb', FX_CASES[4][2]);
+  if (hashSamples(detA.outL) !== hashSamples(detB.outL)) {
+    failures.push('fx determinism: reverb-hall rendered differently twice — apparatus invalid');
+  }
+  console.log(`fx: ${FX_CASES.length} cases rendered (delay x4, reverb x3), stereo capture`);
+}
+
 // --- Heap drift (hot-loop allocation proxy) ------------------------------------
 
 function measureHeapDrift() {
@@ -587,6 +741,9 @@ if (BLESS) {
 for (const a of aliasResults) {
   console.log(`alias ${a.label.padEnd(9)} f0=${a.f0}Hz worst=${a.worstAliasDb}dB audible=${a.worstAudibleAliasDb}dB`);
 }
+
+// 3b. FX worklets (delay + reverb) golden renders
+runFxSection();
 
 // 4. Heap drift
 const drift = measureHeapDrift();

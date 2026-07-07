@@ -51,7 +51,7 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
 | B10 | Engine is mono (identical L/R); no stereo unison spread; `width` doesn't exist. True stereo voice architecture. Extend apparatus to capture both channels first. | H/H | apparatus + G4 re-bless |
-| B11 | Extend apparatus to delay + reverb worklets (burst golden renders, feedback stability, tail decay metrics). | M/M | apparatus |
+| B15 | Delay feedback loop is not gain-bounded: feedback+crossfeed through the tanh drive stage reaches small-signal loop gain > 1 (UI-reachable: delayFeedback 0.92 × drive(age 0.4) ≈ 3.5) → permanent self-oscillating drone; `delay-stress` golden records tailRms 0.87, peak 1.51. Normalize drive inside the loop or scale the feedback ceiling by drive so loop gain stays < 1. | H/M | G4 fx re-bless (stress case), G5 |
 | B12 | Envelope semantics: exponential-approach coeffs mean the attack knob isn't attack time; steal-restart fades to 0 then restarts from 0.001 (no retrigger-from-level). Document/calibrate. | L/M | G4 re-bless if changed |
 | B13 | Stale comments ("at 44100 Hz" for values computed from real sampleRate); CLAUDE.md says recording uses ScriptProcessorNode but recorder-worklet.js exists. Cleanup batch. | L/L | G1 |
 | B14 | Glide always starts from `lastFrequency` even for staccato retriggers; add legato-only glide mode. | M/M | G4 unaffected at defaults |
@@ -246,3 +246,23 @@ unchanged (2.2 s) — the win is GC-pause risk during live tweaking, not through
 G4 225/225 bit-exact. G1 361/361 + smoke. G3 6.7x. G5 heap −25 KB. G2 pass.
 
 `ITERATION 10: B9 route-compile dedup — G1..G5 pass (G4 bit-exact) — backlog: 5 items`
+
+### Iteration 11 — B11: apparatus extended to delay + reverb worklets — 2026-07-07
+`audit:audio` now golden-gates the FX worklets: 7 self-contained cases (delay
+digital/tape/ping-pong/stress, reverb hall/plate/ambient-max), sine-burst stimulus,
+**both channels captured** (per-channel metrics + fingerprints + interchannel
+correlation, gated at ±0.05) — this is also the stereo-capture groundwork B10 needs.
+FX cases define their own param sets (the audit can no longer import
+utils/audioEngine/worklets.js — it carries the ?worker&url specifier only Vite can
+parse). Both worklets verified deterministic; FDN double-render self-check added.
+Fix recorded honestly: first version ran at module level before `failures` initialized
+(TDZ crash in compare mode only — bless mode masked it); restructured into a function
+called from the main flow.
+
+**Discovery — new B15 (H/M):** the delay self-oscillates at max legal settings
+(loop gain ≈ 7 at feedback+crossfeed 0.96 through tanh drive; tailRms 0.87 ≥ rms 0.78,
+peak 1.51, UI-reachable at feedback 0.92 + age 0.4). Reverb ambient-max tail decays
+cleanly (0.004 after 4 s). G1 361/361, G4 225/225 bit-exact + 7 fx cases blessed,
+G3 6.8x, G2 pass.
+
+`ITERATION 11: B11 FX apparatus — G1..G5 pass — backlog: 5 items (B15 added, B11 done)`
