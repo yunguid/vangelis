@@ -26,7 +26,10 @@ export class Voice {
     this.prevFmOffset = 0.0;
     this.envelope = new Envelope(sampleRate);
     this.modEnvelope = new Envelope(sampleRate);
-    this.filter = new StateVariableFilter(sampleRate);
+    // Stereo filter pair: the R filter is only exercised when unison spreads
+    // the sub-voices (mono voices process L and copy, keeping cost flat).
+    this.filterL = new StateVariableFilter(sampleRate);
+    this.filterR = new StateVariableFilter(sampleRate);
     this.lfo1 = new LFO(sampleRate);
     this.lfo2 = new LFO(sampleRate);
     this.useFilter = false;
@@ -38,6 +41,12 @@ export class Voice {
     this.unisonVoices = 1;
     this.unisonDetune = 0.0;
     this.unisonPhases = new Float32Array(4);
+    // Equal-power pan gains per unison sub-voice (unity at center so a
+    // single-voice note renders identically on both channels).
+    this.unisonGainL = new Float32Array(4);
+    this.unisonGainR = new Float32Array(4);
+    this.outL = 0.0;
+    this.outR = 0.0;
     this.routesBox = routesBox;
     this.routes = routesBox.compiled;
     // Per-voice smoothed route depths (~20ms) + a scratch buffer so route
@@ -76,11 +85,13 @@ export class Voice {
     this.fmIndex = fmIndex / TWO_PI; // radians -> cycles
 
     this.useFilter = !!params.useFilter;
-    this.filter.setParams({
+    const filterParams = {
       cutoff: params.filterCutoff,
       resonance: params.filterResonance,
       mode: params.filterMode
-    });
+    };
+    this.filterL.setParams(filterParams);
+    this.filterR.setParams(filterParams);
 
     this.lfo1.shape = clamp(Math.floor(params.lfo1Shape ?? 0), 0, 5);
     this.lfo1.rate = clamp(params.lfoRate ?? 0, 0, 40);
@@ -89,6 +100,19 @@ export class Voice {
 
     this.unisonVoices = clamp(params.unisonVoices ?? this.unisonVoices, 1, 4);
     this.unisonDetune = params.unisonDetune ?? this.unisonDetune;
+
+    // Equal-power pan per sub-voice across a fixed spread; sqrt(2)-normalized
+    // so a centered sub-voice has unity gain on both channels (n=1 keeps the
+    // engine's historical mono behavior exactly).
+    const n = this.unisonVoices;
+    const UNISON_SPREAD = 0.8;
+    const SQRT2 = Math.SQRT2;
+    for (let i = 0; i < 4; i++) {
+      const pan = n > 1 && i < n ? ((i / (n - 1)) * 2 - 1) * UNISON_SPREAD : 0;
+      const theta = ((pan + 1) * Math.PI) / 4;
+      this.unisonGainL[i] = SQRT2 * Math.cos(theta);
+      this.unisonGainR[i] = SQRT2 * Math.sin(theta);
+    }
 
     const prevRoutes = this.routes;
     const nextRoutes = this.routesBox.compiled;
@@ -172,7 +196,8 @@ export class Voice {
       this.envelope.setImmediate();
     }
 
-    this.filter.reset();
+    this.filterL.reset();
+    this.filterR.reset();
     this.lfo1.reset();
     this.lfo2.reset();
 
@@ -199,8 +224,14 @@ export class Voice {
     }
   }
 
+  // Renders one stereo sample into this.outL/this.outR (fields, not returns,
+  // so the hot loop never allocates).
   nextSample(bendMul, modWheel) {
-    if (!this.active) return 0.0;
+    if (!this.active) {
+      this.outL = 0.0;
+      this.outR = 0.0;
+      return;
+    }
 
     // Glide toward the target frequency
     if (this.glideCoeff > 0 && this.frequency !== this.targetFrequency) {
@@ -286,8 +317,10 @@ export class Voice {
     const fmRate = Math.abs(fmOffset - this.prevFmOffset);
     this.prevFmOffset = fmOffset;
 
-    let oscSum = 0.0;
     const unison = this.unisonVoices;
+    const stereo = unison > 1;
+    let oscL = 0.0;
+    let oscR = 0.0;
     const effDetune = this.unisonDetune + detuneAdd;
     for (let i = 0; i < unison; i++) {
       const detune = (i - (unison - 1) / 2) * effDetune;
@@ -295,26 +328,34 @@ export class Voice {
       const phase = this.unisonPhases[i];
       const phaseWithMod = (phase + fmOffset) % 1.0;
       const dt = Math.min(0.45, baseDt * detuneRatio + fmRate);
-      oscSum += waveformSample(this.waveform, phaseWithMod < 0 ? phaseWithMod + 1.0 : phaseWithMod, dt);
+      const s = waveformSample(this.waveform, phaseWithMod < 0 ? phaseWithMod + 1.0 : phaseWithMod, dt);
+      if (stereo) {
+        oscL += s * this.unisonGainL[i];
+        oscR += s * this.unisonGainR[i];
+      } else {
+        oscL += s;
+      }
       this.unisonPhases[i] = (phase + baseDt * detuneRatio) % 1.0;
     }
 
-    let sample = oscSum / unison;
+    let sampleL = oscL / unison;
+    let sampleR = stereo ? oscR / unison : sampleL;
 
     // --- Amplitude section ---
-    sample *= envValue * this.velocity;
+    let amp = envValue * this.velocity;
     if (ampOffset !== 0.0) {
-      sample *= Math.max(0.0, 1.0 + ampOffset);
+      amp *= Math.max(0.0, 1.0 + ampOffset);
     }
+    sampleL *= amp;
+    sampleR = stereo ? sampleR * amp : sampleL;
 
-    // --- Filter section ---
+    // --- Filter section (R filter only pays when the voice is spread) ---
     if (this.useFilter) {
-      if (cutoffOct !== 0.0) {
-        const modCutoff = this.filter.targetCutoff * Math.pow(2, cutoffOct);
-        sample = this.filter.process(sample, modCutoff);
-      } else {
-        sample = this.filter.process(sample);
-      }
+      const modCutoff = cutoffOct !== 0.0
+        ? this.filterL.targetCutoff * Math.pow(2, cutoffOct)
+        : undefined;
+      sampleL = this.filterL.process(sampleL, modCutoff);
+      sampleR = stereo ? this.filterR.process(sampleR, modCutoff) : sampleL;
     }
 
     // Apply steal fade-out if being stolen
@@ -330,9 +371,12 @@ export class Voice {
         if (pending) {
           this.start(pending);
         }
-        return 0.0;
+        this.outL = 0.0;
+        this.outR = 0.0;
+        return;
       }
-      sample *= this.stealFadeGain;
+      sampleL *= this.stealFadeGain;
+      sampleR *= this.stealFadeGain;
     }
 
     if (this.envelope.isIdle() && envValue <= MIN_GAIN) {
@@ -340,13 +384,17 @@ export class Voice {
       this.noteId = null;
     }
 
-    if (!Number.isFinite(sample)) {
-      this.filter.reset();
+    if (!Number.isFinite(sampleL) || !Number.isFinite(sampleR)) {
+      this.filterL.reset();
+      this.filterR.reset();
       this.active = false;
       this.noteId = null;
-      return 0.0;
+      this.outL = 0.0;
+      this.outR = 0.0;
+      return;
     }
 
-    return clamp(sample, -VOICE_SAMPLE_LIMIT, VOICE_SAMPLE_LIMIT);
+    this.outL = clamp(sampleL, -VOICE_SAMPLE_LIMIT, VOICE_SAMPLE_LIMIT);
+    this.outR = clamp(sampleR, -VOICE_SAMPLE_LIMIT, VOICE_SAMPLE_LIMIT);
   }
 }

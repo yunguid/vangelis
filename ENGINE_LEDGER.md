@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B10b | Engine stereo: unison sub-voices panned across the field (equal-power), per-channel master chain (2× DC blocker + clip); apparatus prerequisite DONE (schema v2 captures both channels + correlation; remove the L==R mono assertion deliberately in this change). Non-unison voices stay center (L==R). | H/M | G4 re-bless (correlation drops for unison presets), G3 ≥5.7x |
 | B12 | Envelope semantics: exponential-approach coeffs mean the attack knob isn't attack time; steal-restart fades to 0 then restarts from 0.001 (no retrigger-from-level). Document/calibrate. | L/M | G4 re-bless if changed |
 | B13 | Stale comments ("at 44100 Hz" for values computed from real sampleRate); CLAUDE.md says recording uses ScriptProcessorNode but recorder-worklet.js exists. Cleanup batch. | L/L | G1 |
 | B14 | Glide always starts from `lastFrequency` even for staccato retriggers; add legato-only glide mode. | M/M | G4 unaffected at defaults |
@@ -293,3 +292,21 @@ All 45 preset goldens re-blessed to schema v2 (bit-identical audio, new record s
 G1 363/363, G4 225/225 bit-exact under dual-channel comparison, G3 6.7x, G2 pass.
 
 `ITERATION 13: B10a stereo apparatus — G1..G5 pass (schema v2) — backlog: 4 items (B10 → B10b)`
+
+### Iteration 14 — B10b: the engine goes stereo — 2026-07-07
+Unison sub-voices now pan equal-power across a fixed 0.8 spread (√2-normalized: a
+centered sub-voice has unity gain, so single-voice notes render **bit-identically** on
+both channels via the mono-copy fast path — no cost, no drift). Spread voices get a true
+stereo filter pair (the R filter only runs when unison > 1); the master chain is fully
+per-channel (2× DC blocker, per-channel clip knee). The audit's L==R mono assertion
+removed in this same change, as planned in iteration 13.
+
+**Result:** 30/45 factory presets now have real stereo width — the CS-80/pad unison
+patches are widest (chord-phrase correlation 0.21–0.26: taurus-fog, cs80-velvet,
+blade-runner-blues, fairlight-air, ribbon-fall); 15 non-unison presets measure
+correlation exactly 1.0. New vitest pins mono-voice bit-identity and unison
+decorrelation with channel balance. G4 re-blessed (unison presets drift on both
+channels + correlation; mono presets bit-exact). G1 364/364 + smoke. G3 6.1x (stereo
+filter pair costs ~9%; baseline 5.7x respected). G2 pass. In-app boot + note verified.
+
+`ITERATION 14: B10b engine stereo — G1..G5 pass (G4 re-blessed) — backlog: 3 items`

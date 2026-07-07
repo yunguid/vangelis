@@ -11,6 +11,14 @@ import { Voice } from './dsp/voice.js';
 import { DCBlocker } from './dsp/dc-blocker.js';
 import { compileModRoutes } from './dsp/mod-routes.js';
 
+function softClip(sample) {
+  if (!Number.isFinite(sample)) return 0.0;
+  const mag = Math.abs(sample);
+  if (mag <= CLIP_KNEE) return sample;
+  const clipped = 1.0 - (1.0 - CLIP_KNEE) * Math.exp(-(mag - CLIP_KNEE) / (1.0 - CLIP_KNEE));
+  return sample < 0 ? -clipped : clipped;
+}
+
 class SynthProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
@@ -35,8 +43,9 @@ class SynthProcessor extends AudioWorkletProcessor {
     // ~5ms smoothing for performance controllers
     this.perfSmoothCoeff = Math.exp(-1.0 / (0.005 * sampleRate));
     // Integer-ratio FM leaves a real 0 Hz component in the voice sum; block it
-    // before the clip knee so clipping stays symmetric.
-    this.dcBlocker = new DCBlocker(sampleRate);
+    // before the clip knee so clipping stays symmetric. One per channel.
+    this.dcBlockerL = new DCBlocker(sampleRate);
+    this.dcBlockerR = new DCBlocker(sampleRate);
     this.port.onmessage = (event) => {
       const data = event.data;
       if (!data || !data.type) return;
@@ -184,29 +193,23 @@ class SynthProcessor extends AudioWorkletProcessor {
         ? Math.pow(2, this.pitchBendSmoothed / 12.0)
         : 1.0;
 
-      let sample = 0.0;
+      let sumL = 0.0;
+      let sumR = 0.0;
       for (const voice of this.voices) {
         if (voice.active) {
-          sample += voice.nextSample(bendMul, this.modWheelSmoothed);
+          voice.nextSample(bendMul, this.modWheelSmoothed);
+          sumL += voice.outL;
+          sumR += voice.outR;
         }
       }
-      sample = this.dcBlocker.process(sample);
-      sample *= mixGain;
+      sumL = this.dcBlockerL.process(sumL) * mixGain;
+      sumR = this.dcBlockerR.process(sumR) * mixGain;
       // Safety clip only: unity gain below the knee so polyphonic sums stay
       // clean (the old always-on tanh ground held chords into intermodulation
       // mush); C1-continuous exponential knee, asymptote +/-1.
-      if (!Number.isFinite(sample)) {
-        sample = 0.0;
-      } else {
-        const mag = Math.abs(sample);
-        if (mag > CLIP_KNEE) {
-          const clipped = 1.0 - (1.0 - CLIP_KNEE) * Math.exp(-(mag - CLIP_KNEE) / (1.0 - CLIP_KNEE));
-          sample = sample < 0 ? -clipped : clipped;
-        }
-      }
-      left[i] = sample;
+      left[i] = softClip(sumL);
       if (right) {
-        right[i] = sample;
+        right[i] = right === left ? left[i] : softClip(sumR);
       }
     }
 

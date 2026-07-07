@@ -289,6 +289,49 @@ describe('engine artifact regressions', () => {
     expect(stats.maxAbs).toBeGreaterThan(0.5); // knee engaged, not silenced
   });
 
+  it('unison spread decorrelates channels; single voices stay exactly centered', () => {
+    const renderStereo = (params, waveform) => {
+      const proc = makeProcessor(params);
+      noteOn(proc, 'st', 48, waveform, 0.9);
+      const left = new Float32Array(BLOCK);
+      const right = new Float32Array(BLOCK);
+      const outputs = [[left, right]];
+      const L = [];
+      const R = [];
+      for (let b = 0; b < 400; b++) {
+        proc.process([], outputs);
+        if (b > 100) {
+          for (let i = 0; i < BLOCK; i++) {
+            L.push(left[i]);
+            R.push(right[i]);
+          }
+        }
+      }
+      let ab = 0;
+      let aa = 0;
+      let bb = 0;
+      let identical = true;
+      for (let i = 0; i < L.length; i++) {
+        ab += L[i] * R[i];
+        aa += L[i] * L[i];
+        bb += R[i] * R[i];
+        if (L[i] !== R[i]) identical = false;
+      }
+      return { identical, corr: ab / Math.sqrt(aa * bb), rmsL: Math.sqrt(aa / L.length), rmsR: Math.sqrt(bb / R.length) };
+    };
+
+    const mono = renderStereo({ unisonVoices: 1, useFilter: false }, 'Sawtooth');
+    expect(mono.identical).toBe(true); // single voice: bit-identical channels
+
+    const wide = renderStereo({ unisonVoices: 4, unisonDetune: 18, useFilter: false }, 'Sawtooth');
+    expect(wide.identical).toBe(false);
+    expect(wide.corr).toBeLessThan(0.995); // audibly decorrelated
+    expect(wide.rmsL).toBeGreaterThan(0.01); // both channels carry signal
+    expect(wide.rmsR).toBeGreaterThan(0.01);
+    expect(wide.rmsL / wide.rmsR).toBeGreaterThan(0.7); // roughly balanced
+    expect(wide.rmsL / wide.rmsR).toBeLessThan(1.4);
+  });
+
   it('same-note retrigger does not click', () => {
     const proc = makeProcessor({
       attack: 0.01,

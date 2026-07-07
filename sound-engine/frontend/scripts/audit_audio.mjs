@@ -687,9 +687,8 @@ let compared = 0;
 let bitExact = 0;
 
 // Schema v2: both channels captured per phrase (correlation + per-channel
-// metrics/fingerprints) — the stereo groundwork for the B10 voice
-// architecture. While the engine remains mono, L must hash-equal R; that
-// assertion is removed deliberately when the engine goes stereo.
+// metrics/fingerprints). Unison voices spread across the stereo field as of
+// descent(14); non-unison voices remain exactly centered (L==R by copy).
 for (const preset of presets) {
   const record = { id: preset.id, name: preset.name, sr: SR, schema: 2, phrases: {} };
   for (const phrase of PHRASES) {
@@ -699,9 +698,6 @@ for (const preset of presets) {
     if (!mL.finite || !mR.finite) failures.push(`${preset.id}/${phrase}: non-finite output`);
     const hashL = hashSamples(outL);
     const hashR = hashSamples(outR);
-    if (hashL !== hashR) {
-      failures.push(`${preset.id}/${phrase}: L!=R while engine is mono (apparatus or engine drift)`);
-    }
     record.phrases[phrase] = {
       correlation: Number(stereoCorrelation(outL, outR).toFixed(4)),
       left: { hash: hashL, ...mL, bands: fingerprint(outL) },
