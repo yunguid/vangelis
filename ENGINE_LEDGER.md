@@ -446,3 +446,18 @@ main-thread glue the original audit never covered — the loop is converging by 
 not grinding. **Dry count: 0/2 (reset by this find).**
 
 `ITERATION 22: samplePool stale callbacks — G1..G5 pass (bit-exact) — backlog: 0 items — DRY 0/2 (reset)`
+
+### Iteration 23 — dry-well re-sweep (async/lifecycle lens on audioEngine.js): clean — 2026-07-07
+Adversarial re-read of the main-thread orchestrator's full async surface — the file
+class where descent 19–22 found their bugs. Context/worklet initialization is memoized
+with per-worklet error isolation; unlock handlers are once-per-gesture across four
+event types; `stopNote`/`stopAllNotes` are mode-agnostic and no-op-safe; custom-sample
+and voice-phrase paths are state-only. One candidate found and judged below the line:
+`startRecording`'s isRecording guard precedes its awaits, so a double-tap during the
+first-ever recorder initialization (~50–200 ms, once per session) can interleave —
+benign: UI state tracks actual state and another tap recovers. Noted, not backlogged.
+
+All gates green (G1 373/373 + smoke, G4 225/225 bit-exact, G3 5.9x, G2 pass).
+**Dry count: 1 of 2.**
+
+`ITERATION 23: dry-well re-sweep — G1..G5 pass — backlog: 0 items — DRY 1/2`
