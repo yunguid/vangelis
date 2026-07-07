@@ -2,9 +2,10 @@ export const BASE_OCTAVE = 4;
 export const MIN_OFFSET = -5;
 export const MAX_OFFSET = 2;
 
-export const WHITE_KEY_HEIGHT = 'clamp(72px, 18vh, 120px)';
-export const BLACK_KEY_WIDTH = 'clamp(24px, 4.2vw, 48px)';
-export const BLACK_KEY_HEIGHT = 'clamp(52px, 17vh, 100px)';
+/* var() so breakpoints can retune key sizes; the fallback is the desktop size. */
+export const WHITE_KEY_HEIGHT = 'var(--white-key-height, clamp(72px, 18vh, 120px))';
+export const BLACK_KEY_WIDTH = 'var(--black-key-width, clamp(24px, 4.2vw, 48px))';
+export const BLACK_KEY_HEIGHT = 'var(--black-key-height, clamp(52px, 17vh, 100px))';
 export const BLACK_KEY_OFFSET_RATIO = 2 / 3;
 
 export const WHITE_KEYS = [

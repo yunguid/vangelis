@@ -6,11 +6,16 @@ export function usePointerInput({
   pointerToNoteRef,
   startNote,
   stopNote,
-  switchPointerNote
+  switchPointerNote,
+  touchVelocityRef
 }) {
   useEffect(() => {
     const container = keyboardRef.current;
     if (!container) return;
+
+    // Touch screens rarely report pressure; the on-screen velocity selector
+    // supplies the playing dynamic instead.
+    const fallbackVelocity = () => touchVelocityRef?.current ?? 0.85;
 
     const getMetaFromElement = (element) => {
       if (!element) return null;
@@ -40,7 +45,7 @@ export function usePointerInput({
         }
       }
       const meta = getMetaFromElement(keyElement);
-      const velocity = event.pressure > 0 ? clamp(event.pressure, 0.05, 1) : 0.85;
+      const velocity = event.pressure > 0 ? clamp(event.pressure, 0.05, 1) : fallbackVelocity();
       startNote(meta, { pointerId: event.pointerId, velocity });
     };
 
@@ -50,7 +55,7 @@ export function usePointerInput({
       const keyElement = element ? element.closest('[data-note]') : null;
       if (!keyElement) return;
       const meta = getMetaFromElement(keyElement);
-      const velocity = event.pressure > 0 ? clamp(event.pressure, 0.05, 1) : 0.85;
+      const velocity = event.pressure > 0 ? clamp(event.pressure, 0.05, 1) : fallbackVelocity();
       switchPointerNote(event.pointerId, meta, velocity);
     };
 
@@ -89,5 +94,5 @@ export function usePointerInput({
       container.removeEventListener('pointercancel', pointerUp);
       container.removeEventListener('lostpointercapture', lostPointerCapture, true);
     };
-  }, [keyboardRef, pointerToNoteRef, startNote, stopNote, switchPointerNote]);
+  }, [keyboardRef, pointerToNoteRef, startNote, stopNote, switchPointerNote, touchVelocityRef]);
 }

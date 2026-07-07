@@ -169,20 +169,30 @@
     gap: 8px;
   }
 
-  .white-keys {
-    min-height: clamp(110px, 28vw, 145px);
+  /* Hero keyboard: with only 8 white keys on compact screens, keys get tall
+     and wide enough to actually play with thumbs. */
+  :root {
+    --white-key-height: clamp(140px, 26vh, 230px);
+    --black-key-height: clamp(90px, 16vh, 145px);
+    --black-key-width: clamp(36px, 10vw, 58px);
   }
 
-  .key-white .note-label,
-  .key-white .key-label {
-    font-size: clamp(0.48rem, 1.7vw, 0.62rem);
+  .white-keys {
+    min-height: var(--white-key-height);
+  }
+
+  .key-white .note-label {
+    font-size: clamp(0.62rem, 2.4vw, 0.78rem);
+  }
+
+  /* QWERTY hint letters mean nothing on a touch screen */
+  .key-label {
+    display: none;
   }
 
   .key-black {
     margin-top: 6px;
-    min-width: clamp(19px, 5vw, 30px);
-    min-height: clamp(40px, 13vw, 64px);
-    border-radius: 0 0 10px 10px;
+    border-radius: 0 0 12px 12px;
   }
 
   .keyboard-meta {
@@ -403,11 +413,6 @@
 
   .white-keys {
     border-radius: 12px;
-  }
-
-  .key-black {
-    min-width: clamp(17px, 5.5vw, 24px);
-    min-height: clamp(34px, 14vw, 50px);
   }
 
   .controls-surface {
