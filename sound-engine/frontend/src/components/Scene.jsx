@@ -100,42 +100,42 @@ void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
   vec2 p = (gl_FragCoord.xy * 2.0 - uRes) / min(uRes.x, uRes.y);
 
-  float t = uTime * 0.045;
+  float t = uTime * 0.028;
 
   // Slow scene-state oscillators on incommensurate periods: the composition
   // (rotation, zoom, palette, drift direction) keeps evolving and never loops.
   float m1 = sin(uMorph * 0.31 + sin(uMorph * 0.113) * 1.7);
   float m2 = cos(uMorph * 0.171 + 2.3);
 
-  p = rot(uMorph * 0.05 + uBass * 0.1) * p;
-  float zoom = 1.1 + 0.22 * m2 + uLevel * 0.15;
+  p = rot(uMorph * 0.04) * p;
+  float zoom = 1.12 + 0.18 * m2 + uLevel * 0.06;
   vec2 q = p * zoom;
 
   // Semi-Lagrangian advection: backtrace the noise domain through the
   // vortex particles' velocity field so the smoke visibly swirls around
   // the circulation the music injects, instead of just wobbling in place.
   vec2 flow = vortexVelocity(p);
-  q -= flow * 0.55;
+  q -= flow * 0.45;
 
   // Fourier-series ripple shaped by the live spectrum bands.
   float ripple = spectralRipple(q, uTime);
-  q += vec2(ripple * 0.08, ripple * 0.16);
+  q += vec2(ripple * 0.05, ripple * 0.1);
 
-  // Domain-warped aurora bands; bass and transients push the warp,
-  // mids speed the drift, the morph phase bends its direction over time.
+  // Domain-warped aurora bands; bass leans on the warp gently,
+  // mids nudge the drift, the morph phase bends its direction over time.
   vec2 warp = vec2(
     fbm(q * 1.4 + vec2(t * (1.0 + 0.4 * m1), -t * 0.7)),
     fbm(q * 1.4 + vec2(-t * 0.8, t * 0.6) + 5.0 + uMorph * 0.02)
   );
-  float w = 0.6 + uBass * 1.4 + uPulse * 0.7;
-  float field = fbm(q * 1.1 + warp * w + vec2(0.0, t * (0.5 + uMid)));
+  float w = 0.7 + uBass * 0.6 + uPulse * 0.2;
+  float field = fbm(q * 1.1 + warp * w + vec2(0.0, t * (0.6 + uMid * 0.4)));
 
   // Counter-current layer drifting the other way for depth
   float field2 = fbm(q * 2.3 - warp * 0.7 - vec2(t * 0.9, t * 0.35));
 
-  // Transients ring a shockwave out from the center
+  // Transients send one broad, slow swell out from the center
   float r = length(p);
-  field += uPulse * 0.32 * sin(r * 13.0 - uTime * 6.0) * exp(-r * 1.6);
+  field += uPulse * 0.1 * sin(r * 5.0 - uTime * 1.8) * exp(-r * 1.1);
 
   // Palette morphs between ember/moss and magenta-ember/steel-blue
   vec3 base = vec3(0.075, 0.082, 0.09);
@@ -145,20 +145,20 @@ void main() {
 
   float glow = smoothstep(0.35, 0.95, field);
   vec3 col = base;
-  col += ember * glow * (0.22 + uBass * 0.9 + uPulse * 0.3);
-  col += aqua * smoothstep(0.55, 1.0, field) * (0.18 + uHigh * 1.1);
-  col += ember * 0.35 * smoothstep(0.6, 1.0, field2) * (0.15 + uMid * 0.7);
+  col += ember * glow * (0.24 + uBass * 0.42 + uPulse * 0.1);
+  col += aqua * smoothstep(0.55, 1.0, field) * (0.18 + uHigh * 0.55);
+  col += ember * 0.35 * smoothstep(0.6, 1.0, field2) * (0.15 + uMid * 0.35);
 
   // Swirling regions catch a faint extra glow (kinetic energy -> light)
-  col += ember * min(dot(flow, flow) * 0.6, 0.35) * glow;
+  col += ember * min(dot(flow, flow) * 0.4, 0.22) * glow;
 
-  // High frequencies scatter tiny hot grains; silence scatters none
-  float grain = noise(q * 26.0 + vec2(t * 3.0, -t * 2.0));
-  float sparkle = step(1.001 - uHigh * 0.05, grain);
-  col += vec3(0.9, 0.75, 0.5) * sparkle * uHigh * 0.55;
+  // High frequencies breathe soft glints into the grain (no hard pops)
+  float grain = noise(q * 22.0 + vec2(t * 2.0, -t * 1.4));
+  float glint = smoothstep(0.9, 1.0, grain) * uHigh;
+  col += vec3(0.85, 0.7, 0.5) * glint * 0.18;
 
-  // Loudness lifts the whole scene slightly
-  col *= 0.85 + uLevel * 0.55;
+  // Loudness lifts the whole scene gently
+  col *= 0.9 + uLevel * 0.24;
 
   // Horizon gradient + vignette to keep the UI readable
   col *= mix(1.0, 0.55, uv.y);
@@ -268,10 +268,11 @@ const Scene = () => {
     let contextLost = false;
     let analyser = null;
     let freqData = null;
-    // Attack/release smoothed band values
+    // Attack/release smoothed band values — deliberately slow both ways so
+    // the scene swells and subsides instead of twitching with the music.
     const smooth = { bass: 0, mid: 0, high: 0, level: 0 };
     const follow = (key, target) => {
-      const k = target > smooth[key] ? 0.4 : 0.06; // fast attack, slow release
+      const k = target > smooth[key] ? 0.09 : 0.03;
       smooth[key] += (target - smooth[key]) * k;
       return smooth[key];
     };
@@ -286,8 +287,9 @@ const Scene = () => {
     let lastFrameTime = performance.now();
 
     // Lagrangian vortex particles: bass onsets inject circulation, highs
-    // sprinkle fine turbulence; the strongest ten reach the shader.
-    const vortices = new VortexField({ maxParticles: 14 });
+    // sprinkle fine turbulence; the strongest ten reach the shader. Long
+    // decay + ramp-in keeps swirls emerging and dissolving, never popping.
+    const vortices = new VortexField({ maxParticles: 12, decay: 0.12, rampTime: 0.9 });
     const VORTEX_SLOTS = 10;
     const vortexPos = new Float32Array(VORTEX_SLOTS * 2);
     const vortexStr = new Float32Array(VORTEX_SLOTS);
@@ -331,8 +333,8 @@ const Scene = () => {
         level = (bass + mid + high) / 3;
         for (let b = 0; b < 8; b++) {
           const e = bandEnergy(freqData, sr, fft, BAND_EDGES[b], BAND_EDGES[b + 1]);
-          // Light attack/release so the ripple breathes instead of flickering
-          bands[b] += (e - bands[b]) * (e > bands[b] ? 0.5 : 0.12);
+          // Slow attack/release so the ripple breathes instead of flickering
+          bands[b] += (e - bands[b]) * (e > bands[b] ? 0.12 : 0.04);
         }
       }
 
@@ -342,38 +344,39 @@ const Scene = () => {
 
       // Slow baseline tracks sustained bass; the excess above it is the hit.
       bassSlow += (bass - bassSlow) * (bass > bassSlow ? 0.06 : 0.02);
-      const onset = Math.max(0, bass - bassSlow) * 5;
-      pulse = Math.min(1, Math.max(pulse * Math.exp(-dt * 5), onset));
-      morphPhase += dt * (0.06 + level * 0.5);
+      const onset = Math.max(0, bass - bassSlow) * 3.5;
+      pulse = Math.min(1, Math.max(pulse * Math.exp(-dt * 1.6), onset));
+      morphPhase += dt * (0.05 + level * 0.3);
 
       // Inject circulation on bass onsets (rate-limited); sprinkle small
       // counter-rotating turbulence when the top end is busy; keep a mild
-      // ambient swirl going whenever there is any signal at all.
-      if (onset > 0.1 && now - lastInjectAt > 140) {
+      // ambient swirl going whenever there is any signal at all. Broad,
+      // soft cores + slow decay = flowing currents rather than jolts.
+      if (onset > 0.1 && now - lastInjectAt > 450) {
         lastInjectAt = now;
         const sign = Math.random() < 0.5 ? -1 : 1;
         vortices.inject({
           x: (Math.random() - 0.5) * 1.8,
           y: (Math.random() - 0.7) * 1.2,
-          strength: sign * (0.18 + Math.min(onset, 1) * 0.4),
-          radius: 0.4 + Math.random() * 0.35
+          strength: sign * (0.1 + Math.min(onset, 1) * 0.2),
+          radius: 0.55 + Math.random() * 0.4
         });
       }
       // Poisson-style rates (per second, scaled by dt so frame rate is moot)
-      if (high > 0.12 && Math.random() < dt * (0.2 + high * 1.5)) {
+      if (high > 0.12 && Math.random() < dt * (0.1 + high * 0.7)) {
         vortices.inject({
           x: (Math.random() - 0.5) * 2.2,
           y: (Math.random() - 0.5) * 1.6,
-          strength: (Math.random() < 0.5 ? -1 : 1) * (0.05 + high * 0.1),
-          radius: 0.18 + Math.random() * 0.15
+          strength: (Math.random() < 0.5 ? -1 : 1) * (0.04 + high * 0.06),
+          radius: 0.3 + Math.random() * 0.2
         });
       }
-      if (level > 0.04 && vortices.particles.length < 3 && Math.random() < dt * 0.6) {
+      if (level > 0.04 && vortices.particles.length < 3 && Math.random() < dt * 0.5) {
         vortices.inject({
           x: (Math.random() - 0.5) * 1.6,
           y: (Math.random() - 0.5) * 1.2,
-          strength: (Math.random() < 0.5 ? -1 : 1) * (0.1 + level * 0.25),
-          radius: 0.5 + Math.random() * 0.3
+          strength: (Math.random() < 0.5 ? -1 : 1) * (0.08 + level * 0.18),
+          radius: 0.6 + Math.random() * 0.35
         });
       }
       vortices.step(dt);

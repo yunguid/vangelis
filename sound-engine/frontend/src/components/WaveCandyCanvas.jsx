@@ -342,9 +342,9 @@ const WaveCandyCanvas = () => {
   // springs while wave-equation tension lets transients ripple outward.
   const spectrumChainRef = useRef(
     new VerletChain(SPECTRUM_CELLS, {
-      stiffness: 220,
-      tension: 380,
-      damping: 0.88,
+      stiffness: 130,
+      tension: 300,
+      damping: 0.9,
       initial: FLOOR_DB
     })
   );

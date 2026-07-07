@@ -329,3 +329,27 @@ smoke and WaveCandy.
   (__sceneShaderOk), vortices 5->14 with pulses firing during Sugar Crash
   Angel (rms 0.08-0.15), spectrum canvas pixel-delta 6k->55k while playing,
   console clean, screenshot shows swirling smoke + physical spectrum curve.
+
+### Cycle 5b (2026-07-06) — stuck-note fix + visual calming pass
+- **Stuck looping noise (user report)**: real bug from the click-free steal —
+  a noteOff arriving during the ~5ms steal fade found no active voice with
+  that id, the release was dropped, and the queued note started afterward and
+  rang forever. noteOff now cancels matching pendingStart notes and releases
+  ALL matching active voices; allNotesOff clears pending too. Regression
+  tests added (steal + immediate noteOff -> silence; allNotesOff clears
+  queued). Pushed as bec5f48.
+- **"Too jumpy/flashy" calming pass**: slow attack AND release on all
+  audio-follow envelopes (0.09/0.03), band smoothing 0.12/0.04; pulse decay
+  1.6/s and onset gain 3.5; shockwave now one broad slow swell (r*5, t*1.8,
+  amp 0.1); hard step() sparkles -> soft smoothstep glints at 0.18; loudness
+  lift 0.9+0.24*level (was 0.85+0.55); bass no longer jitters rotation; zoom
+  pumping 0.06 (was 0.15); global time 0.028 (was 0.045); audio color gains
+  roughly halved. Vortices: decay 0.12 (longer-lived), strengths ~halved,
+  radii widened, onset injection rate-limited to 450ms, and a new
+  VortexField rampTime option smoothstep-fades each swirl's visible
+  circulation in over 0.9s (fillUniforms only; internal dynamics unchanged)
+  so vortices emerge instead of popping. WaveCandy spectrum spring softened
+  (stiffness 130, tension 300, damping 0.9).
+- Verified: 337/337 tests; in-browser vortices build 2->11 over 12s with
+  pulse settling to a 0.03-0.08 simmer and steady level (no pumping);
+  console clean.

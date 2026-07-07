@@ -170,14 +170,20 @@ export class VortexField {
    * @param {number} [opts.decay] circulation half-life-ish rate (1/s)
    * @param {number} [opts.inertia] velocity relaxation time constant (s):
    *   how long a particle takes to match the local flow (adds swirl memory)
+   * @param {number} [opts.rampTime] seconds over which a new vortex's
+   *   *visible* circulation fades in (fillUniforms only; the internal
+   *   dynamics use full strength). 0 disables the ramp.
    * @param {() => number} [opts.random] RNG (injectable for tests)
    */
-  constructor({ maxParticles = 16, decay = 0.22, inertia = 0.18, random = Math.random } = {}) {
+  constructor({
+    maxParticles = 16, decay = 0.22, inertia = 0.18, rampTime = 0, random = Math.random
+  } = {}) {
     this.maxParticles = maxParticles;
     this.decay = decay;
     this.inertia = inertia;
+    this.rampTime = rampTime;
     this.random = random;
-    /** @type {Array<{x:number,y:number,px:number,py:number,strength:number,radius:number}>} */
+    /** @type {Array<{x:number,y:number,px:number,py:number,strength:number,radius:number,age:number}>} */
     this.particles = [];
   }
 
@@ -213,7 +219,7 @@ export class VortexField {
       }
       this.particles.splice(weakest, 1);
     }
-    this.particles.push({ x, y, px: x, py: y, strength, radius });
+    this.particles.push({ x, y, px: x, py: y, strength, radius, age: 0 });
   }
 
   /**
@@ -240,6 +246,7 @@ export class VortexField {
         p.y = ny;
       }
       p.strength *= decayMul;
+      p.age += h;
     });
     // Cull spent or escaped vortices.
     this.particles = this.particles.filter(
@@ -261,9 +268,11 @@ export class VortexField {
       .slice(0, slots);
     for (let i = 0; i < slots; i++) {
       const p = sorted[i];
+      // Fade new swirls in so they emerge from the smoke instead of popping.
+      const ramp = p && this.rampTime > 0 ? Math.min(1, p.age / this.rampTime) : 1;
       positions[i * 2] = p ? p.x : 0;
       positions[i * 2 + 1] = p ? p.y : 0;
-      strengths[i] = p ? p.strength : 0;
+      strengths[i] = p ? p.strength * ramp * ramp * (3 - 2 * ramp) : 0;
       radii[i] = p ? p.radius : 1;
     }
   }
