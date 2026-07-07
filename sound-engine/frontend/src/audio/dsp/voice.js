@@ -57,7 +57,7 @@ export class Voice {
     // Voice stealing fade-out
     this.isBeingStolen = false;
     this.stealFadeGain = 1.0;
-    // Fade-out rate: complete in ~5ms at 44100 Hz
+    // Fade-out rate: complete in ~5ms at the context sample rate
     this.stealFadeRate = 1.0 / (0.005 * sampleRate);
     // Note waiting for the steal fade to finish before it starts (click-free
     // steal/retrigger: never hard-reset a phase that is still audible).

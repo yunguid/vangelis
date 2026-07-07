@@ -15,8 +15,8 @@ export class StateVariableFilter {
     this.ic1eq = 0.0;
     this.ic2eq = 0.0;
     this.mode = 0; // 0=lowpass
-    // Smoothing coefficient (higher = slower smoothing)
-    // ~10ms smoothing at 44100 Hz
+    // Smoothing coefficient (higher = slower smoothing), ~10ms at the
+    // context sample rate
     this.smoothCoeff = Math.exp(-1.0 / (0.01 * sampleRate));
   }
 

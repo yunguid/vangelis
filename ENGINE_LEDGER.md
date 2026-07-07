@@ -50,7 +50,8 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B13 | Stale comments ("at 44100 Hz" for values computed from real sampleRate); CLAUDE.md says recording uses ScriptProcessorNode but recorder-worklet.js exists. Cleanup batch. | L/L | G1 |
+*(empty — dry-well protocol active: two consecutive audit iterations finding nothing new
+terminate the loop)*
 
 Out of domain (noted, not engine work): none yet.
 
@@ -335,3 +336,16 @@ regression in everything that matters. Documented precisely in `dsp/envelope.js`
 instead of changed. G4 225/225 bit-exact, G1 365/365, G3 6.1x, G2 pass.
 
 `ITERATION 16: B12 envelope semantics documented — G1..G5 pass (bit-exact) — backlog: 1 item`
+
+### Iteration 17 — B13: comment + doc drift cleanup — 2026-07-07
+Fixed the two remaining "at 44100 Hz" comments (values compute from the real context
+rate) and CLAUDE.md drift: recording uses `recorder-worklet.js` (not ScriptProcessorNode),
+the reverb is an algorithmic FDN (not convolution), and the architecture sections now
+describe the dsp/ decomposition, stereo unison, the master DC-blocker/clip stage, and
+the `audit:audio` golden apparatus with pointers to ENGINE_DESCENT/LEDGER. Bit-exact.
+G1 365/365, G4 225/225, G3 6.1x, G2 pass.
+
+**Backlog empty.** Dry-well protocol begins: the next iterations audit the engine fresh;
+two consecutive discoveries of nothing new → FIXED POINT REACHED.
+
+`ITERATION 17: B13 doc cleanup — G1..G5 pass (bit-exact) — backlog: 0 items`

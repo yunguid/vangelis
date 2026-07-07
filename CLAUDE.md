@@ -16,19 +16,26 @@ Vangelis is an expressive, playable web synthesizer that feels responsive and mu
 ### Sound Engine (`/sound-engine`)
 - **Frontend** (`frontend/`) - React app with Web Audio API integration
 - **DSP core** - Pure-JS AudioWorklet processors in `frontend/src/audio/` (synth, delay,
-  reverb, recorder) running on the audio thread. There is no Rust/WASM in the audio path;
-  a worst-case polyphonic benchmark (`frontend/scripts/bench_synth_worklet.mjs`) showed
-  ample realtime headroom in plain JS (numbers in the PROGRESS.md decision record), so
-  the DSP stays in hot-reloadable JS.
+  reverb, recorder) running on the audio thread. The synth worklet is a thin shell over
+  pure-DSP ES modules in `frontend/src/audio/dsp/` (oscillator, envelope, LFO, SVF,
+  voice, mod-routes, DC blocker), each unit-tested directly. There is no Rust/WASM in
+  the audio path; a worst-case polyphonic benchmark
+  (`frontend/scripts/bench_synth_worklet.mjs`) showed ample realtime headroom in plain
+  JS, so the DSP stays in hot-reloadable JS.
+- **Audio quality gates** - `npm run audit:audio` renders every factory preset (and the
+  delay/reverb worklets) against golden masters in `frontend/golden/` — stereo
+  per-channel fingerprints, aliasing, DC, heap-drift metrics. See `ENGINE_DESCENT.md`
+  and `ENGINE_LEDGER.md` at the repo root for the improvement loop and its history.
 
 ### Audio Pipeline
 ```
-AudioWorklet synth (polyBLEP + FM + ADSR + filter + LFO + unison)
+AudioWorklet synth (4-pt polyBLEP/BLAMP + FM + ADSR + SVF + LFO
+                    + stereo unison spread + DC blocker + soft-clip knee)
     -> Input bus
     -> Compressor
     -> Distortion
     -> Delay (with feedback)
-    -> Reverb (convolution)
+    -> Reverb (algorithmic FDN worklet)
     -> Master Gain
     -> Stereo Panner
     -> Analyser (visualization)
@@ -90,9 +97,11 @@ frontend/src/
 │       └── recorder.js        # Recording and WAV export
 │
 └── audio/
-    ├── synth-worklet.js       # AudioWorklet processor (synthesis core)
-    ├── delay-worklet.js       # Tempo-synced feedback delay
-    ├── reverb-worklet.js      # Algorithmic reverb
+    ├── synth-worklet.js       # AudioWorklet shell (message protocol, voice pool, master clip)
+    ├── dsp/                   # Pure-DSP modules (oscillator, envelope, lfo, svf,
+    │                          #   voice, mod-routes, dc-blocker) + direct unit tests
+    ├── delay-worklet.js       # Tempo-synced feedback delay (contractive feedback loop)
+    ├── reverb-worklet.js      # Algorithmic FDN reverb
     └── recorder-worklet.js    # PCM capture for WAV export
 ```
 
@@ -108,7 +117,7 @@ frontend/src/
   detune), up to 8 routes with bipolar depth
 - Glide/portamento, pitch bend and mod wheel messages, velocity curves
 - Web MIDI hardware input (notes, bend wheel, CC1)
-- Unison with configurable voice count and detune
+- Unison with configurable voice count and detune, spread equal-power across the stereo field
 
 ### Custom Sample Mode
 - Upload WAV/MP3/OGG files as custom instruments
@@ -146,14 +155,14 @@ frontend/src/
 
 ### Recording
 - Record button captures all audio output
-- Uses ScriptProcessorNode to capture raw PCM
+- Uses an AudioWorklet (`recorder-worklet.js`) to capture raw PCM on the audio thread
 - Exports as WAV format with automatic download
 
 ### Effects Chain
 - **Compressor** - Dynamics control
 - **Distortion** - Soft clipping with adjustable drive
 - **Delay** - Tempo-synced with feedback
-- **Reverb** - Convolution-based room simulation
+- **Reverb** - Algorithmic FDN worklet (room/plate/hall/ambient variants)
 
 ## Development
 
