@@ -398,140 +398,53 @@ export const getDelaySeconds = (params = {}, transportBpm = DEFAULT_TRANSPORT_TE
   return clamp((60 / bpm) * getDelayDivisionBeats(params?.delayDivision), 0.02, 4);
 };
 
+// Params that are integer-valued in the engine (floored before clamping).
+const INTEGER_PARAMS = new Set(['filterMode', 'lfoTarget', 'unisonVoices', 'lfo1Shape', 'lfo2Shape']);
+
 export const sanitizeAudioParams = (params = {}) => {
   const merged = { ...AUDIO_PARAM_DEFAULTS, ...params };
-  const ranges = AUDIO_PARAM_RANGES;
-  const legacyReverbMix = clamp(
-    Number.isFinite(merged.reverbMix)
-      ? merged.reverbMix
-      : (merged.reverb ?? AUDIO_PARAM_DEFAULTS.reverbMix),
-    ranges.reverbMix.min,
-    ranges.reverbMix.max
-  );
-  const legacyDelayTime = Number.isFinite(merged.delayTime)
-    ? merged.delayTime
-    : Number.isFinite(merged.delay)
+
+  // Legacy field fallbacks feed the table pass below.
+  if (!Number.isFinite(merged.reverbMix)) {
+    merged.reverbMix = merged.reverb ?? AUDIO_PARAM_DEFAULTS.reverbMix;
+  }
+  if (!Number.isFinite(merged.delayTime)) {
+    merged.delayTime = Number.isFinite(merged.delay)
       ? merged.delay
       : AUDIO_PARAM_DEFAULTS.delayTime;
-  const delayLowCut = clamp(
-    merged.delayLowCut ?? AUDIO_PARAM_DEFAULTS.delayLowCut,
-    ranges.delayLowCut.min,
-    ranges.delayLowCut.max
+  }
+
+  // Table pass: every ranged numeric param gets default-fill, optional floor,
+  // and clamp — AUDIO_PARAM_RANGES is the single authority on legal values.
+  const out = {};
+  for (const [key, { min, max }] of Object.entries(AUDIO_PARAM_RANGES)) {
+    const raw = merged[key] ?? AUDIO_PARAM_DEFAULTS[key];
+    out[key] = clamp(INTEGER_PARAMS.has(key) ? Math.floor(raw) : raw, min, max);
+  }
+
+  // Couplings, aliases, and non-numeric fields — everything a range can't say.
+  out.delayHighCut = clamp(
+    Math.max(merged.delayHighCut ?? AUDIO_PARAM_DEFAULTS.delayHighCut, out.delayLowCut + 400),
+    AUDIO_PARAM_RANGES.delayHighCut.min,
+    AUDIO_PARAM_RANGES.delayHighCut.max
   );
-  const delayHighCut = clamp(
-    Math.max(
-      merged.delayHighCut ?? AUDIO_PARAM_DEFAULTS.delayHighCut,
-      delayLowCut + 400
-    ),
-    ranges.delayHighCut.min,
-    ranges.delayHighCut.max
-  );
-  const reverbEnabled = typeof merged.reverbEnabled === 'boolean'
+  out.reverb = out.reverbMix; // legacy alias: both fields carry the wet level
+  out.pan = AUDIO_PARAM_DEFAULTS.pan; // deliberately pinned to center (see audioParams.test.js)
+  out.useADSR = merged.useADSR !== false;
+  out.useFM = !!merged.useFM;
+  out.useFilter = !!merged.useFilter;
+  out.reverbEnabled = typeof merged.reverbEnabled === 'boolean'
     ? merged.reverbEnabled
     : AUDIO_PARAM_DEFAULTS.reverbEnabled;
-  const delayEnabled = typeof merged.delayEnabled === 'boolean'
+  out.delayEnabled = typeof merged.delayEnabled === 'boolean'
     ? merged.delayEnabled
     : AUDIO_PARAM_DEFAULTS.delayEnabled;
-
-  return {
-    volume: clamp(merged.volume, ranges.volume.min, ranges.volume.max),
-    reverb: legacyReverbMix,
-    reverbEnabled,
-    reverbMode: coerceReverbMode(merged.reverbMode),
-    reverbSize: clamp(
-      merged.reverbSize ?? AUDIO_PARAM_DEFAULTS.reverbSize,
-      ranges.reverbSize.min,
-      ranges.reverbSize.max
-    ),
-    reverbDecay: clamp(
-      merged.reverbDecay ?? AUDIO_PARAM_DEFAULTS.reverbDecay,
-      ranges.reverbDecay.min,
-      ranges.reverbDecay.max
-    ),
-    reverbTone: clamp(
-      merged.reverbTone ?? AUDIO_PARAM_DEFAULTS.reverbTone,
-      ranges.reverbTone.min,
-      ranges.reverbTone.max
-    ),
-    reverbMix: legacyReverbMix,
-    reverbPreDelay: clamp(
-      merged.reverbPreDelay ?? AUDIO_PARAM_DEFAULTS.reverbPreDelay,
-      ranges.reverbPreDelay.min,
-      ranges.reverbPreDelay.max
-    ),
-    reverbWidth: clamp(
-      merged.reverbWidth ?? AUDIO_PARAM_DEFAULTS.reverbWidth,
-      ranges.reverbWidth.min,
-      ranges.reverbWidth.max
-    ),
-    delayEnabled,
-    delayMode: coerceDelayMode(merged.delayMode),
-    delaySync: !!merged.delaySync,
-    delayTime: clamp(legacyDelayTime, ranges.delayTime.min, ranges.delayTime.max),
-    delayDivision: coerceDelayDivision(merged.delayDivision),
-    delayFeedback: clamp(
-      merged.delayFeedback ?? AUDIO_PARAM_DEFAULTS.delayFeedback,
-      ranges.delayFeedback.min,
-      ranges.delayFeedback.max
-    ),
-    delayMix: clamp(
-      merged.delayMix ?? AUDIO_PARAM_DEFAULTS.delayMix,
-      ranges.delayMix.min,
-      ranges.delayMix.max
-    ),
-    delayStereo: clamp(
-      merged.delayStereo ?? AUDIO_PARAM_DEFAULTS.delayStereo,
-      ranges.delayStereo.min,
-      ranges.delayStereo.max
-    ),
-    delayLowCut,
-    delayHighCut,
-    delayDucking: clamp(
-      merged.delayDucking ?? AUDIO_PARAM_DEFAULTS.delayDucking,
-      ranges.delayDucking.min,
-      ranges.delayDucking.max
-    ),
-    delayAge: clamp(
-      merged.delayAge ?? AUDIO_PARAM_DEFAULTS.delayAge,
-      ranges.delayAge.min,
-      ranges.delayAge.max
-    ),
-    delayMotion: clamp(
-      merged.delayMotion ?? AUDIO_PARAM_DEFAULTS.delayMotion,
-      ranges.delayMotion.min,
-      ranges.delayMotion.max
-    ),
-    distortion: clamp(merged.distortion, ranges.distortion.min, ranges.distortion.max),
-    pan: AUDIO_PARAM_DEFAULTS.pan,
-    attack: clamp(merged.attack, ranges.attack.min, ranges.attack.max),
-    decay: clamp(merged.decay, ranges.decay.min, ranges.decay.max),
-    sustain: clamp(merged.sustain, ranges.sustain.min, ranges.sustain.max),
-    release: clamp(merged.release, ranges.release.min, ranges.release.max),
-    useADSR: merged.useADSR !== false,
-    useFM: !!merged.useFM,
-    fmRatio: clamp(merged.fmRatio, ranges.fmRatio.min, ranges.fmRatio.max),
-    fmIndex: clamp(merged.fmIndex, ranges.fmIndex.min, ranges.fmIndex.max),
-    phaseOffset: clamp(merged.phaseOffset, ranges.phaseOffset.min, ranges.phaseOffset.max),
-    useFilter: !!merged.useFilter,
-    filterCutoff: clamp(merged.filterCutoff, ranges.filterCutoff.min, ranges.filterCutoff.max),
-    filterResonance: clamp(merged.filterResonance, ranges.filterResonance.min, ranges.filterResonance.max),
-    filterMode: clamp(Math.floor(merged.filterMode), ranges.filterMode.min, ranges.filterMode.max),
-    lfoRate: clamp(merged.lfoRate, ranges.lfoRate.min, ranges.lfoRate.max),
-    lfoDepth: clamp(merged.lfoDepth, ranges.lfoDepth.min, ranges.lfoDepth.max),
-    lfoTarget: clamp(Math.floor(merged.lfoTarget), ranges.lfoTarget.min, ranges.lfoTarget.max),
-    unisonVoices: clamp(Math.floor(merged.unisonVoices), ranges.unisonVoices.min, ranges.unisonVoices.max),
-    unisonDetune: clamp(merged.unisonDetune, ranges.unisonDetune.min, ranges.unisonDetune.max),
-    lfo1Shape: clamp(Math.floor(merged.lfo1Shape ?? 0), ranges.lfo1Shape.min, ranges.lfo1Shape.max),
-    lfo2Shape: clamp(Math.floor(merged.lfo2Shape ?? 0), ranges.lfo2Shape.min, ranges.lfo2Shape.max),
-    lfo2Rate: clamp(merged.lfo2Rate ?? 0, ranges.lfo2Rate.min, ranges.lfo2Rate.max),
-    modAttack: clamp(merged.modAttack ?? AUDIO_PARAM_DEFAULTS.modAttack, ranges.modAttack.min, ranges.modAttack.max),
-    modDecay: clamp(merged.modDecay ?? AUDIO_PARAM_DEFAULTS.modDecay, ranges.modDecay.min, ranges.modDecay.max),
-    modSustain: clamp(merged.modSustain ?? AUDIO_PARAM_DEFAULTS.modSustain, ranges.modSustain.min, ranges.modSustain.max),
-    modRelease: clamp(merged.modRelease ?? AUDIO_PARAM_DEFAULTS.modRelease, ranges.modRelease.min, ranges.modRelease.max),
-    modRoutes: sanitizeModRoutes(merged.modRoutes),
-    glideTime: clamp(merged.glideTime ?? 0, ranges.glideTime.min, ranges.glideTime.max),
-    velocityCurve: clamp(merged.velocityCurve ?? 0, ranges.velocityCurve.min, ranges.velocityCurve.max)
-  };
+  out.delaySync = !!merged.delaySync;
+  out.reverbMode = coerceReverbMode(merged.reverbMode);
+  out.delayMode = coerceDelayMode(merged.delayMode);
+  out.delayDivision = coerceDelayDivision(merged.delayDivision);
+  out.modRoutes = sanitizeModRoutes(merged.modRoutes);
+  return out;
 };
 
 export const applyEffectToggleState = (params = {}) => {

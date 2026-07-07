@@ -50,8 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B4 | Table-drive `sanitizeAudioParams` from `AUDIO_PARAM_RANGES` (~130 lines of hand-written clamps; per-param drift risk). | M/M | G1, G4 bit-exact |
-| B5 | `pan` is silently pinned to 0.5 in sanitizeAudioParams (audioParams.js:495) — dead param or bug; decide, fix or remove. | M/L | G1 |
 | B6 | `tape-solitude` DC offset 0.103 in chord render — likely integer-ratio FM producing a DC component. Find cause; fix (DC blocker or phase fix); re-bless with metric delta. | M/M | G4 re-bless, G5 dc improves |
 | B7 | Alias suppression: -22 dB worst alias (saw/square) at ~5 kHz through full engine; polyBLEP is first-order and master `tanh` re-aliases. Target ≤ -40 dB (higher-order residuals, oversampled nonlinearity, or restructured drive). | H/H | G5 improves, G4 re-bless, G3 no regression |
 | B8 | Filter smoothing computes `Math.tan` per sample per voice; hoist coefficients to block rate / on-change. Expect G3 gain from 5.7x. | M/M | G3 improves, G4 within spectral tolerance |
@@ -145,3 +143,20 @@ hardcoded `s > 6 || d > 4` bounds now reference the enums. Adding a mod source/d
 now a one-file change. G1 357/357, smoke clean, G4 225/225 bit-exact, G3 7.7x, G2 pass.
 
 `ITERATION 4: B3 enum dedup — G1..G5 pass (G4 bit-exact) — backlog: 11 items`
+
+### Iteration 5 — B4: table-driven sanitize (+B5 closed by evidence) — 2026-07-07
+`sanitizeAudioParams` rewritten as a table pass over `AUDIO_PARAM_RANGES` (default-fill →
+optional floor for the 5 integer params → clamp), with couplings/aliases/non-numerics
+(delayHighCut ≥ lowCut+400, reverb↔reverbMix alias, enable flags, mode coercions,
+modRoutes) kept explicit. ~90 lines shorter; adding a ranged param no longer requires a
+hand-written clamp. Honest note: `null` inputs now uniformly take the default (the old
+code coerced null→0 for the ~14 params written without `??` — degenerate-input path
+only; factory presets and stored params are unaffected, G4 bit-exact confirms).
+
+**B5 closed, no code change:** pan pinning to center is deliberate and pinned by
+`audioParams.test.js` ("forces pan back to center when loading saved params") — the
+stereoPanner is user-session state, not preset state. Backlog -2.
+
+G1 357/357, smoke ALL PASS, G4 225/225 bit-exact, G3 7.6x, G2 pass.
+
+`ITERATION 5: B4 table-driven sanitize — G1..G5 pass (G4 bit-exact) — backlog: 9 items`
