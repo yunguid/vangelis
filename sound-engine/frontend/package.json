@@ -4,6 +4,8 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "audit:audio": "node --expose-gc scripts/audit_audio.mjs",
+        "audit:audio:bless": "node --expose-gc scripts/audit_audio.mjs --bless",
         "perf:visual": "node scripts/perf_visual_workload.mjs",
         "sync:midis": "node scripts/sync_russian_midis.mjs",
         "sync:private-sound-sets": "node scripts/sync_private_sound_sets.mjs",

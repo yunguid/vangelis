@@ -1,0 +1,22 @@
+[
+  {
+    "label": "saw",
+    "f0": 4998,
+    "worstAliasDb": -22.22
+  },
+  {
+    "label": "square",
+    "f0": 4998,
+    "worstAliasDb": -22.09
+  },
+  {
+    "label": "triangle",
+    "f0": 4998,
+    "worstAliasDb": -35.4
+  },
+  {
+    "label": "fm-sine",
+    "f0": 4998,
+    "worstAliasDb": -29.64
+  }
+]
