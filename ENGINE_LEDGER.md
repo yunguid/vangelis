@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B3 | Dedup mod-matrix enums + MAX_MOD_ROUTES, triplicated across synth-worklet.js, audioParams.js, presetStorage.js. | M/L | G1, G2 |
 | B4 | Table-drive `sanitizeAudioParams` from `AUDIO_PARAM_RANGES` (~130 lines of hand-written clamps; per-param drift risk). | M/M | G1, G4 bit-exact |
 | B5 | `pan` is silently pinned to 0.5 in sanitizeAudioParams (audioParams.js:495) — dead param or bug; decide, fix or remove. | M/L | G1 |
 | B6 | `tape-solitude` DC offset 0.103 in chord render — likely integer-ratio FM producing a DC component. Find cause; fix (DC blocker or phase fix); re-bless with metric delta. | M/M | G4 re-bless, G5 dc improves |
@@ -136,3 +135,13 @@ values), not a defaults duplicate — left alone. G1 357/357 + smoke ALL PASS.
 G4 225/225 bit-exact (presets fully specify params). G3 7.7x. G2 pass.
 
 `ITERATION 3: B2 defaults dedup — G1..G5 pass (G4 bit-exact) — backlog: 12 items`
+
+### Iteration 4 — B3: mod-matrix enum dedup — 2026-07-07
+`MOD_SRC`/`MOD_DST`/`LFO_SHAPES`/`MAX_MOD_ROUTES` now live only in `dsp/constants.js`.
+`audioParams.js` derives its UI option lists and `sanitizeModRoutes` bounds from them
+(and re-exports MAX_MOD_ROUTES for existing UI imports); `presetStorage.js` keeps its
+compact SRC/DST patch-table aliases but derives every value; the route compiler's
+hardcoded `s > 6 || d > 4` bounds now reference the enums. Adding a mod source/dest is
+now a one-file change. G1 357/357, smoke clean, G4 225/225 bit-exact, G3 7.7x, G2 pass.
+
+`ITERATION 4: B3 enum dedup — G1..G5 pass (G4 bit-exact) — backlog: 11 items`

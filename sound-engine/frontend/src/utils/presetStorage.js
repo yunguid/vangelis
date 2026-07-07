@@ -3,6 +3,8 @@
  * @module utils/presetStorage
  */
 
+import { MOD_SRC, MOD_DST } from '../audio/dsp/constants.js';
+
 const STORAGE_KEY = 'vangelis.presets.v1';
 
 const makeId = () => (
@@ -11,12 +13,22 @@ const makeId = () => (
     : `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 );
 
-// Mod-matrix enums, mirrored from audio/synth-worklet.js for readability.
+// Short aliases over the engine's mod-matrix enums, for compact patch tables.
 const SRC = Object.freeze({
-  LFO1: 0, LFO2: 1, AMP_ENV: 2, MOD_ENV: 3, VEL: 4, KEY: 5, WHEEL: 6
+  LFO1: MOD_SRC.LFO1,
+  LFO2: MOD_SRC.LFO2,
+  AMP_ENV: MOD_SRC.AMP_ENV,
+  MOD_ENV: MOD_SRC.MOD_ENV,
+  VEL: MOD_SRC.VELOCITY,
+  KEY: MOD_SRC.KEY_TRACK,
+  WHEEL: MOD_SRC.MOD_WHEEL
 });
 const DST = Object.freeze({
-  PITCH: 0, CUTOFF: 1, AMP: 2, FM: 3, DETUNE: 4
+  PITCH: MOD_DST.PITCH,
+  CUTOFF: MOD_DST.CUTOFF,
+  AMP: MOD_DST.AMP,
+  FM: MOD_DST.FM_INDEX,
+  DETUNE: MOD_DST.DETUNE
 });
 
 /**

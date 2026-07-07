@@ -1,5 +1,14 @@
 import { clamp } from './math.js';
-import { DEFAULT_PARAMS as ENGINE_DEFAULTS } from '../audio/dsp/constants.js';
+import {
+  DEFAULT_PARAMS as ENGINE_DEFAULTS,
+  LFO_SHAPES,
+  MAX_MOD_ROUTES,
+  MOD_DST,
+  MOD_SRC
+} from '../audio/dsp/constants.js';
+
+// Re-exported so UI code keeps importing engine constants from the param layer.
+export { MAX_MOD_ROUTES };
 
 export const MICRO_FADE_TIME = 0.005;
 export const DEFAULT_TRANSPORT_TEMPO = 120;
@@ -205,33 +214,31 @@ export const AUDIO_PARAM_DEFAULTS = {
 };
 
 export const MOD_SOURCE_OPTIONS = [
-  { value: 0, label: 'LFO 1' },
-  { value: 1, label: 'LFO 2' },
-  { value: 2, label: 'Amp Env' },
-  { value: 3, label: 'Mod Env' },
-  { value: 4, label: 'Velocity' },
-  { value: 5, label: 'Key Track' },
-  { value: 6, label: 'Mod Wheel' }
+  { value: MOD_SRC.LFO1, label: 'LFO 1' },
+  { value: MOD_SRC.LFO2, label: 'LFO 2' },
+  { value: MOD_SRC.AMP_ENV, label: 'Amp Env' },
+  { value: MOD_SRC.MOD_ENV, label: 'Mod Env' },
+  { value: MOD_SRC.VELOCITY, label: 'Velocity' },
+  { value: MOD_SRC.KEY_TRACK, label: 'Key Track' },
+  { value: MOD_SRC.MOD_WHEEL, label: 'Mod Wheel' }
 ];
 
 export const MOD_DEST_OPTIONS = [
-  { value: 0, label: 'Pitch', unit: '±12 st' },
-  { value: 1, label: 'Filter Cutoff', unit: '±4 oct' },
-  { value: 2, label: 'Amplitude', unit: '±100%' },
-  { value: 3, label: 'FM Index', unit: '±10 rad' },
-  { value: 4, label: 'Unison Detune', unit: '±50 ¢' }
+  { value: MOD_DST.PITCH, label: 'Pitch', unit: '±12 st' },
+  { value: MOD_DST.CUTOFF, label: 'Filter Cutoff', unit: '±4 oct' },
+  { value: MOD_DST.AMP, label: 'Amplitude', unit: '±100%' },
+  { value: MOD_DST.FM_INDEX, label: 'FM Index', unit: '±10 rad' },
+  { value: MOD_DST.DETUNE, label: 'Unison Detune', unit: '±50 ¢' }
 ];
 
 export const LFO_SHAPE_OPTIONS = [
-  { value: 0, label: 'Sine' },
-  { value: 1, label: 'Triangle' },
-  { value: 2, label: 'Square' },
-  { value: 3, label: 'Saw Up' },
-  { value: 4, label: 'Saw Down' },
-  { value: 5, label: 'S&H' }
+  { value: LFO_SHAPES.SINE, label: 'Sine' },
+  { value: LFO_SHAPES.TRIANGLE, label: 'Triangle' },
+  { value: LFO_SHAPES.SQUARE, label: 'Square' },
+  { value: LFO_SHAPES.SAW_UP, label: 'Saw Up' },
+  { value: LFO_SHAPES.SAW_DOWN, label: 'Saw Down' },
+  { value: LFO_SHAPES.SAMPLE_HOLD, label: 'S&H' }
 ];
-
-export const MAX_MOD_ROUTES = 8;
 
 export const sanitizeModRoutes = (routes) => {
   if (!Array.isArray(routes)) return [];
@@ -242,7 +249,7 @@ export const sanitizeModRoutes = (routes) => {
     const src = Math.floor(route.src ?? -1);
     const dst = Math.floor(route.dst ?? -1);
     const depth = Number(route.depth);
-    if (src < 0 || src > 6 || dst < 0 || dst > 4) continue;
+    if (src < 0 || src > MOD_SRC.MOD_WHEEL || dst < 0 || dst > MOD_DST.DETUNE) continue;
     if (!Number.isFinite(depth)) continue;
     result.push({ src, dst, depth: clamp(depth, -1, 1) });
   }

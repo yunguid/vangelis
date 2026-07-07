@@ -17,7 +17,7 @@ export function compileModRoutes(routes, legacy) {
       const s = Math.floor(route.src ?? -1);
       const d = Math.floor(route.dst ?? -1);
       const k = Number(route.depth);
-      if (s < 0 || s > 6 || d < 0 || d > 4) continue;
+      if (s < 0 || s > MOD_SRC.MOD_WHEEL || d < 0 || d > MOD_DST.DETUNE) continue;
       if (!Number.isFinite(k) || k === 0) continue;
       src[count] = s;
       dst[count] = d;
