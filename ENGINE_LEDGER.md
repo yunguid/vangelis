@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B8 | Filter smoothing computes `Math.tan` per sample per voice; hoist coefficients to block rate / on-change. Expect G3 gain from 5.7x. | M/M | G3 improves, G4 within spectral tolerance |
 | B9 | `setParams` reallocates compiled mod routes for all 24 voices on every param change (UI drags churn 24 × 3 typed arrays). Compile once at processor level or diff. | M/M | G5 heap, G4 bit-exact |
 | B10 | Engine is mono (identical L/R); no stereo unison spread; `width` doesn't exist. True stereo voice architecture. Extend apparatus to capture both channels first. | H/H | apparatus + G4 re-bless |
 | B11 | Extend apparatus to delay + reverb worklets (burst golden renders, feedback stability, tail decay metrics). | M/M | apparatus |
@@ -218,3 +217,17 @@ if an always-on nonlinear stage is ever added.
 G4 re-blessed (triangle presets). G1 361/361 + smoke. G3 6.8x (baseline 5.7x). G2 pass.
 
 `ITERATION 8: B7b triangle BLAMP4 — G1..G5 pass (G4 re-blessed) — backlog: 7 items`
+
+### Iteration 9 — B8: REFUTED and reverted — 2026-07-07
+Hypothesis: per-sample `Math.tan` in the SVF is a hot-loop cost; memoize coefficients.
+Implemented exact-equality memoization (bit-exact by construction — the one-pole
+smoothers converge to the target in finite float steps, after which coefficients reuse
+identical inputs). Built a dedicated static-filter bench (24 voices, converged filter,
+no cutoff modulation — the best case for memoization): **9.1x before, 9.1x after.**
+`Math.tan` costs ~1% of the sample budget on a modern JS engine; the item's premise is
+false. Reverted per §6 ("the bench is the referee") — five instance fields and two
+branches that pay no measured rent are entropy, not optimization. All gates re-verified
+green after revert (225/225 bit-exact). Ledger note for future perf work: profile
+before hypothesizing; transcendentals are not where this engine's time goes.
+
+`ITERATION 9: B8 refuted (null result, reverted) — G1..G5 pass — backlog: 6 items`
