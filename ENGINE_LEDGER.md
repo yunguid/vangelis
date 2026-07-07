@@ -51,7 +51,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
 | B10 | Engine is mono (identical L/R); no stereo unison spread; `width` doesn't exist. True stereo voice architecture. Extend apparatus to capture both channels first. | H/H | apparatus + G4 re-bless |
-| B15 | Delay feedback loop is not gain-bounded: feedback+crossfeed through the tanh drive stage reaches small-signal loop gain > 1 (UI-reachable: delayFeedback 0.92 × drive(age 0.4) ≈ 3.5) → permanent self-oscillating drone; `delay-stress` golden records tailRms 0.87, peak 1.51. Normalize drive inside the loop or scale the feedback ceiling by drive so loop gain stays < 1. | H/M | G4 fx re-bless (stress case), G5 |
 | B12 | Envelope semantics: exponential-approach coeffs mean the attack knob isn't attack time; steal-restart fades to 0 then restarts from 0.001 (no retrigger-from-level). Document/calibrate. | L/M | G4 re-bless if changed |
 | B13 | Stale comments ("at 44100 Hz" for values computed from real sampleRate); CLAUDE.md says recording uses ScriptProcessorNode but recorder-worklet.js exists. Cleanup batch. | L/L | G1 |
 | B14 | Glide always starts from `lastFrequency` even for staccato retriggers; add legato-only glide mode. | M/M | G4 unaffected at defaults |
@@ -266,3 +265,19 @@ cleanly (0.004 after 4 s). G1 361/361, G4 225/225 bit-exact + 7 fx cases blessed
 G3 6.8x, G2 pass.
 
 `ITERATION 11: B11 FX apparatus — G1..G5 pass — backlog: 5 items (B15 added, B11 done)`
+
+### Iteration 12 — B15: delay feedback loop made contractive — 2026-07-07
+The tanh drive stage in the delay's feedback path is now normalized to unity
+small-signal gain (`tanh(x·g)/g` — drive adds saturation color, no longer multiplies
+every repeat by up to 3.8×), and combined feedback+crossfeed recirculation is capped at
+0.96, so the loop is strictly contractive at any legal settings.
+
+**Metric deltas:** delay-stress sustained rms −2.1 → −18.6 dBFS, tail 0.873 → 0.0017
+(drone → decaying echoes); peak no longer exceeds unity (+3.6 → −3.0 dBFS). Tape case
+−6.6 dB rms (its drive 0.18 was regenerating repeats); digital/pingpong ≈ −1 dB.
+Feedback knob now means what it says. FX goldens re-blessed (4 delay cases); reverb +
+synth goldens untouched (225/225 bit-exact). New `delay-worklet.test.js` pins
+decay-at-max-settings and audible-repeats-at-moderate-settings (G1 363/363). In-app:
+echoes decay to 1.7e-5 by 4.5 s on the live session patch. G3 6.6x, G2 pass.
+
+`ITERATION 12: B15 delay loop bounded — G1..G5 pass (G4 fx re-blessed) — backlog: 4 items`

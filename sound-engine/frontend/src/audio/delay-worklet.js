@@ -203,9 +203,20 @@ class DelayProcessor extends AudioWorkletProcessor {
       const wetLeft = this.leftTone.process(rawDelayLeft);
       const wetRight = this.rightTone.process(rawDelayRight);
 
+      // Contractive feedback: the tanh stage is normalized to unity
+      // small-signal gain (drive adds saturation color, not regeneration),
+      // and combined feedback+crossfeed recirculation is capped below 1.
+      // The old un-normalized drive multiplied every repeat by up to 3.8x,
+      // making the loop self-oscillate into a permanent drone at high
+      // feedback (loop gain ~7 at max settings, reachable from the UI).
       const feedbackDrive = 1 + drive * 7;
-      const feedbackLeft = Math.tanh((wetLeft * feedback + wetRight * crossfeed) * feedbackDrive);
-      const feedbackRight = Math.tanh((wetRight * feedback + wetLeft * crossfeed) * feedbackDrive);
+      const driveNorm = 1 / feedbackDrive;
+      const fbSum = feedback + crossfeed;
+      const fbScale = fbSum > 0.96 ? 0.96 / fbSum : 1.0;
+      const mixLeft = (wetLeft * feedback + wetRight * crossfeed) * fbScale;
+      const mixRight = (wetRight * feedback + wetLeft * crossfeed) * fbScale;
+      const feedbackLeft = Math.tanh(mixLeft * feedbackDrive) * driveNorm;
+      const feedbackRight = Math.tanh(mixRight * feedbackDrive) * driveNorm;
 
       const dryLeft = inputLeft?.[i] || 0;
       const dryRight = inputRight?.[i] || 0;
