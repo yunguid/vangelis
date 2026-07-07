@@ -82,7 +82,21 @@ so nothing else still depends on the corpse.
 
 ## 6. Rules of engagement
 
-- One item per iteration, one commit (`purge(k): ...`), push to main.
+- **Delegation protocol (mandatory):** the orchestrator (this session) writes NO
+  implementation code. Each item is implemented by a Sonnet subagent (Agent tool,
+  `model: "sonnet"`), briefed with: the item, the exact files, the §2 design language,
+  the gates it must run, and the never-stage-other-session-files rule.
+- **Adversarial review:** the orchestrator reads the subagent's full diff, re-runs the
+  gates independently (never trusts the agent's claims), and screenshots the result.
+  Work that is sloppy, off-language, over-scoped, or gate-failing gets sent back to the
+  SAME agent (SendMessage, context preserved) with blunt, specific criticism — name
+  what is bad and why; "this is awful because X, Y; redo it so that Z" is the register.
+  Max 3 rework rounds; after that, revert everything, record the failure in the ledger,
+  and re-brief a fresh agent next iteration.
+- The ledger records review cycles honestly: rework counts, what the agent got wrong,
+  what feedback fixed it.
+- One item per iteration, one commit (`purge(k): ...`), push to main. The orchestrator
+  commits only after its own review passes — never the agent.
 - **Concurrent session warning:** another loop works this repo's UI files (mobile
   design). Start every iteration with `git pull --rebase`; if your item's files show
   uncommitted changes from the other session, pick a different item this iteration.
