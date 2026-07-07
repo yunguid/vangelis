@@ -296,3 +296,36 @@ User directives: 20-30 more melodies, sidebar redesign, hide non-keyboard pages
   gone; rail = Sound/MIDI/Samples only.
 - Note: user's message ended mid-sentence ("we should load more songs from") —
   interpreted as growing the built-in library, which the 58-cue corpus does.
+
+### Cycle 5 (2026-07-06) — Verlet + Fourier + Lagrange for scene smoke & WaveCandy
+User directive: advanced Verlet / Fourier / Lagrange methods for the background
+smoke and WaveCandy.
+
+- **utils/vizPhysics.js** (pure, unit-tested — 14 tests):
+  - VerletChain: damped elastic string = spring-to-target + discrete-Laplacian
+    tension (1-D wave equation), position-Verlet integrated with automatic
+    CFL substepping ((k+c)h^2 bound), NaN-guarded.
+  - barycentricLagrange + chebyshevNodes + lagrangeEnvelope: numerically
+    stable Lagrange interpolation on Chebyshev nodes (exact on polynomials,
+    no Runge blow-up on step data).
+  - VortexField: 2-D Lagrangian vortex particles (regularized Biot-Savart /
+    Lamb-Oseen cores), mutual advection via Verlet with velocity relaxation
+    toward the induced flow (steady state = exact Lagrangian advection
+    dx/dt = u; inertia term keeps arcs). Circulation decay, weakest-eviction
+    cap, uniform packing for the shader. Initial u-as-acceleration scheme
+    flung particles out (traced in node); relaxation form orbits correctly.
+- **Scene.jsx**: bass onsets (fast-vs-slow envelope comparator — frame deltas
+  are useless under the analyser's 0.84 smoothing) inject circulation;
+  highs sprinkle fine turbulence; ambient swirl floor; all injection rates
+  Poisson-style dt-scaled (per-frame probabilities saturated the pool at
+  60fps). Shader: semi-Lagrangian backtrace of the noise domain through the
+  analytic vortex field (10 uniform slots), truncated Fourier series ripple
+  whose 8 coefficients are live log-spaced spectrum bands (1/k weighted),
+  kinetic-energy glow. window.__sceneDebug probe.
+- **WaveCandyCanvas.jsx spectrum**: log-FFT -> Lagrange envelope (21 Chebyshev
+  controls) -> targets for a 96-node VerletChain (stiffness 220 / tension 380
+  / damping 0.88); draw = faint raw-FFT bed + gradient body + glowing string.
+- **Verification**: 335/335 vitest, build OK. In-browser: shader compiles
+  (__sceneShaderOk), vortices 5->14 with pulses firing during Sugar Crash
+  Angel (rms 0.08-0.15), spectrum canvas pixel-delta 6k->55k while playing,
+  console clean, screenshot shows swirling smoke + physical spectrum curve.

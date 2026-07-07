@@ -1,9 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
+import { VortexField } from '../utils/vizPhysics.js';
 
 // Audio-reactive WebGL2 background.
 // Falls back to the static gradient (the underlay div) when WebGL2 is
 // unavailable, the user prefers reduced motion, or the GL context is lost.
+//
+// The smoke is driven by a Lagrangian vortex-particle system (vizPhysics.js):
+// bass onsets inject circulation, particles Verlet-advect through each
+// other's regularized Biot–Savart fields on the CPU, and the fragment shader
+// backtraces its noise domain through the analytic velocity field
+// (semi-Lagrangian advection) plus a truncated Fourier series whose
+// coefficients are the live audio spectrum bands.
 
 const VERT = `#version 300 es
 precision highp float;
@@ -22,6 +30,10 @@ uniform float uHigh;
 uniform float uLevel;  // overall loudness 0..1
 uniform float uPulse;  // 0..1 transient (bass onset), fast decay
 uniform float uMorph;  // ever-advancing phase; music makes it run faster
+uniform vec2 uVortexPos[10];   // Lagrangian vortex particles (CPU-simulated)
+uniform float uVortexStr[10];  // signed circulation per vortex
+uniform float uVortexRad[10];  // core radius per vortex
+uniform float uBands[8];       // live log-spaced spectrum bands (Fourier)
 
 float hash(vec2 p) {
   p = fract(p * vec2(234.34, 435.345));
@@ -57,6 +69,33 @@ mat2 rot(float a) {
   return mat2(c, -s, s, c);
 }
 
+// Velocity induced at p by the vortex particles: the curl of regularized
+// Lamb-Oseen-style cores (matches VortexField.velocityAt on the CPU).
+vec2 vortexVelocity(vec2 p) {
+  vec2 vel = vec2(0.0);
+  for (int i = 0; i < 10; i++) {
+    if (uVortexStr[i] == 0.0) continue;
+    vec2 r = p - uVortexPos[i];
+    float d2 = dot(r, r);
+    float rad2 = uVortexRad[i] * uVortexRad[i];
+    float fall = 1.0 - exp(-d2 / rad2);
+    vel += uVortexStr[i] * fall / (d2 + rad2 * 0.25) * vec2(-r.y, r.x);
+  }
+  return vel;
+}
+
+// Truncated Fourier series over the live spectrum: each audio band k powers
+// the k-th spatial harmonic, so the smoke literally ripples at the music's
+// spectral shape (1/k weighting keeps it a convergent, smooth series).
+float spectralRipple(vec2 p, float t) {
+  float s = 0.0;
+  for (int k = 0; k < 8; k++) {
+    float fk = float(k + 1);
+    s += uBands[k] / fk * sin(p.y * fk * 2.1 + p.x * fk * 0.9 + t * (0.5 + fk * 0.17));
+  }
+  return s;
+}
+
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
   vec2 p = (gl_FragCoord.xy * 2.0 - uRes) / min(uRes.x, uRes.y);
@@ -71,6 +110,16 @@ void main() {
   p = rot(uMorph * 0.05 + uBass * 0.1) * p;
   float zoom = 1.1 + 0.22 * m2 + uLevel * 0.15;
   vec2 q = p * zoom;
+
+  // Semi-Lagrangian advection: backtrace the noise domain through the
+  // vortex particles' velocity field so the smoke visibly swirls around
+  // the circulation the music injects, instead of just wobbling in place.
+  vec2 flow = vortexVelocity(p);
+  q -= flow * 0.55;
+
+  // Fourier-series ripple shaped by the live spectrum bands.
+  float ripple = spectralRipple(q, uTime);
+  q += vec2(ripple * 0.08, ripple * 0.16);
 
   // Domain-warped aurora bands; bass and transients push the warp,
   // mids speed the drift, the morph phase bends its direction over time.
@@ -99,6 +148,9 @@ void main() {
   col += ember * glow * (0.22 + uBass * 0.9 + uPulse * 0.3);
   col += aqua * smoothstep(0.55, 1.0, field) * (0.18 + uHigh * 1.1);
   col += ember * 0.35 * smoothstep(0.6, 1.0, field2) * (0.15 + uMid * 0.7);
+
+  // Swirling regions catch a faint extra glow (kinetic energy -> light)
+  col += ember * min(dot(flow, flow) * 0.6, 0.35) * glow;
 
   // High frequencies scatter tiny hot grains; silence scatters none
   float grain = noise(q * 26.0 + vec2(t * 3.0, -t * 2.0));
@@ -191,6 +243,10 @@ const Scene = () => {
     const uLevel = gl.getUniformLocation(program, 'uLevel');
     const uPulse = gl.getUniformLocation(program, 'uPulse');
     const uMorph = gl.getUniformLocation(program, 'uMorph');
+    const uVortexPos = gl.getUniformLocation(program, 'uVortexPos');
+    const uVortexStr = gl.getUniformLocation(program, 'uVortexStr');
+    const uVortexRad = gl.getUniformLocation(program, 'uVortexRad');
+    const uBands = gl.getUniformLocation(program, 'uBands');
 
     // Cap DPR: a soft background does not need retina resolution
     const dprCap = 1.25;
@@ -222,10 +278,25 @@ const Scene = () => {
     // Transient detector (bass onsets ring the shader's shockwave) and a
     // morph phase that always creeps forward but runs faster with the music,
     // so the scene composition keeps evolving instead of looping.
-    let prevBass = 0;
+    // Onsets = fast envelope rising above a slow baseline; frame-to-frame
+    // deltas are useless here because the analyser already smooths heavily.
+    let bassSlow = 0;
     let pulse = 0;
     let morphPhase = Math.random() * 100;
     let lastFrameTime = performance.now();
+
+    // Lagrangian vortex particles: bass onsets inject circulation, highs
+    // sprinkle fine turbulence; the strongest ten reach the shader.
+    const vortices = new VortexField({ maxParticles: 14 });
+    const VORTEX_SLOTS = 10;
+    const vortexPos = new Float32Array(VORTEX_SLOTS * 2);
+    const vortexStr = new Float32Array(VORTEX_SLOTS);
+    const vortexRad = new Float32Array(VORTEX_SLOTS);
+    let lastInjectAt = 0;
+
+    // Log-spaced Fourier band edges (Hz) for the shader's spectral ripple.
+    const BAND_EDGES = [30, 80, 160, 350, 700, 1400, 3000, 6500, 13000];
+    const bands = new Float32Array(8);
 
     const onLost = (e) => {
       e.preventDefault();
@@ -258,16 +329,56 @@ const Scene = () => {
         mid = bandEnergy(freqData, sr, fft, 250, 2000);
         high = bandEnergy(freqData, sr, fft, 2000, 12000);
         level = (bass + mid + high) / 3;
+        for (let b = 0; b < 8; b++) {
+          const e = bandEnergy(freqData, sr, fft, BAND_EDGES[b], BAND_EDGES[b + 1]);
+          // Light attack/release so the ripple breathes instead of flickering
+          bands[b] += (e - bands[b]) * (e > bands[b] ? 0.5 : 0.12);
+        }
       }
 
       const now = performance.now();
       const dt = Math.min((now - lastFrameTime) / 1000, 0.1);
       lastFrameTime = now;
 
-      const onset = Math.max(0, (bass - prevBass) * 6);
-      prevBass = bass;
+      // Slow baseline tracks sustained bass; the excess above it is the hit.
+      bassSlow += (bass - bassSlow) * (bass > bassSlow ? 0.06 : 0.02);
+      const onset = Math.max(0, bass - bassSlow) * 5;
       pulse = Math.min(1, Math.max(pulse * Math.exp(-dt * 5), onset));
       morphPhase += dt * (0.06 + level * 0.5);
+
+      // Inject circulation on bass onsets (rate-limited); sprinkle small
+      // counter-rotating turbulence when the top end is busy; keep a mild
+      // ambient swirl going whenever there is any signal at all.
+      if (onset > 0.1 && now - lastInjectAt > 140) {
+        lastInjectAt = now;
+        const sign = Math.random() < 0.5 ? -1 : 1;
+        vortices.inject({
+          x: (Math.random() - 0.5) * 1.8,
+          y: (Math.random() - 0.7) * 1.2,
+          strength: sign * (0.18 + Math.min(onset, 1) * 0.4),
+          radius: 0.4 + Math.random() * 0.35
+        });
+      }
+      // Poisson-style rates (per second, scaled by dt so frame rate is moot)
+      if (high > 0.12 && Math.random() < dt * (0.2 + high * 1.5)) {
+        vortices.inject({
+          x: (Math.random() - 0.5) * 2.2,
+          y: (Math.random() - 0.5) * 1.6,
+          strength: (Math.random() < 0.5 ? -1 : 1) * (0.05 + high * 0.1),
+          radius: 0.18 + Math.random() * 0.15
+        });
+      }
+      if (level > 0.04 && vortices.particles.length < 3 && Math.random() < dt * 0.6) {
+        vortices.inject({
+          x: (Math.random() - 0.5) * 1.6,
+          y: (Math.random() - 0.5) * 1.2,
+          strength: (Math.random() < 0.5 ? -1 : 1) * (0.1 + level * 0.25),
+          radius: 0.5 + Math.random() * 0.3
+        });
+      }
+      vortices.step(dt);
+      vortices.fillUniforms(vortexPos, vortexStr, vortexRad);
+      window.__sceneDebug = { vortexCount: vortices.particles.length, pulse, level };
 
       resize();
       gl.uniform2f(uRes, canvas.width, canvas.height);
@@ -278,6 +389,10 @@ const Scene = () => {
       gl.uniform1f(uLevel, follow('level', level));
       gl.uniform1f(uPulse, pulse);
       gl.uniform1f(uMorph, morphPhase);
+      gl.uniform2fv(uVortexPos, vortexPos);
+      gl.uniform1fv(uVortexStr, vortexStr);
+      gl.uniform1fv(uVortexRad, vortexRad);
+      gl.uniform1fv(uBands, bands);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
     raf = requestAnimationFrame(frame);

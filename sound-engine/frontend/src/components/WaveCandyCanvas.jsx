@@ -1,9 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { clamp } from '../utils/math.js';
+import { VerletChain, lagrangeEnvelope } from '../utils/vizPhysics.js';
 
 // Perceptual visualizer suite (Canvas 2D):
-// - Spectrum: log-frequency, dB scale with noise floor, attack/release ballistics
+// - Spectrum: log-frequency, dB scale — the raw FFT is distilled through
+//   barycentric Lagrange interpolation on Chebyshev nodes into a smooth
+//   envelope, which then drives a Verlet-integrated elastic string
+//   (spring + wave-equation tension), so transients pluck the curve and
+//   ripples physically travel and settle along it
 // - Spectrogram: log-frequency rows, scrolling
 // - Oscilloscope: zero-crossing triggered to stabilize the trace
 // - Goniometer: mid/side rotated with phosphor persistence
@@ -88,7 +93,7 @@ const sampleLogSpectrum = ({
 
 const dbToUnit = (db) => clamp((db - FLOOR_DB) / (0 - FLOOR_DB), 0, 1);
 
-const drawSpectrum = (ctx, smoothedDb, width, height) => {
+const drawSpectrum = (ctx, rawDb, chainDb, width, height) => {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
   ctx.fillRect(0, 0, width, height);
@@ -109,32 +114,44 @@ const drawSpectrum = (ctx, smoothedDb, width, height) => {
   }
   ctx.stroke();
 
-  const cells = smoothedDb.length;
-  ctx.beginPath();
-  ctx.moveTo(0, height);
-  for (let i = 0; i < cells; i++) {
-    const x = (i / (cells - 1)) * width;
-    const y = height - dbToUnit(smoothedDb[i]) * height;
-    ctx.lineTo(x, y);
-  }
+  const tracePath = (data) => {
+    const cells = data.length;
+    ctx.beginPath();
+    for (let i = 0; i < cells; i++) {
+      const x = (i / (cells - 1)) * width;
+      const y = height - dbToUnit(data[i]) * height;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+  };
+
+  // Raw FFT (ground truth) as a faint bed under the physical envelope
+  tracePath(rawDb);
   ctx.lineTo(width, height);
+  ctx.lineTo(0, height);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(140, 220, 255, 0.1)';
+  ctx.fill();
+
+  // Verlet/Lagrange envelope: gradient body + glowing string on top
+  tracePath(chainDb);
+  ctx.lineTo(width, height);
+  ctx.lineTo(0, height);
   ctx.closePath();
   const fill = ctx.createLinearGradient(0, 0, 0, height);
-  fill.addColorStop(0, 'rgba(140, 220, 255, 0.34)');
-  fill.addColorStop(1, 'rgba(140, 220, 255, 0.04)');
+  fill.addColorStop(0, 'rgba(140, 220, 255, 0.3)');
+  fill.addColorStop(1, 'rgba(140, 220, 255, 0.03)');
   ctx.fillStyle = fill;
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(140, 220, 255, 0.9)';
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  for (let i = 0; i < cells; i++) {
-    const x = (i / (cells - 1)) * width;
-    const y = height - dbToUnit(smoothedDb[i]) * height;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
+  ctx.save();
+  ctx.shadowColor = 'rgba(140, 220, 255, 0.55)';
+  ctx.shadowBlur = 6;
+  ctx.strokeStyle = 'rgba(170, 230, 255, 0.95)';
+  ctx.lineWidth = 1.6;
+  tracePath(chainDb);
   ctx.stroke();
+  ctx.restore();
 };
 
 const spectroColor = (unit) => {
@@ -317,8 +334,20 @@ const WaveCandyCanvas = () => {
     right: null,
     rightByte: null,
     specDb: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
-    specSmoothed: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB)
+    specSmoothed: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
+    specEnvelope: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB)
   });
+
+  // The spectrum's physical string: Lagrange-envelope targets pull it via
+  // springs while wave-equation tension lets transients ripple outward.
+  const spectrumChainRef = useRef(
+    new VerletChain(SPECTRUM_CELLS, {
+      stiffness: 220,
+      tension: 380,
+      damping: 0.88,
+      initial: FLOOR_DB
+    })
+  );
 
   // Loudness state: 400ms exponentially-weighted mean square + peak hold
   const meterStateRef = useRef({
@@ -380,6 +409,11 @@ const WaveCandyCanvas = () => {
         smoothed: buffers.specSmoothed
       });
 
+      // Chebyshev/Lagrange envelope of the FFT -> targets for the Verlet
+      // string, which supplies the motion (attack pluck, travelling ripple).
+      lagrangeEnvelope(buffers.specSmoothed, buffers.specEnvelope, 21);
+      spectrumChainRef.current.step(buffers.specEnvelope, frameDt);
+
       // Loudness: stereo mean square smoothed over ~400ms, peak with 1.5s hold
       const meter = meterStateRef.current;
       let sum = 0;
@@ -427,7 +461,7 @@ const WaveCandyCanvas = () => {
 
       drawSpectrogram(spectroCtx, spectrogramCanvas, buffers.specSmoothed, spectroSize.width, spectroSize.height, spectroSize.resized, sizesRef.current.spectrogram.dpr || 1);
       drawWaveform(scopeCtx, timeData, scopeSize.width, scopeSize.height);
-      drawSpectrum(spectrumCtx, buffers.specSmoothed, spectrumSize.width, spectrumSize.height);
+      drawSpectrum(spectrumCtx, buffers.specSmoothed, spectrumChainRef.current.positions, spectrumSize.width, spectrumSize.height);
       drawGoniometer(goniometerCtx, leftData, rightData, goniometerSize.width, goniometerSize.height, goniometerSize.resized);
       drawMeter(meterCtx, meterStateRef.current, meterSize.width, meterSize.height);
     };
