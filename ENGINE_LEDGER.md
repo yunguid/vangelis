@@ -349,3 +349,24 @@ G1 365/365, G4 225/225, G3 6.1x, G2 pass.
 two consecutive discoveries of nothing new → FIXED POINT REACHED.
 
 `ITERATION 17: B13 doc cleanup — G1..G5 pass (bit-exact) — backlog: 0 items`
+
+### Iteration 18 — dry-well audit #1 — 2026-07-07
+Fresh-eyes sweep of everything never deeply examined. Findings, all below the value
+line (observations, not backlog):
+- **Bell-preset maxDelta (0.62–0.89) is inherent, not a click**: located mid-note
+  (48–70 ms, long past the 5 ms attack) in deep-FM sine patches (index 5–6 rad) — the
+  legitimate slew of heavily phase-modulated carriers. The relative maxDelta gate pins
+  it against regression.
+- **Reverb FDN verified stable by structure**: feedback matrix is Householder-style
+  (0.5·J − I), spectral radius = feedback ≤ 0.95 < 1 — matches the measured
+  ambient-max tail decay. Line-buffer headroom 8× (memory-only, harmless).
+- **FX worklets run full DSP while disabled** — bounded, inaudible, and low value to
+  fix (factory presets and live sessions run FX enabled); per the B8 lesson, not
+  backlogged without a measurement showing it matters.
+- **Reverb ToneFilter: 4 Math.exp/sample** — same class as refuted B8; not backlogged.
+- Recorder worklet and sample-path utils clean.
+
+All gates green (G1 365/365 + smoke, G4 225/225 bit-exact + 7 fx cases, G3 6.1x,
+G5 heap −19 KB, G2 pass). **Dry count: 1 of 2.**
+
+`ITERATION 18: dry-well audit #1 — G1..G5 pass — backlog: 0 items — DRY 1/2`
