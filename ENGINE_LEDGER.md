@@ -461,3 +461,45 @@ All gates green (G1 373/373 + smoke, G4 225/225 bit-exact, G3 5.9x, G2 pass).
 **Dry count: 1 of 2.**
 
 `ITERATION 23: dry-well re-sweep — G1..G5 pass — backlog: 0 items — DRY 1/2`
+
+### Iteration 24 — final dry audit: 3-minute chaos soak clean — 2026-07-07
+The weakest remaining verification was long-run cross-feature interaction — nothing had
+ever exercised steal + glide + live preset morphs + bend/wheel churn for minutes at a
+stretch. A seeded 3-minute soak (12 events/s: floods, steals, param rotations across all
+45 presets) through the full processor: **zero non-finite samples, peak 0.970 (clip knee
+held), tail decays to 1.8e-36 after allNotesOff, zero stuck voices, heap drift 422 KB**
+(setParams object churn, below gate). All standard gates green. Second consecutive dry
+iteration.
+
+# FIXED POINT REACHED — 2026-07-07
+
+Backlog empty, two consecutive dry audits, all gates green. Final metrics vs iteration 0:
+
+| Metric | Iteration 0 | Final |
+|--------|-------------|-------|
+| Tests | 337 | **373** (+36: DSP units, protocol fuzz, stability, lifecycle) |
+| Synth worklet | 977-line monolith | ~210-line shell + 7 unit-tested dsp/ modules |
+| Worst alias (saw/square) | −22.2 dB | −30.5 dB overall, **−41.1 / −55.0 dB audible** |
+| Worst alias (triangle) | −35.4 dB | −44.5 dB overall, **−71.9 dB audible** |
+| Worst \|DC\| (chord renders) | 0.103 | **1.5e-4** |
+| 10-key polyphony vs 1 key | +3.5 dB (crushed) | **+14 dB** (linear-ish) |
+| Harshness on held chords (hf/rms) | 0.26 | **0.054** |
+| Knob-drag allocation churn | 13.0 MB | **0.6 MB** |
+| Stereo | mono (L==R) | 30/45 presets real width (corr → 0.21) |
+| Delay at max settings | self-oscillating drone (tail 0.87) | decaying echoes (**0.0017**) |
+| Golden coverage | 225 synth renders, L only | 225 stereo renders + 7 FX cases + fuzz + soak |
+| Bench headroom | 5.7x | 6.0x (stereo filter pair included) |
+| Param sources of truth | 3 disagreeing copies | 1 (test-pinned) |
+
+User-facing bugs found and fixed by the loop itself: gain-staging harshness
+(user-reported), widespread FM DC contamination, delay feedback runaway, protocol
+poisoning (one bad message = permanent silence), recorder tail truncation (~46 ms lost
+per take), samplePool stale callbacks killing retriggered notes. Hypotheses honestly
+refuted and reverted: B8 (Math.tan cost), B12 (envelope knob calibration).
+
+The engine loop is closed. Successor loops when wanted: engine-side FX polish
+(observations recorded in iterations 18/22/23, all currently below the value line), the
+synth-designer UI (glideMode + width exposure), and VISUAL_ASCENT (the Lagrangian
+prompt) for the visuals.
+
+`ITERATION 24: soak clean — G1..G5 pass — FIXED POINT REACHED`
