@@ -223,6 +223,42 @@ describe('engine artifact regressions', () => {
     expect(stats.maxJump).toBeLessThan(0.25);
   });
 
+  it('noteOff during a steal fade cancels the queued note (no stuck loop)', () => {
+    const proc = makeProcessor({
+      attack: 0.01,
+      decay: 0.1,
+      sustain: 0.9,
+      release: 0.15
+    });
+    // Saturate the pool, then steal with a note that is released immediately
+    // (inside the ~5ms fade window, before the queued voice ever starts).
+    for (let i = 0; i < 24; i++) noteOn(proc, `held-${i}`, 40 + i, 'Sine', 1);
+    renderSeconds(proc, 0.2);
+    noteOn(proc, 'stolen', 84, 'Sine', 1);
+    noteOff(proc, 'stolen'); // arrives before the steal fade completes
+    for (let i = 0; i < 24; i++) noteOff(proc, `held-${i}`);
+    renderSeconds(proc, 1.0);
+    const tail = new RenderStats();
+    renderSeconds(proc, 0.2, tail.sink);
+    // Without pending-note cancellation the stolen voice starts after the
+    // fade and sustains forever; with the fix everything decays to silence.
+    expect(tail.rms).toBeLessThan(0.001);
+    expect(proc.voices.every((v) => !v.pendingStart)).toBe(true);
+  });
+
+  it('allNotesOff clears queued steal notes too', () => {
+    const proc = makeProcessor({ attack: 0.01, decay: 0.1, sustain: 0.9, release: 0.1 });
+    for (let i = 0; i < 24; i++) noteOn(proc, `held-${i}`, 40 + i, 'Sine', 1);
+    renderSeconds(proc, 0.1);
+    noteOn(proc, 'queued-a', 90, 'Sine', 1);
+    noteOn(proc, 'queued-b', 91, 'Sine', 1);
+    proc.port.onmessage({ data: { type: 'allNotesOff' } });
+    renderSeconds(proc, 1.0);
+    const tail = new RenderStats();
+    renderSeconds(proc, 0.2, tail.sink);
+    expect(tail.rms).toBeLessThan(0.001);
+  });
+
   it('same-note retrigger does not click', () => {
     const proc = makeProcessor({
       attack: 0.01,

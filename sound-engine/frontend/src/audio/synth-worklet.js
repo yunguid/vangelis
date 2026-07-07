@@ -875,15 +875,20 @@ class SynthProcessor extends AudioWorkletProcessor {
   noteOff(noteId) {
     if (!noteId) return;
     for (const voice of this.voices) {
+      // A note released while still queued behind a steal fade must never
+      // start: cancelling here is its noteOff (otherwise it rings forever).
+      if (voice.pendingStart && voice.pendingStart.noteId === noteId) {
+        voice.pendingStart = null;
+      }
       if (voice.active && voice.noteId === noteId) {
         voice.release();
-        break;
       }
     }
   }
 
   allNotesOff() {
     for (const voice of this.voices) {
+      voice.pendingStart = null;
       if (voice.active) {
         voice.release();
       }
