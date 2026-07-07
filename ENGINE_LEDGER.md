@@ -392,3 +392,19 @@ G1 367/367 (+2) + smoke. G4 225/225 bit-exact (valid params pass the guard uncha
 G3 6.0x. G2 pass.
 
 `ITERATION 19: protocol hardening — G1..G5 pass (G4 bit-exact) — backlog: 0 items — DRY 0/2 (reset)`
+
+### Iteration 20 — dry-well audit (carried-over lenses): clean — 2026-07-07
+**UI→engine param path:** every entry into audioEngine (constructor, setGlobalParams,
+playFrequency, playBufferedSample) sanitizes via `sanitizeAudioParams` before applying;
+the worklet has exactly one sync point (`effects.js:311`,
+`synthWorklet.setParams(toWorkletParams(params))`) and it only ever receives sanitized
+params — the descent(19) boundary guard is true defense-in-depth behind this.
+**MIDI input path:** velocity normalized `d2/127`; velocity-0 note-on correctly treated
+as note-off (running-status convention); noteId namespaces are collision-free
+(`webmidi-N` / note names / `voice-N`); pitch bend ±2 st and CC1 wired; degrades
+silently without Web MIDI. Nothing found above the value line.
+
+All gates green (G1 367/367 + smoke, G4 225/225 bit-exact, G3 6.1x, G2 pass).
+**Dry count: 1 of 2.**
+
+`ITERATION 20: dry-well audit — G1..G5 pass — backlog: 0 items — DRY 1/2`
