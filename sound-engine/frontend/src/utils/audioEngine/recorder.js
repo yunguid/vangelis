@@ -38,25 +38,29 @@ export class RecorderController {
       this.node.connect(this.gain);
       this.gain.connect(ctx.destination);
 
-      this.node.port.onmessage = (event) => {
-        const data = event.data;
-        if (!data || !data.type) return;
-        if (data.type === 'data') {
-          if (!this.isRecording) return;
-          this.recordedLeft.push(data.left);
-          this.recordedRight.push(data.right);
-        } else if (data.type === 'stopped') {
-          if (this.pendingStop) {
-            this.pendingStop = false;
-            if (this.onStop) {
-              this.onStop();
-            }
-          }
-        }
-      };
+      this.node.port.onmessage = (event) => this.handlePortMessage(event.data);
     })();
 
     return this.readyPromise;
+  }
+
+  handlePortMessage(data) {
+    if (!data || !data.type) return;
+    if (data.type === 'data') {
+      // Accept while pendingStop too: stop() flips isRecording synchronously,
+      // but the worklet's final flush (the last partial buffer, up to ~46 ms)
+      // arrives AFTER that — dropping it truncated every recording's tail.
+      if (!this.isRecording && !this.pendingStop) return;
+      this.recordedLeft.push(data.left);
+      this.recordedRight.push(data.right);
+    } else if (data.type === 'stopped') {
+      if (this.pendingStop) {
+        this.pendingStop = false;
+        if (this.onStop) {
+          this.onStop();
+        }
+      }
+    }
   }
 
   start() {

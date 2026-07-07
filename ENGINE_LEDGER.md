@@ -408,3 +408,17 @@ All gates green (G1 367/367 + smoke, G4 225/225 bit-exact, G3 6.1x, G2 pass).
 **Dry count: 1 of 2.**
 
 `ITERATION 20: dry-well audit — G1..G5 pass — backlog: 0 items — DRY 1/2`
+
+### Iteration 21 — dry-well audit found the recorder truncating every take — 2026-07-07
+**Dry counter resets to 0 again.** The recorder/WAV lens found a stop-flush race:
+`stop()` flips `isRecording = false` synchronously, but the worklet's final `flush()` —
+the last partial buffer, up to ~46 ms — arrives after that, and the `'data'` guard
+dropped it. **Every recording's tail was silently truncated** (release tails clipped on
+export). Fix: accept data while `pendingStop` is true; the port handler is extracted to
+`handlePortMessage` and unit-tested with the exact worklet message sequence
+(stop → final data → stopped), plus WAV header/flatten coverage. WAV encoding itself
+verified correct (RIFF/PCM16, clamping, asymmetric scale). samplePool and graph.js
+lenses carry over to the next audit. G1 370/370 (+3) + smoke, G4 225/225 bit-exact,
+G3 6.0x, G2 pass.
+
+`ITERATION 21: recorder tail fix — G1..G5 pass (bit-exact) — backlog: 0 items — DRY 0/2 (reset)`
