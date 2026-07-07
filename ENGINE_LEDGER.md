@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B7b | Alias suppression, remainder: (a) triangle still 2-point BLAMP — worst *audible* alias in the bank at -35.3 dB @ 13 kHz; derive 4-point polyBLAMP (integral of the B-spline BLEP residual). (b) Ultrasonic folds (k·f0 just above Nyquist → 20-24 kHz) at -30.5 dB — only reachable via 2× oversampled oscillators or a steep Nyquist-guard on the voice sum; weigh cost vs inaudibility. | M/M | G5 improves, G4 re-bless, G3 no regression |
 | B8 | Filter smoothing computes `Math.tan` per sample per voice; hoist coefficients to block rate / on-change. Expect G3 gain from 5.7x. | M/M | G3 improves, G4 within spectral tolerance |
 | B9 | `setParams` reallocates compiled mod routes for all 24 voices on every param change (UI drags churn 24 × 3 typed arrays). Compile once at processor level or diff. | M/M | G5 heap, G4 bit-exact |
 | B10 | Engine is mono (identical L/R); no stereo unison spread; `width` doesn't exist. True stereo voice architecture. Extend apparatus to capture both channels first. | H/H | apparatus + G4 re-bless |
@@ -197,3 +196,25 @@ unaffected). G1 360/360 + smoke. G3 7.1x (wider correction window costs ~8%; bas
 5.7x untouched). G2 pass. Heap −24 KB.
 
 `ITERATION 7: B7 saw/square BLEP4 — G1..G5 pass (G4 re-blessed) — backlog: 8 items (B7 re-scoped to B7b)`
+
+### Iteration 8 — B7b: triangle 4-point polyBLAMP; alias program complete — 2026-07-07
+Derived the 4-point polyBLAMP (second antiderivative of the cubic-B-spline impulse minus
+the ramp; RES(0)=7/30, quintic tails). First attempt reused the BLEP pair's ×2 scale
+convention and *worsened* audible aliasing to −32.7 dB — an empirical scale sweep
+(×1/×2/×4 → −71.8/−32.7/−21.6 dB) showed the triangle caller's `blampScale = 8·dt`
+already supplies the full slope change, so polyBlamp4 returns the **unit** residual.
+The convention asymmetry is documented in the source; unit test pins corner value 7/30,
+evenness, continuity, window support. The failed ×2 attempt is recorded here per
+append-honesty.
+
+**Metric deltas (f0 ≈ 5 kHz):** triangle worst alias −35.3 → −44.5 dB; worst audible
+−35.3 → **−71.9 dB**. All four cases now beat the ≤ −40 dB audible target (saw −41.1,
+square −55.0, triangle −71.9, fm-sine −51.3). **Ultrasonic remainder closed as a
+decision, not a backlog item:** the −30 dB folds land at 20–24 kHz, below hearing, above
+the DAC's own filtering, and the only post-oscillator nonlinearity (clip knee) rarely
+engages — 2× oversampling would cost ~30–50% headroom for inaudible gain. Revisit only
+if an always-on nonlinear stage is ever added.
+
+G4 re-blessed (triangle presets). G1 361/361 + smoke. G3 6.8x (baseline 5.7x). G2 pass.
+
+`ITERATION 8: B7b triangle BLAMP4 — G1..G5 pass (G4 re-blessed) — backlog: 7 items`

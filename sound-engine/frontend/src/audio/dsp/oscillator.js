@@ -44,6 +44,27 @@ export function polyBlep4(t, dt) {
 // to the 2-point residual.
 const BLEP4_MAX_DT = 0.2;
 
+// 4-point polyBLAMP: second antiderivative of the cubic-B-spline impulse
+// minus the ramp, ±2-sample window. Even in the distance from the corner;
+// RES(0) = 7/30 with quintic tails. NOTE: unlike the BLEP pair (which return
+// 2× the unit residual, callers supplying half the step), this returns the
+// UNIT residual — the triangle caller's blampScale = 8·dt is the full
+// per-sample slope change. Verified empirically: ×2 here worsens audible
+// aliasing to −33 dB; ×1 reaches −72 dB.
+export function polyBlamp4(t, dt) {
+  const d = t < 0.5 ? t / dt : (1.0 - t) / dt; // distance from corner, in samples
+  if (d < 1.0) {
+    const d2 = d * d;
+    return 7.0 / 30.0 - d / 2.0 + d2 / 3.0 - (d2 * d2) / 12.0 + (d2 * d2 * d) / 40.0;
+  }
+  if (d < 2.0) {
+    const y = 2.0 - d;
+    const y2 = y * y;
+    return (y2 * y2 * y) / 120.0;
+  }
+  return 0.0;
+}
+
 // 2-point polyBLAMP residual for a slope discontinuity at phase 0.
 // Integral of the polyBlep step residual; rounds corners instead of steps.
 export function polyBlamp(t, dt) {
@@ -83,8 +104,13 @@ export function waveformSample(waveform, phase, dt) {
       // Slope changes by -8/cycle at the peak (phase 0) and +8/cycle at the
       // trough (phase 0.5); per-sample slope change is 8*dt.
       const blampScale = 8.0 * dt;
-      value -= blampScale * polyBlamp(phase, dt);
-      value += blampScale * polyBlamp((phase + 0.5) % 1.0, dt);
+      if (dt <= BLEP4_MAX_DT) {
+        value -= blampScale * polyBlamp4(phase, dt);
+        value += blampScale * polyBlamp4((phase + 0.5) % 1.0, dt);
+      } else {
+        value -= blampScale * polyBlamp(phase, dt);
+        value += blampScale * polyBlamp((phase + 0.5) % 1.0, dt);
+      }
       return value;
     }
     default:

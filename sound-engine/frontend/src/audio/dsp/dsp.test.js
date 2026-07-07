@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PARAMS, ENV_STAGE, LFO_SHAPES, MOD_SRC, MOD_DST, WAVEFORMS } from './constants.js';
 import { WORKLET_PARAM_DEFAULTS } from '../../utils/audioParams.js';
-import { polyBlep, polyBlep4, polyBlamp, waveformSample, normalizeWaveform } from './oscillator.js';
+import { polyBlep, polyBlep4, polyBlamp, polyBlamp4, waveformSample, normalizeWaveform } from './oscillator.js';
 import { Envelope } from './envelope.js';
 import { LFO } from './lfo.js';
 import { StateVariableFilter } from './svf.js';
@@ -50,6 +50,19 @@ describe('oscillator', () => {
     // Residual jumps by -2 across the wrap: same convention as polyBlep,
     // cancelling the naive saw's +2 step
     expect(polyBlep4(eps, dt) - polyBlep4(1 - eps, dt)).toBeCloseTo(-2, 3);
+  });
+
+  it('polyBlamp4 residual is even, continuous, and windowed to ±2dt', () => {
+    const dt = 0.01;
+    const eps = 1e-9;
+    expect(polyBlamp4(0, dt)).toBeCloseTo(7 / 30, 9); // corner value
+    // Even in distance from the corner (phase 0 wraps: t and 1-t match)
+    expect(polyBlamp4(0.005, dt)).toBeCloseTo(polyBlamp4(0.995, dt), 9);
+    // Continuous across the d=1 branch boundary
+    expect(polyBlamp4(dt - eps, dt)).toBeCloseTo(polyBlamp4(dt + eps, dt), 6);
+    // Quintic tail reaches zero at the window edge, zero outside
+    expect(polyBlamp4(2 * dt - eps, dt)).toBeCloseTo(0, 6);
+    expect(polyBlamp4(0.5, dt)).toBe(0);
   });
 
   it('polyBLAMP residual is zero away from corners', () => {

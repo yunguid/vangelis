@@ -14,8 +14,8 @@
   {
     "label": "triangle",
     "f0": 4998,
-    "worstAliasDb": -35.28,
-    "worstAudibleAliasDb": -35.28
+    "worstAliasDb": -44.5,
+    "worstAudibleAliasDb": -71.85
   },
   {
     "label": "fm-sine",
