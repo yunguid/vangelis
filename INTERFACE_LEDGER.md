@@ -162,3 +162,26 @@ this diff's residue. Orchestrator verified: G1 379/379, G2 clean, G3 225/225 bit
 G4 screenshots (Sound + MIDI tabs) match the §2 language, G5 187.
 
 `ITERATION 3: P4a sidebar paint — census 187 — backlog: 6 items (P4 continues: P4b app chrome, P4c pop-out pages)`
+
+### Iteration 4 — P4b+P3: app chrome paint purge + recording indicators — 2026-07-07
+components.css + controls.css de-AI'd (net −127 lines): 13 gradients and 12 glow
+shadows to zero in those files, 18 pill radii to spec, the toggle-switch "squircle"
+thumb flattened, value sliders and range inputs to flat tracks. P3 closed in the same
+pass: recordPulse animation + keyframes deleted (recording state now a flat accent
+border, alpha raised 0.5→0.9 for salience), dead .recording-indicator/@keyframes blink
+removed. Census 187 → **140**.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. All four judgment
+calls approved (hover-lift kept — not a §2 tell; progress-fill gradients flattened per
+literal mandate; border-alpha compensation; squircle kill). Two honest disclosures
+raised credibility: (a) `layout.css:174/222` + `gruvbox.css` still override the header
+icon buttons to 999px pills and suppress the recording background downstream — real
+remaining P4 scope, recorded here for **P4c (layout.css, gruvbox.css, keyboard.css,
+overlays.css, wave-candy.css, responsive.css + pop-out page CSS)**; (b) a possible
+sidebar tab-state bug flagged as a separate task chip (task_3aa06eed) — orchestrator
+could NOT reproduce it at desktop viewport post-review (the reporter's viewport was in
+a mobile-breakpoint state, which changes sidebar behavior to a bottom sheet); left to
+the chip, not backlogged here. Orchestrator verified: G1 379/379, G2 clean + zero
+console errors, G3 225/225 bit-exact, G4 screenshot matches §2, G5 140.
+
+`ITERATION 4: P4b+P3 app chrome — census 140 — backlog: 5 items (P4c remains)`

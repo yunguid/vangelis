@@ -12,11 +12,9 @@
   gap: var(--space-lg);
   padding: var(--space-lg);
   align-items: flex-start;
-  border-radius: var(--radius-large);
-  background: linear-gradient(210deg, var(--color-surface-intense) 0%, rgba(244, 241, 232, 0.07) 100%);
+  border-radius: 4px;
+  background: var(--color-surface-intense);
   border: var(--border-glass);
-  backdrop-filter: blur(var(--blur-overlay)) brightness(1.1);
-  box-shadow: var(--shadow-floating);
   overflow: hidden;
 }
 
@@ -125,7 +123,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 4px;
   background: transparent;
   border: 0;
   color: var(--color-text-tertiary);
@@ -192,24 +190,15 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 42%),
-    linear-gradient(180deg, rgba(18, 24, 34, 0.9) 0%, rgba(8, 11, 18, 0.98) 100%);
+  background: rgba(13, 17, 26, 0.94);
   border: 1px solid rgba(244, 241, 232, 0.08);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 16px 30px rgba(3, 8, 15, 0.28);
   touch-action: none;
   cursor: ns-resize;
 }
 
 .effect-macro-dial__touch:focus-visible {
   outline: none;
-  box-shadow:
-    0 0 0 1px rgba(246, 186, 120, 0.32),
-    0 0 0 4px rgba(246, 186, 120, 0.08),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-    0 16px 30px rgba(3, 8, 15, 0.34);
+  border-color: rgba(246, 186, 120, 0.6);
 }
 
 .effect-macro-dial.is-disabled .effect-macro-dial__touch {
@@ -308,7 +297,7 @@
 .waveform-button--compact {
   min-height: 44px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: 4px;
   font-size: 0.68rem;
   letter-spacing: 0.02em;
 }
