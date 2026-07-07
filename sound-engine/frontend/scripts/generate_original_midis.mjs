@@ -17,6 +17,7 @@ const { Midi } = tonejsMidi;
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { getOriginalCueName } from '../src/data/originalCueNames.js';
 
 const OUT_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -87,11 +88,18 @@ class Part {
   }
 }
 
+// `name` here is the composition's working title, used only for the
+// console log below (handy for matching a log line back to the piece's
+// doc comment above each builder function). The name embedded in the .mid
+// file header — and the name shown in the app — is the display code from
+// ../src/data/originalCueNames.js, keyed by `id`, so there is exactly one
+// source of truth for what the user actually sees.
 const writeMidi = ({ id, name, bpm, parts }) => {
+  const displayName = getOriginalCueName(id);
   const midi = new Midi();
   midi.header.setTempo(bpm);
   midi.header.timeSignatures.push({ ticks: 0, timeSignature: [4, 4] });
-  midi.header.name = name;
+  midi.header.name = displayName;
 
   parts.forEach((part, index) => {
     const track = midi.addTrack();
@@ -104,7 +112,7 @@ const writeMidi = ({ id, name, bpm, parts }) => {
   const file = path.join(OUT_DIR, `${id}.mid`);
   fs.writeFileSync(file, Buffer.from(midi.toArray()));
   const totalNotes = parts.reduce((sum, part) => sum + part.notes.length, 0);
-  console.log(`wrote ${file} (${totalNotes} notes)`);
+  console.log(`wrote ${file} (${totalNotes} notes) — "${name}" -> "${displayName}"`);
 };
 
 // ── Pieces ─────────────────────────────────────────────────────────────

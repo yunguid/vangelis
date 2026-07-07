@@ -87,16 +87,14 @@ describe('MidiTab', () => {
     getBuiltInMidiFiles.mockReturnValue([
       {
         id: 'original-neon-rain',
-        name: 'Neon Rain (Synth Blues)',
+        name: 'dial_51',
         path: '/midi/originals/original-neon-rain.mid'
       }
     ]);
 
     render(<MidiTab {...defaultProps()} />);
 
-    expect(screen.getByText('Neon Rain')).toBeInTheDocument();
-    expect(screen.queryByText('Synth Blues')).not.toBeInTheDocument();
-    expect(screen.queryByText('(Synth Blues)')).not.toBeInTheDocument();
+    expect(screen.getByText('dial_51')).toBeInTheDocument();
     expect(document.querySelector('.midi-tab__badge')).not.toBeInTheDocument();
     expect(document.querySelector('.midi-tab__file-composer')).not.toBeInTheDocument();
   });

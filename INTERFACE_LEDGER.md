@@ -121,3 +121,24 @@ reviewed and approved (search-string guard, JSDoc optionality). Census 228 → 2
 G2 clean, G3 225/225 bit-exact, G4 screenshot confirms clean rows, G5 225.
 
 `ITERATION 1: P1+P2 rows stripped — census 225 — backlog: 7 items`
+
+### Iteration 2 — P5: the 58 originals renamed to odd codes — 2026-07-07
+Every original cue now bears a flat machine-code name (`dial_51`, `3AM ZONE`, `GRUB 3`,
+`mullet-61`, `DAWN DUCT`...) from a deterministic generator (FNV-1a of the stable id →
+mulberry32; ids and file paths unchanged). Single source of truth established:
+`src/data/originalCueNames.js` feeds BOTH midiParser and the corpus generator — the
+two-copies drift hazard from iteration 0 is dead. All 58 .mid files regenerated so
+embedded metadata matches. Tests pin: uniqueness, no parens, cringe-word absence,
+generator↔committed-map determinism, .mid-metadata agreement, and a per-word-stem cap.
+
+**Review record:** implementer: Sonnet subagent. 1 rework round. Round-1 defect: the
+name list betrayed its own generator — krill×4, HUSK×3, brick×3 across 58 names, plus a
+`MIDN` truncation that read as a bug. Fix: per-stem cap of 2 enforced deterministically
++ wordlist expanded (gasket, mullet, grommet, turnip...). Approved deviations: seeding
+from stable id instead of old name (more robust, documented); vestigial name args in
+generator call sites (log-only). Orchestrator verified independently: 58 unique, max
+stem reuse 2, zero parens; G1 379/379, G2 clean, G3 225/225 bit-exact, G4 live
+snapshot shows all codes rendering, G5 census 225 (names are not a tell category — no
+increase, justified hold).
+
+`ITERATION 2: P5 renames — census 225 — backlog: 6 items`

@@ -6,6 +6,7 @@
 
 import { Midi } from '@tonejs/midi';
 import russianMidiLibrary from '../data/russianMidiLibrary.json';
+import { ORIGINAL_CUE_IDS, getOriginalCueName } from '../data/originalCueNames.js';
 import { withBase } from './baseUrl.js';
 
 /**
@@ -193,70 +194,12 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
 
   // Original in-house cues, composed for the synth presets — see
   // scripts/generate_original_midis.mjs. No soundSetId so they play
-  // through whatever preset is currently loaded.
-  const ORIGINAL_CUES = [
-    ['original-neon-rain', 'Neon Rain (Synth Blues)'],
-    ['original-elegy-for-replicants', 'Elegy for Replicants (Ambient)'],
-    ['original-sea-of-dunes', 'Sea of Dunes (Drone)'],
-    ['original-escape-velocity', 'Escape Velocity (Chase)'],
-    ['original-green-memories', 'Green Memories (Ballad)'],
-    ['original-rain-on-chrome', 'Rain on Chrome (Sequence)'],
-    ['original-offworld-anthem', 'Offworld Anthem (Fanfare)'],
-    ['original-vapor-lights', 'Vapor Lights (Blues II)'],
-    ['original-scream-at-the-sky', 'Scream at the Sky (Lead Ballad)'],
-    ['original-chrome-canyon-run', 'Chrome Canyon Run (Synth Rock)'],
-    ['original-sugar-crash-angel', 'Sugar Crash Angel (Hyperpop)'],
-    ['original-red-mist', 'Red Mist (Rage)'],
-    ['original-analog-sunrise', 'Analog Sunrise (Anthem)'],
-    ['original-velvet-horizon', 'Velvet Horizon (Chorale)'],
-    ['original-strings-of-io', 'Strings of Io (Elegy)'],
-    ['original-west-coast-wall', 'West Coast Wall (80s)'],
-    ['original-ghost-frequency', 'Ghost Frequency (Spectral)'],
-    ['original-airborne-cathedral', 'Airborne Cathedral (Air)'],
-    ['original-night-drive-basement', 'Night Drive Basement (Synthwave)'],
-    ['original-trap-door', 'Trap Door (Trap)'],
-    ['original-concrete-teeth', 'Concrete Teeth (Rage Bass)'],
-    ['original-acid-perimeter', 'Acid Perimeter (Acid)'],
-    ['original-low-tide-fog', 'Low Tide Fog (Deep Drone)'],
-    ['original-glass-elevator', 'Glass Elevator (Comping)'],
-    ['original-bells-for-rachael', 'Bells for Rachael (Bell Ballad)'],
-    ['original-pixel-heartbreak', 'Pixel Heartbreak (Hyperpop)'],
-    ['original-2am-lullaby', '2AM Lullaby (EP Ballad)'],
-    ['original-chime-orbit', 'Chime Orbit (Arpeggio)'],
-    ['original-alarm-district', 'Alarm District (Trap)'],
-    ['original-shimmer-bloom', 'Shimmer Bloom (Texture)'],
-    ['original-ribbon-in-the-rain', 'Ribbon in the Rain (Gesture)'],
-    ['original-gulls-over-voltage-bay', 'Gulls Over Voltage Bay (Ambient)'],
-    ['original-cathedral-of-wires', 'Cathedral of Wires (Drone Mass)'],
-    ['original-neon-cathedral', 'Neon Cathedral (Anthem)'],
-    ['original-static-bloom', 'Static Bloom (Hyperpop)'],
-    ['original-glitter-riot', 'Glitter Riot (Hyperpop Rage)'],
-    ['original-halogen-heart', 'Halogen Heart (Hyperpop Pluck)'],
-    ['original-midnight-slide', 'Midnight Slide (Trap)'],
-    ['original-black-ice', 'Black Ice (Trap)'],
-    ['original-adrenaline-red', 'Adrenaline Red (Rage)'],
-    ['original-teeth-grinder', 'Teeth Grinder (Rage)'],
-    ['original-first-light-over-la', 'First Light Over LA (Pad Ballad)'],
-    ['original-solar-sail', 'Solar Sail (Dream Pad)'],
-    ['original-rust-and-chrome', 'Rust and Chrome (Slow Blues)'],
-    ['original-violet-skyline', 'Violet Skyline (80s Ballad)'],
-    ['original-magnetic-north', 'Magnetic North (Anthem)'],
-    ['original-deep-signal', 'Deep Signal (Drone)'],
-    ['original-afterimage', 'Afterimage (Ambient)'],
-    ['original-late-checkout', 'Late Checkout (Lo-fi Keys)'],
-    ['original-thunder-veil', 'Thunder Veil (Dark Pad)'],
-    ['original-warm-static', 'Warm Static (EP Ballad)'],
-    ['original-zero-gravity-waltz', 'Zero Gravity Waltz'],
-    ['original-tokyo-monorail', 'Tokyo Monorail (Synthwave)'],
-    ['original-perimeter-run', 'Perimeter Run (Chase Arps)'],
-    ['original-glass-garden', 'Glass Garden (Pluck Arps)'],
-    ['original-copper-wires', 'Copper Wires (Acid)'],
-    ['original-dust-devils', 'Dust Devils (Sequence)'],
-    ['original-crystal-run', 'Crystal Run (Bright Arps)']
-  ];
-  const originalFiles = ORIGINAL_CUES.map(([id, name]) => ({
+  // through whatever preset is currently loaded. Display names come from
+  // the shared ../data/originalCueNames.js map (single source of truth,
+  // also consumed by the generator script) so the two can't drift.
+  const originalFiles = ORIGINAL_CUE_IDS.map((id) => ({
     id,
-    name,
+    name: getOriginalCueName(id),
     path: toBuiltInPath(`originals/${id}.mid`)
   }));
 
