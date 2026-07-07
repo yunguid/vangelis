@@ -142,7 +142,14 @@ const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
   const [sampleLoading, setSampleLoading] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(() => initialSession.sidebarOpen || false);
+  // On phones the sidebar is a full-screen sheet; never restore it open there,
+  // or the app boots with the synth hidden behind a modal.
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(max-width: 900px)').matches) return false;
+    return initialSession.sidebarOpen || false;
+  });
   const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'sound');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);

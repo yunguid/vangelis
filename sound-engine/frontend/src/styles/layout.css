@@ -20,6 +20,7 @@
 .app-stage {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -35,6 +36,7 @@
   gap: var(--space-xl);
   padding: var(--space-xl) var(--space-lg) var(--space-2xl);
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-shell > * {
@@ -213,8 +215,8 @@
 
 .app-notice {
   position: fixed;
-  right: 18px;
-  bottom: 18px;
+  right: max(18px, env(safe-area-inset-right, 18px));
+  bottom: max(18px, env(safe-area-inset-bottom, 18px));
   z-index: 130;
   padding: 10px 14px;
   border-radius: 999px;

@@ -475,11 +475,11 @@ const WaveCandyCanvas = () => {
   return (
     <section className="wave-candy" aria-label="Wave Candy visualizer">
       <div className="wave-candy-grid">
-        <div className="candy-tile">
+        <div className="candy-tile candy-tile--spectrogram">
           <span className="candy-label">Spectrogram</span>
           <canvas ref={spectrogramRef} className="candy-canvas" />
         </div>
-        <div className="candy-tile">
+        <div className="candy-tile candy-tile--scope">
           <span className="candy-label">Oscilloscope</span>
           <canvas ref={scopeRef} className="candy-canvas" />
         </div>
@@ -487,11 +487,11 @@ const WaveCandyCanvas = () => {
           <span className="candy-label">Loudness</span>
           <canvas ref={meterRef} className="candy-canvas" />
         </div>
-        <div className="candy-tile">
+        <div className="candy-tile candy-tile--gonio">
           <span className="candy-label">Goniometer</span>
           <canvas ref={goniometerRef} className="candy-canvas" />
         </div>
-        <div className="candy-tile">
+        <div className="candy-tile candy-tile--spectrum">
           <span className="candy-label">Spectrum</span>
           <canvas ref={spectrumRef} className="candy-canvas" />
         </div>

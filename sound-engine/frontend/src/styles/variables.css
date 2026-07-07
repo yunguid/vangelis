@@ -87,6 +87,12 @@ html, body {
   direction: ltr;
 }
 
+/* Guard: any accidental horizontal overflow would make phones zoom out to fit,
+   shrinking the whole UI and detaching fixed elements from the visual viewport. */
+html {
+  overflow-x: clip;
+}
+
 body {
   margin: 0;
   min-height: 100%;
@@ -104,6 +110,7 @@ body {
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   z-index: 1;
 }

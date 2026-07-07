@@ -111,6 +111,24 @@
     min-height: var(--wave-candy-height);
   }
 
+  /* The 5-pane analyzer wall needs ~830px; anything wider than the viewport
+     makes phones zoom out to fit, shrinking the entire UI. Keep the two most
+     musical panes side by side and let them shrink freely. */
+  .wave-candy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: var(--wave-candy-height);
+  }
+
+  .candy-tile--spectrogram,
+  .candy-tile--gonio,
+  .candy-meter {
+    display: none;
+  }
+
+  .candy-tile {
+    min-height: 0;
+  }
+
   .wave-candy-gear {
     top: 8px;
     right: 8px;
