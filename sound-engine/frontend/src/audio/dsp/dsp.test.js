@@ -131,6 +131,33 @@ describe('lfo', () => {
   });
 });
 
+describe('dc blocker', () => {
+  it('removes a DC step within ~100ms', async () => {
+    const { DCBlocker } = await import('./dc-blocker.js');
+    const dc = new DCBlocker(SR);
+    let y = 0;
+    for (let i = 0; i < SR * 0.1; i++) y = dc.process(0.5);
+    expect(Math.abs(y)).toBeLessThan(0.05 * 0.5);
+    for (let i = 0; i < SR * 0.4; i++) y = dc.process(0.5);
+    expect(Math.abs(y)).toBeLessThan(1e-3);
+  });
+
+  it('passes audio-rate content at ~unity gain', async () => {
+    const { DCBlocker } = await import('./dc-blocker.js');
+    const dc = new DCBlocker(SR);
+    const f = 100; // worst realistic case: low bass fundamental
+    let peak = 0;
+    for (let i = 0; i < SR; i++) {
+      const y = dc.process(Math.sin((TWO_PI_TEST * f * i) / SR));
+      if (i > SR / 2) peak = Math.max(peak, Math.abs(y));
+    }
+    expect(peak).toBeGreaterThan(0.995);
+    expect(peak).toBeLessThanOrEqual(1.005);
+  });
+});
+
+const TWO_PI_TEST = Math.PI * 2;
+
 describe('state-variable filter', () => {
   it('lowpass passes DC and attenuates near-Nyquist input', () => {
     const f = new StateVariableFilter(SR);

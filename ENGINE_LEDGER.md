@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B6 | `tape-solitude` DC offset 0.103 in chord render — likely integer-ratio FM producing a DC component. Find cause; fix (DC blocker or phase fix); re-bless with metric delta. | M/M | G4 re-bless, G5 dc improves |
 | B7 | Alias suppression: -22 dB worst alias (saw/square) at ~5 kHz through full engine; polyBLEP is first-order and master `tanh` re-aliases. Target ≤ -40 dB (higher-order residuals, oversampled nonlinearity, or restructured drive). | H/H | G5 improves, G4 re-bless, G3 no regression |
 | B8 | Filter smoothing computes `Math.tan` per sample per voice; hoist coefficients to block rate / on-change. Expect G3 gain from 5.7x. | M/M | G3 improves, G4 within spectral tolerance |
 | B9 | `setParams` reallocates compiled mod routes for all 24 voices on every param change (UI drags churn 24 × 3 typed arrays). Compile once at processor level or diff. | M/M | G5 heap, G4 bit-exact |
@@ -160,3 +159,22 @@ stereoPanner is user-session state, not preset state. Backlog -2.
 G1 357/357, smoke ALL PASS, G4 225/225 bit-exact, G3 7.6x, G2 pass.
 
 `ITERATION 5: B4 table-driven sanitize — G1..G5 pass (G4 bit-exact) — backlog: 9 items`
+
+### Iteration 6 — B6: DC offset eliminated (master DC blocker) — 2026-07-07
+Cause confirmed: integer-ratio phase modulation (`tape-solitude` uses fmRatio 1) puts a
+Bessel-weighted spectral component at exactly 0 Hz; each harmonic k of the triangle
+carrier contributes when k + n·ratio = 0, and eight chord voices sum their offsets.
+Fix: one-pole DC blocker (`dsp/dc-blocker.js`, 5 Hz corner, −0.03 dB at 65 Hz) on the
+voice sum, before the clip knee so clipping stays symmetric. Two unit tests (step decay,
+audio-band unity).
+
+**Metric deltas (chord renders):** tape-solitude |dc| 0.107 → 3e-5; love-theme 0.015 →
+5e-5; lullaby-ep 0.007 → 2e-5; worst |dc| across the whole bank now 1.5e-4 (was 0.103).
+DC contamination was wider than the flagged preset — 95/225 renders drifted vs old
+goldens (DC + sub-30 Hz cleanup across FM patches); **G4 re-blessed** for that reason.
+Aliasing unchanged, heap −24 KB, G3 7.7x, G1 359/359 + smoke, G2 pass. In-app check:
+note plays, output mean −6.6e-5. (Transient dev-only HMR "MAX_MOD_ROUTES already
+declared" errors observed during concurrent editing — verified stale: single declaration
+in tree, build/tests/boot all clean after reload.)
+
+`ITERATION 6: B6 DC blocker — G1..G5 pass (G4 re-blessed) — backlog: 8 items`

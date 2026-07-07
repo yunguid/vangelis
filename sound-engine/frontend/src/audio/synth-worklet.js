@@ -8,6 +8,7 @@
 
 import { MAX_VOICES, ENV_STAGE, CLIP_KNEE, DEFAULT_PARAMS, clamp } from './dsp/constants.js';
 import { Voice } from './dsp/voice.js';
+import { DCBlocker } from './dsp/dc-blocker.js';
 
 class SynthProcessor extends AudioWorkletProcessor {
   constructor(options) {
@@ -28,6 +29,9 @@ class SynthProcessor extends AudioWorkletProcessor {
     this.modWheelSmoothed = 0.0;
     // ~5ms smoothing for performance controllers
     this.perfSmoothCoeff = Math.exp(-1.0 / (0.005 * sampleRate));
+    // Integer-ratio FM leaves a real 0 Hz component in the voice sum; block it
+    // before the clip knee so clipping stays symmetric.
+    this.dcBlocker = new DCBlocker(sampleRate);
     this.port.onmessage = (event) => {
       const data = event.data;
       if (!data || !data.type) return;
@@ -180,6 +184,7 @@ class SynthProcessor extends AudioWorkletProcessor {
           sample += voice.nextSample(bendMul, this.modWheelSmoothed);
         }
       }
+      sample = this.dcBlocker.process(sample);
       sample *= mixGain;
       // Safety clip only: unity gain below the knee so polyphonic sums stay
       // clean (the old always-on tanh ground held chords into intermodulation
