@@ -1,15 +1,17 @@
 // One polyphonic voice: oscillator stack (unison + FM), dual envelopes, dual
 // LFOs, per-voice SVF, mod-matrix evaluation, glide, and click-free stealing.
 
-import { TWO_PI, WAVEFORMS, MOD_SRC, MOD_DST, MIN_GAIN, VOICE_SAMPLE_LIMIT, DEFAULT_PARAMS, clamp } from './constants.js';
+import { TWO_PI, WAVEFORMS, MOD_SRC, MOD_DST, MAX_MOD_ROUTES, MIN_GAIN, VOICE_SAMPLE_LIMIT, DEFAULT_PARAMS, clamp } from './constants.js';
 import { waveformSample, normalizeWaveform } from './oscillator.js';
 import { Envelope } from './envelope.js';
 import { LFO } from './lfo.js';
 import { StateVariableFilter } from './svf.js';
-import { compileModRoutes } from './mod-routes.js';
 
 export class Voice {
-  constructor(sampleRate) {
+  // routesBox is the processor-owned holder of the shared compiled route
+  // template ({ compiled }); the processor swaps box.compiled on setParams so
+  // voices never compile (or allocate) routes themselves.
+  constructor(sampleRate, routesBox) {
     this.sampleRate = sampleRate;
     this.active = false;
     this.noteId = null;
@@ -36,8 +38,12 @@ export class Voice {
     this.unisonVoices = 1;
     this.unisonDetune = 0.0;
     this.unisonPhases = new Float32Array(4);
-    this.routes = compileModRoutes([], null);
-    // ~20ms depth smoothing at 44100 Hz
+    this.routesBox = routesBox;
+    this.routes = routesBox.compiled;
+    // Per-voice smoothed route depths (~20ms) + a scratch buffer so route
+    // swaps can carry matching depths over without allocating.
+    this.depthSmoothed = new Float32Array(MAX_MOD_ROUTES + 2);
+    this.depthScratch = new Float32Array(MAX_MOD_ROUTES + 2);
     this.depthSmoothCoeff = Math.exp(-1.0 / (0.02 * sampleRate));
     // Voice stealing fade-out
     this.isBeingStolen = false;
@@ -85,23 +91,22 @@ export class Voice {
     this.unisonDetune = params.unisonDetune ?? this.unisonDetune;
 
     const prevRoutes = this.routes;
-    const nextRoutes = compileModRoutes(params.modRoutes, {
-      lfoRate: params.lfoRate ?? 0,
-      lfoDepth: params.lfoDepth ?? 0,
-      lfoTarget: params.lfoTarget ?? 0
-    });
-    if (this.active && prevRoutes) {
+    const nextRoutes = this.routesBox.compiled;
+    if (this.active && prevRoutes !== nextRoutes) {
       // Carry over smoothed depths for matching routes; new routes ramp in
-      // from zero so live edits never click.
+      // from zero so live edits never click. Scratch buffer first — the new
+      // route order may permute indices we still need to read.
+      const scratch = this.depthScratch;
       for (let i = 0; i < nextRoutes.count; i++) {
-        nextRoutes.depthSmoothed[i] = 0;
+        scratch[i] = 0;
         for (let j = 0; j < prevRoutes.count; j++) {
           if (prevRoutes.src[j] === nextRoutes.src[i] && prevRoutes.dst[j] === nextRoutes.dst[i]) {
-            nextRoutes.depthSmoothed[i] = prevRoutes.depthSmoothed[j];
+            scratch[i] = this.depthSmoothed[j];
             break;
           }
         }
       }
+      this.depthSmoothed.set(scratch);
     }
     this.routes = nextRoutes;
 
@@ -154,7 +159,7 @@ export class Voice {
 
     this.applyParams(params);
     // Fresh note: no ramp-in needed, the amp envelope masks the onset.
-    this.routes.depthSmoothed.set(this.routes.depth);
+    this.depthSmoothed.set(this.routes.depth);
 
     // Glide starts from the previously played note, if any
     this.frequency = (this.glideCoeff > 0 && glideFrom && glideFrom > 0)
@@ -235,8 +240,8 @@ export class Voice {
         default: value = 0.0; break;
       }
       const target = routes.depth[i];
-      const smoothed = target + (routes.depthSmoothed[i] - target) * this.depthSmoothCoeff;
-      routes.depthSmoothed[i] = smoothed;
+      const smoothed = target + (this.depthSmoothed[i] - target) * this.depthSmoothCoeff;
+      this.depthSmoothed[i] = smoothed;
       const amount = value * smoothed;
       switch (routes.dst[i]) {
         case MOD_DST.PITCH: pitchSemis += amount * 12.0; break;

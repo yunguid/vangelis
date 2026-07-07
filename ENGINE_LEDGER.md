@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B9 | `setParams` reallocates compiled mod routes for all 24 voices on every param change (UI drags churn 24 × 3 typed arrays). Compile once at processor level or diff. | M/M | G5 heap, G4 bit-exact |
 | B10 | Engine is mono (identical L/R); no stereo unison spread; `width` doesn't exist. True stereo voice architecture. Extend apparatus to capture both channels first. | H/H | apparatus + G4 re-bless |
 | B11 | Extend apparatus to delay + reverb worklets (burst golden renders, feedback stability, tail decay metrics). | M/M | apparatus |
 | B12 | Envelope semantics: exponential-approach coeffs mean the attack knob isn't attack time; steal-restart fades to 0 then restarts from 0.001 (no retrigger-from-level). Document/calibrate. | L/M | G4 re-bless if changed |
@@ -231,3 +230,19 @@ green after revert (225/225 bit-exact). Ledger note for future perf work: profil
 before hypothesizing; transcendentals are not where this engine's time goes.
 
 `ITERATION 9: B8 refuted (null result, reverted) — G1..G5 pass — backlog: 6 items`
+
+### Iteration 10 — B9: setParams allocation churn eliminated — 2026-07-07
+Mod routes now compile **once per setParams** at the processor into a shared immutable
+template (`routesBox`); each voice keeps only a persistent `depthSmoothed` +
+scratch Float32Array and carries matching depths across route swaps without allocating.
+Note-on no longer compiles routes either (it previously allocated 3 typed arrays + an
+object per note). Steal-fade nuance documented in code: a pending start now picks up the
+freshest compiled routes rather than a snapshot — observable only if setParams lands
+inside a 5 ms fade.
+
+**Measured (5000-drag + 2000-retrigger churn bench, 24 held voices):** allocation volume
+13.0 MB → 0.6 MB (−95%; remainder is param-object spreads, not route state). CPU time
+unchanged (2.2 s) — the win is GC-pause risk during live tweaking, not throughput.
+G4 225/225 bit-exact. G1 361/361 + smoke. G3 6.7x. G5 heap −25 KB. G2 pass.
+
+`ITERATION 10: B9 route-compile dedup — G1..G5 pass (G4 bit-exact) — backlog: 5 items`

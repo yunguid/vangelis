@@ -58,13 +58,12 @@ export function compileModRoutes(routes, legacy) {
     else if (src[i] === MOD_SRC.MOD_ENV) usesModEnv = true;
   }
 
+  // Immutable template, shared by all voices (compiled once per setParams at
+  // the processor level). Per-voice smoothing state lives in Voice, not here.
   return {
     src,
     dst,
     depth,
-    // Smoothed per-route depth (~20ms) to avoid zipper clicks while dragging
-    // depth controls; seeded by the caller.
-    depthSmoothed: new Float32Array(depth),
     count,
     usesLfo1,
     usesLfo2,

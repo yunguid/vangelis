@@ -9,17 +9,22 @@
 import { MAX_VOICES, ENV_STAGE, CLIP_KNEE, DEFAULT_PARAMS, clamp } from './dsp/constants.js';
 import { Voice } from './dsp/voice.js';
 import { DCBlocker } from './dsp/dc-blocker.js';
+import { compileModRoutes } from './dsp/mod-routes.js';
 
 class SynthProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
     this.sampleRate = sampleRate;
-    this.voices = Array.from({ length: MAX_VOICES }, () => new Voice(sampleRate));
     const paramDefaults = options?.processorOptions?.paramDefaults;
     this.params = {
       ...DEFAULT_PARAMS,
       ...(paramDefaults || {})
     };
+    // Routes compile once per setParams into this shared box; voices hold a
+    // reference and never allocate route state themselves (params.lfoRate/
+    // lfoDepth/lfoTarget double as the legacy-LFO mapping input).
+    this.routesBox = { compiled: compileModRoutes(this.params.modRoutes, this.params) };
+    this.voices = Array.from({ length: MAX_VOICES }, () => new Voice(sampleRate, this.routesBox));
     this.frameCounter = 0;
     this.lastFrequency = 0; // for glide
     // Performance state (not part of presets)
@@ -118,6 +123,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       ...this.params,
       ...params
     };
+    this.routesBox.compiled = compileModRoutes(this.params.modRoutes, this.params);
     for (const voice of this.voices) {
       voice.updateParams(this.params);
     }
