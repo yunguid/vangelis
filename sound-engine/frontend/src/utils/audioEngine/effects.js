@@ -25,11 +25,17 @@ export class DistortionCurveCache {
         curve[i] = (i * 2) / this.resolution - 1;
       }
     } else {
-      const k = key * 150;
-      const deg = Math.PI / 180;
+      // Level-anchored drive: tanh saturation rescaled so a signal at the
+      // program-level anchor keeps its loudness as drive increases. The old
+      // curve applied a (3+k)/9 small-signal boost (3.3x at drive 0.18, 17x
+      // at full) into a ~0.35 ceiling, grinding held chords into harsh
+      // intermodulation mush.
+      const drive = 1 + key * 5;
+      const anchor = 0.35;
+      const scale = anchor / Math.tanh(drive * anchor);
       for (let i = 0; i < this.resolution; i++) {
         const x = (i * 2) / this.resolution - 1;
-        curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+        curve[i] = Math.tanh(drive * x) * scale;
       }
     }
 

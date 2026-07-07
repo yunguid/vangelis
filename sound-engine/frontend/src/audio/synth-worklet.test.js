@@ -259,6 +259,36 @@ describe('engine artifact regressions', () => {
     expect(tail.rms).toBeLessThan(0.001);
   });
 
+  it('master stage is linear below the clip knee (no tanh coloration)', () => {
+    // Three identical sines sum to exactly 3x one sine while under the knee;
+    // the old always-on tanh compressed the triple to ~2.8x.
+    const params = { useADSR: false, useFilter: false, useFM: false };
+    const single = makeProcessor(params);
+    noteOn(single, 'a', 60, 'Sine', 0.8);
+    const s1 = new RenderStats();
+    renderSeconds(single, 0.5, s1.sink);
+
+    const triple = makeProcessor(params);
+    noteOn(triple, 'a', 60, 'Sine', 0.8);
+    noteOn(triple, 'b', 60, 'Sine', 0.8);
+    noteOn(triple, 'c', 60, 'Sine', 0.8);
+    const s3 = new RenderStats();
+    renderSeconds(triple, 0.5, s3.sink);
+
+    expect(s3.maxAbs / s1.maxAbs).toBeGreaterThan(2.95);
+    expect(s3.maxAbs / s1.maxAbs).toBeLessThan(3.05);
+  });
+
+  it('master clip knee bounds a saturated flood below unity', () => {
+    const proc = makeProcessor({ useADSR: false, useFilter: false, useFM: false });
+    for (let i = 0; i < 24; i++) noteOn(proc, `f${i}`, 36 + i, 'Sawtooth', 1);
+    const stats = new RenderStats();
+    renderSeconds(proc, 0.5, stats.sink);
+    expect(stats.nonFinite).toBe(0);
+    expect(stats.maxAbs).toBeLessThanOrEqual(1.0);
+    expect(stats.maxAbs).toBeGreaterThan(0.5); // knee engaged, not silenced
+  });
+
   it('same-note retrigger does not click', () => {
     const proc = makeProcessor({
       attack: 0.01,

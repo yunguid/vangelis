@@ -78,3 +78,28 @@ B1-B14. Notable discoveries: default-param disagreement between worklet and para
 (B2), dead `pan` param (B5), tape-solitude DC (B6), -22 dB engine-level aliasing (B7).
 
 `ITERATION 0: apparatus — G1..G5 pass — backlog: 14 items`
+
+### Iteration 1 (hotfix, user-reported) — 2026-07-06
+**"Sounds clip / sharp clashing noise on long holds."** Diagnosed live (headless renders
+clean → measured in-app via `__vangelisAudioProbe`): two cascaded saturators. (1) Worklet
+master `tanh(0.2·Σvoices)` — always-on, deep saturation for held chords (10 keys measured
+only +3.5 dB over 1 key). (2) Distortion WaveShaper curve applied a (3+k)/9 small-signal
+boost (3.3x at the user's drive 0.18, 17x at full) into a ~0.35 ceiling.
+
+Fix: worklet master stage is now a transparent safety clip — unity below knee 0.5,
+C1-continuous exponential knee to ±1 (`CLIP_KNEE`, synth-worklet.js); distortion curve
+replaced with level-anchored tanh drive (unity-ish at the 0.35 program anchor,
+effects.js). Two new vitest cases pin linear-below-knee and bounded-flood behavior.
+
+Measured in-app (user's patch: saw, filter 950/2.1, distortion 0.18, delay+reverb on):
+10-key mash now +14 dB over single note (was +3.5 dB); harshness ratio hf/rms 0.26 →
+0.054; zero output clipping. Single notes ~2 dB quieter (the hidden distortion makeup
+gain is gone — volume knob territory, not a regression).
+
+**G4 re-blessed** (deliberate): chords/floods no longer tanh-compressed — chord peaks
+rise ~0.8 dB, spectral deltas are removed intermod products. Aliasing unchanged (±0.15
+dB), so B7's "master tanh re-aliases" clause is moot; B7 target stands. Heap drift -1 KB.
+G1 339/339 (+2). G3 8.5x vs 5.7x baseline (knee skips `exp` below threshold; some delta
+may be machine load — gate is "no regression," satisfied either way).
+
+`ITERATION 1: gain-staging hotfix — G1..G5 pass (G4 re-blessed) — backlog: 14 items`

@@ -4,6 +4,7 @@ const MIN_GAIN = 0.0001;
 const MAX_MOD_ROUTES = 8;
 const FILTER_MAX_CUTOFF_RATIO = 0.35;
 const VOICE_SAMPLE_LIMIT = 8.0;
+const CLIP_KNEE = 0.5;
 
 const WAVEFORMS = Object.freeze({
   SINE: 0,
@@ -967,7 +968,18 @@ class SynthProcessor extends AudioWorkletProcessor {
         }
       }
       sample *= mixGain;
-      sample = Number.isFinite(sample) ? Math.tanh(sample) : 0.0;
+      // Safety clip only: unity gain below the knee so polyphonic sums stay
+      // clean (the old always-on tanh ground held chords into intermodulation
+      // mush); C1-continuous exponential knee, asymptote +/-1.
+      if (!Number.isFinite(sample)) {
+        sample = 0.0;
+      } else {
+        const mag = Math.abs(sample);
+        if (mag > CLIP_KNEE) {
+          const clipped = 1.0 - (1.0 - CLIP_KNEE) * Math.exp(-(mag - CLIP_KNEE) / (1.0 - CLIP_KNEE));
+          sample = sample < 0 ? -clipped : clipped;
+        }
+      }
       left[i] = sample;
       if (right) {
         right[i] = sample;
