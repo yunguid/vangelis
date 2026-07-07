@@ -1,4 +1,19 @@
 // Exponential-approach ADSR envelope (per-stage one-pole coefficients).
+//
+// Time semantics — deliberate, and NOT the same as the knob label:
+// each stage approaches its target as an RC curve with τ = knobTime / 4
+// (timeConstant below). Stage completion therefore lags the knob:
+//   - attack ends at 0.999 of target  → ln(1000)·τ ≈ 1.73 × knobTime
+//   - release ends at MIN_GAIN (1e-4) → ln(S/1e-4)·τ ≈ 2.2 × knobTime
+//     from a sustain level S ≈ 0.76
+// Calibrating the knob to literal seconds was considered and rejected in
+// descent(16): every factory preset was voiced against these curves, so a
+// "fix" would re-time the whole bank for a labeling nicety. The RC shape is
+// also why note onsets are click-free without extra ramping.
+//
+// Steal/retrigger: a stolen voice fades ~5 ms (Voice.stealFadeGain), then the
+// envelope restarts from 0.001 — it does not resume from the previous level.
+// The fade masks the restart; see Voice.queueStart.
 
 import { ENV_STAGE, MIN_GAIN, clamp } from './constants.js';
 

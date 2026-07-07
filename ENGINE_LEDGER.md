@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B12 | Envelope semantics: exponential-approach coeffs mean the attack knob isn't attack time; steal-restart fades to 0 then restarts from 0.001 (no retrigger-from-level). Document/calibrate. | L/M | G4 re-bless if changed |
 | B13 | Stale comments ("at 44100 Hz" for values computed from real sampleRate); CLAUDE.md says recording uses ScriptProcessorNode but recorder-worklet.js exists. Cleanup batch. | L/L | G1 |
 
 Out of domain (noted, not engine work): none yet.
@@ -325,3 +324,14 @@ synth-designer-loop work, not engine work.
 G4 225/225 bit-exact (default 0). G1 365/365 + smoke. G3 6.1x. G2 pass.
 
 `ITERATION 15: B14 legato glide — G1..G5 pass (G4 bit-exact) — backlog: 2 items`
+
+### Iteration 16 — B12: envelope semantics documented, calibration rejected — 2026-07-07
+Decision with math: the RC-approach envelope runs τ = knob/4, so attack completes at
+≈1.73× the knob time (0.999 threshold) and release at ≈2.2× (to MIN_GAIN from S≈0.76).
+Calibrating the knob to literal seconds would re-time the attack/release of all 45
+factory presets — the bank was voiced against these curves, so the "fix" would be a
+regression in everything that matters. Documented precisely in `dsp/envelope.js`
+(including the steal-restart-from-0.001 behavior and why the RC shape is click-free)
+instead of changed. G4 225/225 bit-exact, G1 365/365, G3 6.1x, G2 pass.
+
+`ITERATION 16: B12 envelope semantics documented — G1..G5 pass (bit-exact) — backlog: 1 item`
