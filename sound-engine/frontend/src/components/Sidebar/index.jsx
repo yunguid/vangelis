@@ -135,9 +135,9 @@ const Sidebar = ({
       ? 'Sample library'
       : 'Sound controls';
   const panelSubtitle = activeTab === 'midi'
-    ? (currentMidi?.name || 'Pick a file, then play')
+    ? currentMidi?.name
     : activeTab === 'samples'
-      ? (activeSampleId ? 'Sample ready' : 'Pick or import a sample')
+      ? (activeSampleId ? 'Sample ready' : null)
       : (activePresetName || waveformType);
 
   return (
@@ -173,7 +173,7 @@ const Sidebar = ({
         <div className="sidebar-panel__header">
           <div className="sidebar-panel__heading-group">
             <h2 className="sidebar-panel__title">{panelTitle}</h2>
-            <p className="sidebar-panel__subtitle">{panelSubtitle}</p>
+            {panelSubtitle && <p className="sidebar-panel__subtitle">{panelSubtitle}</p>}
           </div>
           <button
             type="button"

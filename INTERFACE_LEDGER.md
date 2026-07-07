@@ -142,3 +142,23 @@ snapshot shows all codes rendering, G5 census 225 (names are not a tell category
 increase, justified hold).
 
 `ITERATION 2: P5 renames — census 225 — backlog: 6 items`
+
+### Iteration 3 — P4a: sidebar paint purge — 2026-07-07
+Sidebar.css de-AI'd wholesale: 14 gradients flattened to three-tier solid surfaces,
+8 glow shadows deleted, 18 radii brought to spec (4px controls / 2px containers / 0
+accent bars), the ●-dot subtitle pills removed (instructional filler subtitles deleted
+outright; state subtitles kept as plain muted text), the rail pulse de-animated to a
+static informational dot, the skeleton shimmer flattened to an opacity pulse. Net −44
+lines. The sidebar now reads as a tool: flat near-black rail/panel, hairline borders,
+flat accent active states.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. All five judgment
+calls approved (static playing-dot kept as information; loading pulse kept; filter
+buttons as controls; filler subtitles deleted vs state kept). Census 225 → **187**
+(gradients −14, glows −5, pills −18, dots −1); Sidebar.css itself now has zero
+gradients/glows/pill tokens. Remaining pills visible in the Sound tab (preset shelf,
+waveform buttons, Reset sound) live in components.css/controls.css — P4b's scope, not
+this diff's residue. Orchestrator verified: G1 379/379, G2 clean, G3 225/225 bit-exact,
+G4 screenshots (Sound + MIDI tabs) match the §2 language, G5 187.
+
+`ITERATION 3: P4a sidebar paint — census 187 — backlog: 6 items (P4 continues: P4b app chrome, P4c pop-out pages)`
