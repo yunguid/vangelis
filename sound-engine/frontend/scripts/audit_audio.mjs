@@ -297,7 +297,8 @@ function renderPhrase(preset, phraseName) {
   const { lenSec, events } = buildPhrase(phraseName);
 
   const totalBlocks = Math.ceil((lenSec * SR) / BLOCK);
-  const out = new Float32Array(totalBlocks * BLOCK);
+  const outL = new Float32Array(totalBlocks * BLOCK);
+  const outR = new Float32Array(totalBlocks * BLOCK);
   const left = new Float32Array(BLOCK);
   const right = new Float32Array(BLOCK);
   const outputs = [[left, right]];
@@ -311,9 +312,10 @@ function renderPhrase(preset, phraseName) {
       evIdx++;
     }
     proc.process([], outputs);
-    out.set(left, b * BLOCK);
+    outL.set(left, b * BLOCK);
+    outR.set(right, b * BLOCK);
   }
-  return out;
+  return { outL, outR };
 }
 
 function measure(buf) {
@@ -669,8 +671,8 @@ const failures = [];
     })
     .slice(0, 5);
   for (const p of rngPresets) {
-    const h1 = hashSamples(renderPhrase(p, 'single'));
-    const h2 = hashSamples(renderPhrase(p, 'single'));
+    const h1 = hashSamples(renderPhrase(p, 'single').outL);
+    const h2 = hashSamples(renderPhrase(p, 'single').outL);
     if (h1 !== h2) {
       failures.push(`DETERMINISM: ${p.id} rendered differently twice (${h1} vs ${h2}) — apparatus invalid`);
     }
@@ -684,16 +686,27 @@ let blessed = 0;
 let compared = 0;
 let bitExact = 0;
 
+// Schema v2: both channels captured per phrase (correlation + per-channel
+// metrics/fingerprints) — the stereo groundwork for the B10 voice
+// architecture. While the engine remains mono, L must hash-equal R; that
+// assertion is removed deliberately when the engine goes stereo.
 for (const preset of presets) {
-  const record = { id: preset.id, name: preset.name, sr: SR, phrases: {} };
-  const fps = {};
+  const record = { id: preset.id, name: preset.name, sr: SR, schema: 2, phrases: {} };
   for (const phrase of PHRASES) {
-    const buf = renderPhrase(preset, phrase);
-    const m = measure(buf);
-    if (!m.finite) failures.push(`${preset.id}/${phrase}: non-finite output`);
-    const fp = fingerprint(buf);
-    fps[phrase] = fp;
-    record.phrases[phrase] = { hash: hashSamples(buf), ...m, bands: fp };
+    const { outL, outR } = renderPhrase(preset, phrase);
+    const mL = measure(outL);
+    const mR = measure(outR);
+    if (!mL.finite || !mR.finite) failures.push(`${preset.id}/${phrase}: non-finite output`);
+    const hashL = hashSamples(outL);
+    const hashR = hashSamples(outR);
+    if (hashL !== hashR) {
+      failures.push(`${preset.id}/${phrase}: L!=R while engine is mono (apparatus or engine drift)`);
+    }
+    record.phrases[phrase] = {
+      correlation: Number(stereoCorrelation(outL, outR).toFixed(4)),
+      left: { hash: hashL, ...mL, bands: fingerprint(outL) },
+      right: { hash: hashR, ...mR, bands: fingerprint(outR) }
+    };
   }
 
   const goldenPath = join(GOLDEN_DIR, `${preset.id}.json`);
@@ -706,9 +719,24 @@ for (const preset of presets) {
     const golden = JSON.parse(readFileSync(goldenPath, 'utf8'));
     for (const phrase of PHRASES) {
       const fresh = record.phrases[phrase];
-      const probs = comparePhrase(preset.id, phrase, fresh, fps[phrase], golden);
-      failures.push(...probs);
-      if (probs.length === 0 && fresh.hash === golden.phrases[phrase]?.hash) bitExact++;
+      const g = golden.phrases[phrase];
+      if (!g || g.left === undefined) {
+        failures.push(`${preset.id}/${phrase}: golden predates stereo schema (run --bless)`);
+        compared++;
+        continue;
+      }
+      let clean = true;
+      for (const ch of ['left', 'right']) {
+        const probs = comparePhrase(preset.id, `${phrase}.${ch[0].toUpperCase()}`, fresh[ch], fresh[ch].bands,
+          { phrases: { [`${phrase}.${ch[0].toUpperCase()}`]: g[ch] } });
+        failures.push(...probs);
+        if (probs.length > 0) clean = false;
+      }
+      if (Math.abs(fresh.correlation - g.correlation) > 0.02) {
+        failures.push(`${preset.id}/${phrase}: stereo correlation ${g.correlation} -> ${fresh.correlation}`);
+        clean = false;
+      }
+      if (clean && fresh.left.hash === g.left.hash && fresh.right.hash === g.right.hash) bitExact++;
       compared++;
     }
   }

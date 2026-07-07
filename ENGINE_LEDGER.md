@@ -50,7 +50,7 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B10 | Engine is mono (identical L/R); no stereo unison spread; `width` doesn't exist. True stereo voice architecture. Extend apparatus to capture both channels first. | H/H | apparatus + G4 re-bless |
+| B10b | Engine stereo: unison sub-voices panned across the field (equal-power), per-channel master chain (2× DC blocker + clip); apparatus prerequisite DONE (schema v2 captures both channels + correlation; remove the L==R mono assertion deliberately in this change). Non-unison voices stay center (L==R). | H/M | G4 re-bless (correlation drops for unison presets), G3 ≥5.7x |
 | B12 | Envelope semantics: exponential-approach coeffs mean the attack knob isn't attack time; steal-restart fades to 0 then restarts from 0.001 (no retrigger-from-level). Document/calibrate. | L/M | G4 re-bless if changed |
 | B13 | Stale comments ("at 44100 Hz" for values computed from real sampleRate); CLAUDE.md says recording uses ScriptProcessorNode but recorder-worklet.js exists. Cleanup batch. | L/L | G1 |
 | B14 | Glide always starts from `lastFrequency` even for staccato retriggers; add legato-only glide mode. | M/M | G4 unaffected at defaults |
@@ -281,3 +281,15 @@ decay-at-max-settings and audible-repeats-at-moderate-settings (G1 363/363). In-
 echoes decay to 1.7e-5 by 4.5 s on the live session patch. G3 6.6x, G2 pass.
 
 `ITERATION 12: B15 delay loop bounded — G1..G5 pass (G4 fx re-blessed) — backlog: 4 items`
+
+### Iteration 13 — B10a: synth goldens go stereo (schema v2) — 2026-07-07
+Split B10 deliberately: apparatus first, engine second — so a future correlation change
+can't confuse apparatus bugs with engine bugs. `renderPhrase` now captures both
+channels; each phrase golden records per-channel hash/metrics/fingerprints plus
+interchannel correlation (gated ±0.02). While the engine is mono, the audit asserts
+L hash-equals R on every render — pinned green across all 225 (the assertion gets
+removed as part of B10b, on purpose, in the same commit that makes the engine stereo).
+All 45 preset goldens re-blessed to schema v2 (bit-identical audio, new record shape).
+G1 363/363, G4 225/225 bit-exact under dual-channel comparison, G3 6.7x, G2 pass.
+
+`ITERATION 13: B10a stereo apparatus — G1..G5 pass (schema v2) — backlog: 4 items (B10 → B10b)`
