@@ -2,8 +2,14 @@ export const DEFAULT_SAMPLE_RATE = 44100;
 export const SAMPLE_VOICE_POOL = 64;
 export const MINIMUM_GAIN = 0.0001;
 
+// The synth worklet has ES imports (src/audio/dsp/*), so it must go through
+// Vite's worker bundling (?worker&url) to stay a single self-contained module
+// for AudioWorklet.addModule in production builds. The other worklets are
+// import-free and can remain plain URL assets.
+import synthWorkletUrl from '../../audio/synth-worklet.js?worker&url';
+
 export const WORKLET_PROCESSOR = 'vangelis-synth';
-export const WORKLET_URL = new URL('../../audio/synth-worklet.js', import.meta.url);
+export const WORKLET_URL = synthWorkletUrl;
 export const DELAY_WORKLET_PROCESSOR = 'vangelis-delay';
 export const DELAY_WORKLET_URL = new URL('../../audio/delay-worklet.js', import.meta.url);
 export const REVERB_WORKLET_PROCESSOR = 'vangelis-reverb';

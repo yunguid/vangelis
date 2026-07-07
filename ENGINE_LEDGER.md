@@ -50,7 +50,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B1 | Decompose `src/audio/synth-worklet.js` (977 lines) into pure-DSP ES modules (envelope, LFO, SVF, oscillator, mod-route compiler, voice) with direct vitest tests; worklet becomes a thin shell. Risk: Vite worklet-module bundling — G2 must confirm `addModule` still loads. | H/H | G1-G5, expect G4 bit-exact |
 | B2 | Single source of truth for defaults: `DEFAULT_PARAMS` (worklet) disagrees with `AUDIO_PARAM_DEFAULTS` (audioParams.js) — attack 0.01 vs 0.012, decay 0.1 vs 0.18, sustain 0.8 vs 0.76, release 0.3 vs 0.42. Derive one from the other (post-B1). | H/M | G1-G4 bit-exact (app always sends full params) |
 | B3 | Dedup mod-matrix enums + MAX_MOD_ROUTES, triplicated across synth-worklet.js, audioParams.js, presetStorage.js. | M/L | G1, G2 |
 | B4 | Table-drive `sanitizeAudioParams` from `AUDIO_PARAM_RANGES` (~130 lines of hand-written clamps; per-param drift risk). | M/M | G1, G4 bit-exact |
@@ -103,3 +102,22 @@ G1 339/339 (+2). G3 8.5x vs 5.7x baseline (knee skips `exp` below threshold; som
 may be machine load — gate is "no regression," satisfied either way).
 
 `ITERATION 1: gain-staging hotfix — G1..G5 pass (G4 re-blessed) — backlog: 14 items`
+
+### Iteration 2 — B1: worklet decomposition — 2026-07-07
+`synth-worklet.js` (977 lines) decomposed into pure-DSP ES modules under
+`src/audio/dsp/` — constants, oscillator (polyBLEP/BLAMP), envelope, lfo, svf,
+mod-routes, voice — each directly importable by vitest and Node; the worklet is now a
+~210-line shell (message protocol, voice pool/steal, master clip). Code moved verbatim:
+**G4 225/225 bit-exact**, proving zero behavior change.
+
+The Vite bundling risk resolved via `?worker&url` import in
+`utils/audioEngine/constants.js`: the worklet builds as a self-contained worker chunk
+(13.3 kB, registerProcessor present, zero residual imports — verified in dist) and the
+dev server addModule + audible output confirmed in-browser (peak 0.19, no console
+errors). Delay/reverb/recorder worklets are import-free and keep the plain URL path.
+
+17 new DSP unit tests (envelope stages, LFO shapes + seeded S&H, SVF stability/clamps,
+BLEP residual continuity, route compiler validation/legacy mapping). G1 356/356.
+G3 7.4x (baseline 5.7x). G5 unchanged. B2/B3 now unblocked.
+
+`ITERATION 2: B1 worklet decomposition — G1..G5 pass (G4 bit-exact) — backlog: 13 items`
