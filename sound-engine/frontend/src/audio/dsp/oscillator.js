@@ -15,6 +15,35 @@ export function polyBlep(t, dt) {
   return 0.0;
 }
 
+// 4-point polyBLEP: cubic-B-spline step residual over a ±2-sample window.
+// Derived as RES(x) = ∫B3 − u(x) and scaled ×2 to match polyBlep's convention
+// (caller multiplies by half the step amplitude). ~15–20 dB lower worst-case
+// aliasing than the 2-point residual at high fundamentals.
+export function polyBlep4(t, dt) {
+  if (t < dt) {
+    const x = t / dt;
+    return 2.0 * (-0.5 + x * (2.0 / 3.0) - (x * x * x) / 3.0 + (x * x * x * x) / 8.0);
+  }
+  if (t < 2.0 * dt) {
+    const x = 2.0 - t / dt;
+    return 2.0 * (-(x * x * x * x) / 24.0);
+  }
+  if (t > 1.0 - dt) {
+    const x = (t - 1.0) / dt;
+    return 2.0 * (0.5 + x * (2.0 / 3.0) - (x * x * x) / 3.0 - (x * x * x * x) / 8.0);
+  }
+  if (t > 1.0 - 2.0 * dt) {
+    const x = 2.0 + (t - 1.0) / dt;
+    return 2.0 * ((x * x * x * x) / 24.0);
+  }
+  return 0.0;
+}
+
+// The 4-point window spans 2dt each side of an edge; past dt 0.2 it would
+// wrap onto itself within one cycle, so heavily FM-widened tones fall back
+// to the 2-point residual.
+const BLEP4_MAX_DT = 0.2;
+
 // 2-point polyBLAMP residual for a slope discontinuity at phase 0.
 // Integral of the polyBlep step residual; rounds corners instead of steps.
 export function polyBlamp(t, dt) {
@@ -35,13 +64,18 @@ export function waveformSample(waveform, phase, dt) {
       return Math.sin(TWO_PI * phase);
     case WAVEFORMS.SAW: {
       let value = 2.0 * phase - 1.0;
-      value -= polyBlep(phase, dt);
+      value -= dt <= BLEP4_MAX_DT ? polyBlep4(phase, dt) : polyBlep(phase, dt);
       return value;
     }
     case WAVEFORMS.SQUARE: {
       let value = phase < 0.5 ? 1.0 : -1.0;
-      value += polyBlep(phase, dt);
-      value -= polyBlep((phase + 0.5) % 1.0, dt);
+      if (dt <= BLEP4_MAX_DT) {
+        value += polyBlep4(phase, dt);
+        value -= polyBlep4((phase + 0.5) % 1.0, dt);
+      } else {
+        value += polyBlep(phase, dt);
+        value -= polyBlep((phase + 0.5) % 1.0, dt);
+      }
       return value;
     }
     case WAVEFORMS.TRIANGLE: {

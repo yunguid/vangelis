@@ -50,7 +50,7 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 
 | id | item | value/effort | gates |
 |----|------|--------------|-------|
-| B7 | Alias suppression: -22 dB worst alias (saw/square) at ~5 kHz through full engine; polyBLEP is first-order and master `tanh` re-aliases. Target ≤ -40 dB (higher-order residuals, oversampled nonlinearity, or restructured drive). | H/H | G5 improves, G4 re-bless, G3 no regression |
+| B7b | Alias suppression, remainder: (a) triangle still 2-point BLAMP — worst *audible* alias in the bank at -35.3 dB @ 13 kHz; derive 4-point polyBLAMP (integral of the B-spline BLEP residual). (b) Ultrasonic folds (k·f0 just above Nyquist → 20-24 kHz) at -30.5 dB — only reachable via 2× oversampled oscillators or a steep Nyquist-guard on the voice sum; weigh cost vs inaudibility. | M/M | G5 improves, G4 re-bless, G3 no regression |
 | B8 | Filter smoothing computes `Math.tan` per sample per voice; hoist coefficients to block rate / on-change. Expect G3 gain from 5.7x. | M/M | G3 improves, G4 within spectral tolerance |
 | B9 | `setParams` reallocates compiled mod routes for all 24 voices on every param change (UI drags churn 24 × 3 typed arrays). Compile once at processor level or diff. | M/M | G5 heap, G4 bit-exact |
 | B10 | Engine is mono (identical L/R); no stereo unison spread; `width` doesn't exist. True stereo voice architecture. Extend apparatus to capture both channels first. | H/H | apparatus + G4 re-bless |
@@ -178,3 +178,22 @@ declared" errors observed during concurrent editing — verified stale: single d
 in tree, build/tests/boot all clean after reload.)
 
 `ITERATION 6: B6 DC blocker — G1..G5 pass (G4 re-blessed) — backlog: 8 items`
+
+### Iteration 7 — B7: 4-point polyBLEP for saw/square — 2026-07-07
+Derived the cubic-B-spline BLEP residual (RES(x) = ∫B3 − u over a ±2-sample window) and
+shipped it as `polyBlep4` in `dsp/oscillator.js`; saw/square use it whenever dt ≤ 0.2
+(the window self-overlaps past that — heavily FM-widened tones fall back to 2-point).
+Unit test pins branch continuity, window support, and the −2 step convention.
+
+**Metric deltas (f0 ≈ 5 kHz through full engine):** saw/square worst alias −22.25 →
+−30.52 dB; worst *audible* (< 20 kHz) alias: saw −41.1 dB, square −55.0 dB — the ≤ −40
+target is met in the audible band. The remaining over-target bin is the k=5 partial
+folding to 23 kHz (ultrasonic). Audit now records `worstAudibleAliasDb` alongside
+`worstAliasDb` and gates on both. Triangle untouched (−35.3 dB at 13 kHz — now the worst
+audible offender; re-scoped with the ultrasonic remainder as B7b).
+
+G4 re-blessed (saw/square band-limiting legitimately changed; sine/triangle presets
+unaffected). G1 360/360 + smoke. G3 7.1x (wider correction window costs ~8%; baseline
+5.7x untouched). G2 pass. Heap −24 KB.
+
+`ITERATION 7: B7 saw/square BLEP4 — G1..G5 pass (G4 re-blessed) — backlog: 8 items (B7 re-scoped to B7b)`

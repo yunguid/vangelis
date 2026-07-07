@@ -380,20 +380,29 @@ function measureAliasing(label, waveform, extraParams) {
 
   const fund = goertzelMag(buf, ALIAS_M, ALIAS_N);
   const half = ALIAS_N / 2;
+  const audibleBin = Math.floor((20000 / SR) * ALIAS_N);
   const seen = new Set();
   let worst = -Infinity;
+  let worstAudible = -Infinity;
   for (let k = 2; k <= 80; k++) {
     const raw = k * ALIAS_M;
     let m = raw % ALIAS_N;
     if (m > half) m = ALIAS_N - m;
     // Skip true harmonics (all signal components live at multiples of M,
-    // including tanh distortion products) and near-DC bins.
+    // including distortion products) and near-DC bins.
     if (m % ALIAS_M === 0 || m <= 3 || seen.has(m)) continue;
     seen.add(m);
     const rel = 20 * Math.log10(goertzelMag(buf, m, ALIAS_N) / Math.max(fund, 1e-12));
     if (rel > worst) worst = rel;
+    // Folds landing above 20 kHz are inaudible but still tracked via `worst`.
+    if (m <= audibleBin && rel > worstAudible) worstAudible = rel;
   }
-  return { label, f0: Number(f0.toFixed(1)), worstAliasDb: Number(worst.toFixed(2)) };
+  return {
+    label,
+    f0: Number(f0.toFixed(1)),
+    worstAliasDb: Number(worst.toFixed(2)),
+    worstAudibleAliasDb: Number(worstAudible.toFixed(2))
+  };
 }
 
 const ALIAS_CASES = [
@@ -562,15 +571,21 @@ if (BLESS) {
     const g = goldenAlias.find((x) => x.label === fresh.label);
     if (!g) {
       failures.push(`alias/${fresh.label}: missing from golden`);
-    } else if (fresh.worstAliasDb > g.worstAliasDb + ALIAS_HEADROOM_DB) {
-      failures.push(`alias/${fresh.label}: worst alias ${g.worstAliasDb} -> ${fresh.worstAliasDb} dB`);
+    } else {
+      if (fresh.worstAliasDb > g.worstAliasDb + ALIAS_HEADROOM_DB) {
+        failures.push(`alias/${fresh.label}: worst alias ${g.worstAliasDb} -> ${fresh.worstAliasDb} dB`);
+      }
+      if (g.worstAudibleAliasDb !== undefined
+        && fresh.worstAudibleAliasDb > g.worstAudibleAliasDb + ALIAS_HEADROOM_DB) {
+        failures.push(`alias/${fresh.label}: worst audible alias ${g.worstAudibleAliasDb} -> ${fresh.worstAudibleAliasDb} dB`);
+      }
     }
   }
 } else {
   failures.push('alias: no golden reference (run --bless to create)');
 }
 for (const a of aliasResults) {
-  console.log(`alias ${a.label.padEnd(9)} f0=${a.f0}Hz worst=${a.worstAliasDb}dB`);
+  console.log(`alias ${a.label.padEnd(9)} f0=${a.f0}Hz worst=${a.worstAliasDb}dB audible=${a.worstAudibleAliasDb}dB`);
 }
 
 // 4. Heap drift

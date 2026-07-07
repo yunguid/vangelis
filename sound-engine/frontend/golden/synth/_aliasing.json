@@ -2,21 +2,25 @@
   {
     "label": "saw",
     "f0": 4998,
-    "worstAliasDb": -22.25
+    "worstAliasDb": -30.52,
+    "worstAudibleAliasDb": -41.11
   },
   {
     "label": "square",
     "f0": 4998,
-    "worstAliasDb": -22.25
+    "worstAliasDb": -30.52,
+    "worstAudibleAliasDb": -54.95
   },
   {
     "label": "triangle",
     "f0": 4998,
-    "worstAliasDb": -35.28
+    "worstAliasDb": -35.28,
+    "worstAudibleAliasDb": -35.28
   },
   {
     "label": "fm-sine",
     "f0": 4998,
-    "worstAliasDb": -29.74
+    "worstAliasDb": -29.74,
+    "worstAudibleAliasDb": -51.34
   }
 ]

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_PARAMS, ENV_STAGE, LFO_SHAPES, MOD_SRC, MOD_DST, WAVEFORMS } from './constants.js';
 import { WORKLET_PARAM_DEFAULTS } from '../../utils/audioParams.js';
-import { polyBlep, polyBlamp, waveformSample, normalizeWaveform } from './oscillator.js';
+import { polyBlep, polyBlep4, polyBlamp, waveformSample, normalizeWaveform } from './oscillator.js';
 import { Envelope } from './envelope.js';
 import { LFO } from './lfo.js';
 import { StateVariableFilter } from './svf.js';
@@ -35,6 +35,21 @@ describe('oscillator', () => {
     expect(polyBlep(dt * 1.001, dt)).toBeCloseTo(0, 5);
     // Residual jumps by -2 across phase 0 to cancel the naive saw's +2 step
     expect(polyBlep(1e-9, dt) - polyBlep(1 - 1e-9, dt)).toBeCloseTo(-2, 3);
+  });
+
+  it('polyBlep4 residual is continuous, windowed to ±2dt, and step-matched', () => {
+    const dt = 0.01;
+    const eps = 1e-9;
+    // Continuous across the x=1 branch boundary on both sides of the edge
+    expect(polyBlep4(dt - eps, dt)).toBeCloseTo(polyBlep4(dt + eps, dt), 6);
+    expect(polyBlep4(1 - dt - eps, dt)).toBeCloseTo(polyBlep4(1 - dt + eps, dt), 6);
+    // Fades to zero at the ±2dt window edge, zero outside it
+    expect(polyBlep4(2 * dt - eps, dt)).toBeCloseTo(0, 6);
+    expect(polyBlep4(1 - 2 * dt + eps, dt)).toBeCloseTo(0, 6);
+    expect(polyBlep4(0.5, dt)).toBe(0);
+    // Residual jumps by -2 across the wrap: same convention as polyBlep,
+    // cancelling the naive saw's +2 step
+    expect(polyBlep4(eps, dt) - polyBlep4(1 - eps, dt)).toBeCloseTo(-2, 3);
   });
 
   it('polyBLAMP residual is zero away from corners', () => {
