@@ -289,6 +289,44 @@ describe('engine artifact regressions', () => {
     expect(stats.maxAbs).toBeGreaterThan(0.5); // knee engaged, not silenced
   });
 
+  it('legato-only glide: staccato retriggers start on pitch, overlaps slide', () => {
+    const countZC = (proc, blocks) => {
+      const left = new Float32Array(BLOCK);
+      const outputs = [[left, left]];
+      let zc = 0;
+      let prev = 0;
+      for (let b = 0; b < blocks; b++) {
+        proc.process([], outputs);
+        for (let i = 0; i < BLOCK; i++) {
+          if (prev < 0 && left[i] >= 0) zc++;
+          prev = left[i];
+        }
+      }
+      return zc;
+    };
+    const params = { glideTime: 0.5, glideMode: 1, useFilter: false, useFM: false };
+
+    // Staccato: release the low note fully, then play the high note — it must
+    // start at its own pitch (no glide), so early zero-crossings run fast.
+    const stac = makeProcessor(params);
+    noteOn(stac, 'a', 45, 'Sine', 1); // 110 Hz
+    renderSeconds(stac, 0.3);
+    noteOff(stac, 'a');
+    renderSeconds(stac, 2.0); // release fully idle
+    noteOn(stac, 'b', 69, 'Sine', 1); // 440 Hz
+    const zcStac = countZC(stac, 8); // ~21ms window: 440Hz ≈ 9 crossings
+    expect(zcStac).toBeGreaterThanOrEqual(7);
+
+    // Legato: hold the low note and overlap the high one — glide engages,
+    // early pitch stays near 110 Hz (≈ 2 crossings in the same window).
+    const lega = makeProcessor(params);
+    noteOn(lega, 'a', 45, 'Sine', 1);
+    renderSeconds(lega, 0.3);
+    noteOn(lega, 'b', 69, 'Sine', 1); // 'a' still held
+    const zcLega = countZC(lega, 8);
+    expect(zcLega).toBeLessThan(5);
+  });
+
   it('unison spread decorrelates channels; single voices stay exactly centered', () => {
     const renderStereo = (params, waveform) => {
       const proc = makeProcessor(params);

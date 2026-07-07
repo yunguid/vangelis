@@ -210,6 +210,7 @@ export const AUDIO_PARAM_DEFAULTS = {
   modRoutes: [], // fresh array — never share the engine default's reference
   // Playability
   glideTime: ENGINE_DEFAULTS.glideTime,
+  glideMode: ENGINE_DEFAULTS.glideMode,
   velocityCurve: ENGINE_DEFAULTS.velocityCurve
 };
 
@@ -299,6 +300,7 @@ export const AUDIO_PARAM_RANGES = {
   modSustain: { min: 0, max: 1, step: 0.01 },
   modRelease: { min: MICRO_FADE_TIME, max: 5, step: 0.01 },
   glideTime: { min: 0, max: 2, step: 0.01 },
+  glideMode: { min: 0, max: 1, step: 1 },
   velocityCurve: { min: -1, max: 1, step: 0.05 }
 };
 
@@ -399,7 +401,7 @@ export const getDelaySeconds = (params = {}, transportBpm = DEFAULT_TRANSPORT_TE
 };
 
 // Params that are integer-valued in the engine (floored before clamping).
-const INTEGER_PARAMS = new Set(['filterMode', 'lfoTarget', 'unisonVoices', 'lfo1Shape', 'lfo2Shape']);
+const INTEGER_PARAMS = new Set(['filterMode', 'lfoTarget', 'unisonVoices', 'lfo1Shape', 'lfo2Shape', 'glideMode']);
 
 export const sanitizeAudioParams = (params = {}) => {
   const merged = { ...AUDIO_PARAM_DEFAULTS, ...params };
@@ -493,6 +495,7 @@ export const toWorkletParams = (params) => ({
   modRelease: params.modRelease,
   modRoutes: params.modRoutes,
   glideTime: params.glideTime,
+  glideMode: params.glideMode,
   velocityCurve: params.velocityCurve
 });
 

@@ -90,6 +90,20 @@ class SynthProcessor extends AudioWorkletProcessor {
       targetVoice = this.stealVoice();
     }
     if (!targetVoice) return;
+    // Legato-only glide (glideMode 1): slide from the previous pitch only
+    // while another note is still held — staccato retriggers start on pitch.
+    let glideFrom = this.lastFrequency;
+    if (this.params.glideMode === 1) {
+      let held = false;
+      for (const voice of this.voices) {
+        if (voice.active && voice.noteId !== noteId
+          && voice.envelope.stage !== ENV_STAGE.RELEASE) {
+          held = true;
+          break;
+        }
+      }
+      if (!held) glideFrom = 0; // Voice.start treats 0 as "no glide source"
+    }
     // queueStart fades a still-audible voice before restarting it, so steals
     // and same-note retriggers never hard-reset a live phase (no clicks).
     targetVoice.queueStart({
@@ -99,7 +113,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       velocity,
       params: this.params,
       frame: this.frameCounter,
-      glideFrom: this.lastFrequency
+      glideFrom
     });
     this.lastFrequency = frequency;
   }

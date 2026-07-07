@@ -52,7 +52,6 @@ Ordering: structure first (B1 unlocks B2/B3), then quality. One item per iterati
 |----|------|--------------|-------|
 | B12 | Envelope semantics: exponential-approach coeffs mean the attack knob isn't attack time; steal-restart fades to 0 then restarts from 0.001 (no retrigger-from-level). Document/calibrate. | L/M | G4 re-bless if changed |
 | B13 | Stale comments ("at 44100 Hz" for values computed from real sampleRate); CLAUDE.md says recording uses ScriptProcessorNode but recorder-worklet.js exists. Cleanup batch. | L/L | G1 |
-| B14 | Glide always starts from `lastFrequency` even for staccato retriggers; add legato-only glide mode. | M/M | G4 unaffected at defaults |
 
 Out of domain (noted, not engine work): none yet.
 
@@ -310,3 +309,19 @@ channels + correlation; mono presets bit-exact). G1 364/364 + smoke. G3 6.1x (st
 filter pair costs ~9%; baseline 5.7x respected). G2 pass. In-app boot + note verified.
 
 `ITERATION 14: B10b engine stereo — G1..G5 pass (G4 re-blessed) — backlog: 3 items`
+
+### Iteration 15 — B14: legato-only glide mode — 2026-07-07
+New engine param `glideMode` (0 = always glide from the last note — the historical
+behavior and the default; 1 = legato-only: glide engages only while another non-releasing
+note is held, so staccato retriggers start on pitch). The gate lives in the processor's
+noteOn, which can see the other voices' envelope stages; `glideFrom: 0` is the existing
+"no glide source" convention in Voice.start. Param plumbed through DEFAULT_PARAMS →
+AUDIO_PARAM_DEFAULTS (derived) → ranges table (integer) → toWorkletParams; the
+defaults-agreement pin keeps all copies in lockstep. Vitest covers both directions
+(staccato starts fast at 440 Hz; overlap glides from 110 Hz). Presets/UI can adopt
+`glideMode: 1` freely; out-of-domain note: a Glide-mode toggle in AudioControls is
+synth-designer-loop work, not engine work.
+
+G4 225/225 bit-exact (default 0). G1 365/365 + smoke. G3 6.1x. G2 pass.
+
+`ITERATION 15: B14 legato glide — G1..G5 pass (G4 bit-exact) — backlog: 2 items`

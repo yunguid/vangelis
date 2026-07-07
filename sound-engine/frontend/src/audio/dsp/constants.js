@@ -85,6 +85,7 @@ export const DEFAULT_PARAMS = {
   modRoutes: [],
   // Playability
   glideTime: 0.0,
+  glideMode: 0, // 0 = always glide from the last note, 1 = legato-only
   velocityCurve: 0.0
 };
 
