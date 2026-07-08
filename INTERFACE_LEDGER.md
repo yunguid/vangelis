@@ -363,3 +363,23 @@ G3 225/225 bit-exact, G5 19 hold. **Backlog: 0 — awaiting user sign-off on the
 paradigm.**
 
 `ITERATION 11: P11 stage designer — census 19 — backlog: 0 — SIGN-OFF PENDING`
+
+## USER VETO #3 — 2026-07-08 (on the P11 stage designer, with screenshots)
+"Still looks awful." The paradigm survives ("I like kind of what you did") but the
+execution quality is vetoed. Defect list, from the user's own walkthrough:
+
+| # | Defect |
+|---|--------|
+| D1 | Designer page too narrow at fullscreen; workspace must widen |
+| D2 | Keyboard not centered on the page at fullscreen — should sit like the main page's keyboard |
+| D3 | Keyboard dock visuals "off and bizarre" — keys overlap/clip the container's corners and border |
+| D4 | Sliders look "cheap and shitty"; the Distortion thumb at 0% is half cut off (thumb clips outside the track at extremes) |
+| D5 | Toggles look bad (the bare square switch) |
+| D6 | No back navigation in the wizard thread — "next →" exists but no "← back" |
+| D7 | Mobile: the designer page needs a real mobile treatment |
+
+New loop mode, per the user: **DESIGNER POLISH LOOP** — iterate on this page in coherent
+slices (one per iteration, Sonnet implements, orchestrator adversarially reviews with
+screenshots at fullscreen desktop AND mobile widths), until the defect list is empty AND
+one further audit pass finds nothing — then present for sign-off. Same gates, same
+silence rule, same commit/push cadence (purge(k) continues).
