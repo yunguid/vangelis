@@ -25,7 +25,7 @@
 .voice-loop-controls,
 .voice-loop-stage {
   border: 1px solid rgba(168, 153, 132, 0.18);
-  border-radius: 8px;
+  border-radius: 2px;
   background: rgba(40, 40, 40, 0.92);
   box-shadow: none;
 }
@@ -92,7 +92,7 @@
 .voice-loop-field select {
   width: 100%;
   border: 1px solid rgba(168, 153, 132, 0.18);
-  border-radius: 8px;
+  border-radius: 4px;
   background: rgba(29, 32, 33, 0.96);
   color: rgba(235, 219, 178, 0.96);
   font: inherit;
@@ -155,13 +155,12 @@
 .voice-loop-status__dot {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: 50%;
   background: rgba(168, 153, 132, 0.58);
 }
 
 .voice-loop-status--working .voice-loop-status__dot {
   background: #fabd2f;
-  animation: voice-loop-status-pulse 900ms ease-in-out infinite;
 }
 
 .voice-loop-status--ready .voice-loop-status__dot {
@@ -180,7 +179,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid rgba(168, 153, 132, 0.2);
-  border-radius: 8px;
+  border-radius: 4px;
   background: rgba(60, 56, 54, 0.78);
   color: rgba(235, 219, 178, 0.94);
   font-size: 0.78rem;
@@ -214,7 +213,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid rgba(215, 153, 33, 0.24);
-  border-radius: 8px;
+  border-radius: 2px;
   background: rgba(215, 153, 33, 0.08);
   color: rgba(235, 219, 178, 0.78);
   font-size: 0.76rem;
@@ -236,7 +235,7 @@
   min-height: 210px;
   resize: vertical;
   border: 1px solid rgba(168, 153, 132, 0.18);
-  border-radius: 8px;
+  border-radius: 4px;
   background: rgba(29, 32, 33, 0.96);
   color: rgba(235, 219, 178, 0.96);
   padding: 12px;
@@ -296,7 +295,7 @@
   min-height: 50px;
   padding: 8px 10px;
   border: 1px solid rgba(168, 153, 132, 0.2);
-  border-radius: 8px;
+  border-radius: 4px;
   background: rgba(29, 32, 33, 0.72);
   color: rgba(235, 219, 178, 0.92);
   text-align: left;
@@ -460,7 +459,7 @@
 .voice-loop-chord {
   min-height: 76px;
   border: 1px solid rgba(168, 153, 132, 0.14);
-  border-radius: 8px;
+  border-radius: 2px;
   background: rgba(29, 32, 33, 0.72);
   padding: 10px;
   display: flex;
@@ -525,18 +524,6 @@
   }
   to {
     box-shadow: 0 0 0 10px rgba(250, 189, 47, 0);
-  }
-}
-
-@keyframes voice-loop-status-pulse {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: scale(0.9);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.2);
   }
 }
 

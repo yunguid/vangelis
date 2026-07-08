@@ -192,6 +192,13 @@ h4,
   border-color: rgba(168, 153, 132, 0.18) !important;
 }
 
+/* Recording state must beat the ghost-button suppression above (and the base
+   .button-icon override) — flat accent, mirrors components.css values. */
+.header-controls .button-icon.record-button.recording {
+  background: rgba(255, 122, 61, 0.3) !important;
+  border-color: rgba(255, 122, 61, 0.9) !important;
+}
+
 .waveform-button {
   background: rgba(60, 56, 54, 0.5) !important;
   border: 1px solid transparent !important;

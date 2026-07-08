@@ -185,3 +185,28 @@ the chip, not backlogged here. Orchestrator verified: G1 379/379, G2 clean + zer
 console errors, G3 225/225 bit-exact, G4 screenshot matches §2, G5 140.
 
 `ITERATION 4: P4b+P3 app chrome — census 140 — backlog: 5 items (P4c remains)`
+
+### Iteration 5 — P4c: final paint sweep — the P4 program closes — 2026-07-07
+Ten CSS files swept (layout, gruvbox, keyboard, overlays, wave-candy, responsive + the
+four pop-out pages; net −37 lines): the layout.css 999px re-pill overrides and the
+gruvbox !important suppression that had been defeating iterations 3-4 downstream are
+dead — the flat recording state now verifiably wins in production (inspected live:
+rgba(255,122,61,.3) bg, animation none). Keyboard flattened to sharp paper-and-charcoal
+(7 gradients, 11 glows, all radii to spec; pressed state = flat gold). All page CSS
+de-pilled; the last animated dot pulse (voice-loop) deleted.
+
+**Census 140 → 63. Gradients: 0 codebase-wide. Pill radii: 0. Animated pulses: 0.**
+Remainder itemized and justified: 8 "glow" hits are JS canvas/WebGL identifier names
+(paint code, P6/JSX scope), 40 chip/tag hits are identifier NAMES (P6 rename scope —
+their paint is already flat), 15 dot hits are name-matches on now-static informational
+dots. New follow-up recorded: `variables.css` radius tokens (10/12/14px) feed panels
+via var() — census-invisible but off-language; fold into P6.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds; 1 infra death
+(transient API overload before any edits; resumed with context, clean recovery). The
+gruvbox judgment call (explicit higher-specificity recording rule, !important-for-
+!important) approved — gruvbox.css IS the theme override layer, fighting there is
+correct. Orchestrator verified: G1 379/379, G2 clean, G3 225/225 bit-exact, G4
+screenshots (main view transformed; record state live-inspected), G5 63.
+
+`ITERATION 5: P4c paint complete — census 63 — backlog: 4 items (P6 +variables tokens, P7, P8, P9)`

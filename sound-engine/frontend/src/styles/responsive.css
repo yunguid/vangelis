@@ -141,7 +141,7 @@
 
   .birds-eye-radar__stage {
     min-height: clamp(210px, 30vh, 290px);
-    border-radius: 12px;
+    border-radius: 2px;
   }
 
   .keyboard-surface {
@@ -192,7 +192,7 @@
 
   .key-black {
     margin-top: 6px;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 4px 4px;
   }
 
   .keyboard-meta {
@@ -225,7 +225,7 @@
     padding: 12px;
     grid-template-columns: 1fr;
     gap: 12px;
-    border-radius: 12px;
+    border-radius: 2px;
   }
 
   .controls-panel,
@@ -236,7 +236,7 @@
   .panel {
     padding: 12px;
     gap: 12px;
-    border-radius: 12px;
+    border-radius: 2px;
   }
 
   .control-section-shell {
@@ -412,7 +412,7 @@
   }
 
   .white-keys {
-    border-radius: 12px;
+    border-radius: 2px;
   }
 
   .controls-surface {

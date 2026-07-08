@@ -123,14 +123,12 @@
 .song-study__status-dot {
   width: 10px;
   height: 10px;
-  border-radius: 999px;
+  border-radius: 50%;
   background: rgba(255, 164, 112, 0.7);
-  box-shadow: 0 0 0 6px rgba(255, 164, 112, 0.08);
 }
 
 .song-study__status-dot.is-ready {
   background: rgba(116, 210, 168, 0.92);
-  box-shadow: 0 0 0 6px rgba(116, 210, 168, 0.1);
 }
 
 .song-study__transport,
@@ -146,7 +144,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 14px 18px;
-  border-radius: 24px;
+  border-radius: 2px;
 }
 
 .song-study__transport-main,
@@ -223,14 +221,8 @@
   -webkit-appearance: none;
   appearance: none;
   height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    rgba(215, 153, 33, 0.88) 0,
-    rgba(215, 153, 33, 0.88) var(--song-study-progress, 0%),
-    rgba(255, 255, 255, 0.08) var(--song-study-progress, 0%),
-    rgba(255, 255, 255, 0.08) 100%
-  );
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
   cursor: pointer;
 }
 
@@ -239,7 +231,7 @@
   appearance: none;
   width: 16px;
   height: 16px;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 1px solid rgba(255, 171, 123, 0.52);
   background: #ebdbb2;
 }
@@ -247,7 +239,7 @@
 .song-study__scrubber::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  border-radius: 999px;
+  border-radius: 50%;
   border: 1px solid rgba(255, 171, 123, 0.52);
   background: #ebdbb2;
 }
@@ -260,7 +252,7 @@
 .song-study__progress-track {
   width: 100%;
   height: 7px;
-  border-radius: 999px;
+  border-radius: 2px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
 }
@@ -309,7 +301,7 @@
 
 .song-study__metric {
   padding: 16px 18px;
-  border-radius: 20px;
+  border-radius: 2px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -327,7 +319,7 @@
 
 .song-study__error {
   padding: 18px;
-  border-radius: 22px;
+  border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: space-between;

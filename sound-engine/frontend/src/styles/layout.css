@@ -171,7 +171,7 @@
 .header-controls .button-icon {
   width: 40px;
   height: 40px;
-  border-radius: 999px;
+  border-radius: 4px;
   font-size: 0.92rem;
   background: transparent;
   border-color: transparent;
@@ -210,7 +210,7 @@
 
 .panel.elevated {
   box-shadow: var(--shadow-floating);
-  background: linear-gradient(200deg, var(--color-surface) 0%, rgba(244, 241, 232, 0.08) 100%);
+  background: var(--color-surface-intense);
 }
 
 .app-notice {
@@ -219,7 +219,7 @@
   bottom: max(18px, env(safe-area-inset-bottom, 18px));
   z-index: 130;
   padding: 10px 14px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(16, 21, 31, 0.9);
   border: 1px solid rgba(255, 122, 61, 0.4);
   color: var(--color-text-primary);

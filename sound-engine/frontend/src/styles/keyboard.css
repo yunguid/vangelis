@@ -73,10 +73,9 @@
   height: 100%;
   min-height: clamp(120px, 20vh, 180px);
   grid-row: 1;
-  border-radius: 20px;
+  border-radius: 2px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(13, 18, 28, 0.92) 0%, rgba(8, 13, 21, 0.98) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -22px 32px rgba(0, 0, 0, 0.45);
+  background: rgba(8, 13, 21, 0.98);
   backdrop-filter: blur(8px);
   gap: 2px;
 }
@@ -90,16 +89,15 @@
   justify-content: space-between;
   padding: clamp(6px, 1.3vw, 12px);
   border: none;
-  background: linear-gradient(180deg, rgba(248, 250, 254, 0.98) 0%, rgba(227, 233, 241, 0.96) 52%, rgba(212, 221, 233, 0.95) 100%);
+  background: rgba(227, 233, 241, 0.96);
   color: var(--color-text-secondary);
-  transition: transform 100ms cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 100ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 100ms ease;
-  border-radius: 0 0 18px 18px;
+  transition: transform 100ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 100ms ease;
+  border-radius: 0 0 4px 4px;
   cursor: pointer;
   text-shadow: none;
   width: 100%;
   min-width: 0;
   min-height: 100%;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -8px 12px rgba(82, 96, 119, 0.24);
 }
 
 .key-white:last-child {
@@ -110,15 +108,13 @@
 @media (hover: hover) {
   .key-white:hover {
     transform: translateY(-2px) scaleY(1.02);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96), inset 0 -8px 12px rgba(72, 88, 112, 0.28), 0 14px 26px rgba(0, 0, 0, 0.3);
   }
 }
 
 .key-white.active,
 .key-white[data-active="true"] {
-  background: linear-gradient(180deg, rgba(255, 201, 170, 0.98) 0%, rgba(255, 176, 132, 0.98) 55%, rgba(255, 141, 100, 0.98) 100%);
+  background: rgba(255, 176, 132, 0.98);
   transform: translateY(4px) scaleY(0.985);
-  box-shadow: inset 0 1px 0 rgba(255, 236, 219, 0.85), inset 0 -8px 16px rgba(120, 56, 33, 0.32), 0 22px 34px rgba(8, 14, 22, 0.4);
 }
 
 .key-white:focus-visible {
@@ -164,17 +160,16 @@
   top: 0;
   pointer-events: auto;
   margin-top: clamp(8px, 1.5vw, 12px);
-  background: linear-gradient(180deg, rgba(48, 58, 74, 0.96) 0%, rgba(14, 21, 33, 0.99) 65%, rgba(9, 14, 22, 1) 100%);
-  border-radius: 0 0 14px 14px;
+  background: rgba(14, 21, 33, 0.99);
+  border-radius: 0 0 4px 4px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(216, 226, 242, 0.34), inset 0 -8px 14px rgba(2, 6, 12, 0.75), 0 18px 28px rgba(0, 0, 0, 0.55);
   color: rgba(248, 250, 251, 0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-xs);
-  transition: transform 100ms cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 100ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 100ms ease;
+  transition: transform 100ms cubic-bezier(0.22, 0.61, 0.36, 1), background-color 100ms ease;
   transform: translateX(-50%);
   cursor: pointer;
   min-width: clamp(24px, 4vw, 48px);
@@ -185,15 +180,13 @@
 @media (hover: hover) {
   .key-black:hover {
     transform: translateX(-50%) translateY(-2px) scale(1.02);
-    box-shadow: inset 0 1px 0 rgba(216, 226, 242, 0.42), inset 0 -8px 14px rgba(2, 6, 12, 0.75), 0 24px 34px rgba(0, 0, 0, 0.62);
   }
 }
 
 .key-black.active,
 .key-black[data-active="true"] {
-  background: linear-gradient(180deg, rgba(255, 183, 146, 0.98) 0%, rgba(255, 144, 102, 0.98) 52%, rgba(194, 95, 57, 0.98) 100%);
+  background: rgba(255, 144, 102, 0.98);
   transform: translateX(-50%) translateY(4px) scale(0.99);
-  box-shadow: inset 0 1px 0 rgba(255, 228, 209, 0.6), inset 0 -10px 18px rgba(92, 34, 18, 0.7), 0 16px 24px rgba(8, 16, 24, 0.55);
 }
 
 .key-black:focus-visible {
@@ -223,13 +216,13 @@
   opacity: 0.78;
 }
 
-/* Active Key Indicator */
+/* Active Key Indicator — static flat overlay; the key's accent background
+   carries the state, no ambient pulse. */
 .key-active-indicator {
   position: absolute;
   inset: 6px;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 100%);
-  animation: notePulse 1.2s ease-in-out infinite;
+  background: rgba(255, 255, 255, 0.12);
   pointer-events: none;
   mix-blend-mode: soft-light;
 }
@@ -246,7 +239,6 @@
   border-radius: var(--radius-small);
   background: rgba(232, 240, 245, 0.12);
   backdrop-filter: blur(10px) brightness(1.05);
-  box-shadow: 0 12px 20px rgba(16, 28, 40, 0.2);
   max-width: 100%;
 }
 
@@ -256,7 +248,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  border-radius: 18px;
+  border-radius: 2px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--color-text-secondary);
   font-size: clamp(0.85rem, 1vw, 1rem);
@@ -291,14 +283,13 @@
   align-items: center;
   gap: 12px;
   padding: 12px 18px;
-  border-radius: 999px;
+  border-radius: 2px;
   background: rgba(232, 240, 245, 0.24);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: var(--color-text-secondary);
   font-size: clamp(0.72rem, 0.9vw, 0.85rem);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  box-shadow: 0 18px 32px rgba(16, 28, 40, 0.32);
   backdrop-filter: blur(12px) brightness(1.05);
   overflow: hidden;
 }
@@ -327,17 +318,16 @@
   align-items: center;
   gap: 6px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 4px;
   background: rgba(13, 18, 28, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 22px rgba(0, 0, 0, 0.35);
 }
 
 .keyboard-touch-bar__btn {
   min-width: 48px;
   min-height: 44px;
   border: none;
-  border-radius: 999px;
+  border-radius: 4px;
   background: rgba(232, 240, 245, 0.08);
   color: var(--color-text-primary);
   font-size: 1.3rem;
@@ -371,7 +361,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: none;
-  border-radius: 999px;
+  border-radius: 4px;
   background: transparent;
   color: var(--color-text-tertiary);
   font-size: 0.78rem;
@@ -383,7 +373,6 @@
 }
 
 .keyboard-touch-bar__vel--active {
-  background: linear-gradient(180deg, rgba(255, 176, 132, 0.92) 0%, rgba(255, 141, 100, 0.92) 100%);
+  background: rgba(255, 141, 100, 0.92);
   color: rgba(20, 28, 44, 0.92);
-  box-shadow: 0 6px 16px rgba(255, 141, 100, 0.25);
 }
