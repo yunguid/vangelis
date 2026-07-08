@@ -22,7 +22,7 @@
   --color-surface: rgba(40, 40, 40, 0.92);
   --color-surface-intense: rgba(50, 48, 47, 0.96);
   --color-surface-soft: rgba(40, 40, 40, 0.84);
-  --color-chip: rgba(60, 56, 54, 0.9);
+  --color-surface-label: rgba(60, 56, 54, 0.9);
   --border-glass: 1px solid rgba(168, 153, 132, 0.22);
   --border-glass-subtle: 1px solid rgba(168, 153, 132, 0.16);
 }

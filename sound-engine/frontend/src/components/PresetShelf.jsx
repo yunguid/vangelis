@@ -73,10 +73,13 @@ const PresetShelf = ({ waveformType, audioParams, onApply, activePresetName }) =
   }, []);
 
   const renderPreset = (preset) => (
-    <li key={preset.id} className="preset-shelf__item">
+    <li
+      key={preset.id}
+      className={`preset-shelf__item ${preset.id === activeId ? 'preset-shelf__item--active' : ''}`}
+    >
       <button
         type="button"
-        className={`preset-shelf__apply ${preset.id === activeId ? 'preset-shelf__apply--active' : ''}`}
+        className="preset-shelf__apply"
         onClick={() => handleApply(preset)}
         title={preset.description || ''}
         aria-label={`Load preset ${preset.name}`}

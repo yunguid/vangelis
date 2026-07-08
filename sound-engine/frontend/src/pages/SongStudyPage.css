@@ -120,14 +120,14 @@
   white-space: nowrap;
 }
 
-.song-study__status-dot {
+.song-study__status-marker {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: rgba(255, 164, 112, 0.7);
 }
 
-.song-study__status-dot.is-ready {
+.song-study__status-marker.is-ready {
   background: rgba(116, 210, 168, 0.92);
 }
 
@@ -163,7 +163,7 @@
 }
 
 .song-study__action,
-.song-study__tempo-chip {
+.song-study__text-button {
   border: 0;
   background: transparent;
   color: var(--color-text-primary);
@@ -182,15 +182,15 @@
 }
 
 .song-study__action--primary,
-.song-study__tempo-chip.is-active {
+.song-study__text-button.is-active {
   color: var(--color-text-primary);
   border-bottom-color: rgba(215, 153, 33, 0.42);
 }
 
 .song-study__action:hover:not(:disabled),
 .song-study__action:focus-visible,
-.song-study__tempo-chip:hover,
-.song-study__tempo-chip:focus-visible {
+.song-study__text-button:hover,
+.song-study__text-button:focus-visible {
   border-bottom-color: rgba(215, 153, 33, 0.42);
   outline: none;
 }
@@ -284,7 +284,7 @@
   gap: 10px;
 }
 
-.song-study__tempo-chip {
+.song-study__text-button {
   padding: 0;
   min-width: 0;
   min-height: 24px;

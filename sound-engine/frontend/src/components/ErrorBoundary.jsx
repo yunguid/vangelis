@@ -52,7 +52,7 @@ class ErrorBoundary extends React.Component {
           <div className="error-boundary-card tier-support">
             <div className="error-boundary-header">
               <h1>Audio Engine Error</h1>
-              <span className="error-badge">Error Detected</span>
+              <span className="error-status">Error Detected</span>
             </div>
             
             <div className="error-boundary-content">

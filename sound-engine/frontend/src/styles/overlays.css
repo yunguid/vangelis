@@ -103,7 +103,7 @@
   margin: 0;
 }
 
-.error-badge {
+.error-status {
   padding: 8px 16px;
   border-radius: 2px;
   background: rgba(255, 122, 61, 0.2);

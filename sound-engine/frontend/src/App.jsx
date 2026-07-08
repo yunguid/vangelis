@@ -591,7 +591,7 @@ const App = () => {
                 />
                 {!isGraphWarm && (
                   <div className="warmup-indicator" aria-live="polite">
-                    <span className="warmup-indicator__pulse" aria-hidden="true" />
+                    <span className="warmup-indicator__marker" aria-hidden="true" />
                     <span>Audio engine warms now.</span>
                   </div>
                 )}

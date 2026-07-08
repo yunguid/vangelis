@@ -100,7 +100,7 @@
 }
 
 .pipeline-field span,
-.pipeline-chip,
+.pipeline-status,
 .pipeline-tool strong,
 .pipeline-job__metric span,
 .pipeline-form__divider span {
@@ -109,7 +109,7 @@
   text-transform: uppercase;
 }
 
-.pipeline-chip {
+.pipeline-status {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -120,12 +120,12 @@
   background: rgba(60, 56, 54, 0.72);
 }
 
-.pipeline-chip.is-ready {
+.pipeline-status.is-ready {
   background: rgba(152, 151, 26, 0.16);
   border-color: rgba(152, 151, 26, 0.28);
 }
 
-.pipeline-chip.is-warning {
+.pipeline-status.is-warning {
   background: rgba(204, 36, 29, 0.14);
   border-color: rgba(204, 36, 29, 0.24);
 }
@@ -234,18 +234,18 @@
   gap: 10px;
 }
 
-.pipeline-tool__dot {
+.pipeline-tool__indicator {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex: 0 0 auto;
 }
 
-.pipeline-tool__dot.is-ready {
+.pipeline-tool__indicator.is-ready {
   background: #98971a;
 }
 
-.pipeline-tool__dot.is-missing {
+.pipeline-tool__indicator.is-missing {
   background: #cc241d;
 }
 

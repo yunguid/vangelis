@@ -444,7 +444,7 @@ const SongStudyPage = ({ study }) => {
 
           <div className="song-study__status">
             <span
-              className={`song-study__status-dot ${engineStatus.graphWarmed ? 'is-ready' : ''}`}
+              className={`song-study__status-marker ${engineStatus.graphWarmed ? 'is-ready' : ''}`}
               aria-hidden="true"
             />
             <span>{engineStatus.graphWarmed ? 'Audio ready' : 'Warming audio'}</span>
@@ -528,7 +528,7 @@ const SongStudyPage = ({ study }) => {
               <div className="song-study__skip-group">
                 <button
                   type="button"
-                  className="song-study__tempo-chip"
+                  className="song-study__text-button"
                   onClick={() => handleSkip(-10)}
                   disabled={!transportDuration}
                 >
@@ -536,7 +536,7 @@ const SongStudyPage = ({ study }) => {
                 </button>
                 <button
                   type="button"
-                  className="song-study__tempo-chip"
+                  className="song-study__text-button"
                   onClick={() => handleSkip(10)}
                   disabled={!transportDuration}
                 >
@@ -550,7 +550,7 @@ const SongStudyPage = ({ study }) => {
                 <button
                   key={option.label}
                   type="button"
-                  className={`song-study__tempo-chip ${Math.abs(playback.tempoFactor - option.value) < 0.001 ? 'is-active' : ''}`}
+                  className={`song-study__text-button ${Math.abs(playback.tempoFactor - option.value) < 0.001 ? 'is-active' : ''}`}
                   onClick={() => playback.setTempo(option.value)}
                 >
                   {option.label}
@@ -611,7 +611,7 @@ const SongStudyPage = ({ study }) => {
 
             {!engineStatus.graphWarmed && (
               <div className="warmup-indicator" aria-live="polite">
-                <span className="warmup-indicator__pulse" aria-hidden="true" />
+                <span className="warmup-indicator__marker" aria-hidden="true" />
                 <span>Visuals are live while the audio engine warms.</span>
               </div>
             )}

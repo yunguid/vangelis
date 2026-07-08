@@ -281,3 +281,25 @@ this is a binding review verdict. New backlog item:
 | id | item | notes | rating |
 |----|------|-------|--------|
 | P10 | Rebuild the designer page as a real workstation | Diagnosis: it's the sidebar unrolled — single narrow column, accordions collapsed, no sound visualization at all, keyboard below the fold beneath a 45-button preset wall. Requirements: full-viewport multi-column layout; controls EXPANDED and grouped (envelope, filter, FX, mod) as a working surface; a live scope/spectrum (reuse WaveCandy/analyser machinery from the main page); keyboard docked, always visible; presets demoted to a compact strip/selector, not a wall. §2 language throughout. | top priority, runs immediately after P6 lands |
+
+### Iteration 9 — P6: sidebar structure + the lying names — 2026-07-07
+The Sound tab's preset browser is now a dense single-column list matching the MIDI
+tab's language (full-width hairline rows, slim uppercase category labels, 3px flat
+accent edge on the active row). Nine lying identifiers renamed with zero danglers
+(pill/chip/dot/pulse names over flat visuals); EffectMacroDial's "glow" proven to paint
+only a stroke → renamed "ring"; BirdsEyeRadar/Scene glow left alone — real canvas/GLSL
+glow, artistic content, justified residuals. variables.css radius tokens 14/12/10 →
+6/4/4. Bonus finds: ~360 lines of dead .samples-tab__* CSS removed; a self-introduced
+delete-button height bug caught and fixed pre-report.
+
+**Census 62 → 19**, every residual itemized: 4 real visualizer glow (justified), 10
+false-positives/dead-or-flat stragglers (.control-chip dead CSS, .effect-chip already
+flat, DOM tagName, canvas coords), 5 static status-dot names. **Review record:**
+implementer: Sonnet subagent, 0 rework rounds; judgment calls (sibling-container rename,
+component-name rename, scope-honest flagging instead of gold-plating) all approved.
+Orchestrator verified: G1 353/353, G2 clean, G3 225/225 bit-exact, G4 structure
+verified live, G5 19.
+
+**Backlog: P10 only (the user-veto designer rebuild). Sign-off screenshots wait for it.**
+
+`ITERATION 9: P6 sidebar structure — census 19 — backlog: 1 item (P10 veto rebuild)`

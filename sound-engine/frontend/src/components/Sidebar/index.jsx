@@ -139,7 +139,7 @@ const Sidebar = ({
           >
             {tab.icon}
             <span className="sidebar-rail__label">{tab.label}</span>
-            {tab.isActive && <span className="sidebar-rail__pulse" />}
+            {tab.isActive && <span className="sidebar-rail__indicator" />}
           </button>
         ))}
       </div>

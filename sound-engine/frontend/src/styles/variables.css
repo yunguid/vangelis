@@ -37,7 +37,7 @@
   --color-surface: rgba(16, 21, 31, 0.72);
   --color-surface-intense: rgba(16, 21, 31, 0.86);
   --color-surface-soft: rgba(16, 21, 31, 0.58);
-  --color-chip: rgba(16, 21, 31, 0.62);
+  --color-surface-label: rgba(16, 21, 31, 0.62);
 
   /* Shadows */
   --shadow-radiant: 0 8px 24px rgba(0, 0, 0, 0.6);
@@ -67,9 +67,9 @@
   --transition-hover: 100ms ease;
 
   /* Radii */
-  --radius-large: 14px;
-  --radius-medium: 12px;
-  --radius-small: 10px;
+  --radius-large: 6px;
+  --radius-medium: 4px;
+  --radius-small: 4px;
 
   /* Layout */
   --max-shell-width: min(92vw, 1080px);

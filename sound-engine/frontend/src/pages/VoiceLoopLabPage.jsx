@@ -642,18 +642,18 @@ const VoiceLoopLabPage = () => {
                 <h2 className="voice-loop-loopbook__title">Loopbook</h2>
                 <span className="voice-loop-loopbook__hint">curated melodic loops · click to load</span>
               </div>
-              <div className="voice-loop-loopbook__chips">
+              <div className="voice-loop-loopbook__items">
                 {LOOPBOOK.map((loop) => (
                   <button
                     key={loop.id}
                     type="button"
-                    className={`voice-loop-chip${activeLoopId === loop.id ? ' is-active' : ''}`}
+                    className={`voice-loop-item${activeLoopId === loop.id ? ' is-active' : ''}`}
                     onClick={() => handleLoadLoop(loop)}
                     disabled={generating || recording}
                     title={loop.notes}
                   >
-                    <span className="voice-loop-chip__title">{loop.title}</span>
-                    <span className="voice-loop-chip__key">{loop.key} · {loop.bpm}</span>
+                    <span className="voice-loop-item__title">{loop.title}</span>
+                    <span className="voice-loop-item__key">{loop.key} · {loop.bpm}</span>
                   </button>
                 ))}
               </div>

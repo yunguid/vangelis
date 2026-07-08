@@ -294,7 +294,7 @@
   overflow: hidden;
 }
 
-.warmup-indicator__pulse {
+.warmup-indicator__marker {
   width: 8px;
   height: 8px;
   border-radius: 50%;

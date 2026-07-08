@@ -528,7 +528,7 @@ const SegmentedControl = ({
   </div>
 );
 
-const InlineTogglePill = ({
+const InlineToggle = ({
   pressed,
   onToggle,
   activeLabel = 'On',
@@ -538,12 +538,12 @@ const InlineTogglePill = ({
 }) => (
   <button
     type="button"
-    className={`inline-toggle-pill${pressed ? ' is-active' : ''}${subtle ? ' inline-toggle-pill--subtle' : ''}`}
+    className={`inline-toggle${pressed ? ' is-active' : ''}${subtle ? ' inline-toggle--subtle' : ''}`}
     onClick={onToggle}
     aria-pressed={pressed}
     aria-label={srLabel || (pressed ? activeLabel : inactiveLabel)}
   >
-    <span className="inline-toggle-pill__dot" aria-hidden="true" />
+    <span className="inline-toggle__marker" aria-hidden="true" />
     <span>{pressed ? activeLabel : inactiveLabel}</span>
   </button>
 );
@@ -765,7 +765,7 @@ const AudioControls = ({
         open={activeSections.delay}
         onToggle={toggleSection}
         headerAccessory={(
-          <InlineTogglePill
+          <InlineToggle
             pressed={delayEnabled}
             onToggle={() => onParamChange('delayEnabled', !delayEnabled)}
             srLabel={delayEnabled ? 'Turn delay off' : 'Turn delay on'}
@@ -804,7 +804,7 @@ const AudioControls = ({
               displayValue={delayStatus}
               helpText="Lock repeats to the current transport tempo."
               headerAccessory={(
-                <InlineTogglePill
+                <InlineToggle
                   pressed={delaySync}
                   onToggle={() => onParamChange('delaySync', !delaySync)}
                   activeLabel="Sync"
@@ -828,7 +828,7 @@ const AudioControls = ({
               onChange={(value) => onParamChange(DELAY_TIME_SLIDER.param, DELAY_TIME_SLIDER.fromSlider(value))}
               helpText="Free-run delay time in milliseconds."
               headerAccessory={(
-                <InlineTogglePill
+                <InlineToggle
                   pressed={delaySync}
                   onToggle={() => onParamChange('delaySync', !delaySync)}
                   activeLabel="Sync"
@@ -871,7 +871,7 @@ const AudioControls = ({
         open={activeSections.reverb}
         onToggle={toggleSection}
         headerAccessory={(
-          <InlineTogglePill
+          <InlineToggle
             pressed={reverbEnabled}
             onToggle={() => onParamChange('reverbEnabled', !reverbEnabled)}
             srLabel={reverbEnabled ? 'Turn reverb off' : 'Turn reverb on'}

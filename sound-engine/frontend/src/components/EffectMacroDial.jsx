@@ -10,12 +10,12 @@ const clamp01 = (value) => Math.min(Math.max(value, 0), 1);
 
 const ACCENTS = {
   delay: {
-    glow: '246, 176, 112',
+    ring: '246, 176, 112',
     fill: '255, 216, 170',
     shadow: '255, 122, 61'
   },
   reverb: {
-    glow: '126, 214, 255',
+    ring: '126, 214, 255',
     fill: '210, 241, 255',
     shadow: '74, 166, 255'
   }
@@ -63,7 +63,7 @@ const drawDial = (ctx, size, value, accent, isActive, isDisabled, labelSeed) => 
   ctx.stroke();
 
   const pulse = isActive ? 0.18 : 0.08;
-  ctx.strokeStyle = `rgba(${accentSet.glow}, ${isDisabled ? 0.12 : 0.34 + pulse})`;
+  ctx.strokeStyle = `rgba(${accentSet.ring}, ${isDisabled ? 0.12 : 0.34 + pulse})`;
   ctx.lineWidth = 10;
   ctx.beginPath();
   ctx.arc(cx, cy, outerRadius, start, end);
@@ -98,7 +98,7 @@ const drawDial = (ctx, size, value, accent, isActive, isDisabled, labelSeed) => 
   ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.strokeStyle = `rgba(${accentSet.glow}, ${isDisabled ? 0.08 : 0.16})`;
+  ctx.strokeStyle = `rgba(${accentSet.ring}, ${isDisabled ? 0.08 : 0.16})`;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(cx, cy, innerRadius + 4, 0, Math.PI * 2);

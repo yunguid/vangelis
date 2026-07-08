@@ -311,7 +311,7 @@ const MidiPipelinePage = () => {
                     <h2>Check setup</h2>
                     <p>{runtimeSummary}</p>
                   </div>
-                  <span className={`pipeline-chip ${health?.ready ? 'is-ready' : healthError ? 'is-warning' : ''}`}>
+                  <span className={`pipeline-status ${health?.ready ? 'is-ready' : healthError ? 'is-warning' : ''}`}>
                     {runtimeLabel}
                   </span>
                 </div>
@@ -328,7 +328,7 @@ const MidiPipelinePage = () => {
                       <div className="pipeline-tool-grid">
                         {health.tools.map((tool) => (
                           <article className="pipeline-tool" key={tool.label}>
-                            <span className={`pipeline-tool__dot ${tool.ready ? 'is-ready' : 'is-missing'}`} />
+                            <span className={`pipeline-tool__indicator ${tool.ready ? 'is-ready' : 'is-missing'}`} />
                             <strong>{tool.label}</strong>
                           </article>
                         ))}
@@ -357,7 +357,7 @@ const MidiPipelinePage = () => {
                     <h2>{surfacedStudy ? 'Study saved' : job ? 'Build status' : 'Create the study'}</h2>
                     <p>{buildSummary}</p>
                   </div>
-                  <span className={`pipeline-chip ${surfacedStudy ? 'is-ready' : job?.status === 'failed' ? 'is-warning' : ''}`}>
+                  <span className={`pipeline-status ${surfacedStudy ? 'is-ready' : job?.status === 'failed' ? 'is-warning' : ''}`}>
                     {(job || surfacedStudy) && (
                       <SparkleSpinner
                         spinning={progressState.isRunning}
