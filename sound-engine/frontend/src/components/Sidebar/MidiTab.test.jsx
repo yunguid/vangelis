@@ -30,9 +30,7 @@ describe('MidiTab', () => {
         id: 'rachmaninoff-concerto2-mov1',
         name: 'Piano Concerto No. 2 - I. Moderato',
         path: '/midi/rachmaninoff-concerto2-mov1.mid',
-        composer: 'Sergei Rachmaninoff',
-        soundSetId: 'rachmaninoff-orchestral-lite',
-        layerFamilies: ['piano', 'strings']
+        composer: 'Sergei Rachmaninoff'
       }
     ]);
     parseMidiFile.mockResolvedValue({
@@ -43,7 +41,7 @@ describe('MidiTab', () => {
     });
   });
 
-  it('forwards built-in layering metadata into playback payload', async () => {
+  it('forwards built-in metadata into playback payload', async () => {
     const onPlay = vi.fn();
     render(<MidiTab {...defaultProps({ onPlay })} />);
 
@@ -57,9 +55,7 @@ describe('MidiTab', () => {
     expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Piano Concerto No. 2 - I. Moderato',
       sourceFileId: 'rachmaninoff-concerto2-mov1',
-      composer: 'Sergei Rachmaninoff',
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
+      composer: 'Sergei Rachmaninoff'
     }));
   });
 
@@ -79,8 +75,6 @@ describe('MidiTab', () => {
     expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Embedded MIDI Name'
     }));
-    expect(onPlay.mock.calls[0][0].soundSetId).toBeUndefined();
-    expect(onPlay.mock.calls[0][0].layerFamilies).toBeUndefined();
   });
 
   it('renders original cues with a clean title, no tag badge, and no composer byline', () => {

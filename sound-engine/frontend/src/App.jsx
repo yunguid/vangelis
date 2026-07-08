@@ -45,91 +45,6 @@ const isTextInputTarget = (target) => {
   return !!target?.isContentEditable;
 };
 
-const parseBaseNote = (value) => {
-  if (typeof value !== 'string') return null;
-  const match = value.trim().toUpperCase().match(/^([A-G]#?)(-?\d+)$/);
-  if (!match) return null;
-  return { noteName: match[1], octave: Number(match[2]) };
-};
-
-const buildStarterFetchCandidates = (sourceUrl) => {
-  const candidates = [];
-  const add = (value) => {
-    if (typeof value !== 'string' || value.length === 0) return;
-    if (!candidates.includes(value)) candidates.push(value);
-  };
-
-  add(sourceUrl);
-
-  if (typeof window !== 'undefined') {
-    try {
-      const resolved = new URL(sourceUrl, window.location.href);
-      add(resolved.toString());
-
-      const samplesIndex = resolved.pathname.indexOf('/samples/');
-      if (samplesIndex > -1) {
-        add(`${resolved.origin}${resolved.pathname.slice(samplesIndex)}${resolved.search}`);
-      }
-    } catch (_) {
-      // Ignore invalid URL candidates.
-    }
-  }
-
-  return candidates;
-};
-
-const fetchStarterSampleBlob = async (sourceUrl) => {
-  const candidates = buildStarterFetchCandidates(sourceUrl);
-  let lastError = null;
-
-  for (const url of candidates) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status} for ${url}`);
-        continue;
-      }
-
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('text/html')) {
-        lastError = new Error(`Unexpected HTML response for ${url}`);
-        continue;
-      }
-
-      return await response.blob();
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError || new Error('Failed to fetch starter sample');
-};
-
-const getSampleSelection = (sample) => {
-  if (!sample || typeof sample !== 'object') return null;
-
-  if (sample.sourceUrl && sample.id) {
-    return {
-      type: 'starter',
-      id: sample.id,
-      name: sample.name,
-      sourceUrl: sample.sourceUrl,
-      mimeType: sample.mimeType || 'audio/wav',
-      baseNote: sample.baseNote || null
-    };
-  }
-
-  if (sample.id) {
-    return {
-      type: 'stored',
-      id: sample.id,
-      name: sample.name
-    };
-  }
-
-  return null;
-};
-
 const App = () => {
   const initialSessionRef = useRef(loadAppSession());
   const initialSession = initialSessionRef.current;
@@ -311,45 +226,6 @@ const App = () => {
     setActiveSampleId(null);
     setSampleSelection(null);
     pushNotice('Sample cleared.');
-  }, [pushNotice]);
-
-  // Handle sample selection from sidebar
-  const handleSampleSelect = useCallback(async (sample) => {
-    if (!sample) return;
-
-    setSampleLoading(true);
-    try {
-      let blob;
-      if (sample.audioData) {
-        blob = new Blob([sample.audioData], { type: sample.mimeType || 'audio/wav' });
-      } else if (sample.sourceUrl) {
-        blob = await fetchStarterSampleBlob(sample.sourceUrl);
-      } else {
-        return;
-      }
-
-      const inferredMimeType = sample.mimeType || blob.type || 'audio/wav';
-      const file = new File([blob], sample.name + '.wav', { type: inferredMimeType });
-
-      const info = await audioEngine.loadCustomSample(file);
-      const parsedBase = parseBaseNote(sample.baseNote);
-      if (parsedBase) {
-        audioEngine.setCustomSampleBaseNote(parsedBase.noteName, parsedBase.octave);
-      }
-      setSampleInfo({
-        name: sample.name,
-        duration: info.duration.toFixed(2),
-        channels: info.channels
-      });
-      setActiveSampleId(sample.id);
-      setSampleSelection(getSampleSelection(sample));
-      pushNotice('Sample changed.');
-    } catch (err) {
-      console.error('Failed to load sample:', err);
-      pushNotice('Sample load failed.');
-    } finally {
-      setSampleLoading(false);
-    }
   }, [pushNotice]);
 
   const handleRecordToggle = useCallback(() => {
@@ -784,8 +660,6 @@ const App = () => {
                 onClose={() => setSidebarOpen(false)}
                 activeTab={sidebarTab}
                 onTabChange={setSidebarTab}
-                onSampleSelect={handleSampleSelect}
-                activeSampleId={activeSampleId}
               />
             </VoicePhraseContext.Provider>
           </MidiTransportContext.Provider>

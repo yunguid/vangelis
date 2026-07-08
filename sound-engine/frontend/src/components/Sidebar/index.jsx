@@ -1,6 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
 import MidiTab from './MidiTab.jsx';
-import SamplesTab from './SamplesTab.jsx';
 import SoundTab from './SoundTab.jsx';
 import {
   useMidiTransport,
@@ -12,7 +11,7 @@ const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
 
 /**
  * Collapsed sidebar rail with expandable panel
- * Supports multiple tabs: MIDI, Samples, Voice, Sound
+ * Supports multiple tabs: MIDI, Voice, Sound
  * MIDI transport, voice phrase, and sound-control state come from contexts.
  */
 const Sidebar = ({
@@ -21,10 +20,7 @@ const Sidebar = ({
   onOpen = () => {},
   activeTab,
   onTabChange = () => {},
-  disabled = false,
-  // Samples props
-  onSampleSelect,
-  activeSampleId
+  disabled = false
 }) => {
   const {
     isPlaying,
@@ -117,28 +113,14 @@ const Sidebar = ({
       ),
       isActive: !disabled && isPlaying
     },
-    {
-      id: 'samples',
-      label: 'Samples',
-      icon: (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-        </svg>
-      ),
-      isActive: !disabled && !!activeSampleId
-    },
   ];
   const activePanel = tabs.find((tab) => tab.id === activeTab) || tabs[0];
   const panelTitle = activeTab === 'midi'
     ? 'MIDI library'
-    : activeTab === 'samples'
-      ? 'Sample library'
-      : 'Sound controls';
+    : 'Sound controls';
   const panelSubtitle = activeTab === 'midi'
     ? currentMidi?.name
-    : activeTab === 'samples'
-      ? (activeSampleId ? 'Sample ready' : null)
-      : (activePresetName || waveformType);
+    : (activePresetName || waveformType);
 
   return (
     <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''} ${disabled ? 'sidebar-container--disabled' : ''}`}>
@@ -197,12 +179,6 @@ const Sidebar = ({
               onResume={onResume}
               onStop={onStop}
               onTempoChange={onTempoChange}
-            />
-          )}
-          {activeTab === 'samples' && (
-            <SamplesTab
-              onSampleSelect={onSampleSelect}
-              activeSampleId={activeSampleId}
             />
           )}
           {activeTab === 'sound' && (

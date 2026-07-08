@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useMidiPlayback } from './useMidiPlayback.js';
 import { audioEngine } from '../utils/audioEngine.js';
-import { ensureSoundSetLoaded } from '../utils/instrumentSamples.js';
 
 vi.mock('../utils/audioEngine.js', () => ({
   audioEngine: {
@@ -14,11 +13,7 @@ vi.mock('../utils/audioEngine.js', () => ({
   }
 }));
 
-vi.mock('../utils/instrumentSamples.js', () => ({
-  ensureSoundSetLoaded: vi.fn()
-}));
-
-describe('useMidiPlayback layering', () => {
+describe('useMidiPlayback', () => {
   const originalRequestAnimationFrame = global.requestAnimationFrame;
   const originalCancelAnimationFrame = global.cancelAnimationFrame;
   let consoleWarnSpy;
@@ -52,17 +47,7 @@ describe('useMidiPlayback layering', () => {
     return { promise, resolve, reject };
   };
 
-  it('plays stacked sample layers when a sound set is available', async () => {
-    ensureSoundSetLoaded.mockResolvedValue({
-      id: 'rachmaninoff-orchestral-lite',
-      name: 'Rachmaninoff Concerto No. 2 (Starter Pack)',
-      instruments: [{ id: 'piano' }, { id: 'violin' }],
-      pickInstruments: () => [
-        { id: 'piano', buffer: {}, baseFrequency: 261.63 },
-        { id: 'violin', buffer: {}, baseFrequency: 196.0 }
-      ]
-    });
-
+  it('plays each note through the current waveform via playFrequency', async () => {
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
       audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
@@ -72,123 +57,11 @@ describe('useMidiPlayback layering', () => {
       result.current.play({
         duration: 1,
         bpm: 120,
-        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1, instrumentFamily: 'piano' }],
-        soundSetId: 'rachmaninoff-orchestral-lite',
-        layerFamilies: ['piano', 'strings']
+        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1, instrumentFamily: 'piano' }]
       });
       await Promise.resolve();
       await Promise.resolve();
     });
-
-    expect(result.current.layeringMode).toBe('sample-layered');
-    expect(result.current.activeSoundSetName).toBe('Rachmaninoff Concerto No. 2 (Starter Pack)');
-
-    expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
-
-    await act(async () => {
-      vi.runAllTimers();
-    });
-
-    expect(audioEngine.playBufferedSample).toHaveBeenCalledTimes(2);
-    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
-    expect(audioEngine.stopNote).toHaveBeenCalledTimes(2);
-  });
-
-  it('falls back to waveform layer families when sample set is unavailable', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
-    const { result } = renderHook(() => useMidiPlayback({
-      waveformType: 'sine',
-      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
-    }));
-
-    await act(async () => {
-      result.current.play({
-        duration: 1,
-        bpm: 120,
-        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 0.8, instrumentFamily: 'piano' }],
-        soundSetId: 'rachmaninoff-orchestral-lite',
-        layerFamilies: ['piano', 'strings']
-      });
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.layeringMode).toBe('wave-layered');
-    expect(result.current.activeSoundSetName).toBeNull();
-
-    expect(ensureSoundSetLoaded).toHaveBeenCalledWith('rachmaninoff-orchestral-lite');
-
-    await act(async () => {
-      vi.runAllTimers();
-    });
-
-    expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
-    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
-
-    const waveforms = audioEngine.playFrequency.mock.calls.map((call) => call[0].waveformType);
-    expect(waveforms).toContain('triangle');
-    expect(waveforms).toContain('saw');
-  });
-
-  it('uses soundset layer families when midi metadata does not provide them', async () => {
-    ensureSoundSetLoaded.mockResolvedValue({
-      id: 'cinematic-starter-pack',
-      name: 'Cinematic Starter Pack',
-      layerFamilies: ['piano', 'strings'],
-      instruments: [],
-      pickInstruments: () => []
-    });
-
-    const { result } = renderHook(() => useMidiPlayback({
-      waveformType: 'sine',
-      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
-    }));
-
-    await act(async () => {
-      result.current.play({
-        duration: 1,
-        bpm: 120,
-        notes: [{ midi: 67, time: 0, duration: 0.12, velocity: 0.8, instrumentFamily: 'strings' }],
-        soundSetId: 'cinematic-starter-pack'
-      });
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.layeringMode).toBe('wave-layered');
-    expect(result.current.activeSoundSetName).toBe('Cinematic Starter Pack');
-
-    await act(async () => {
-      vi.runAllTimers();
-    });
-
-    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
-    const waveforms = audioEngine.playFrequency.mock.calls.map((call) => call[0].waveformType);
-    expect(waveforms).toContain('triangle');
-    expect(waveforms).toContain('saw');
-  });
-
-  it('dedupes and filters unknown layer families before waveform stacking', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
-    const { result } = renderHook(() => useMidiPlayback({
-      waveformType: 'sine',
-      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
-    }));
-
-    await act(async () => {
-      result.current.play({
-        duration: 1,
-        bpm: 120,
-        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 0.8, instrumentFamily: 'piano' }],
-        layerFamilies: ['Piano', 'piano', 'unknown-family']
-      });
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(result.current.layeringMode).toBe('wave-layered');
 
     await act(async () => {
       vi.runAllTimers();
@@ -196,14 +69,15 @@ describe('useMidiPlayback layering', () => {
 
     expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
-    expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('triangle');
+    expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('sine');
+    expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
   });
 
   it('ignores stale play request that resolves after a newer play starts', async () => {
     const firstLoad = createDeferred();
-    ensureSoundSetLoaded
+    audioEngine.ensureAudioContext
       .mockImplementationOnce(() => firstLoad.promise)
-      .mockResolvedValueOnce(null);
+      .mockResolvedValue(audioEngine.context);
 
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
@@ -214,8 +88,7 @@ describe('useMidiPlayback layering', () => {
       result.current.play({
         duration: 1,
         bpm: 120,
-        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1 }],
-        soundSetId: 'slow-first'
+        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1 }]
       });
       await Promise.resolve();
     });
@@ -231,7 +104,7 @@ describe('useMidiPlayback layering', () => {
     });
 
     await act(async () => {
-      firstLoad.resolve(null);
+      firstLoad.resolve(audioEngine.context);
       await Promise.resolve();
       await Promise.resolve();
       vi.runAllTimers();
@@ -242,9 +115,9 @@ describe('useMidiPlayback layering', () => {
     expect(result.current.currentMidi?.notes?.[0]?.midi).toBe(67);
   });
 
-  it('does not start playback if stop is called before async soundset load resolves', async () => {
+  it('does not start playback if stop is called before async context resolution', async () => {
     const slowLoad = createDeferred();
-    ensureSoundSetLoaded.mockImplementationOnce(() => slowLoad.promise);
+    audioEngine.ensureAudioContext.mockImplementationOnce(() => slowLoad.promise);
 
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
@@ -255,8 +128,7 @@ describe('useMidiPlayback layering', () => {
       result.current.play({
         duration: 1,
         bpm: 120,
-        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 1 }],
-        soundSetId: 'slow-stop'
+        notes: [{ midi: 64, time: 0, duration: 0.1, velocity: 1 }]
       });
       await Promise.resolve();
     });
@@ -266,7 +138,7 @@ describe('useMidiPlayback layering', () => {
     });
 
     await act(async () => {
-      slowLoad.resolve(null);
+      slowLoad.resolve(audioEngine.context);
       await Promise.resolve();
       await Promise.resolve();
       vi.runAllTimers();
@@ -279,8 +151,6 @@ describe('useMidiPlayback layering', () => {
   });
 
   it('logs and preserves paused state when resume cannot initialize audio context', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
       audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
@@ -321,8 +191,6 @@ describe('useMidiPlayback layering', () => {
   });
 
   it('ignores stale resume request when stop is called before async resume resolves', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
       audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
@@ -402,8 +270,6 @@ describe('useMidiPlayback layering', () => {
   });
 
   it('derives playback duration from notes when midi duration is missing', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
       audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
@@ -429,8 +295,6 @@ describe('useMidiPlayback layering', () => {
   });
 
   it('filters invalid notes before scheduling playback', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
       audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
@@ -461,8 +325,6 @@ describe('useMidiPlayback layering', () => {
   });
 
   it('warns and does not start when all notes are invalid', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
       audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
@@ -482,9 +344,7 @@ describe('useMidiPlayback layering', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith('No MIDI data to play');
   });
 
-  it('normalizes instrument family casing without overriding waveform mode playback', async () => {
-    ensureSoundSetLoaded.mockResolvedValue(null);
-
+  it('normalizes instrument family casing without affecting waveform playback', async () => {
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',
       audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }

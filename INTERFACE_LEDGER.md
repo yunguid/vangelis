@@ -252,3 +252,24 @@ The user's designer mandate is now complete end-to-end: start from a waveform �
 shape → test on the keyboard → save → use from the sidebar sound page.
 
 `ITERATION 7: P8 save pipeline — census 63 — backlog: 2 items (P9 samples kill, P6 sidebar structure)`
+
+### Iteration 8 — P9: the Samples page is dead — 2026-07-07
+366 files deleted (~6,900 lines of code + 345 sample assets, ~2.1 MB): SamplesTab,
+sampleStorage (IndexedDB), instrumentSamples, soundSets, starterCatalog, all starter
+JSON inventories + their tests, three sync scripts + npm entries, public/samples/
+wholesale. The Rachmaninoff hazard was decoupled first: soundSetId/layerFamilies
+stripped from every MIDI entry, the sample-layer path removed from useMidiPlayback
+(−149 lines) — the concerto plays through the plain synth, verified audibly (probe
+0.61). Persisted sidebarTab:'samples' coerces to 'sound'. Upload mode untouched
+(shared state grep-confirmed and kept). CLAUDE.md updated. Rail: Sound + MIDI only.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. Judgment calls: orphan
+sweep of instrumentManifestGuards/instrumentSelection approved (grep-proved sole-purpose
+dead code); textbook STOP-and-report on discovered out-of-scope remains — the
+api/sound-catalog.js backend route + root vercel.json entry + SOUND_LIBRARY.md are now
+orphaned (only caller was SamplesTab) and flagged as a task chip (task_55f06312) for the
+user rather than improvised. Orchestrator verified: death list absent on disk, zero
+dangling imports repo-wide, G1 353/353 (count down from 394 = deleted dead tests),
+G2 clean, G3 225/225 bit-exact, G4 boot screenshot (two-tab rail), G5 62 (chips −1).
+
+`ITERATION 8: P9 samples killed — census 62 — backlog: 1 item (P6 sidebar structure)`

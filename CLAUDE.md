@@ -68,8 +68,7 @@ frontend/src/
 │   │   ├── index.jsx          # Sidebar container with icon rail
 │   │   ├── Sidebar.css        # Sidebar styles
 │   │   ├── MidiTab.jsx        # MIDI file browser
-│   │   ├── MidiPlayer.jsx     # MIDI playback controls
-│   │   └── SamplesTab.jsx     # Sample library browser
+│   │   └── MidiPlayer.jsx     # MIDI playback controls
 │   │
 │   └── SynthKeyboard/         # Virtual piano keyboard
 │       ├── index.jsx          # Keyboard container
@@ -86,7 +85,6 @@ frontend/src/
 ├── utils/
 │   ├── math.js                # Shared math utilities (clamp, MIDI helpers)
 │   ├── midiParser.js          # Parse .mid files using @tonejs/midi
-│   ├── sampleStorage.js       # IndexedDB storage for sample library
 │   ├── presetStorage.js       # Factory preset bank (categorized) + user presets
 │   ├── audioParams.js         # Audio parameter definitions and sanitization
 │   │
@@ -124,12 +122,6 @@ frontend/src/
 - Samples mapped across keyboard with pitch shifting
 - Supports one-shot and looped playback
 - Per-voice envelopes applied to samples
-
-### Sample Library (IndexedDB)
-- Import entire folders of samples organized by category
-- Samples persist in browser storage across sessions
-- Browse by category, search, and quick-select
-- Storage stats show library size
 
 ### Factory Preset Bank
 - 45 hand-designed patches in `utils/presetStorage.js`, grouped by category
@@ -200,6 +192,3 @@ node scripts/bench_synth_worklet.mjs
 ### Audio
 - @tonejs/midi (MIDI parsing)
 - Web Audio API (AudioWorklet, ConvolverNode, etc.)
-
-### Storage
-- IndexedDB (sample library persistence)

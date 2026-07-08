@@ -9,8 +9,6 @@
         "audit:ui": "node scripts/audit_ui_tells.mjs",
         "perf:visual": "node scripts/perf_visual_workload.mjs",
         "sync:midis": "node scripts/sync_russian_midis.mjs",
-        "sync:private-sound-sets": "node scripts/sync_private_sound_sets.mjs",
-        "sync:starter-sounds": "node scripts/sync_starter_sounds.mjs",
         "preview": "vite preview",
         "test": "vitest run",
         "test:watch": "vitest",

@@ -26,47 +26,11 @@ describe('getBuiltInMidiFiles', () => {
     expect(vocalise?.path).toBe('/midi/rachmaninoff-vocalise.mid');
   });
 
-  it('assigns piano+strings layering metadata to Rachmaninoff concerto files', () => {
+  it('does not attach sample-library sound-set metadata to any built-in entry', () => {
     const files = getBuiltInMidiFiles('/');
-    const rachConcerto = files.filter((file) => file.id.startsWith('rachmaninoff-concerto2-'));
 
-    expect(rachConcerto.length).toBe(3);
-    expect(rachConcerto.every((file) => file.soundSetId === 'rachmaninoff-orchestral-lite')).toBe(true);
-    expect(rachConcerto.every((file) => Array.isArray(file.layerFamilies))).toBe(true);
-    expect(rachConcerto.every((file) => file.layerFamilies.includes('piano'))).toBe(true);
-    expect(rachConcerto.every((file) => file.layerFamilies.includes('strings'))).toBe(true);
-  });
-
-  it('assigns layered playback metadata to cello and vocalise pieces', () => {
-    const files = getBuiltInMidiFiles('/');
-    const cello = files.find((file) => file.id === 'bach-cello-prelude');
-    const vocalise = files.find((file) => file.id === 'rachmaninoff-vocalise');
-
-    expect(cello?.soundSetId).toBe('cinematic-starter-pack');
-    expect(cello?.layerFamilies).toEqual(['strings']);
-
-    expect(vocalise?.soundSetId).toBe('orchestral-extended-starter');
-    expect(vocalise?.layerFamilies).toEqual(['strings', 'reed', 'piano']);
-  });
-
-  it('assigns orchestral extended layering metadata to selected Russian library pieces', () => {
-    const files = getBuiltInMidiFiles('/');
-    const mussorgsky = files.find((file) => file.id === 'mussorgsky-night-on-bald-mountain');
-    const alyabyev = files.find((file) => file.id === 'alyabyev-the-nightingale');
-    const tchaikovskyMarch = files.find((file) => file.id === 'tchaikovsky-op39-05-march-wooden-soldiers');
-    const scriabin = files.find((file) => file.id === 'scriabin-op11-13-prelude');
-
-    expect(mussorgsky?.soundSetId).toBe('orchestral-extended-starter');
-    expect(mussorgsky?.layerFamilies).toEqual(['strings', 'brass', 'reed']);
-
-    expect(alyabyev?.soundSetId).toBe('orchestral-extended-starter');
-    expect(alyabyev?.layerFamilies).toEqual(['strings', 'reed', 'piano']);
-
-    expect(tchaikovskyMarch?.soundSetId).toBe('orchestral-extended-starter');
-    expect(tchaikovskyMarch?.layerFamilies).toEqual(['strings', 'brass', 'piano']);
-
-    expect(scriabin?.soundSetId).toBe('cinematic-starter-pack');
-    expect(scriabin?.layerFamilies).toEqual(['piano', 'strings']);
+    expect(files.every((file) => !('soundSetId' in file))).toBe(true);
+    expect(files.every((file) => !('layerFamilies' in file))).toBe(true);
   });
 
   it('maps every built-in entry to a committed midi file', () => {

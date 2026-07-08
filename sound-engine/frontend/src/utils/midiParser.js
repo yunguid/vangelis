@@ -35,8 +35,6 @@ import { withBase } from './baseUrl.js';
  * @property {string} name - Display name
  * @property {string} path - Path to MIDI file
  * @property {string} [composer] - Composer name, if known
- * @property {string|null} [soundSetId] - Optional built-in sound set id for samples
- * @property {string[]} [layerFamilies] - Optional forced layer families (e.g. ['piano', 'strings'])
  * @property {string} [sourceUrl] - Optional source URL for MIDI file metadata
  */
 
@@ -136,67 +134,20 @@ function flattenTracks(tracks) {
  */
 export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   const toBuiltInPath = (relativePath) => withBase(`midi/${relativePath}`, base);
-  const libraryPlaybackProfiles = {
-    'tchaikovsky-op39-01-morning-prayer': {
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
-    },
-    'tchaikovsky-op39-05-march-wooden-soldiers': {
-      soundSetId: 'orchestral-extended-starter',
-      layerFamilies: ['strings', 'brass', 'piano']
-    },
-    'tchaikovsky-op39-16-old-french-song': {
-      soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['piano', 'strings']
-    },
-    'rachmaninoff-op23-04-prelude': {
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
-    },
-    'rachmaninoff-op23-05-prelude': {
-      soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['piano', 'strings']
-    },
-    'mussorgsky-night-on-bald-mountain': {
-      soundSetId: 'orchestral-extended-starter',
-      layerFamilies: ['strings', 'brass', 'reed']
-    },
-    'rimsky-korsakov-op11-07-etude': {
-      soundSetId: 'orchestral-extended-starter',
-      layerFamilies: ['strings', 'reed', 'brass']
-    },
-    'scriabin-op11-13-prelude': {
-      soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['piano', 'strings']
-    },
-    'bortniansky-the-angel-cried': {
-      soundSetId: 'orchestral-extended-starter',
-      layerFamilies: ['strings', 'reed', 'piano']
-    },
-    'alyabyev-the-nightingale': {
-      soundSetId: 'orchestral-extended-starter',
-      layerFamilies: ['strings', 'reed', 'piano']
-    },
-    'stanchinsky-prelude-c-minor': {
-      soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['piano', 'strings']
-    }
-  };
 
   const russianFiles = russianMidiLibrary.map((entry) => ({
     id: entry.id,
     name: entry.name,
     path: toBuiltInPath(`russian/${entry.id}.mid`),
     composer: entry.composer,
-    sourceUrl: entry.sourceUrl,
-    ...(libraryPlaybackProfiles[entry.id] || {})
+    sourceUrl: entry.sourceUrl
   }));
 
   // Original in-house cues, composed for the synth presets — see
-  // scripts/generate_original_midis.mjs. No soundSetId so they play
-  // through whatever preset is currently loaded. Display names come from
-  // the shared ../data/originalCueNames.js map (single source of truth,
-  // also consumed by the generator script) so the two can't drift.
+  // scripts/generate_original_midis.mjs. They play through whatever preset
+  // is currently loaded. Display names come from the shared
+  // ../data/originalCueNames.js map (single source of truth, also consumed
+  // by the generator script) so the two can't drift.
   const originalFiles = ORIGINAL_CUE_IDS.map((id) => ({
     id,
     name: getOriginalCueName(id),
@@ -217,66 +168,50 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
       id: 'rachmaninoff-concerto2-mov1',
       name: 'Piano Concerto No. 2 - I. Moderato',
       path: toBuiltInPath('rachmaninoff-concerto2-mov1.mid'),
-      composer: 'Sergei Rachmaninoff',
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
+      composer: 'Sergei Rachmaninoff'
     },
     {
       id: 'rachmaninoff-concerto2-mov2',
       name: 'Piano Concerto No. 2 - II. Adagio',
       path: toBuiltInPath('rachmaninoff-concerto2-mov2.mid'),
-      composer: 'Sergei Rachmaninoff',
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
+      composer: 'Sergei Rachmaninoff'
     },
     {
       id: 'rachmaninoff-concerto2-mov3',
       name: 'Piano Concerto No. 2 - III. Allegro',
       path: toBuiltInPath('rachmaninoff-concerto2-mov3.mid'),
-      composer: 'Sergei Rachmaninoff',
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
+      composer: 'Sergei Rachmaninoff'
     },
     // Other pieces
     {
       id: 'bach-wtc-prelude',
       name: 'WTC Book I - Prelude in C',
       path: toBuiltInPath('bach-wtc-prelude-c.mid'),
-      composer: 'J.S. Bach',
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano']
+      composer: 'J.S. Bach'
     },
     {
       id: 'satie-gnossienne',
       name: 'Gnossienne No. 1',
       path: toBuiltInPath('satie-gnossienne-1.mid'),
-      composer: 'Erik Satie',
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
+      composer: 'Erik Satie'
     },
     {
       id: 'satie-gymnopedie',
       name: 'Gymnopedie No. 1',
       path: toBuiltInPath('satie-gymnopedie-1.mid'),
-      composer: 'Erik Satie',
-      soundSetId: 'rachmaninoff-orchestral-lite',
-      layerFamilies: ['piano', 'strings']
+      composer: 'Erik Satie'
     },
     {
       id: 'bach-cello-prelude',
       name: 'Cello Suite No. 1 - Prelude',
       path: toBuiltInPath('bach-prelude-cello.mid'),
-      composer: 'J.S. Bach',
-      soundSetId: 'cinematic-starter-pack',
-      layerFamilies: ['strings']
+      composer: 'J.S. Bach'
     },
     {
       id: 'rachmaninoff-vocalise',
       name: 'Vocalise Op. 34',
       path: toBuiltInPath('rachmaninoff-vocalise.mid'),
-      composer: 'Sergei Rachmaninoff',
-      soundSetId: 'orchestral-extended-starter',
-      layerFamilies: ['strings', 'reed', 'piano']
+      composer: 'Sergei Rachmaninoff'
     }
   ];
 }

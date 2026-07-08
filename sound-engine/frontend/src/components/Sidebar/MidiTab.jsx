@@ -62,9 +62,7 @@ const MidiTab = ({
         sourceFileId: file.id,
         sourcePath: file.path,
         sourceUrl: file.sourceUrl || null,
-        composer: file.composer,
-        soundSetId: file.soundSetId || null,
-        layerFamilies: Array.isArray(file.layerFamilies) ? file.layerFamilies : []
+        composer: file.composer
       });
     } catch (err) {
       console.error('Failed to load MIDI file:', err);

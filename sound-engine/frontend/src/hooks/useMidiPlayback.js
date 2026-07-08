@@ -7,40 +7,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
-import { ensureSoundSetLoaded } from '../utils/instrumentSamples.js';
-
-/**
- * Map GM instrument families to appropriate waveforms
- * @type {Object.<string, string|null>}
- */
-const FAMILY_WAVEFORMS = {
-  piano: 'triangle',      // Soft attack, mellow
-  'chromatic percussion': 'triangle',
-  organ: 'sine',          // Clean, sustained
-  guitar: 'triangle',     // Plucked, mellow
-  bass: 'saw',            // Rich harmonics
-  strings: 'saw',         // Rich, bowed
-  ensemble: 'saw',        // Orchestral
-  brass: 'square',        // Bright, punchy
-  reed: 'saw',            // Clarinet, sax
-  pipe: 'sine',           // Flute, recorder
-  'synth lead': 'saw',    // Classic lead
-  'synth pad': 'triangle', // Soft, ambient
-  'synth effects': 'saw',
-  ethnic: 'triangle',
-  percussive: null,       // Skip or use sample
-  'sound effects': null
-};
-const KNOWN_LAYER_FAMILIES = new Set(Object.keys(FAMILY_WAVEFORMS));
-
-function toLayerToken(value, fallback = 'layer') {
-  if (typeof value !== 'string') return fallback;
-  const normalized = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return normalized || fallback;
-}
 
 function resolveMidiDuration(midiData) {
   const declaredDuration = Number(midiData?.duration);
@@ -62,23 +28,6 @@ function resolveMidiDuration(midiData) {
   });
 
   return derivedDuration > 0 ? derivedDuration : 1;
-}
-
-function normalizeLayerFamilies(layerFamilies) {
-  if (!Array.isArray(layerFamilies)) return [];
-
-  const deduped = [];
-  const seen = new Set();
-
-  layerFamilies.forEach((family) => {
-    if (typeof family !== 'string') return;
-    const normalized = family.trim().toLowerCase();
-    if (!KNOWN_LAYER_FAMILIES.has(normalized) || seen.has(normalized)) return;
-    seen.add(normalized);
-    deduped.push(normalized);
-  });
-
-  return deduped;
 }
 
 function normalizeMidiNotes(notes) {
@@ -179,8 +128,6 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const [activeNotes, setActiveNotes] = useState(new Set());
   const [currentMidi, setCurrentMidi] = useState(null);
   const [tempoFactor, setTempoFactorState] = useState(1.0);
-  const [activeSoundSetName, setActiveSoundSetName] = useState(null);
-  const [layeringMode, setLayeringMode] = useState('waveform');
 
   // Use refs to avoid stale closures in setTimeout callbacks
   const waveformRef = useRef(waveformType);
@@ -191,8 +138,6 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const activeNoteCountsRef = useRef(new Map());
   const activeVoiceIdsRef = useRef(new Set());
   const scheduledVoiceMapRef = useRef(new Map());
-  const soundSetRef = useRef(null);
-  const layerFamiliesRef = useRef([]);
   const timeoutsRef = useRef([]);
   const rafRef = useRef(null);
   const playRequestSeqRef = useRef(0);
@@ -255,67 +200,12 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @param {string} voiceId - Internal voice id used by the audio engine
    * @param {number} frequency - Note frequency in Hz
    * @param {number} velocity - Note velocity (0-1)
-   * @param {Object} [noteMeta] - Note metadata (instrument family/name/channel)
    * @returns {string[]} Voice ids actually started
    * @private
    */
-  const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, noteMeta = {}) => {
+  const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity) => {
     const startedVoiceIds = [];
     const params = audioParamsRef.current;
-    const soundSet = soundSetRef.current;
-
-    if (soundSet?.pickInstruments) {
-      const pickedInstruments = soundSet.pickInstruments(noteMeta);
-      pickedInstruments?.forEach((instrument, layerIndex) => {
-        if (!instrument?.buffer || !instrument?.baseFrequency) return;
-        const layerToken = toLayerToken(instrument.id, `sample-${layerIndex}`);
-        const layerVoiceId = `${voiceId}-${layerToken}-${layerIndex}`;
-        const started = audioEngine.playBufferedSample({
-          noteId: layerVoiceId,
-          buffer: instrument.buffer,
-          frequency,
-          baseFrequency: instrument.baseFrequency,
-          params,
-          velocity,
-          loop: instrument.loop
-        });
-        if (started?.voiceId) {
-          startedVoiceIds.push(started.voiceId);
-        }
-      });
-
-      if (startedVoiceIds.length > 0) {
-        registerActiveVoices(noteId, startedVoiceIds);
-        return startedVoiceIds;
-      }
-    }
-
-    const stackedFamilies = layerFamiliesRef.current;
-    if (stackedFamilies.length > 0) {
-      stackedFamilies.forEach((family, layerIndex) => {
-        const familyWaveform = FAMILY_WAVEFORMS[family];
-        if (familyWaveform === null) return;
-        const waveform = familyWaveform || waveformRef.current;
-        const layerToken = toLayerToken(family, `wave-${layerIndex}`);
-        const layerVoiceId = `${voiceId}-${layerToken}-${layerIndex}`;
-        const started = audioEngine.playFrequency({
-          noteId: layerVoiceId,
-          frequency,
-          waveformType: waveform,
-          params,
-          velocity,
-          allowVoicePhrase: false
-        });
-        if (started?.voiceId) {
-          startedVoiceIds.push(started.voiceId);
-        }
-      });
-
-      if (startedVoiceIds.length > 0) {
-        registerActiveVoices(noteId, startedVoiceIds);
-        return startedVoiceIds;
-      }
-    }
 
     const started = audioEngine.playFrequency({
       noteId: voiceId,
@@ -383,11 +273,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     playbackRef.current.startTime = 0;
     playbackRef.current.pauseOriginalTime = 0;
     playbackRef.current.elapsedOriginalAtStart = 0;
-    soundSetRef.current = null;
-    layerFamiliesRef.current = [];
     scheduledVoiceMapRef.current.clear();
-    setActiveSoundSetName(null);
-    setLayeringMode('waveform');
 
     setIsPlaying(false);
     setIsPaused(false);
@@ -441,7 +327,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       // Schedule note on
       const startDelay = Math.max(0, (scheduledStart - now) * 1000);
       const startId = setTimeout(() => {
-        const startedVoiceIds = triggerNoteOn(noteId, voiceId, frequency, note.velocity, note);
+        const startedVoiceIds = triggerNoteOn(noteId, voiceId, frequency, note.velocity);
         if (startedVoiceIds.length > 0) {
           scheduledVoiceMapRef.current.set(voiceId, startedVoiceIds);
         }
@@ -565,38 +451,11 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     setProgress(midiDuration > 0 ? startAt / midiDuration : 0);
 
     // Ensure audio context is ready
-    resumeAudioContextIfNeeded().then(async () => {
+    resumeAudioContextIfNeeded().then(() => {
       if (playRequestSeq !== playRequestSeqRef.current) return;
 
       // Stop any existing playback
       stopInternal();
-
-      let loadedSoundSet = null;
-      if (midiData.soundSetId) {
-        try {
-          loadedSoundSet = await ensureSoundSetLoaded(effectiveMidiData.soundSetId);
-        } catch (error) {
-          console.warn(`Failed to load sound set "${effectiveMidiData.soundSetId}":`, error);
-        }
-      }
-      if (playRequestSeq !== playRequestSeqRef.current) return;
-
-      soundSetRef.current = loadedSoundSet;
-      setActiveSoundSetName(loadedSoundSet?.name || null);
-      const requestedLayerFamilies = normalizeLayerFamilies(effectiveMidiData.layerFamilies);
-      const soundSetLayerFamilies = normalizeLayerFamilies(loadedSoundSet?.layerFamilies);
-      layerFamiliesRef.current = requestedLayerFamilies.length > 0
-        ? requestedLayerFamilies
-        : soundSetLayerFamilies;
-      const resolvedLayerCount = layerFamiliesRef.current.length;
-      const hasSampleLayers = Array.isArray(loadedSoundSet?.instruments) && loadedSoundSet.instruments.length > 0;
-      if (hasSampleLayers && resolvedLayerCount > 0) {
-        setLayeringMode('sample-layered');
-      } else if (resolvedLayerCount > 0) {
-        setLayeringMode('wave-layered');
-      } else {
-        setLayeringMode('waveform');
-      }
 
       const ctx = audioEngine.context;
       const startTime = ctx?.currentTime || 0;
@@ -744,8 +603,6 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     activeNotes,
     currentMidi,
     tempoFactor,
-    activeSoundSetName,
-    layeringMode,
     play,
     pause,
     resume,

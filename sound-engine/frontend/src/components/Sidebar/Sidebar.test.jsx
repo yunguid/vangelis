@@ -6,10 +6,6 @@ vi.mock('./MidiTab.jsx', () => ({
   default: () => <div data-testid="midi-tab">MIDI content</div>
 }));
 
-vi.mock('./SamplesTab.jsx', () => ({
-  default: () => <div data-testid="samples-tab">Samples content</div>
-}));
-
 vi.mock('./SoundTab.jsx', () => ({
   default: () => <div data-testid="sound-tab">Sound content</div>
 }));
@@ -30,8 +26,6 @@ const buildProps = (overrides = {}) => ({
   onResume: vi.fn(),
   onStop: vi.fn(),
   onTempoChange: vi.fn(),
-  onSampleSelect: vi.fn(),
-  activeSampleId: null,
   waveformType: 'Sine',
   onWaveformChange: vi.fn(),
   audioParams: {},
@@ -59,7 +53,6 @@ describe('Sidebar', () => {
   it('renders rail buttons with labels', () => {
     render(<Sidebar {...buildProps()} />);
     expect(screen.getByRole('button', { name: /open midi browser/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /open samples browser/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open sound controls/i })).toBeInTheDocument();
   });
 
@@ -68,9 +61,9 @@ describe('Sidebar', () => {
     const onTabChange = vi.fn();
     render(<Sidebar {...buildProps({ onOpen, onTabChange })} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open samples browser/i }));
+    fireEvent.click(screen.getByRole('button', { name: /open midi browser/i }));
 
-    expect(onTabChange).toHaveBeenCalledWith('samples');
+    expect(onTabChange).toHaveBeenCalledWith('midi');
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
