@@ -327,3 +327,16 @@ bit-exact, G5 19 hold (residuals unchanged and justified).
 **Backlog: EMPTY. All census residuals itemized and justified. Awaiting user sign-off.**
 
 `ITERATION 10: P10 veto rebuild — census 19 — backlog: 0 — SIGN-OFF PENDING`
+
+## USER VETO #2 — 2026-07-07 (on the P10 workstation)
+Verdict on the rebuilt designer: layout/spacing off, "stretched vertically"; page is
+buried (only reachable via a small Sound-tab link — needs rail-level presence); and the
+paradigm is wrong — raw synth controls are not a sound-design experience. The user's
+direction, verbatim spirit: "the user has the choice to explore and pick around
+different layers of the sound itself... progressive wizard-like element where they
+start from a base — the sound that they're layering — and go from there... once happy,
+save it and MINT it and use it from the main page."
+
+| id | item | rating |
+|----|------|--------|
+| P11 | Designer rebuilt around a STAGE/LAYER paradigm: stage rail (BASE → TONE → MOTION → SPACE → MINT), one focused stage card at a time (free navigation between stages, wizard progression affordance), persistent compact scope + docked keyboard at every stage, viewport-composed (no vertical sprawl), rail-level entry in the sidebar. "Mint" is the save action's name. | top priority |
