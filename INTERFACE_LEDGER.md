@@ -273,3 +273,11 @@ dangling imports repo-wide, G1 353/353 (count down from 394 = deleted dead tests
 G2 clean, G3 225/225 bit-exact, G4 boot screenshot (two-tab rail), G5 62 (chips −1).
 
 `ITERATION 8: P9 samples killed — census 62 — backlog: 1 item (P6 sidebar structure)`
+
+## USER VETO — 2026-07-07 (iteration 9, mid-flight)
+The user on the sound-designer page: **"looks like shit and is not useful."** Per §3/G4
+this is a binding review verdict. New backlog item:
+
+| id | item | notes | rating |
+|----|------|-------|--------|
+| P10 | Rebuild the designer page as a real workstation | Diagnosis: it's the sidebar unrolled — single narrow column, accordions collapsed, no sound visualization at all, keyboard below the fold beneath a 45-button preset wall. Requirements: full-viewport multi-column layout; controls EXPANDED and grouped (envelope, filter, FX, mod) as a working surface; a live scope/spectrum (reuse WaveCandy/analyser machinery from the main page); keyboard docked, always visible; presets demoted to a compact strip/selector, not a wall. §2 language throughout. | top priority, runs immediately after P6 lands |
