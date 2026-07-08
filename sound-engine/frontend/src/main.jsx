@@ -5,6 +5,7 @@ import { getBuiltInStudy } from './data/songStudies.js';
 import GeneratedSongStudyPage from './pages/GeneratedSongStudyPage.jsx';
 import MidiPipelinePage from './pages/MidiPipelinePage.jsx';
 import SongStudyPage from './pages/SongStudyPage.jsx';
+import SoundDesignerPage from './pages/SoundDesignerPage.jsx';
 import StudySongsPage from './pages/StudySongsPage.jsx';
 import VoiceLoopLabPage from './pages/VoiceLoopLabPage.jsx';
 import './style.css';
@@ -13,6 +14,7 @@ import {
   getActiveRoute,
   getStudyRouteMatch,
   isMidiPipelineRoute,
+  isSoundDesignerRoute,
   isStudySongsRoute,
   isVoiceLoopRoute
 } from './utils/routes.js';
@@ -20,6 +22,7 @@ import {
 const Root = () => {
   const [route, setRoute] = React.useState(() => getActiveRoute());
   const showMidiPipeline = isMidiPipelineRoute(route);
+  const showSoundDesigner = isSoundDesignerRoute(route);
   const showVoiceLoop = isVoiceLoopRoute(route);
   const showStudySongs = isStudySongsRoute(route);
   const studyRoute = getStudyRouteMatch(route);
@@ -54,6 +57,10 @@ const Root = () => {
 
   if (showMidiPipeline) {
     return <MidiPipelinePage />;
+  }
+
+  if (showSoundDesigner) {
+    return <SoundDesignerPage />;
   }
 
   if (showVoiceLoop) {

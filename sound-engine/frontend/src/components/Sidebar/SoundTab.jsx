@@ -2,6 +2,7 @@ import React from 'react';
 import UIOverlay from '../UIOverlay.jsx';
 import AudioControls from '../AudioControls.jsx';
 import PresetShelf from '../PresetShelf.jsx';
+import { SOUND_DESIGNER_HREF } from '../../utils/routes.js';
 
 const SoundTab = ({
   currentWaveform,
@@ -17,6 +18,9 @@ const SoundTab = ({
 }) => (
   <div className="sound-tab">
     <div className="sound-tab__surface">
+      <a className="sound-tab__designer-link" href={SOUND_DESIGNER_HREF}>
+        sound designer &rarr;
+      </a>
       <UIOverlay
         currentWaveform={currentWaveform}
         onWaveformChange={onWaveformChange}

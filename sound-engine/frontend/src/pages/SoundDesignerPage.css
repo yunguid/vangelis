@@ -1,0 +1,45 @@
+.sound-designer-page {
+  min-height: 100vh;
+  background: #1d2021;
+  color: var(--color-text-primary);
+}
+
+.sound-designer-page__shell {
+  width: var(--max-shell-width);
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+}
+
+.sound-designer-page__header {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.sound-designer-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.sound-designer-keyboard {
+  padding: var(--space-lg);
+  border: 1px solid rgba(168, 153, 132, 0.18);
+  background: rgba(40, 40, 40, 0.92);
+  border-radius: 2px;
+}
+
+/* keyboard.css and wave-candy.css size .keyboard-surface with
+   viewport-relative widths (min(1400px,96vw) / min(1200px,95vw)) for the main
+   page's full-bleed stage; inside this panel it must fill the column instead
+   of overflowing it. Descendant selector out-specifies both. */
+.sound-designer-keyboard .keyboard-surface {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .sound-designer-page__shell {
+    width: 100%;
+    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
+      calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}

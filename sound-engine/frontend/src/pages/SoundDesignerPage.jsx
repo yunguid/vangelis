@@ -1,0 +1,121 @@
+import React from 'react';
+import AppHeader from '../components/AppHeader.jsx';
+import AudioControls from '../components/AudioControls.jsx';
+import Sidebar from '../components/Sidebar';
+import SynthKeyboard from '../components/SynthKeyboard';
+import UIOverlay from '../components/UIOverlay.jsx';
+import { audioEngine } from '../utils/audioEngine.js';
+import {
+  AUDIO_PARAM_DEFAULTS,
+  DEFAULT_WAVEFORM,
+  sanitizeAudioParams
+} from '../utils/audioParams.js';
+import './SoundDesignerPage.css';
+
+const DEFAULT_CONTROL_SECTIONS = Object.freeze({
+  essentials: true,
+  delay: false,
+  reverb: false,
+  color: false,
+  modulation: false
+});
+
+// Stable empty set: this page has no MIDI playback / web-MIDI input, so no
+// note is ever externally active. A fresh Set() on every render would
+// needlessly re-trigger key highlight lookups downstream.
+const NO_EXTERNAL_ACTIVE_NOTES = new Set();
+
+const SoundDesignerPage = () => {
+  const [engineStatus, setEngineStatus] = React.useState(() => audioEngine.getStatus());
+  const [waveformType, setWaveformType] = React.useState(() => DEFAULT_WAVEFORM);
+  const [audioParams, setAudioParams] = React.useState(() => (
+    sanitizeAudioParams(AUDIO_PARAM_DEFAULTS)
+  ));
+  const [controlSections, setControlSections] = React.useState(() => (
+    DEFAULT_CONTROL_SECTIONS
+  ));
+
+  React.useEffect(() => {
+    audioEngine.setGlobalParams(audioParams);
+  }, [audioParams]);
+
+  React.useEffect(() => {
+    const unsubscribe = audioEngine.subscribe(setEngineStatus);
+
+    audioEngine.ensureWasm().catch(() => {});
+    audioEngine.ensureAudioContext().then(() => {
+      audioEngine.warmGraph();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleAudioParamChange = React.useCallback((paramName, value) => {
+    setAudioParams((prev) => sanitizeAudioParams({
+      ...prev,
+      [paramName]: value
+    }));
+  }, []);
+
+  const handleAudioParamsChange = React.useCallback((nextParams) => {
+    setAudioParams((prev) => sanitizeAudioParams({
+      ...prev,
+      ...nextParams
+    }));
+  }, []);
+
+  const handleControlSectionToggle = React.useCallback((section) => {
+    if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTROL_SECTIONS, section)) return;
+    setControlSections((prev) => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
+
+  return (
+    <div className="sound-designer-page">
+      <main className="sound-designer-page__shell">
+        <AppHeader activeSection="sound-designer" className="sound-designer-page__header" />
+
+        <div className="sound-designer-workspace">
+          <UIOverlay
+            currentWaveform={waveformType}
+            onWaveformChange={setWaveformType}
+            compact={false}
+          />
+
+          <AudioControls
+            audioParams={audioParams}
+            onParamChange={handleAudioParamChange}
+            onParamsChange={handleAudioParamsChange}
+            sections={controlSections}
+            onSectionToggle={handleControlSectionToggle}
+          />
+
+          {/* Panel chrome lives on the wrapper, not on .keyboard-surface:
+              gruvbox.css strips background/border from .keyboard-surface with
+              !important (correct for the main page's full-bleed stage), so the
+              surface stays chrome-less and this wrapper provides the flat
+              bordered panel that matches the two surfaces above. */}
+          <div className="sound-designer-keyboard" role="region" aria-label="Test keyboard">
+            <div className="keyboard-surface">
+              <div className="keyboard-region">
+                <SynthKeyboard
+                  waveformType={waveformType}
+                  audioParams={audioParams}
+                  wasmLoaded={engineStatus.wasmReady}
+                  externalActiveNotes={NO_EXTERNAL_ACTIVE_NOTES}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Sidebar disabled isOpen={false} activeTab="sound" />
+    </div>
+  );
+};
+
+export default SoundDesignerPage;

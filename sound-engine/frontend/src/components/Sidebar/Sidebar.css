@@ -252,6 +252,21 @@
   box-shadow: none;
 }
 
+.sound-tab__designer-link {
+  align-self: flex-start;
+  color: var(--color-core-accent);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sound-tab__designer-link:hover,
+.sound-tab__designer-link:focus-visible {
+  color: var(--color-text-primary);
+}
+
 /* Backdrop */
 .sidebar-backdrop {
   position: fixed;

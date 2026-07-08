@@ -7,6 +7,9 @@ export const MIDI_PIPELINE_HREF = `#${MIDI_PIPELINE_ROUTE}`;
 export const VOICE_LOOP_ROUTE = '/voice-loop';
 export const VOICE_LOOP_HREF = `#${VOICE_LOOP_ROUTE}`;
 
+export const SOUND_DESIGNER_ROUTE = '/sound-designer';
+export const SOUND_DESIGNER_HREF = `#${SOUND_DESIGNER_ROUTE}`;
+
 export const STUDY_SONGS_ROUTE = '/studies';
 export const STUDY_SONGS_HREF = `#${STUDY_SONGS_ROUTE}`;
 
@@ -38,6 +41,11 @@ export const isMidiPipelineRoute = (route) => (
 export const isVoiceLoopRoute = (route) => (
   route === VOICE_LOOP_ROUTE
   || route === `${VOICE_LOOP_ROUTE}/`
+);
+
+export const isSoundDesignerRoute = (route) => (
+  route === SOUND_DESIGNER_ROUTE
+  || route === `${SOUND_DESIGNER_ROUTE}/`
 );
 
 export const isStudySongsRoute = (route) => (

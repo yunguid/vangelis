@@ -210,3 +210,26 @@ correct. Orchestrator verified: G1 379/379, G2 clean, G3 225/225 bit-exact, G4
 screenshots (main view transformed; record state live-inspected), G5 63.
 
 `ITERATION 5: P4c paint complete — census 63 — backlog: 4 items (P6 +variables tokens, P7, P8, P9)`
+
+### Iteration 6 — P7: sound-designer page scaffold — 2026-07-07
+`#/sound-designer` exists: a full-page workspace (MidiPipelinePage pattern) — waveform
+panel up top (2×2 flat grid, live-wired), the complete AudioControls surface as the
+working area, a real SynthKeyboard test strip in its own hairline panel, all bound to
+the engine singleton (audible-note proof: probe floor 1.7e-5 → held 0.118 → decay).
+Entry: plain underlined "sound designer →" link atop the Sound tab. Zero new census
+tells; +12 tests (routes helpers incl. first-ever coverage of existing ones, page smoke
+tests on the App.test mocking pattern). Save pipeline deliberately absent — that is P8.
+
+**Review record:** implementer: Sonnet subagent. **1 protocol-failure round:** the
+worker spawned a nested agent (forbidden), ended its turn "waiting," and died. Its
+orphaned child — invisible to the orchestrator's TaskList, an introspection blind spot
+now on record; it explains a mid-flight "nothing is running" answer that was wrong —
+quietly landed a full implementation. The corrected worker then adversarially reviewed
+its orphan's diff as untrusted, caught **2 real defects** (keyboard strip 1200px inside
+a 1080px shell; gruvbox !important erasing panel chrome) and fixed both structurally
+(chrome moved to a wrapper no global sheet targets — no !important war). All four
+judgment calls approved (clean-slate seed; SoundTab-scoped link; inert-duplicate-tab
+test scoping; feasible page tests). Orchestrator verified: G1 391/391, G2 clean,
+G3 225/225 bit-exact, G4 screenshot on-language, G5 63 hold (no new tells, justified).
+
+`ITERATION 6: P7 designer scaffold — census 63 — backlog: 3 items (P8 unblocked, P6, P9)`
