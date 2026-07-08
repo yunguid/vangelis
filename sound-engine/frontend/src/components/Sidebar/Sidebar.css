@@ -123,6 +123,13 @@
   color: rgba(255, 188, 160, 0.96);
 }
 
+/* Nav action rail button: an <a>, not a <button>, so it needs its own reset
+   (no underline, box-sizing) — everything else matches .sidebar-rail__btn. */
+.sidebar-rail__btn--nav {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
 .sidebar-rail__indicator {
   position: absolute;
   top: 6px;

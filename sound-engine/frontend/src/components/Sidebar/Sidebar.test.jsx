@@ -56,6 +56,13 @@ describe('Sidebar', () => {
     expect(screen.getByRole('button', { name: /open sound controls/i })).toBeInTheDocument();
   });
 
+  it('renders a rail-level Design nav link to the sound-designer page', () => {
+    render(<Sidebar {...buildProps()} />);
+    const designLink = screen.getByRole('link', { name: /open the sound design workspace/i });
+    expect(designLink).toBeInTheDocument();
+    expect(designLink).toHaveAttribute('href', '#/sound-designer');
+  });
+
   it('opens selected tab when rail button clicked', () => {
     const onOpen = vi.fn();
     const onTabChange = vi.fn();

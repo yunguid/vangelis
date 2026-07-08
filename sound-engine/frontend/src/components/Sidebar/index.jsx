@@ -5,6 +5,7 @@ import {
   useMidiTransport,
   useSoundControls
 } from '../../context/SynthContexts.jsx';
+import { SOUND_DESIGNER_HREF } from '../../utils/routes.js';
 import './Sidebar.css';
 
 const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
@@ -142,6 +143,18 @@ const Sidebar = ({
             {tab.isActive && <span className="sidebar-rail__indicator" />}
           </button>
         ))}
+        {/* Nav action, not a panel tab: takes you to the dedicated sound
+            design workspace instead of toggling a rail panel. */}
+        <a
+          className="sidebar-rail__btn sidebar-rail__btn--nav"
+          href={SOUND_DESIGNER_HREF}
+          aria-label="Open the sound design workspace"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 15 L9 15 L11 9 L14 19 L16 12 L20 12" />
+          </svg>
+          <span className="sidebar-rail__label">Design</span>
+        </a>
       </div>
 
       {/* Expandable Panel */}

@@ -99,18 +99,18 @@ const ESSENTIAL_SLIDERS = [
   })
 ];
 
-const DELAY_TIME_SLIDER = makeSlider('delayTime', {
+export const DELAY_TIME_SLIDER = makeSlider('delayTime', {
   id: 'delay-time',
   label: 'Time',
   display: (value) => `${Math.round(value)} ms`
 });
 
-const DELAY_FEEDBACK_SLIDER = makePercentSlider('delayFeedback', {
+export const DELAY_FEEDBACK_SLIDER = makePercentSlider('delayFeedback', {
   id: 'delay-feedback',
   label: 'Feedback'
 });
 
-const DELAY_MIX_SLIDER = makePercentSlider('delayMix', {
+export const DELAY_MIX_SLIDER = makePercentSlider('delayMix', {
   id: 'delay-mix',
   label: 'Blend'
 });
@@ -159,7 +159,7 @@ const DELAY_MOTION_SLIDER = makePercentSlider('delayMotion', {
   }
 });
 
-const REVERB_SIZE_SLIDER = makePercentSlider('reverbSize', {
+export const REVERB_SIZE_SLIDER = makePercentSlider('reverbSize', {
   id: 'reverb-size',
   label: 'Size',
   display: (value) => {
@@ -170,7 +170,7 @@ const REVERB_SIZE_SLIDER = makePercentSlider('reverbSize', {
   }
 });
 
-const REVERB_DECAY_SLIDER = makePercentSlider('reverbDecay', {
+export const REVERB_DECAY_SLIDER = makePercentSlider('reverbDecay', {
   id: 'reverb-decay',
   label: 'Decay',
   display: (value) => {
@@ -192,7 +192,7 @@ const REVERB_TONE_SLIDER = makePercentSlider('reverbTone', {
   }
 });
 
-const REVERB_MIX_SLIDER = makePercentSlider('reverbMix', {
+export const REVERB_MIX_SLIDER = makePercentSlider('reverbMix', {
   id: 'reverb-mix',
   label: 'Blend'
 });
@@ -214,12 +214,12 @@ const REVERB_WIDTH_SLIDER = makePercentSlider('reverbWidth', {
   }
 });
 
-const DISTORTION_SLIDER = makePercentSlider('distortion', {
+export const DISTORTION_SLIDER = makePercentSlider('distortion', {
   id: 'distortion',
   label: 'Distortion'
 });
 
-const ADSR_SLIDERS = [
+export const ADSR_SLIDERS = [
   makeSlider('attack', {
     id: 'attack',
     label: 'Attack',
@@ -241,7 +241,7 @@ const ADSR_SLIDERS = [
   })
 ];
 
-const FM_SLIDERS = [
+export const FM_SLIDERS = [
   makeSlider('fmRatio', {
     id: 'fm-ratio',
     label: 'FM ratio',
@@ -260,7 +260,7 @@ const PHASE_SLIDER = makeSlider('phaseOffset', {
   display: (value) => `${Math.round(value)}°`
 });
 
-const FILTER_SLIDERS = [
+export const FILTER_SLIDERS = [
   makeLogSlider('filterCutoff', {
     id: 'filter-cutoff',
     label: 'Filter cutoff',
@@ -291,19 +291,19 @@ const VELOCITY_CURVE_SLIDER = makeSlider('velocityCurve', {
   helpText: 'How strongly key velocity shapes loudness.'
 });
 
-const LFO1_RATE_SLIDER = makeSlider('lfoRate', {
+export const LFO1_RATE_SLIDER = makeSlider('lfoRate', {
   id: 'lfo1-rate',
   label: 'LFO 1 rate',
   display: (value) => (value <= 0 ? 'Off' : `${value.toFixed(1)} Hz`)
 });
 
-const LFO2_RATE_SLIDER = makeSlider('lfo2Rate', {
+export const LFO2_RATE_SLIDER = makeSlider('lfo2Rate', {
   id: 'lfo2-rate',
   label: 'LFO 2 rate',
   display: (value) => (value <= 0 ? 'Off' : `${value.toFixed(1)} Hz`)
 });
 
-const MOD_ENV_SLIDERS = [
+export const MOD_ENV_SLIDERS = [
   makeSlider('modAttack', {
     id: 'mod-attack',
     label: 'Mod attack',
@@ -325,7 +325,7 @@ const MOD_ENV_SLIDERS = [
   })
 ];
 
-const ModMatrixEditor = ({ routes, onChange }) => {
+export const ModMatrixEditor = ({ routes, onChange }) => {
   const addRoute = () => {
     if (routes.length >= MAX_MOD_ROUTES) return;
     onChange([...routes, { src: 0, dst: 1, depth: 0.25 }]);
@@ -406,7 +406,7 @@ const ModMatrixEditor = ({ routes, onChange }) => {
   );
 };
 
-const UNISON_SLIDERS = [
+export const UNISON_SLIDERS = [
   makeSlider('unisonVoices', {
     id: 'unison-voices',
     label: 'Unison voices',
@@ -419,7 +419,7 @@ const UNISON_SLIDERS = [
   })
 ];
 
-const SliderControl = ({
+export const SliderControl = ({
   id,
   label,
   value,
@@ -528,7 +528,7 @@ const SegmentedControl = ({
   </div>
 );
 
-const InlineToggle = ({
+export const InlineToggle = ({
   pressed,
   onToggle,
   activeLabel = 'On',

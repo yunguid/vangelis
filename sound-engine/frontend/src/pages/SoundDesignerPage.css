@@ -1,14 +1,16 @@
 /*
- * Sound Designer workstation layout.
+ * Sound Designer — stage/layer paradigm (P11 rebuild).
  *
- * Full-viewport two-column working area (LEFT: waveform row + presets strip
- * + AudioControls, scrolling independently; RIGHT: live scope/spectrum) with
- * a keyboard dock pinned to the bottom of the viewport so it is never
- * scrolled out of view. This page intentionally does NOT use the shared
- * `--max-shell-width` token (min(92vw, 1080px)) — that width is correct for
- * the single-column pop-out pages (pipeline, song study) but is exactly the
- * "narrow column" defect this page exists to fix, so it defines its own
- * wider shell instead.
+ * The user's own words: start from a BASE (the sound you're layering on),
+ * freely explore the layers (TONE / MOTION / SPACE), a wizard-like thread
+ * pulls you forward, and you MINT it at the end for use on the main page.
+ *
+ * Layout: a flat stage rail (five text tabs) sits above ONE focused stage
+ * card at a time; a compact scope strip and the docked keyboard are always
+ * visible below it. Everything composes within the viewport — no scrolling
+ * on a normal desktop. This page does not use the shared `--max-shell-width`
+ * token (min(92vw, 1080px)) — that width fits the single-column pop-out
+ * pages, not this wider, viewport-composed workspace.
  */
 
 .sound-designer-page {
@@ -21,9 +23,9 @@
 }
 
 .sound-designer-page__shell {
-  width: min(97vw, 1720px);
+  width: min(94vw, 900px);
   margin: 0 auto;
-  padding: var(--space-md) var(--space-lg) 0;
+  padding: var(--space-sm) var(--space-lg) 0;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -32,94 +34,247 @@
 
 .sound-designer-page__header {
   width: 100%;
-  margin-bottom: 14px;
+  margin-bottom: var(--space-sm);
   flex: 0 0 auto;
 }
 
 .sound-designer-workspace {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   flex: 1 1 auto;
   min-height: 0;
 }
 
-/* The working area: two columns on desktop widths. Controls column scrolls
-   on its own; the scope column fills the remaining width and height. */
-.sound-designer-workspace__main {
-  display: grid;
-  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
-  gap: var(--space-md);
-  flex: 1 1 auto;
-  min-height: 0;
+/* ── Stage rail ───────────────────────────────────────────────────────── */
+/* Flat text tabs, no pills/dots. A filled accent underline marks the active
+   stage; a visited stage keeps a faint underline so progress reads at a
+   glance without a completion badge/checkmark ornament. */
+.stage-rail {
+  display: flex;
+  flex: 0 0 auto;
+  border-bottom: 1px solid rgba(168, 153, 132, 0.18);
 }
 
-.sound-designer-column {
+.stage-rail__tab {
+  flex: 1 1 0;
+  padding: 10px 4px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text-tertiary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 100ms ease, border-color 100ms ease;
+}
+
+.stage-rail__tab:hover {
+  color: var(--color-text-secondary);
+}
+
+.stage-rail__tab.is-visited {
+  border-bottom-color: rgba(168, 153, 132, 0.32);
+}
+
+.stage-rail__tab.is-active {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-core-accent);
+}
+
+/* ── Stage stack: rail + card + scope + keyboard fills remaining height ── */
+.stage-stage {
+  flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ── One focused stage card ──────────────────────────────────────────── */
+.stage-card {
+  width: 100%;
+  max-height: 55vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-md);
+  border: 1px solid rgba(168, 153, 132, 0.18);
+  background: rgba(40, 40, 40, 0.92);
+  border-radius: 2px;
+}
+
+.stage-card__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
-.sound-designer-column--controls {
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-right: var(--space-xs);
-  padding-bottom: var(--space-md);
+.stage-card__body--centered {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
-/* Without this, the flex column shrinks .panel/.control-groups (which has
-   its own `overflow: hidden` in layout.css) to fit the available height
-   instead of letting the column's content exceed it — silently clipping
-   Delay/Reverb detail and the Modulation section instead of making the
-   column scrollable. Each direct child keeps its natural content height;
-   overflow-y on the parent is what turns the excess into a scrollbar. */
-.sound-designer-column--controls > * {
-  flex-shrink: 0;
+.stage-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
-.sound-designer-column--scope {
-  min-height: 0;
+.stage-section__title {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
 }
 
-/* Waveform row: a single compact strip of 4, not a 2x2 grid. UIOverlay's
-   own `compact` prop already shrinks the buttons and abbreviates labels;
-   this page-scoped override is the only change needed to force one row
-   (the shared `.waveform-grid--inline` rule stays a 2-column grid for the
-   sidebar's narrower Sound tab, which this selector does not touch). */
-.sound-designer-waveform {
-  padding: var(--space-md);
-  border: 1px solid rgba(168, 153, 132, 0.18);
-  background: rgba(40, 40, 40, 0.92);
-  border-radius: 2px;
+.stage-section__summary {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
 }
 
-.sound-designer-waveform .waveform-panel--inline {
-  padding: 0;
-  border-bottom: 0;
+.stage-card__next {
+  align-self: flex-end;
+  flex: 0 0 auto;
+  margin-top: var(--space-sm);
+  padding: 8px 0 0;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
 }
 
-.sound-designer-waveform .waveform-grid--inline {
+.stage-card__next:hover {
+  color: var(--color-core-accent);
+}
+
+/* Internal grids over vertical stacks: use the shared slider-grid rule from
+   controls.css (auto-fit 180px columns) so rows lay side by side. A four-up
+   variant keeps the ADSR row on one line in the wider designer card. */
+.slider-grid--four {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
-.sound-designer-presets {
-  padding: var(--space-md);
-  border: 1px solid rgba(168, 153, 132, 0.18);
-  background: rgba(40, 40, 40, 0.92);
+/* ── BASE stage ───────────────────────────────────────────────────────── */
+.base-waveform-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.base-waveform-card {
+  padding: var(--space-md) var(--space-sm);
+  border: 1px solid rgba(168, 153, 132, 0.24);
+  background: rgba(29, 32, 33, 0.6);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: border-color 100ms ease, color 100ms ease, background 100ms ease;
+}
+
+.base-waveform-card:hover {
+  color: var(--color-text-primary);
+  border-color: rgba(168, 153, 132, 0.4);
+}
+
+.base-waveform-card.is-active {
+  border-color: var(--color-core-accent);
+  color: var(--color-text-primary);
+  background: rgba(255, 122, 61, 0.1);
+}
+
+/* PresetShelf reused wholesale (foldBrowse keeps the 45-patch wall folded) —
+   strip its own panel chrome here since the stage card already provides it. */
+.stage-card--base .preset-shelf {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* ── MINT stage ───────────────────────────────────────────────────────── */
+.mint-name-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.mint-name-input {
+  width: min(100%, 360px);
+  padding: 10px 12px;
+  border: 1px solid rgba(168, 153, 132, 0.3);
+  background: rgba(29, 32, 33, 0.8);
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
   border-radius: 2px;
 }
 
-/* Right column: live visual feedback. WaveCandy sizes itself with
-   viewport-relative widths (min(1200px, 95vw)) for the main page's
-   full-bleed stage; inside this column it must fill the column instead. */
-.sound-designer-scope {
-  height: 100%;
-  min-height: 320px;
-  padding: var(--space-md);
-  border: 1px solid rgba(168, 153, 132, 0.18);
-  background: rgba(40, 40, 40, 0.92);
+.mint-name-input:focus-visible {
+  outline: none;
+  border-color: var(--color-core-accent);
+}
+
+.mint-button {
+  padding: 12px 28px;
+  border: 1px solid var(--color-core-accent);
+  background: rgba(255, 122, 61, 0.14);
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   border-radius: 2px;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.mint-button:hover {
+  background: rgba(255, 122, 61, 0.24);
+}
+
+.mint-confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.mint-confirmation__title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.mint-confirmation__link {
+  color: var(--color-core-accent);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+/* ── Scope strip: persistent at every stage, above the keyboard dock ───── */
+/* WaveCandy always mounts its full 5-pane grid (spectrogram/scope/meter/
+   goniometer/spectrum) as one RAF-driven unit — there is no per-pane mount.
+   Sized down to a slim strip here via a page-scoped grid-row override. */
+.sound-designer-scope {
+  flex: 0 0 auto;
+  height: 108px;
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid rgba(168, 153, 132, 0.18);
+  border-top: 0;
+  background: rgba(40, 40, 40, 0.92);
   display: flex;
 }
 
@@ -134,35 +289,31 @@
   grid-auto-rows: 1fr;
 }
 
-/* Keyboard dock: pinned at the bottom of the viewport, always visible while
-   the controls column scrolls above it. */
+/* ── Keyboard dock: always visible, pinned under the scope strip ───────── */
 .sound-designer-keyboard {
   flex: 0 0 auto;
   padding: var(--space-sm) var(--space-md);
   border: 1px solid rgba(168, 153, 132, 0.18);
-  border-bottom: 0;
+  border-top: 0;
   background: rgba(40, 40, 40, 0.92);
-  border-radius: 2px 2px 0 0;
-  margin-top: auto;
+  border-radius: 0 0 2px 2px;
 }
 
 .sound-designer-keyboard .keyboard-surface {
   width: 100%;
 }
 
-@media (max-width: 1100px) {
-  .sound-designer-workspace__main {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
+@media (max-width: 900px) {
+  .sound-designer-page__shell {
+    width: 100%;
   }
 
-  .sound-designer-column--scope {
-    flex: 0 0 auto;
+  .base-waveform-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .sound-designer-scope {
-    height: auto;
+  .slider-grid--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -173,15 +324,17 @@
   }
 
   .sound-designer-page__shell {
-    width: 100%;
     height: auto;
     padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
       calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
+  .stage-card {
+    max-height: none;
+  }
+
   .sound-designer-keyboard {
     position: sticky;
     bottom: 0;
-    margin-top: 0;
   }
 }

@@ -340,3 +340,26 @@ save it and MINT it and use it from the main page."
 | id | item | rating |
 |----|------|--------|
 | P11 | Designer rebuilt around a STAGE/LAYER paradigm: stage rail (BASE → TONE → MOTION → SPACE → MINT), one focused stage card at a time (free navigation between stages, wizard progression affordance), persistent compact scope + docked keyboard at every stage, viewport-composed (no vertical sprawl), rail-level entry in the sidebar. "Mint" is the save action's name. | top priority |
+
+### Iteration 11 — P11: the stage/layer designer — 2026-07-07
+`#/sound-designer` rebuilt on the vetoed paradigm's replacement: a five-stage rail
+(BASE → TONE → MOTION → SPACE → MINT), free navigation with a wizard thread ("next →"
+per card, visited marks), one focused ≤55vh stage card at a time built from focused
+control rows (15 existing AudioControls primitives export-only exposed — no logic
+change, no accordion), a persistent 108px live scope strip + docked keyboard at every
+stage, zero vertical scroll at 1440×900 (verified: scrollHeight === innerHeight).
+MINT is the save action: name → "Mint sound" → confirmation → "use it on the main
+page →". Rail-level "Design" entry added to the sidebar (anchor styled as a rail
+button, waveform glyph). Full muted walk-through proven: param change at every stage,
+notes at two stages (probe 0.051 / 0.018), mint round-trip to the sidebar (45→46,
+listed, cleaned up), scope canvases live-redrawing (3330 pixels changed on note).
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. Judgment calls all
+approved: filterMode has no UI anywhere in the app — correctly flagged, not invented
+(noted here as possible future work, user's call); WaveCandy mounts only as a suite —
+strip-sized per the brief's fallback; EffectMacroDial skipped for §2 consistency;
+unused export removed before finishing. Orchestrator verified: G1 363/363, G2 clean,
+G3 225/225 bit-exact, G5 19 hold. **Backlog: 0 — awaiting user sign-off on the new
+paradigm.**
+
+`ITERATION 11: P11 stage designer — census 19 — backlog: 0 — SIGN-OFF PENDING`
