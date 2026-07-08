@@ -1,16 +1,23 @@
 /*
- * Sound Designer — stage/layer paradigm (P11 rebuild).
+ * Sound Designer — stage/layer paradigm (P11 rebuild; P12 polish per USER VETO #3).
  *
  * The user's own words: start from a BASE (the sound you're layering on),
  * freely explore the layers (TONE / MOTION / SPACE), a wizard-like thread
  * pulls you forward, and you MINT it at the end for use on the main page.
  *
  * Layout: a flat stage rail (five text tabs) sits above ONE focused stage
- * card at a time; a compact scope strip and the docked keyboard are always
+ * card at a time; a persistent scope strip and the docked keyboard are always
  * visible below it. Everything composes within the viewport — no scrolling
- * on a normal desktop. This page does not use the shared `--max-shell-width`
- * token (min(92vw, 1080px)) — that width fits the single-column pop-out
- * pages, not this wider, viewport-composed workspace.
+ * on a normal desktop.
+ *
+ * Shell width: uses the shared `--max-shell-width` token (min(92vw, 1080px)),
+ * the same token + centering mechanism (`margin: 0 auto`) as the main page's
+ * `.app-shell` — so the whole workspace (rail, card, scope, keyboard) shares
+ * the main page's horizontal footprint and centering behavior instead of the
+ * narrow 900px column D1/D2 flagged. The stage CARD keeps its actual controls
+ * (`.stage-card__body`) capped at ~820px and centered within the wider card,
+ * so the frame reads as a proper wide workspace while individual control rows
+ * stay a readable line length rather than stretching thin sliders edge to edge.
  */
 
 .sound-designer-page {
@@ -23,7 +30,7 @@
 }
 
 .sound-designer-page__shell {
-  width: min(94vw, 900px);
+  width: var(--max-shell-width);
   margin: 0 auto;
   padding: var(--space-sm) var(--space-lg) 0;
   height: 100%;
@@ -107,6 +114,9 @@
 }
 
 .stage-card__body {
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -264,16 +274,28 @@
   letter-spacing: 0.02em;
 }
 
-/* ── Scope strip: persistent at every stage, above the keyboard dock ───── */
+/* ── Scope + keyboard: one merged surface with an internal hairline ─────
+   D3 fix: the scope strip and keyboard dock previously both set
+   `border-top: 0` (an unfinished attempt at a flush stack) while the
+   workspace's flex `gap` still held them apart by 10px — two open-topped
+   boxes floating across a bare gap, which read as "off and bizarre" (the
+   scope's border and the keyboard panel appeared to collide with nothing
+   actually separating them). Fixed by actually merging them: the keyboard
+   dock's negative top margin cancels the gap, its border-top becomes the
+   single internal hairline, and the scope strip rounds only its top corners
+   while the keyboard dock rounds only its bottom ones — together they read
+   as one continuous panel, not two mismatched fragments. Padding on both
+   raised so keys/canvases sit clear of the outer border on every edge. */
 /* WaveCandy always mounts its full 5-pane grid (spectrogram/scope/meter/
    goniometer/spectrum) as one RAF-driven unit — there is no per-pane mount.
    Sized down to a slim strip here via a page-scoped grid-row override. */
 .sound-designer-scope {
   flex: 0 0 auto;
   height: 108px;
-  padding: var(--space-xs) var(--space-md);
+  padding: var(--space-xs) var(--space-lg);
   border: 1px solid rgba(168, 153, 132, 0.18);
-  border-top: 0;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
   background: rgba(40, 40, 40, 0.92);
   display: flex;
 }
@@ -289,12 +311,11 @@
   grid-auto-rows: 1fr;
 }
 
-/* ── Keyboard dock: always visible, pinned under the scope strip ───────── */
 .sound-designer-keyboard {
   flex: 0 0 auto;
-  padding: var(--space-sm) var(--space-md);
+  margin-top: calc(-1 * var(--space-sm));
+  padding: var(--space-md) var(--space-lg);
   border: 1px solid rgba(168, 153, 132, 0.18);
-  border-top: 0;
   background: rgba(40, 40, 40, 0.92);
   border-radius: 0 0 2px 2px;
 }

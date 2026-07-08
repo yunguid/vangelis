@@ -383,3 +383,20 @@ slices (one per iteration, Sonnet implements, orchestrator adversarially reviews
 screenshots at fullscreen desktop AND mobile widths), until the defect list is empty AND
 one further audit pass finds nothing — then present for sign-off. Same gates, same
 silence rule, same commit/push cadence (purge(k) continues).
+
+### Iteration 12 — polish slice 1: D1+D2+D3 closed — 2026-07-08
+D1: designer shell now uses the main page's exact `--max-shell-width` token + auto
+margins (900 → 1080px at 1920w; card frame spans the shell, controls capped at a
+readable 820px inside). D2: keyboard centering matches the main page by construction —
+measured: both center on x=960 at 1920w, gap symmetry 0px (and symmetric at 2560w).
+D3 root-caused: scope strip and dock both carried a half-finished `border-top: 0`
+flush-stack intent, broken by the flex gap — merged into one continuous surface with a
+single internal hairline; key clearance now 17-21px on all edges, zero overlap.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. CSS-only diff (one
+file, +33/−12) verified. Judgment calls approved (merge-over-separate matched the
+code's original intent; body-vs-card width split; launch.json experiment reverted
+before finishing — noted for honesty). Orchestrator verified: G1 363/363, G2 clean,
+G3 225/225 bit-exact, G5 19. D4-D7 remain.
+
+`ITERATION 12: polish D1-D3 — census 19 — defects remaining: D4 D5 D6 D7`
