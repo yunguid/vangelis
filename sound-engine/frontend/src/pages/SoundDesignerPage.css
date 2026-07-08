@@ -1,52 +1,187 @@
+/*
+ * Sound Designer workstation layout.
+ *
+ * Full-viewport two-column working area (LEFT: waveform row + presets strip
+ * + AudioControls, scrolling independently; RIGHT: live scope/spectrum) with
+ * a keyboard dock pinned to the bottom of the viewport so it is never
+ * scrolled out of view. This page intentionally does NOT use the shared
+ * `--max-shell-width` token (min(92vw, 1080px)) — that width is correct for
+ * the single-column pop-out pages (pipeline, song study) but is exactly the
+ * "narrow column" defect this page exists to fix, so it defines its own
+ * wider shell instead.
+ */
+
 .sound-designer-page {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #1d2021;
   color: var(--color-text-primary);
+  display: flex;
+  flex-direction: column;
 }
 
 .sound-designer-page__shell {
-  width: var(--max-shell-width);
+  width: min(97vw, 1720px);
   margin: 0 auto;
-  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+  padding: var(--space-md) var(--space-lg) 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .sound-designer-page__header {
   width: 100%;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+  flex: 0 0 auto;
 }
 
 .sound-designer-workspace {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-md);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The working area: two columns on desktop widths. Controls column scrolls
+   on its own; the scope column fills the remaining width and height. */
+.sound-designer-workspace__main {
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: var(--space-md);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sound-designer-column {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.sound-designer-column--controls {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: var(--space-xs);
+  padding-bottom: var(--space-md);
+}
+
+/* Without this, the flex column shrinks .panel/.control-groups (which has
+   its own `overflow: hidden` in layout.css) to fit the available height
+   instead of letting the column's content exceed it — silently clipping
+   Delay/Reverb detail and the Modulation section instead of making the
+   column scrollable. Each direct child keeps its natural content height;
+   overflow-y on the parent is what turns the excess into a scrollbar. */
+.sound-designer-column--controls > * {
+  flex-shrink: 0;
+}
+
+.sound-designer-column--scope {
+  min-height: 0;
+}
+
+/* Waveform row: a single compact strip of 4, not a 2x2 grid. UIOverlay's
+   own `compact` prop already shrinks the buttons and abbreviates labels;
+   this page-scoped override is the only change needed to force one row
+   (the shared `.waveform-grid--inline` rule stays a 2-column grid for the
+   sidebar's narrower Sound tab, which this selector does not touch). */
+.sound-designer-waveform {
+  padding: var(--space-md);
+  border: 1px solid rgba(168, 153, 132, 0.18);
+  background: rgba(40, 40, 40, 0.92);
+  border-radius: 2px;
+}
+
+.sound-designer-waveform .waveform-panel--inline {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.sound-designer-waveform .waveform-grid--inline {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .sound-designer-presets {
-  padding: var(--space-lg);
+  padding: var(--space-md);
   border: 1px solid rgba(168, 153, 132, 0.18);
   background: rgba(40, 40, 40, 0.92);
   border-radius: 2px;
 }
 
+/* Right column: live visual feedback. WaveCandy sizes itself with
+   viewport-relative widths (min(1200px, 95vw)) for the main page's
+   full-bleed stage; inside this column it must fill the column instead. */
+.sound-designer-scope {
+  height: 100%;
+  min-height: 320px;
+  padding: var(--space-md);
+  border: 1px solid rgba(168, 153, 132, 0.18);
+  background: rgba(40, 40, 40, 0.92);
+  border-radius: 2px;
+  display: flex;
+}
+
+.sound-designer-scope .wave-candy {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sound-designer-scope .wave-candy-grid {
+  height: 100%;
+  grid-auto-rows: 1fr;
+}
+
+/* Keyboard dock: pinned at the bottom of the viewport, always visible while
+   the controls column scrolls above it. */
 .sound-designer-keyboard {
-  padding: var(--space-lg);
+  flex: 0 0 auto;
+  padding: var(--space-sm) var(--space-md);
   border: 1px solid rgba(168, 153, 132, 0.18);
+  border-bottom: 0;
   background: rgba(40, 40, 40, 0.92);
-  border-radius: 2px;
+  border-radius: 2px 2px 0 0;
+  margin-top: auto;
 }
 
-/* keyboard.css and wave-candy.css size .keyboard-surface with
-   viewport-relative widths (min(1400px,96vw) / min(1200px,95vw)) for the main
-   page's full-bleed stage; inside this panel it must fill the column instead
-   of overflowing it. Descendant selector out-specifies both. */
 .sound-designer-keyboard .keyboard-surface {
   width: 100%;
 }
 
+@media (max-width: 1100px) {
+  .sound-designer-workspace__main {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sound-designer-column--scope {
+    flex: 0 0 auto;
+  }
+
+  .sound-designer-scope {
+    height: auto;
+  }
+}
+
 @media (max-width: 720px) {
+  .sound-designer-page {
+    height: auto;
+    overflow: visible;
+  }
+
   .sound-designer-page__shell {
     width: 100%;
+    height: auto;
     padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
       calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sound-designer-keyboard {
+    position: sticky;
+    bottom: 0;
+    margin-top: 0;
   }
 }

@@ -303,3 +303,27 @@ verified live, G5 19.
 **Backlog: P10 only (the user-veto designer rebuild). Sign-off screenshots wait for it.**
 
 `ITERATION 9: P6 sidebar structure — census 19 — backlog: 1 item (P10 veto rebuild)`
+
+### Iteration 10 — P10: the veto rebuild — designer is a workstation — 2026-07-07
+`#/sound-designer` rebuilt against the user's veto ("looks like shit and is not
+useful"): full-viewport two-column grid — left (~420px, own scrollbar): compact
+waveform strip, compact preset strip (transport + save row always visible, 45-patch
+browse folded behind a disclosure via a new optional `foldBrowse` PresetShelf prop —
+sidebar behavior byte-identical without it), full AudioControls with Essentials +
+Modulation EXPANDED by default; right: the live 5-pane WaveCandy suite (meter, scope,
+spectrum, spectrogram, goniometer) on the real analyser; bottom: keyboard docked,
+bounding-box-identical under scroll. Zero new census tells. +10 tests.
+
+**Review record:** two workers. Worker 1 implemented, then was cancelled during
+audible verification (the noise incident — user present; the loop now runs a HARD
+SILENCE RULE: every sound-producing check wraps macOS mute/restore via osascript,
+probe reads are internal and unaffected). Worker 2 inherited the diff as untrusted,
+reviewed line-by-line, accepted with zero changes, and ran all verification muted
+(probe 1.7e-5 → 0.0898 → decay; all 5 canvases painting; keyboard dock proven;
+sidebar round-trip clean). A mid-verification host-process restart also occurred;
+gates re-run clean after. Orchestrator verified: G1 355/355, G2 clean, G3 225/225
+bit-exact, G5 19 hold (residuals unchanged and justified).
+
+**Backlog: EMPTY. All census residuals itemized and justified. Awaiting user sign-off.**
+
+`ITERATION 10: P10 veto rebuild — census 19 — backlog: 0 — SIGN-OFF PENDING`

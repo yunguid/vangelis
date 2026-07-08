@@ -47,34 +47,66 @@ describe('SoundDesignerPage', () => {
     expect(screen.getByText('Vangelis')).toBeInTheDocument();
   });
 
-  it('renders the full (non-compact) waveform selector', () => {
+  it('renders a compact single-row waveform selector', () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
     expect(workspace.getByRole('radiogroup', { name: 'Waveform selection' })).toBeInTheDocument();
-    // Full-size waveform buttons render the raw waveform name, not the
-    // compact abbreviation.
+    // Accessible name is always the raw waveform name regardless of the
+    // `compact` prop (only the visible label text abbreviates); this page
+    // uses the compact row (defect: a huge 2x2 grid dominating the column),
+    // scoped to a single row via `.sound-designer-waveform` CSS.
     expect(workspace.getByRole('radio', { name: 'Sine' })).toBeInTheDocument();
+    expect(workspace.getByRole('radio', { name: 'Sawtooth' })).toBeInTheDocument();
   });
 
-  it('renders the full AudioControls surface (not compact/embedded)', () => {
+  it('renders the full AudioControls surface (not compact/embedded), with Essentials and Modulation expanded by default', () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
     expect(workspace.getByText('Volume')).toBeInTheDocument();
+
+    // Essentials: expanded by default (Volume slider visible, asserted above).
+    // Modulation: expanded by default too — this is the working surface for
+    // envelope/FM/filter/mod-matrix shaping, the core designer loop, so it
+    // must not be collapsed behind an extra click like the sidebar's Sound
+    // tab default. The ADSR toggle row only exists in the DOM when the
+    // Modulation section is open.
+    expect(workspace.getByText('ADSR envelope')).toBeInTheDocument();
   });
 
-  it('renders a preset shelf with a save control between the controls and the keyboard', () => {
+  it('renders a compact preset strip (transport + save row) with the full preset browser folded by default', () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
-    expect(workspace.getByRole('region', { name: 'Save and load sounds' })).toBeInTheDocument();
-    expect(workspace.getByRole('button', { name: /save/i })).toBeInTheDocument();
-
-    // Ordering: the presets region must sit after AudioControls (Volume) and
-    // before the keyboard test strip, per the mandate's placement.
     const presetsRegion = workspace.getByRole('region', { name: 'Save and load sounds' });
-    const keyboardRegion = screen.getByRole('region', { name: 'Test keyboard' });
-    // Node.DOCUMENT_POSITION_FOLLOWING (4): presetsRegion comes before keyboardRegion.
+    const scoped = within(presetsRegion);
+
+    // Always-visible strip: prev/next transport, active-name readout, save row.
+    expect(scoped.getByRole('button', { name: 'Previous preset' })).toBeInTheDocument();
+    expect(scoped.getByRole('button', { name: 'Next preset' })).toBeInTheDocument();
+    expect(scoped.getByLabelText('New preset name')).toBeInTheDocument();
+    expect(scoped.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
+
+    // The 45-button preset wall is demoted: factory category lists are not
+    // in the DOM until the browse disclosure is opened.
+    expect(scoped.queryByRole('list', { name: /presets$/i })).not.toBeInTheDocument();
+    const browseToggle = scoped.getByRole('button', { name: /Browse all presets/i });
+    expect(browseToggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(browseToggle);
+    expect(scoped.getAllByRole('list', { name: /presets$/i }).length).toBeGreaterThan(0);
+  });
+
+  it('places the preset strip between the waveform row and the AudioControls surface', () => {
+    const { container } = render(<SoundDesignerPage />);
+    const workspace = getWorkspace(container);
+    const waveformGroup = workspace.getByRole('radiogroup', { name: 'Waveform selection' });
+    const presetsRegion = workspace.getByRole('region', { name: 'Save and load sounds' });
+    const volumeLabel = workspace.getByText('Volume');
+
     expect(
-      presetsRegion.compareDocumentPosition(keyboardRegion) & Node.DOCUMENT_POSITION_FOLLOWING
+      waveformGroup.compareDocumentPosition(presetsRegion) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      presetsRegion.compareDocumentPosition(volumeLabel) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 
@@ -82,6 +114,18 @@ describe('SoundDesignerPage', () => {
     render(<SoundDesignerPage />);
     expect(screen.getByRole('region', { name: 'Test keyboard' })).toBeInTheDocument();
     expect(screen.getByTestId('keyboard-mock')).toBeInTheDocument();
+  });
+
+  it('renders live visual feedback (the WaveCandy scope/spectrum suite)', () => {
+    const { container } = render(<SoundDesignerPage />);
+    const workspace = getWorkspace(container);
+    const scopeRegion = workspace.getByRole('region', { name: 'Live sound visualization' });
+    const scoped = within(scopeRegion);
+
+    // WaveCandy's own internal section, reused wholesale (no reimplementation).
+    expect(scoped.getByLabelText('Wave Candy visualizer')).toBeInTheDocument();
+    expect(scoped.getByText('Oscilloscope')).toBeInTheDocument();
+    expect(scoped.getByText('Spectrum')).toBeInTheDocument();
   });
 
   it('renders a disabled sidebar rail', () => {
@@ -113,7 +157,7 @@ describe('SoundDesignerPage', () => {
         .toBe('porch light');
     });
 
-    it('shows the saved preset in the "Your presets" shelf list immediately after saving', () => {
+    it('shows the saved preset in the "Your presets" shelf list immediately after saving (once browse is opened)', () => {
       const { container } = render(<SoundDesignerPage />);
       const workspace = getWorkspace(container);
 
@@ -121,6 +165,10 @@ describe('SoundDesignerPage', () => {
       fireEvent.change(nameInput, { target: { value: 'bx-90' } });
       fireEvent.click(workspace.getByRole('button', { name: /^save$/i }));
 
+      // The strip stays compact after saving — the new preset lives in the
+      // folded browser, one click away, not forced back into view.
+      expect(workspace.queryByRole('button', { name: 'Load preset bx-90' })).not.toBeInTheDocument();
+      fireEvent.click(workspace.getByRole('button', { name: /Browse all presets/i }));
       expect(workspace.getByRole('button', { name: 'Load preset bx-90' })).toBeInTheDocument();
     });
   });

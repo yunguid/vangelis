@@ -5,6 +5,7 @@ import PresetShelf from '../components/PresetShelf.jsx';
 import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
 import UIOverlay from '../components/UIOverlay.jsx';
+import WaveCandy from '../components/WaveCandy';
 import { audioEngine } from '../utils/audioEngine.js';
 import {
   AUDIO_PARAM_DEFAULTS,
@@ -13,12 +14,17 @@ import {
 } from '../utils/audioParams.js';
 import './SoundDesignerPage.css';
 
+// Unlike the sidebar's compact Sound tab (Essentials only, everything else
+// collapsed to save space), this is a workstation: the sections a designer
+// actually shapes a sound with — envelope/filter/FM/mod live under
+// "Modulation" — start open. Delay/reverb stay collapsed (secondary, not the
+// core shaping loop) but are one click away, same as everywhere else.
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
   delay: false,
   reverb: false,
   color: false,
-  modulation: false
+  modulation: true
 });
 
 // Stable empty set: this page has no MIDI playback / web-MIDI input, so no
@@ -88,34 +94,47 @@ const SoundDesignerPage = () => {
         <AppHeader activeSection="sound-designer" className="sound-designer-page__header" />
 
         <div className="sound-designer-workspace">
-          <UIOverlay
-            currentWaveform={waveformType}
-            onWaveformChange={setWaveformType}
-            compact={false}
-          />
+          <div className="sound-designer-workspace__main">
+            <div className="sound-designer-column sound-designer-column--controls">
+              <div className="sound-designer-waveform">
+                <UIOverlay
+                  currentWaveform={waveformType}
+                  onWaveformChange={setWaveformType}
+                  compact
+                />
+              </div>
 
-          <AudioControls
-            audioParams={audioParams}
-            onParamChange={handleAudioParamChange}
-            onParamsChange={handleAudioParamsChange}
-            sections={controlSections}
-            onSectionToggle={handleControlSectionToggle}
-          />
+              <div className="sound-designer-presets" role="region" aria-label="Save and load sounds">
+                <PresetShelf
+                  waveformType={waveformType}
+                  audioParams={audioParams}
+                  activePresetName={activePresetName}
+                  onApply={handlePresetApplied}
+                  foldBrowse
+                />
+              </div>
 
-          <div className="sound-designer-presets" role="region" aria-label="Save and load sounds">
-            <PresetShelf
-              waveformType={waveformType}
-              audioParams={audioParams}
-              activePresetName={activePresetName}
-              onApply={handlePresetApplied}
-            />
+              <AudioControls
+                audioParams={audioParams}
+                onParamChange={handleAudioParamChange}
+                onParamsChange={handleAudioParamsChange}
+                sections={controlSections}
+                onSectionToggle={handleControlSectionToggle}
+              />
+            </div>
+
+            <div className="sound-designer-column sound-designer-column--scope">
+              <div className="sound-designer-scope" role="region" aria-label="Live sound visualization">
+                <WaveCandy />
+              </div>
+            </div>
           </div>
 
           {/* Panel chrome lives on the wrapper, not on .keyboard-surface:
               gruvbox.css strips background/border from .keyboard-surface with
               !important (correct for the main page's full-bleed stage), so the
               surface stays chrome-less and this wrapper provides the flat
-              bordered panel that matches the two surfaces above. */}
+              bordered dock that matches the columns above. */}
           <div className="sound-designer-keyboard" role="region" aria-label="Test keyboard">
             <div className="keyboard-surface">
               <div className="keyboard-region">

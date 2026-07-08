@@ -12,8 +12,24 @@ import {
  * Factory bank is grouped by category with one-click apply and prev/next
  * cycling; user presets persist in localStorage. Applying a preset merges
  * its params over the current sound.
+ *
+ * `foldBrowse` is optional and additive: when omitted (the Sound tab's use),
+ * behavior is unchanged — the transport, save row, and full category/preset
+ * lists all render every time, as before. When `true` (the sound-designer
+ * page's use), the transport + description + save row still always render,
+ * but the factory-category groups and the "Your presets" list collapse
+ * behind a disclosure button, so a 45-button preset wall doesn't dominate a
+ * compact strip. The save row is deliberately kept out of the collapsible
+ * region in both branches — saving is a core action, never hidden.
  */
-const PresetShelf = ({ waveformType, audioParams, onApply, activePresetName }) => {
+const PresetShelf = ({
+  waveformType,
+  audioParams,
+  onApply,
+  activePresetName,
+  foldBrowse = false
+}) => {
+  const [browseOpen, setBrowseOpen] = useState(false);
   const [userPresets, setUserPresets] = useState(() => loadUserPresets());
   const [name, setName] = useState('');
   // Highlight survives remounts (tab switches) by re-deriving the active
@@ -133,23 +149,39 @@ const PresetShelf = ({ waveformType, audioParams, onApply, activePresetName }) =
       {activePreset?.description && (
         <p className="preset-shelf__description">{activePreset.description}</p>
       )}
-      {factoryByCategory.map(([category, presets]) => (
-        <div key={category} className="preset-shelf__group">
-          <h4 className="preset-shelf__category">{category}</h4>
-          <ul className="preset-shelf__list" aria-label={`${category} presets`}>
-            {presets.map(renderPreset)}
-          </ul>
-        </div>
-      ))}
-      <div className="preset-shelf__group">
-        <h4 className="preset-shelf__category">Your presets</h4>
-        {userPresets.length > 0 ? (
-          <ul className="preset-shelf__list" aria-label="Your presets">
-            {userPresets.map(renderPreset)}
-          </ul>
-        ) : (
-          <p className="preset-shelf__hint">Shape a sound, name it, save it here.</p>
-        )}
+      {foldBrowse && (
+        <button
+          type="button"
+          className="button-link preset-shelf__browse-toggle"
+          onClick={() => setBrowseOpen((prev) => !prev)}
+          aria-expanded={browseOpen}
+        >
+          {browseOpen ? 'Hide all presets' : `Browse all presets (${orderedPresets.length})`}
+        </button>
+      )}
+      {(!foldBrowse || browseOpen) && (
+        <>
+          {factoryByCategory.map(([category, presets]) => (
+            <div key={category} className="preset-shelf__group">
+              <h4 className="preset-shelf__category">{category}</h4>
+              <ul className="preset-shelf__list" aria-label={`${category} presets`}>
+                {presets.map(renderPreset)}
+              </ul>
+            </div>
+          ))}
+          <div className="preset-shelf__group">
+            <h4 className="preset-shelf__category">Your presets</h4>
+            {userPresets.length > 0 ? (
+              <ul className="preset-shelf__list" aria-label="Your presets">
+                {userPresets.map(renderPreset)}
+              </ul>
+            ) : (
+              <p className="preset-shelf__hint">Shape a sound, name it, save it here.</p>
+            )}
+          </div>
+        </>
+      )}
+      <div className="preset-shelf__group preset-shelf__group--save">
         <div className="preset-shelf__save-row">
           <input
             type="text"
