@@ -21,6 +21,13 @@
   gap: var(--space-lg);
 }
 
+.sound-designer-presets {
+  padding: var(--space-lg);
+  border: 1px solid rgba(168, 153, 132, 0.18);
+  background: rgba(40, 40, 40, 0.92);
+  border-radius: 2px;
+}
+
 .sound-designer-keyboard {
   padding: var(--space-lg);
   border: 1px solid rgba(168, 153, 132, 0.18);

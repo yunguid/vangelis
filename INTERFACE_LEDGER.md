@@ -233,3 +233,22 @@ test scoping; feasible page tests). Orchestrator verified: G1 391/391, G2 clean,
 G3 225/225 bit-exact, G4 screenshot on-language, G5 63 hold (no new tells, justified).
 
 `ITERATION 6: P7 designer scaffold — census 63 — backlog: 3 items (P8 unblocked, P6, P9)`
+
+### Iteration 7 — P8: designer save pipeline — the workflow closes — 2026-07-07
+PresetShelf mounted on the designer page (untouched — its prop contract matched the
+page's state slice one-for-one), placed between the controls surface and the keyboard
+strip with panel chrome copied verbatim from its siblings. Round-trip proven live in
+BOTH directions: save "purge-p8-roundtrip" (Square) on the designer → sidebar Sound tab
+lists it, loads it, waveform snaps back to Square with active highlight → reverse
+navigation shows it on the designer too; artifact cleaned up after. No reactivity
+plumbing built — the hash router genuinely remounts pages, so localStorage re-reads
+free (correctly identified as a problem that doesn't exist). Iteration-6's "no preset
+shelf" assertion rewritten (P8 is exactly the item that reverses it). +3 tests.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. All judgment calls
+approved. Orchestrator verified: G1 394/394, G2 clean, G3 225/225 bit-exact, G4
+screenshot (presets panel on-language in the stack), G5 63 hold (no new tells).
+The user's designer mandate is now complete end-to-end: start from a waveform →
+shape → test on the keyboard → save → use from the sidebar sound page.
+
+`ITERATION 7: P8 save pipeline — census 63 — backlog: 2 items (P9 samples kill, P6 sidebar structure)`

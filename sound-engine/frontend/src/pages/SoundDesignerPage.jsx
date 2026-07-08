@@ -1,6 +1,7 @@
 import React from 'react';
 import AppHeader from '../components/AppHeader.jsx';
 import AudioControls from '../components/AudioControls.jsx';
+import PresetShelf from '../components/PresetShelf.jsx';
 import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
 import UIOverlay from '../components/UIOverlay.jsx';
@@ -34,6 +35,7 @@ const SoundDesignerPage = () => {
   const [controlSections, setControlSections] = React.useState(() => (
     DEFAULT_CONTROL_SECTIONS
   ));
+  const [activePresetName, setActivePresetName] = React.useState(null);
 
   React.useEffect(() => {
     audioEngine.setGlobalParams(audioParams);
@@ -74,6 +76,12 @@ const SoundDesignerPage = () => {
     }));
   }, []);
 
+  const handlePresetApplied = React.useCallback((preset) => {
+    if (preset.waveformType) setWaveformType(preset.waveformType);
+    if (preset.audioParams) setAudioParams(sanitizeAudioParams(preset.audioParams));
+    setActivePresetName(preset.name || null);
+  }, []);
+
   return (
     <div className="sound-designer-page">
       <main className="sound-designer-page__shell">
@@ -93,6 +101,15 @@ const SoundDesignerPage = () => {
             sections={controlSections}
             onSectionToggle={handleControlSectionToggle}
           />
+
+          <div className="sound-designer-presets" role="region" aria-label="Save and load sounds">
+            <PresetShelf
+              waveformType={waveformType}
+              audioParams={audioParams}
+              activePresetName={activePresetName}
+              onApply={handlePresetApplied}
+            />
+          </div>
 
           {/* Panel chrome lives on the wrapper, not on .keyboard-surface:
               gruvbox.css strips background/border from .keyboard-surface with

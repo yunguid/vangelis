@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import SoundDesignerPage from './SoundDesignerPage.jsx';
+import { loadUserPresets } from '../utils/presetStorage.js';
 
 // Mock the audio engine the same way App.test.jsx does, so the page can
 // mount without touching real AudioWorklet/Web Audio API in jsdom.
@@ -55,13 +56,26 @@ describe('SoundDesignerPage', () => {
     expect(workspace.getByRole('radio', { name: 'Sine' })).toBeInTheDocument();
   });
 
-  it('renders the full AudioControls surface (not compact/embedded, no preset shelf)', () => {
+  it('renders the full AudioControls surface (not compact/embedded)', () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
     expect(workspace.getByText('Volume')).toBeInTheDocument();
-    // This page must not import/render PresetShelf itself: no "Save" button
-    // or its hint text inside the page's own workspace.
-    expect(workspace.queryByText(/save/i)).not.toBeInTheDocument();
+  });
+
+  it('renders a preset shelf with a save control between the controls and the keyboard', () => {
+    const { container } = render(<SoundDesignerPage />);
+    const workspace = getWorkspace(container);
+    expect(workspace.getByRole('region', { name: 'Save and load sounds' })).toBeInTheDocument();
+    expect(workspace.getByRole('button', { name: /save/i })).toBeInTheDocument();
+
+    // Ordering: the presets region must sit after AudioControls (Volume) and
+    // before the keyboard test strip, per the mandate's placement.
+    const presetsRegion = workspace.getByRole('region', { name: 'Save and load sounds' });
+    const keyboardRegion = screen.getByRole('region', { name: 'Test keyboard' });
+    // Node.DOCUMENT_POSITION_FOLLOWING (4): presetsRegion comes before keyboardRegion.
+    expect(
+      presetsRegion.compareDocumentPosition(keyboardRegion) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it('renders the keyboard test strip', () => {
@@ -75,5 +89,39 @@ describe('SoundDesignerPage', () => {
     // The disabled Sidebar rail still renders its tab buttons, disabled.
     const soundRailButton = screen.getByRole('button', { name: /Sound panel unavailable/i });
     expect(soundRailButton).toBeDisabled();
+  });
+
+  describe('saving a designed sound', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it('persists a new preset to presetStorage (localStorage) on Save', () => {
+      const { container } = render(<SoundDesignerPage />);
+      const workspace = getWorkspace(container);
+
+      const nameInput = workspace.getByLabelText('New preset name');
+      fireEvent.change(nameInput, { target: { value: 'porch light' } });
+      fireEvent.click(workspace.getByRole('button', { name: /^save$/i }));
+
+      const stored = loadUserPresets();
+      expect(stored).toHaveLength(1);
+      expect(stored[0].name).toBe('porch light');
+      // This is the same localStorage-backed store the sidebar's Sound tab
+      // reads (utils/presetStorage.js STORAGE_KEY) — no page-local copy.
+      expect(JSON.parse(localStorage.getItem('vangelis.presets.v1'))[0].name)
+        .toBe('porch light');
+    });
+
+    it('shows the saved preset in the "Your presets" shelf list immediately after saving', () => {
+      const { container } = render(<SoundDesignerPage />);
+      const workspace = getWorkspace(container);
+
+      const nameInput = workspace.getByLabelText('New preset name');
+      fireEvent.change(nameInput, { target: { value: 'bx-90' } });
+      fireEvent.click(workspace.getByRole('button', { name: /^save$/i }));
+
+      expect(workspace.getByRole('button', { name: 'Load preset bx-90' })).toBeInTheDocument();
+    });
   });
 });
