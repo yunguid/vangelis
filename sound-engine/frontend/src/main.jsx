@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { getBuiltInStudy } from './data/songStudies.js';
+import ControlKitPage from './pages/ControlKitPage.jsx';
 import GeneratedSongStudyPage from './pages/GeneratedSongStudyPage.jsx';
 import MidiPipelinePage from './pages/MidiPipelinePage.jsx';
 import SongStudyPage from './pages/SongStudyPage.jsx';
@@ -13,6 +14,7 @@ import { withBase } from './utils/baseUrl.js';
 import {
   getActiveRoute,
   getStudyRouteMatch,
+  isControlKitRoute,
   isMidiPipelineRoute,
   isSoundDesignerRoute,
   isStudySongsRoute,
@@ -23,6 +25,7 @@ const Root = () => {
   const [route, setRoute] = React.useState(() => getActiveRoute());
   const showMidiPipeline = isMidiPipelineRoute(route);
   const showSoundDesigner = isSoundDesignerRoute(route);
+  const showControlKit = isControlKitRoute(route);
   const showVoiceLoop = isVoiceLoopRoute(route);
   const showStudySongs = isStudySongsRoute(route);
   const studyRoute = getStudyRouteMatch(route);
@@ -61,6 +64,10 @@ const Root = () => {
 
   if (showSoundDesigner) {
     return <SoundDesignerPage />;
+  }
+
+  if (showControlKit) {
+    return <ControlKitPage />;
   }
 
   if (showVoiceLoop) {

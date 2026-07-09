@@ -473,3 +473,56 @@ is accepted in principle, but the page needs a FULL redesign and they dislike AL
 current controls — "I don't like any of the buttons and draggers and things like that" —
 including the post-D4/D5 flat sliders and switches. The next thread's mandate is a
 ground-up control-language redesign, not another polish pass.
+
+### Iteration 16 — the control-kit proposal — 2026-07-08
+
+New thread, resuming per the handoff. The redesign's first checkpoint, per the user's
+protocol: propose the control kit, get approval, THEN roll it across the page. Five
+primitives built from scratch in `src/components/controls/kit/` (Knob, NumField, Fader,
+ToggleBtn, SegmentSelect + a shared `useDragValue` hook + 529-line kit.css): SVG-drawn
+270° knobs with 11-tick rings and theme-accent value arcs (bipolar arcs grow from
+center), drag-vertical numeric fields with double-click type-in and hover steppers,
+stepped faders with machined caps pinned to iteration 13's D4 flush-at-extremes
+contract by exported pure geometry functions (+ tests at both extremes, both
+orientations), latching LED-bar toggle buttons (no switches anywhere), joined segment
+selectors with 1.5px-stroke waveform glyphs. Chassis neutral (paper-alpha hairlines);
+accent strictly for value/state indication; radius ≤2px; tabular-nums everywhere. One
+interaction language across all five: pointer-capture drag (~150px travel, Shift =
+fine), double-click reset, non-passive wheel, full keyboard + ARIA
+(slider/spinbutton/radiogroup). Hidden interactive specimen sheet at `#/control-kit`
+(specimen rows + a composed OSC/FILTER/ENVELOPE/DELAY module row), linked from
+nowhere. +63 tests. Zero new census tells by construction (all arcs/ticks SVG).
+
+**Review record:** implementer: Sonnet subagent. **1 rework round, 3 defects:**
+(a) kit tint variables hardcoded orange rgba while gruvbox.css resolves the accent
+token to gold — mixed hues on a single control's on-state; fixed by `color-mix`
+derivation from the token, verified via computed styles (face/border/LED/arc/fill all
+one hue). (b) Boxed NumField grew on hover — steppers flipped `display:none→flex`,
+layout-shift jank; fixed with visibility toggling over permanently reserved space,
+rect proven byte-identical. (c) Knob wheel used React synthetic `onWheel` +
+`preventDefault()`, which React ≥17 attaches PASSIVELY — wheel scrolled the page and
+logged a Chrome warning; fixed with a ref-attached `{passive:false}` listener (+2
+tests). Worker self-caught a real bug pre-review (fine-mode keyboard nudges were
+no-ops: `commit()` re-quantized sub-step deltas back to the start value) and hardened
+`setPointerCapture` with try/catch. Judgment calls approved: knob readout composes the
+bare NumField (one language, typed precision on every knob); touch hit-areas via
+content-box padding so visuals don't grow; typed values not step-quantized (DAW
+exact-entry semantics); bare readout under a knob exempt from the 44px bump (the knob
+body is the touch target).
+
+Orchestrator verified independently: G1 434 owned tests pass — 3 pre-existing failures
+live in another session's untracked `PresetShelf.test.jsx` (off-limits per handoff,
+expects a browse-cap feature from the killed F1-F6 slice; not this diff's). G2 build
+clean; zero console output on `#/control-kit`, `#/sound-designer`, and `#/`. G3
+225/225 bit-exact. G4 screenshots at 1920/768/375 — zero horizontal overflow at
+375/768; interactions verified live (toggle latch + dependent-knob disable, knob
+keyboard incl. Home/End, segment selection, drag/wheel/edit per worker's instrumented
+proofs). G5 census 19 held, zero new tells. Worker's port-5183 launch.json scaffolding
+reverted before commit (iteration-12 precedent). Mid-flight user signal on the spec
+direction: "the proposal looks better" — recorded as encouragement, NOT counted as kit
+approval.
+
+**BLOCKED ON USER: kit approval gates the rollout slice (page-wide kit adoption +
+F1-F6). The kit is live at `#/control-kit` for hands-on judgment.**
+
+`ITERATION 16: control kit proposal — census 19 — awaiting kit approval; F1-F6 open`

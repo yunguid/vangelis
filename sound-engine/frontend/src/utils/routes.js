@@ -10,6 +10,12 @@ export const VOICE_LOOP_HREF = `#${VOICE_LOOP_ROUTE}`;
 export const SOUND_DESIGNER_ROUTE = '/sound-designer';
 export const SOUND_DESIGNER_HREF = `#${SOUND_DESIGNER_ROUTE}`;
 
+// Hidden specimen sheet for the ground-up control-kit proposal (see
+// INTERFACE_LEDGER.md's handoff). Linked from nowhere — reached only by
+// navigating to the hash directly.
+export const CONTROL_KIT_ROUTE = '/control-kit';
+export const CONTROL_KIT_HREF = `#${CONTROL_KIT_ROUTE}`;
+
 export const STUDY_SONGS_ROUTE = '/studies';
 export const STUDY_SONGS_HREF = `#${STUDY_SONGS_ROUTE}`;
 
@@ -46,6 +52,11 @@ export const isVoiceLoopRoute = (route) => (
 export const isSoundDesignerRoute = (route) => (
   route === SOUND_DESIGNER_ROUTE
   || route === `${SOUND_DESIGNER_ROUTE}/`
+);
+
+export const isControlKitRoute = (route) => (
+  route === CONTROL_KIT_ROUTE
+  || route === `${CONTROL_KIT_ROUTE}/`
 );
 
 export const isStudySongsRoute = (route) => (

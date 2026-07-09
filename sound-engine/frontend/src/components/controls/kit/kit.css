@@ -1,0 +1,541 @@
+/**
+ * Control Kit — ground-up control-language proposal.
+ * See INTERFACE_LEDGER.md's handoff: the user dislikes every control shipped
+ * so far, flat sliders/switches included. Aesthetic contract: DAW / hardware
+ * synth module (Ableton device strip, u-he, Elektron) — "engineered, not
+ * styled HTML inputs."
+ *
+ * Chassis is neutral: flat ink faces, paper-alpha hairlines. The single
+ * accent color is reserved strictly for VALUE and STATE indication (arcs,
+ * fills, LED bars, active text) — never for structural borders. IBM Plex
+ * Mono + tabular-nums on every value readout. border-radius stays <= 2px on
+ * every control face (circles are drawn as SVG, not CSS border-radius, so
+ * the knob body never touches the border-radius census bucket at all).
+ */
+
+:root {
+  --kit-face: var(--color-core-ink);
+  --kit-hairline: rgba(244, 241, 232, 0.14);
+  --kit-hairline-hover: rgba(244, 241, 232, 0.28);
+  /* Both tints are DERIVED from the accent token (not hardcoded rgba) so
+     they follow whatever theme resolves --color-core-accent — gruvbox.css,
+     loaded last, currently overrides it to gold. One accent hue per
+     control, always. */
+  --kit-accent: var(--color-core-accent);
+  --kit-accent-silver: color-mix(in srgb, var(--kit-accent) 16%, transparent);
+  --kit-accent-border: color-mix(in srgb, var(--kit-accent) 34%, transparent);
+  --kit-text-primary: var(--color-text-primary);
+  --kit-text-secondary: var(--color-text-secondary);
+  --kit-text-tertiary: var(--color-text-tertiary);
+  --kit-transition: 90ms ease;
+  --kit-radius: 2px;
+}
+
+.kit-knob,
+.kit-numfield,
+.kit-fader,
+.kit-togglebtn,
+.kit-segment {
+  font-family: 'IBM Plex Mono', 'Menlo', 'Monaco', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus: 1px accent, offset 2px — overrides the app's soft 3px sheen
+   (variables.css :focus-visible) for every kit interactive element. */
+.kit-knob__body:focus-visible,
+.kit-numfield__value:focus-visible,
+.kit-numfield__input:focus-visible,
+.kit-numfield__stepper:focus-visible,
+.kit-fader__track:focus-visible,
+.kit-togglebtn:focus-visible,
+.kit-segment__cell:focus-visible {
+  outline: 1px solid var(--kit-accent);
+  outline-offset: 2px;
+}
+
+/* ============================== Knob ============================== */
+
+.kit-knob {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.kit-knob--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.kit-knob__body {
+  width: var(--kit-knob-svg);
+  height: var(--kit-knob-svg);
+  display: block;
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.kit-knob__body svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.kit-knob__tick {
+  stroke: var(--kit-hairline);
+  transition: stroke var(--kit-transition);
+}
+
+.kit-knob__arc {
+  stroke: var(--kit-accent);
+}
+
+.kit-knob__face {
+  fill: var(--kit-face);
+  stroke: var(--kit-hairline);
+  transition: stroke var(--kit-transition);
+}
+
+.kit-knob__pointer {
+  stroke: var(--kit-text-secondary);
+  transition: stroke var(--kit-transition);
+}
+
+.kit-knob__body:hover .kit-knob__face,
+.kit-knob__body:focus-visible .kit-knob__face {
+  stroke: var(--kit-hairline-hover);
+}
+
+.kit-knob__body--dragging .kit-knob__pointer {
+  stroke: var(--kit-accent);
+}
+
+.kit-knob__body--dragging .kit-knob__tick {
+  stroke: var(--kit-hairline-hover);
+}
+
+.kit-knob__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ============================== NumField ============================== */
+
+.kit-numfield {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.kit-numfield--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.kit-numfield__label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--kit-text-tertiary);
+  white-space: nowrap;
+}
+
+.kit-numfield__value {
+  font-size: 12px;
+  color: var(--kit-text-primary);
+  cursor: ns-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+  transition: color var(--kit-transition);
+  flex: 1 1 auto;
+}
+
+.kit-numfield--active .kit-numfield__value {
+  color: var(--kit-accent);
+}
+
+.kit-numfield--align-right .kit-numfield__value { text-align: right; }
+.kit-numfield--align-center .kit-numfield__value { text-align: center; }
+.kit-numfield--align-left .kit-numfield__value { text-align: left; }
+
+.kit-numfield--boxed {
+  border: 1px solid var(--kit-hairline);
+  border-radius: var(--kit-radius);
+  background: var(--kit-face);
+  padding: 4px 8px;
+  min-height: 26px;
+  box-sizing: border-box;
+  transition: border-color var(--kit-transition);
+}
+
+.kit-numfield--boxed:hover,
+.kit-numfield--boxed:focus-within {
+  border-color: var(--kit-hairline-hover);
+}
+
+.kit-numfield--bare {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.kit-numfield--bare .kit-numfield__value {
+  font-size: 11px;
+}
+
+.kit-numfield__input {
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  background: var(--kit-face);
+  color: var(--kit-accent);
+  border: 1px solid var(--kit-accent);
+  border-radius: var(--kit-radius);
+  padding: 3px 6px;
+  width: 7ch;
+  text-align: inherit;
+}
+
+/* Steppers stay IN layout permanently (hidden via visibility, not
+   display) so the boxed field's border-box is byte-identical between idle
+   and hover — a control must never change size under the cursor. */
+.kit-numfield__steppers {
+  display: flex;
+  flex-direction: column;
+  margin-left: 2px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.kit-numfield--boxed:hover .kit-numfield__steppers,
+.kit-numfield--boxed:focus-within .kit-numfield__steppers {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.kit-numfield__stepper {
+  color: var(--kit-text-tertiary);
+  padding: 1px;
+  line-height: 0;
+  cursor: pointer;
+  background: transparent;
+}
+
+.kit-numfield__stepper:hover {
+  color: var(--kit-accent);
+}
+
+.kit-numfield__stepper:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .kit-numfield--boxed {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+
+  /* No hover on touch: steppers are always visible and tappable. */
+  .kit-numfield--boxed .kit-numfield__steppers {
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+
+/* ============================== Fader ============================== */
+
+.kit-fader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kit-fader--horizontal {
+  flex-direction: row;
+}
+
+.kit-fader--vertical {
+  flex-direction: column;
+}
+
+.kit-fader--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.kit-fader__label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--kit-text-tertiary);
+  white-space: nowrap;
+}
+
+.kit-fader__track {
+  display: block;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
+}
+
+.kit-fader--horizontal .kit-fader__track {
+  width: var(--kit-fader-length);
+  height: var(--kit-fader-cross);
+  cursor: ew-resize;
+}
+
+.kit-fader--vertical .kit-fader__track {
+  width: var(--kit-fader-cross);
+  height: var(--kit-fader-length);
+  cursor: ns-resize;
+}
+
+.kit-fader__track svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.kit-fader__groove {
+  fill: var(--kit-hairline);
+}
+
+.kit-fader__tick {
+  stroke: var(--kit-hairline);
+  transition: stroke var(--kit-transition);
+}
+
+.kit-fader__track--dragging .kit-fader__tick {
+  stroke: var(--kit-hairline-hover);
+}
+
+.kit-fader__fill {
+  fill: var(--kit-accent);
+}
+
+.kit-fader__cap {
+  fill: var(--color-core-paper);
+  stroke: var(--kit-face);
+  stroke-width: 1;
+}
+
+.kit-fader__cap-line {
+  stroke: var(--kit-accent);
+}
+
+.kit-fader__value {
+  font-size: 11px;
+  color: var(--kit-text-secondary);
+  white-space: nowrap;
+  min-width: 4ch;
+  transition: color var(--kit-transition);
+}
+
+.kit-fader__value--active {
+  color: var(--kit-accent);
+}
+
+/* Pad the cross-axis hit area to >=44px on touch WITHOUT growing the
+   visual track — box-sizing: content-box means the padding extends the
+   clickable border-box beyond the fixed-size SVG content box. */
+@media (max-width: 768px), (pointer: coarse) {
+  .kit-fader--horizontal .kit-fader__track {
+    box-sizing: content-box;
+    padding: 11px 0;
+  }
+
+  .kit-fader--vertical .kit-fader__track {
+    box-sizing: content-box;
+    padding: 0 7px;
+  }
+}
+
+/* ============================== ToggleBtn ============================== */
+
+.kit-togglebtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.kit-togglebtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.kit-togglebtn__face {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 14px;
+  border: 1px solid var(--kit-hairline);
+  border-radius: var(--kit-radius);
+  background: var(--kit-face);
+  color: var(--kit-text-tertiary);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: border-color var(--kit-transition), background-color var(--kit-transition), color var(--kit-transition);
+}
+
+.kit-togglebtn__led {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  background: var(--kit-hairline);
+  transition: background-color var(--kit-transition);
+}
+
+.kit-togglebtn:hover:not(:disabled) .kit-togglebtn__face {
+  border-color: var(--kit-hairline-hover);
+}
+
+.kit-togglebtn:active:not(:disabled) .kit-togglebtn__face {
+  filter: brightness(0.8);
+}
+
+.kit-togglebtn--on .kit-togglebtn__face {
+  background: var(--kit-accent-silver);
+  border-color: var(--kit-accent-border);
+  color: var(--kit-text-primary);
+}
+
+.kit-togglebtn--on .kit-togglebtn__led {
+  background: var(--kit-accent);
+}
+
+.kit-togglebtn--sm .kit-togglebtn__face {
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 9px;
+}
+
+@media (max-width: 768px), (pointer: coarse) {
+  .kit-togglebtn {
+    padding: 8px;
+  }
+}
+
+/* ============================== SegmentSelect ============================== */
+
+.kit-segment {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kit-segment--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.kit-segment__label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--kit-text-tertiary);
+}
+
+.kit-segment__row {
+  display: flex;
+  border: 1px solid var(--kit-hairline);
+  border-radius: var(--kit-radius);
+  overflow: hidden;
+  background: var(--kit-face);
+}
+
+.kit-segment__cell {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 10px;
+  min-height: 44px;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--kit-hairline);
+  color: var(--kit-text-tertiary);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color var(--kit-transition), color var(--kit-transition);
+}
+
+.kit-segment__cell:last-child {
+  border-right: none;
+}
+
+.kit-segment__cell:hover:not(:disabled) {
+  color: var(--kit-text-secondary);
+}
+
+.kit-segment__cell--active {
+  background: var(--kit-accent-silver);
+  color: var(--kit-text-primary);
+}
+
+.kit-segment__cell--active::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 2px;
+  background: var(--kit-accent);
+}
+
+.kit-segment__glyph {
+  color: inherit;
+  display: inline-flex;
+}
+
+.kit-segment__cell-label {
+  line-height: 1;
+}
+
+.kit-segment--wrap4 .kit-segment__row {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 380px) {
+  .kit-segment--wrap4 .kit-segment__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .kit-segment--wrap4 .kit-segment__cell {
+    border-right: 1px solid var(--kit-hairline);
+    border-bottom: 1px solid var(--kit-hairline);
+  }
+
+  .kit-segment--wrap4 .kit-segment__cell:nth-child(2n) {
+    border-right: none;
+  }
+
+  .kit-segment--wrap4 .kit-segment__cell:nth-child(3),
+  .kit-segment--wrap4 .kit-segment__cell:nth-child(4) {
+    border-bottom: none;
+  }
+}
