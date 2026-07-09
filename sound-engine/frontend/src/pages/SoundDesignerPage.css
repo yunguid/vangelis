@@ -340,9 +340,36 @@
   width: 100%;
 }
 
+/* ── Mobile treatment (D7) ────────────────────────────────────────────────
+ * Speaks the main page's mobile language rather than inventing a third one:
+ * same tablet cutoff (900px, see responsive.css), same escape from a fixed
+ * 100vh/overflow:hidden shell into natural document flow with the shared
+ * fixed bottom sidebar rail (Sidebar.css's row-layout `.sidebar-rail`) and
+ * the identical safe-area bottom-clearance calc the main page's `.app-shell`
+ * uses, so scrolling to the end of the page always clears the rail by the
+ * same margin everywhere in the app.
+ *
+ * Root-caused bug fixed here: the previous mobile pass (P10/P12) pinned the
+ * keyboard dock with `position: sticky; bottom: 0`, which stuck it to the
+ * viewport bottom directly underneath the sidebar's OWN fixed rail — the two
+ * fixed/sticky bottom elements overlapped and the rail painted over the
+ * keyboard's touch octave/velocity bar (measured at 375x812: rail top 746px
+ * vs touch-bar bottom 795px, a ~49px overlap hiding the octave/velocity
+ * controls). The dock now flows in-document like the main page's keyboard
+ * does, and the shell's bottom padding reserves room for it to fully clear
+ * the rail once scrolled into view.
+ */
 @media (max-width: 900px) {
+  .sound-designer-page {
+    height: auto;
+    overflow: visible;
+  }
+
   .sound-designer-page__shell {
     width: 100%;
+    height: auto;
+    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
+      calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
   .base-waveform-grid {
@@ -352,26 +379,151 @@
   .slider-grid--four {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
 
-@media (max-width: 720px) {
-  .sound-designer-page {
-    height: auto;
-    overflow: visible;
+  /* Stage rail: a horizontally-scrollable strip of flat tabs instead of a
+     squeeze-to-fit flex row. Five short labels already fit at 375px without
+     scrolling, but this guarantees every tab clears a 44px touch target and
+     never wraps/clips regardless of device width or future stage renames —
+     the scrollbar itself is hidden (still keyboard/AT reachable, just no
+     visible chrome) so it reads as a tab strip, not a scroll widget. */
+  .stage-rail {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
-  .sound-designer-page__shell {
-    height: auto;
-    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
-      calc(88px + env(safe-area-inset-bottom, 0px));
+  .stage-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .stage-rail__tab {
+    flex: 1 1 0;
+    min-width: 72px;
+    min-height: 44px;
+    padding: 12px 10px;
+  }
+
+  .stage-stage {
+    overflow: visible;
   }
 
   .stage-card {
     max-height: none;
   }
 
+  .stage-card__body {
+    max-width: 100%;
+    overflow-y: visible;
+  }
+
+  /* Wizard back/next: full-width-ish tappable rows at the card footer
+     instead of small inline text links (measured before: 34.7px tall,
+     95.8px wide in a 355px-wide card). Flat bordered buttons, each ≥48px
+     tall and sharing the footer width evenly — a lone "next" (Base) or lone
+     "back" (Mint) still reads as a full-width row via flex: 1 1 0. */
+  .stage-card__footer {
+    gap: 10px;
+  }
+
+  .stage-card__back,
+  .stage-card__next {
+    flex: 1 1 0;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    text-align: center;
+    border: 1px solid rgba(168, 153, 132, 0.24);
+    border-radius: 2px;
+    background: rgba(244, 241, 232, 0.04);
+  }
+
+  .stage-card__next {
+    margin-left: 0;
+  }
+
+  .stage-card__back:hover,
+  .stage-card__next:hover {
+    border-color: rgba(255, 122, 61, 0.4);
+    background: rgba(255, 122, 61, 0.08);
+  }
+
+  /* Touch-friendly slider/toggle hit areas — extended via padding/box size,
+     never the thumb/knob visuals D4/D5 already fixed. ValueSlider's pointer
+     handlers live on the `.value-slider` div itself (not a wrapper), so its
+     own box is the real tap target; bumping it from 28px to 44px is a
+     hit-area-only change, the 16px thumb stays exactly as drawn. */
+  .stage-card .value-slider {
+    height: 44px;
+  }
+
+  .stage-card .toggle-row {
+    min-height: 44px;
+  }
+
+  /* Scope strip: keeps both surviving panes (scope + spectrum collapse to
+     2-up globally, see responsive.css's `.wave-candy-grid`/`.candy-tile--*`
+     rules) but shrinks a little shorter than the desktop 108px so it, one
+     full control section, and the keyboard dock all share the screen
+     without forcing more scrolling than the main page's own mobile view
+     needs. */
+  .sound-designer-scope {
+    height: 84px;
+    padding: 6px var(--space-md);
+  }
+
   .sound-designer-keyboard {
-    position: sticky;
-    bottom: 0;
+    margin-top: 0;
+    padding: var(--space-sm) var(--space-md);
+  }
+}
+
+@media (max-width: 520px) {
+  .slider-grid--four {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-card__back,
+  .stage-card__next {
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+  }
+
+  .sound-designer-scope {
+    height: 72px;
+  }
+
+  /* Narrow phones: the dock's own chrome padding, stacked on top of the
+     page shell's padding, otherwise leaves the shared keyboard-touch-bar
+     (octave -/+ and Soft/Med/Hard velocity, keyboard.css) 24px too narrow
+     to fit its own content — measured overflowing the viewport at 375px
+     (velocity group right edge at 399px against a 375px viewport) even
+     though the identical component doesn't overflow on the main page,
+     which doesn't wrap the keyboard in extra dock chrome. Recover the
+     width the dock's border/padding costs instead of shrinking the piano
+     keys themselves: tighter dock padding + tighter (still ≥44px-tall)
+     touch-bar buttons. Verified clean (no overflow) at 375/390/414px. */
+  .sound-designer-keyboard {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .sound-designer-keyboard .keyboard-touch-bar__octave,
+  .sound-designer-keyboard .keyboard-touch-bar__velocity {
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .sound-designer-keyboard .keyboard-touch-bar__btn {
+    min-width: 44px;
+  }
+
+  .sound-designer-keyboard .keyboard-touch-bar__readout {
+    min-width: 32px;
+  }
+
+  .sound-designer-keyboard .keyboard-touch-bar__vel {
+    padding: 0 8px;
   }
 }

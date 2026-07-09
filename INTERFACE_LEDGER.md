@@ -420,3 +420,23 @@ Mint-back; dev-server port experiment reverted cleanly). Orchestrator verified:
 G1 371/371 (+8), G2 clean, G3 225/225 bit-exact, G5 19. D7 remains, then the audit.
 
 `ITERATION 13: polish D4-D6 — census 19 — defects remaining: D7`
+
+### Iteration 14 — polish slice 3: D7 closed — 2026-07-08
+Mobile treatment aligned to the main page's shared breakpoint system (900/520 replaces
+an ad-hoc 720). Two real bugs found: (1) the sticky keyboard dock pinned UNDER the
+fixed mobile nav rail — ~49px of the touch bar buried at 375×812; replaced with the
+main page's own flow + safe-area clearance pattern; (2) stacked chrome padding left
+the shared touch bar overflowing the viewport by 24px — recovered via padding, keys
+untouched. 44-48px touch targets on tabs/wizard nav/sliders/toggles (visual geometry
+from D4/D5 unchanged); ADSR grid collapses 4→2→1; scope strip kept (shrunk 108→72px)
+per the paradigm's persistent-scope principle. Verified at 375/390/400/414/430/480/768:
+zero horizontal scroll, zero overflowing elements, keyboard playable (muted, probe
+0.0898), mint flow completed live. Out-of-scope finding flagged, not improvised: the
+shared mod-route remove button (28×28) is under-target app-wide.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. CSS-only (+163/−11,
+all inside media queries — desktop untouched by construction). Orchestrator verified:
+G1 371/371, G2 clean, G3 225/225 bit-exact, G5 19. **D1-D7 all closed. Final
+adversarial polish audit remains before sign-off.**
+
+`ITERATION 14: polish D7 — census 19 — defects remaining: none (audit slice next)`
