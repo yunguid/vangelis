@@ -459,3 +459,17 @@ Verdict quoted: "the user would very likely veto again." Sign-off withheld; F1-F
 the next fix slice, then the audit re-runs.
 
 `ITERATION 15: audit found F1-F6 — sign-off withheld`
+
+## HANDOFF — 2026-07-08 — session ended by user; new thread takes over
+State at handoff: purge(0)-purge(14) committed and pushed (census 228 → 19, all
+justified; user defects D1-D7 closed and verified). Iteration 15's adversarial audit
+filed F1-F6 (4 blockers: Base-stage Save duplicating Mint; browse-all burying the
+stage; half-empty fixed-height cards; mintedName never resets — plus 2 minors: empty/
+duplicate mint names). A fix slice for F1-F6 was killed mid-flight at the user's
+request and its partial work REVERTED — F1-F6 remain open in this ledger.
+
+**The user's standing verdict:** the stage/layer paradigm (BASE→TONE→MOTION→SPACE→MINT)
+is accepted in principle, but the page needs a FULL redesign and they dislike ALL
+current controls — "I don't like any of the buttons and draggers and things like that" —
+including the post-D4/D5 flat sliders and switches. The next thread's mandate is a
+ground-up control-language redesign, not another polish pass.
