@@ -440,3 +440,22 @@ G1 371/371, G2 clean, G3 225/225 bit-exact, G5 19. **D1-D7 all closed. Final
 adversarial polish audit remains before sign-off.**
 
 `ITERATION 14: polish D7 — census 19 — defects remaining: none (audit slice next)`
+
+### Iteration 15 — final audit: NOT clean — 4 blockers filed — 2026-07-08
+The adversarial audit re-verified D1-D7 as genuinely closed (all 14 sliders flush at
+extremes, centering 0px asymmetry at two widths, mobile overflow zero, cross-page
+regression clean) but found what ordinary use would hit:
+
+| # | Sev | Finding |
+|---|-----|---------|
+| F1 | BLOCKER | Base stage's embedded PresetShelf carries a full "Save" row — duplicates Mint with a different verb on screen one, violating the minted-wizard paradigm the user dictated |
+| F2 | BLOCKER | "Browse all presets" expands to ~2410px inside a 515px window — the "cramped little panel" reborn |
+| F3 | BLOCKER | Fixed-height stage cards half-empty (Tone 46%, Base 52% fill at 1920w) — dead-space composition inside the capped shell |
+| F4 | BLOCKER | `mintedName` never resets — after one mint the stage is stuck on the confirmation; a second sound requires leaving the page (undiscoverable) |
+| F5 | MINOR | Empty-name mint silently becomes "Untitled" |
+| F6 | MINOR | Duplicate-name mint silently coexists |
+
+Verdict quoted: "the user would very likely veto again." Sign-off withheld; F1-F6 are
+the next fix slice, then the audit re-runs.
+
+`ITERATION 15: audit found F1-F6 — sign-off withheld`
