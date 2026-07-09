@@ -152,11 +152,22 @@
   color: var(--color-text-secondary);
 }
 
-.stage-card__next {
-  align-self: flex-end;
+/* D6: back/next thread — a flat footer row shared by every stage card. Back
+   sits at the start, next is pushed to the end via margin-left: auto (so a
+   lone next, e.g. on Base, still lands at the right; a lone back, e.g. on
+   Mint, stays at the left rather than being centered by a stale
+   justify-content rule). Same flat text-button treatment for both. */
+.stage-card__footer {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
   margin-top: var(--space-sm);
-  padding: 8px 0 0;
+}
+
+.stage-card__back,
+.stage-card__next {
+  flex: 0 0 auto;
+  padding: 8px 0;
   background: transparent;
   border: 0;
   color: var(--color-text-secondary);
@@ -165,6 +176,11 @@
   cursor: pointer;
 }
 
+.stage-card__next {
+  margin-left: auto;
+}
+
+.stage-card__back:hover,
 .stage-card__next:hover {
   color: var(--color-core-accent);
 }

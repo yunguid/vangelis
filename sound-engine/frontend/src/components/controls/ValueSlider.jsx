@@ -147,7 +147,7 @@ const ValueSlider = ({
       aria-orientation="horizontal"
       aria-disabled={disabled || undefined}
       className={`value-slider${disabled ? ' value-slider--disabled' : ''}${className ? ` ${className}` : ''}`}
-      style={{ '--slider-progress': `${(progress * 100).toFixed(2)}%` }}
+      style={{ '--slider-progress': progress.toFixed(4) }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
@@ -157,6 +157,7 @@ const ValueSlider = ({
       onDoubleClick={handleDoubleClick}
     >
       <div className="value-slider__track" aria-hidden="true" />
+      <div className="value-slider__fill" aria-hidden="true" />
       <div className="value-slider__thumb" aria-hidden="true" />
     </div>
   );

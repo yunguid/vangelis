@@ -34,8 +34,9 @@ import { HOME_HREF } from '../utils/routes.js';
 import './SoundDesignerPage.css';
 
 // The wizard thread: five stages, freely navigable (nothing is ever locked —
-// the default BASE is just "whatever waveform is already selected"), with a
-// "next" affordance on each card nudging forward in order.
+// the default BASE is just "whatever waveform is already selected"), with
+// "← back" / "next →" affordances on each card nudging along the thread in
+// order (Base has no back, Mint has no next).
 const STAGES = [
   { id: 'base', label: 'Base' },
   { id: 'tone', label: 'Tone' },
@@ -73,18 +74,37 @@ const renderSlider = (slider, audioParams, onParamChange) => {
   );
 };
 
-const StageNextButton = ({ stageId, onAdvance }) => {
-  const isLast = STAGE_INDEX[stageId] === STAGES.length - 1;
-  if (isLast) return null;
-  const nextStage = STAGES[STAGE_INDEX[stageId] + 1];
+// The wizard's back/next affordances. Every stage except the first (Base)
+// gets a "← back" to the previous stage; every stage except the last (Mint)
+// keeps its "next →". Both just call the same onNavigate (goToStage) — the
+// stage rail tabs remain freely clickable regardless, this is only the
+// wizard's forward/backward thread.
+const StageFooterNav = ({ stageId, onNavigate }) => {
+  const index = STAGE_INDEX[stageId];
+  const prevStage = index > 0 ? STAGES[index - 1] : null;
+  const nextStage = index < STAGES.length - 1 ? STAGES[index + 1] : null;
+  if (!prevStage && !nextStage) return null;
   return (
-    <button
-      type="button"
-      className="stage-card__next"
-      onClick={() => onAdvance(nextStage.id)}
-    >
-      {`next: ${nextStage.label} →`}
-    </button>
+    <div className="stage-card__footer">
+      {prevStage && (
+        <button
+          type="button"
+          className="stage-card__back"
+          onClick={() => onNavigate(prevStage.id)}
+        >
+          {`← back: ${prevStage.label}`}
+        </button>
+      )}
+      {nextStage && (
+        <button
+          type="button"
+          className="stage-card__next"
+          onClick={() => onNavigate(nextStage.id)}
+        >
+          {`next: ${nextStage.label} →`}
+        </button>
+      )}
+    </div>
   );
 };
 
@@ -117,7 +137,7 @@ const BaseStage = ({ waveformType, onWaveformChange, presetShelfProps, onAdvance
         <PresetShelf {...presetShelfProps} />
       </div>
     </div>
-    <StageNextButton stageId="base" onAdvance={onAdvance} />
+    <StageFooterNav stageId="base" onNavigate={onAdvance} />
   </div>
 );
 
@@ -147,7 +167,7 @@ const ToneStage = ({ audioParams, onParamChange, onAdvance }) => {
           </div>
         </div>
       </div>
-      <StageNextButton stageId="tone" onAdvance={onAdvance} />
+      <StageFooterNav stageId="tone" onNavigate={onAdvance} />
     </div>
   );
 };
@@ -194,7 +214,7 @@ const MotionStage = ({ audioParams, onParamChange, onAdvance }) => {
           />
         </div>
       </div>
-      <StageNextButton stageId="motion" onAdvance={onAdvance} />
+      <StageFooterNav stageId="motion" onNavigate={onAdvance} />
     </div>
   );
 };
@@ -244,12 +264,12 @@ const SpaceStage = ({ audioParams, onParamChange, onAdvance }) => {
           </div>
         </div>
       </div>
-      <StageNextButton stageId="space" onAdvance={onAdvance} />
+      <StageFooterNav stageId="space" onNavigate={onAdvance} />
     </div>
   );
 };
 
-const MintStage = ({ waveformType, audioParams, onMint, mintedName }) => {
+const MintStage = ({ waveformType, audioParams, onMint, mintedName, onAdvance }) => {
   const [name, setName] = React.useState('');
 
   const filterSummary = audioParams.useFilter ? 'filter on' : 'filter off';
@@ -299,6 +319,7 @@ const MintStage = ({ waveformType, audioParams, onMint, mintedName }) => {
           </>
         )}
       </div>
+      <StageFooterNav stageId="mint" onNavigate={onAdvance} />
     </div>
   );
 };
@@ -436,6 +457,7 @@ const SoundDesignerPage = () => {
                 audioParams={audioParams}
                 onMint={handleMint}
                 mintedName={mintedName}
+                onAdvance={goToStage}
               />
             )}
           </div>

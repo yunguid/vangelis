@@ -161,6 +161,42 @@ describe('SoundDesignerPage', () => {
     expect(workspace.queryByRole('button', { name: /^next:/i })).not.toBeInTheDocument();
   });
 
+  it('the Base stage has no "back" affordance (it is the first stage)', () => {
+    const { container } = render(<SoundDesignerPage />);
+    const workspace = getWorkspace(container);
+    expect(workspace.queryByRole('button', { name: /^← back:/i })).not.toBeInTheDocument();
+    expect(workspace.getByRole('button', { name: /^next:/i })).toBeInTheDocument();
+  });
+
+  it('every stage after Base has a "back" affordance that steps backward in order', () => {
+    const { container } = render(<SoundDesignerPage />);
+    const workspace = getWorkspace(container);
+
+    goToStage(workspace, 'Tone');
+    expect(workspace.getByRole('button', { name: '← back: Base' })).toBeInTheDocument();
+
+    goToStage(workspace, 'Motion');
+    expect(workspace.getByRole('button', { name: '← back: Tone' })).toBeInTheDocument();
+
+    goToStage(workspace, 'Space');
+    expect(workspace.getByRole('button', { name: '← back: Motion' })).toBeInTheDocument();
+
+    goToStage(workspace, 'Mint');
+    expect(workspace.getByRole('button', { name: '← back: Space' })).toBeInTheDocument();
+
+    // Clicking back actually navigates (not just decorative).
+    fireEvent.click(workspace.getByRole('button', { name: '← back: Space' }));
+    expect(workspace.getByText('Delay')).toBeInTheDocument();
+  });
+
+  it('the Mint stage keeps its "back" affordance alongside having no "next"', () => {
+    const { container } = render(<SoundDesignerPage />);
+    const workspace = getWorkspace(container);
+    goToStage(workspace, 'Mint');
+    expect(workspace.getByRole('button', { name: '← back: Space' })).toBeInTheDocument();
+    expect(workspace.queryByRole('button', { name: /^next:/i })).not.toBeInTheDocument();
+  });
+
   it('renders the keyboard test strip, always docked', () => {
     render(<SoundDesignerPage />);
     expect(screen.getByRole('region', { name: 'Test keyboard' })).toBeInTheDocument();

@@ -400,3 +400,23 @@ before finishing — noted for honesty). Orchestrator verified: G1 363/363, G2 c
 G3 225/225 bit-exact, G5 19. D4-D7 remain.
 
 `ITERATION 12: polish D1-D3 — census 19 — defects remaining: D4 D5 D6 D7`
+
+### Iteration 13 — polish slice 2: D4+D5+D6 closed — 2026-07-08
+D4 root-caused for real: the thumb was positioned by raw percentage of its CENTER
+(half hangs out at 0%), and the clip came from `.stage-card__body`'s `overflow-y: auto`
+forcing `overflow-x` to auto per spec. Fix: unitless progress ratio +
+`calc(thumb/2 + p * (100% - thumb))` — thumb edge flush at both extremes, measured 0px
+overflow at 820px and 395px widths, pinned by a new 5-test geometry contract. Quality:
+7px track, flat accent fill-to-thumb (value affordance, no gradient), 16px hairline-
+bordered thumb, real focus-visible outline. D5: TWO forked toggle visuals found (the
+7px-dot InlineToggle and an off-palette blue-gray 52×32 switch) — unified onto one flat
+34×18 switch (custom-property geometry, `--subtle` scales it), zero JSX/ARIA changes.
+D6: StageFooterNav with "← back" + "next →"; Base no back, Mint gains back (judgment:
+a backward dead-end after minting was wrong), rail tabs still free.
+
+**Review record:** implementer: Sonnet subagent. 0 rework rounds. Judgment calls
+approved (native range left to VoiceLoopLab's scope; iOS-style constant knob;
+Mint-back; dev-server port experiment reverted cleanly). Orchestrator verified:
+G1 371/371 (+8), G2 clean, G3 225/225 bit-exact, G5 19. D7 remains, then the audit.
+
+`ITERATION 13: polish D4-D6 — census 19 — defects remaining: D7`
