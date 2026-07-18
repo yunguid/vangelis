@@ -289,6 +289,10 @@ const waveCandyCanvasSource = await readFile(
   path.join(sourceDir, 'components', 'WaveCandyCanvas.jsx'),
   'utf8'
 );
+const waveCandyMeterGridSource = await readFile(
+  path.join(sourceDir, 'utils', 'waveCandyMeterGrid.js'),
+  'utf8'
+);
 const waveCandyDefersFrameLoopUntilGraph = (
   /audioEngine\.subscribe\s*\(startFrameLoopIfReady\)/.test(waveCandyCanvasSource)
   && /!audioEngine\.getAnalysisNodes\(\)\?\.analyser/.test(waveCandyCanvasSource)
@@ -329,9 +333,17 @@ const waveCandyCachesLagrangeEnvelopePlan = (
 const waveCandyCachesStaticGridGeometry = (
   /const SPECTRUM_GRID_X_RATIOS = Float64Array\.from/.test(waveCandyCanvasSource)
   && /const SPECTRUM_GRID_DB_RATIOS = Float64Array\.from/.test(waveCandyCanvasSource)
-  && /const METER_GRID_RATIOS = Float64Array\.from/.test(waveCandyCanvasSource)
+  && /export const METER_GRID_RATIOS = Float64Array\.from/.test(waveCandyMeterGridSource)
   && /const traceSpectrumPath = \(ctx, data, width, height\)/.test(waveCandyCanvasSource)
   && /sizeControllers\.spectrogram\.acknowledgeResize\(\)/.test(waveCandyCanvasSource)
+);
+const waveCandyBatchesMeterGridPaths = (
+  /drawWaveCandyMeterGrid\(ctx, width, height\)/.test(waveCandyCanvasSource)
+  && (waveCandyMeterGridSource.match(/ctx\.beginPath\(\)/g) || []).length === 1
+  && (waveCandyMeterGridSource.match(/ctx\.stroke\(\)/g) || []).length === 1
+  && (waveCandyMeterGridSource.match(/ctx\.moveTo\(/g) || []).length === 5
+  && (waveCandyMeterGridSource.match(/ctx\.lineTo\(/g) || []).length === 5
+  && (waveCandyMeterGridSource.match(/ctx\.fillText\(/g) || []).length === 5
 );
 const birdsEyeRadarSource = await readFile(
   path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
@@ -603,6 +615,9 @@ const report = {
     waveCandyCachesLagrangeEnvelopePlan,
     waveCandyStaticGridFrameTemporaries: waveCandyCachesStaticGridGeometry ? 0 : 6,
     waveCandyCachesStaticGridGeometry,
+    waveCandyMeterGridBeginPathCallsPerFrame: waveCandyBatchesMeterGridPaths ? 1 : 5,
+    waveCandyMeterGridStrokeCallsPerFrame: waveCandyBatchesMeterGridPaths ? 1 : 5,
+    waveCandyBatchesMeterGridPaths,
     radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
     radarPaletteStateLimit: 256,
     radarUsesBoundedPaletteCache,
@@ -757,6 +772,13 @@ if (!waveCandyCachesStaticGridGeometry) {
     name: 'Guard cached analyzer grid geometry',
     actual: 'static grid math or temporary collections recreated in active analyzer frames',
     expected: 'module-scoped ratios/path helper and direct resize acknowledgement'
+  });
+}
+if (!waveCandyBatchesMeterGridPaths) {
+  failures.push({
+    name: 'Guard batched analyzer meter grid path',
+    actual: 'one begin/stroke pair per loudness guide',
+    expected: 'one shared begin/stroke pair for all five guides'
   });
 }
 if (!radarUsesBoundedPaletteCache) {
@@ -1135,7 +1157,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 68,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 69,
   failures
 };
 

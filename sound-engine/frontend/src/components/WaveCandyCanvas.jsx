@@ -18,6 +18,7 @@ import {
   createSpectrogramColorLut,
   createSpectrogramRowRuns
 } from '../utils/spectrogramRendering.js';
+import { drawWaveCandyMeterGrid } from '../utils/waveCandyMeterGrid.js';
 
 // Perceptual visualizer suite (Canvas 2D):
 // - Spectrum: log-frequency, dB scale — the raw FFT is distilled through
@@ -60,12 +61,6 @@ const SPECTRUM_GRID_DB_RATIOS = Float64Array.from(
   [-60, -40, -20],
   dbToUnit
 );
-const METER_GRID_DECIBELS = Object.freeze([0, -12, -24, -36, -48]);
-const METER_GRID_RATIOS = Float64Array.from(
-  METER_GRID_DECIBELS,
-  (db) => clamp((db + 60) / 60, 0, 1)
-);
-const METER_GRID_LABELS = Object.freeze(METER_GRID_DECIBELS.map(String));
 
 const traceSpectrumPath = (ctx, data, width, height) => {
   const cells = data.length;
@@ -281,14 +276,7 @@ const drawMeter = (ctx, state, width, height, resized, gradientCache) => {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.font = '9px "TX-02-Regular", ui-sans-serif';
   ctx.lineWidth = 1;
-  for (let i = 0; i < METER_GRID_RATIOS.length; i++) {
-    const y = height - METER_GRID_RATIOS[i] * height;
-    ctx.beginPath();
-    ctx.moveTo(width * 0.16, y);
-    ctx.lineTo(width * 0.84, y);
-    ctx.stroke();
-    ctx.fillText(METER_GRID_LABELS[i], 2, y + 3);
-  }
+  drawWaveCandyMeterGrid(ctx, width, height);
 
   const stHeight = clamp((state.shortTermDb + 60) / 60, 0, 1) * height;
   if (resized || !gradientCache.current) {

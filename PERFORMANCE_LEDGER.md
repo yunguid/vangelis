@@ -2319,3 +2319,52 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 46 — batched loudness-meter grid path
+
+Collected from WaveCandy's five-guide loudness meter, exact active-session Canvas 2D boundary-call
+counts, three geometry/checksum-equivalent 200,000-frame dispatcher workloads, generated
+production closures, focused paint-order tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 45 | Batch 46 | Change |
+|---|---:|---:|---:|
+| Meter grid `beginPath` calls over 20 s active | 3,000 | 600 | -80.00% |
+| Meter grid `stroke` calls over 20 s active | 3,000 | 600 | -80.00% |
+| Combined native path-boundary calls over 20 s | 6,000 | 1,200 | -80.00% |
+| Isolated meter-grid dispatcher CPU, 200k frames | 5.48 ms | 4.75 ms | -13.37% |
+| Deferred WaveCandy JS raw / gzip | 9.98 / 3.77 KiB | 10.25 / 3.84 KiB | +0.27 / +0.07 KiB |
+| Initial Home JS gzip | 67.87 KiB | 67.85 KiB | -0.02 KiB |
+| Fully activated Home visual JS gzip | 78.41 KiB | 78.47 KiB | +0.06 KiB |
+| Production deployment bytes | 1,482.77 KiB | 1,483.03 KiB | +0.26 KiB |
+| Automated production budgets | 86 | 87 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced five identical `beginPath`/`stroke` pairs in every loudness-meter frame with one shared
+  guide path. Guide geometry, style, and the existing guides-before-labels paint order are retained.
+- Unrolled the fixed five-guide coordinates after the first batched version exposed a second-loop
+  penalty in the isolated JavaScript dispatcher. The corrected path removes native calls without
+  adding iteration overhead.
+- Added a focused mock-canvas test that verifies one begin/stroke pair, all five exact line
+  coordinates, all five label coordinates, and stroke-before-label ordering.
+- Added exact active-session command counts, a geometry-checksummed legacy-vs-batched workload,
+  and a production guard requiring one begin/stroke pair with five guides and labels.
+
+### Batch 46 verification gates
+
+- Full suite: 57 files, 516/516 tests pass, including the new meter-grid geometry/paint-order case
+  and all existing Sound Designer, radar, Song Study, canvas, numerical, and audio cases.
+- Production delivery/static/dependency/route guardrails: 87/87 pass; WaveCandy reports one meter-
+  grid `beginPath` and one `stroke` per active frame.
+- Three corrected 200,000-frame profiles measured 8.96–14.30% lower dispatcher CPU; the final pass
+  is 5.48 ms to 4.75 ms, a 13.37% reduction. Canvas path-boundary calls fall exactly 80% over a
+  20-second active session.
+- Warmed combined visual workload: 80.29% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 399.5 us per 128-frame block with 6.7x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

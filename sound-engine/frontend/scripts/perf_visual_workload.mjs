@@ -43,6 +43,7 @@ import {
   lowerBound,
   upperBound
 } from '../src/components/midiBirdsEyeMath.js';
+import { drawWaveCandyMeterGrid } from '../src/utils/waveCandyMeterGrid.js';
 
 const SECONDS = 20;
 
@@ -700,6 +701,67 @@ const cachedAnalyzerGridBenchmark = runSpectrumBenchmark(
   analyzerGridBenchmarkIterations
 );
 
+const meterGridBenchmarkIterations = 200000;
+const createMeterGridBenchmarkContext = () => {
+  const stats = {
+    beginPathCalls: 0,
+    moveToCalls: 0,
+    lineToCalls: 0,
+    strokeCalls: 0,
+    fillTextCalls: 0,
+    geometryChecksum: 0
+  };
+  return {
+    stats,
+    beginPath() { stats.beginPathCalls += 1; },
+    moveTo(x, y) {
+      stats.moveToCalls += 1;
+      stats.geometryChecksum += x * 0.01 + y * 0.001;
+    },
+    lineTo(x, y) {
+      stats.lineToCalls += 1;
+      stats.geometryChecksum += x * 0.02 + y * 0.002;
+    },
+    stroke() { stats.strokeCalls += 1; },
+    fillText(label, x, y) {
+      stats.fillTextCalls += 1;
+      stats.geometryChecksum += label.length + x * 0.03 + y * 0.003;
+    }
+  };
+};
+const drawLegacyMeterGrid = (ctx, width, height) => {
+  for (let index = 0; index < analyzerMeterRatios.length; index += 1) {
+    const y = height - analyzerMeterRatios[index] * height;
+    ctx.beginPath();
+    ctx.moveTo(width * 0.16, y);
+    ctx.lineTo(width * 0.84, y);
+    ctx.stroke();
+    ctx.fillText(String(analyzerMeterDb[index]), 2, y + 3);
+  }
+};
+const runMeterGridBenchmark = (draw) => {
+  const context = createMeterGridBenchmarkContext();
+  for (let iteration = 0; iteration < 2000; iteration += 1) {
+    draw(context, 104, 148);
+  }
+  for (const key of Object.keys(context.stats)) context.stats[key] = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < meterGridBenchmarkIterations; iteration += 1) {
+    draw(context, 104, 148);
+  }
+  return { elapsedMs: performance.now() - startedAt, ...context.stats };
+};
+const legacyMeterGridBenchmark = runMeterGridBenchmark(drawLegacyMeterGrid);
+const batchedMeterGridBenchmark = runMeterGridBenchmark(drawWaveCandyMeterGrid);
+if (
+  Math.abs(
+    legacyMeterGridBenchmark.geometryChecksum
+    - batchedMeterGridBenchmark.geometryChecksum
+  ) > 1e-6
+) {
+  throw new Error('Batched meter grid changed guide or label geometry');
+}
+
 const radarStartTimes = Float64Array.from(midiNotes, (note) => note.time);
 const radarRangeBenchmarkIterations = 500000;
 const reusableRadarRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
@@ -957,6 +1019,30 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyAnalyzerGridBenchmark.elapsedMs,
       cachedAnalyzerGridBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  meterGridPathBatchPolicy: {
+    activeFrames: activeAnalyzerFrames,
+    guideCount: analyzerMeterRatios.length,
+    beginPathCallsOverBenchmarkBefore:
+      activeAnalyzerFrames * analyzerMeterRatios.length,
+    beginPathCallsOverBenchmarkAfter: activeAnalyzerFrames,
+    strokeCallsOverBenchmarkBefore:
+      activeAnalyzerFrames * analyzerMeterRatios.length,
+    strokeCallsOverBenchmarkAfter: activeAnalyzerFrames,
+    nativePathBoundaryCallsOverBenchmarkBefore:
+      activeAnalyzerFrames * analyzerMeterRatios.length * 2,
+    nativePathBoundaryCallsOverBenchmarkAfter: activeAnalyzerFrames * 2,
+    nativePathBoundaryCallReductionPercent: Number(reduction(
+      activeAnalyzerFrames * analyzerMeterRatios.length * 2,
+      activeAnalyzerFrames * 2
+    ).toFixed(2)),
+    benchmarkIterations: meterGridBenchmarkIterations,
+    legacyElapsedMs: Number(legacyMeterGridBenchmark.elapsedMs.toFixed(2)),
+    batchedElapsedMs: Number(batchedMeterGridBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyMeterGridBenchmark.elapsedMs,
+      batchedMeterGridBenchmark.elapsedMs
     ).toFixed(2))
   },
   radarFrameContainerPolicy: {
