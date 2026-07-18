@@ -352,6 +352,19 @@ const radarCachesParticleColors = (
   && /const particleColors = Array\.from\(/.test(radarParticleColorSource)
   && /RADAR_PARTICLE_COLOR_COUNT/.test(radarParticleColorSource)
 );
+const sceneSource = await readFile(path.join(sourceDir, 'components', 'Scene.jsx'), 'utf8');
+const sceneBandAnalysisSource = await readFile(
+  path.join(sourceDir, 'utils', 'sceneBandAnalysis.js'),
+  'utf8'
+);
+const sceneCachesBandRanges = (
+  (sceneSource.match(/createSceneBandBinRanges\s*\(/g) || []).length === 1
+  && /sceneBinSampleRate\s*!==\s*sampleRate/.test(sceneSource)
+  && /sceneBinFftSize\s*!==\s*fftSize/.test(sceneSource)
+  && /sceneBinCount\s*!==\s*freqData\.length/.test(sceneSource)
+  && /sampleSceneBandEnergies\(freqData, sceneBinRanges, sceneBandEnergies\)/.test(sceneSource)
+  && /new Uint16Array\(frequencyBands\.length \* 2\)/.test(sceneBandAnalysisSource)
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -527,6 +540,8 @@ const report = {
     sidebarEscapeListenerIsOpenOnly,
     sceneActiveFrameRateHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
     sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
+    sceneFrequencyBoundaryEvaluationsPerSteadyStateFrame: sceneCachesBandRanges ? 0 : 22,
+    sceneCachesBandRanges,
     waveCandyColdFrameRateHz: waveCandyDefersFrameLoopUntilGraph ? 0 : 30,
     waveCandyDefersFrameLoopUntilGraph,
     waveCandyColdCanvasContextCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
@@ -701,6 +716,13 @@ if (!radarCachesParticleColors) {
     name: 'Guard bounded radar particle colors',
     actual: 'per-particle RGBA string formatting in active frame path',
     expected: '121-entry three-decimal alpha lookup table'
+  });
+}
+if (!sceneCachesBandRanges) {
+  failures.push({
+    name: 'Guard configuration-scoped scene band ranges',
+    actual: 'frequency-to-bin boundaries evaluated in the WebGL active frame path',
+    expected: 'cached until sample rate, FFT size, or bin count changes'
   });
 }
 if (
@@ -1037,7 +1059,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 63,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 64,
   failures
 };
 

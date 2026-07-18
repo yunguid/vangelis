@@ -27,6 +27,11 @@ import {
   RADAR_PARTICLE_COLOR_COUNT,
   getRadarParticleColor
 } from '../src/utils/radarParticleColor.js';
+import {
+  SCENE_FREQUENCY_BANDS,
+  createSceneBandBinRanges,
+  sampleSceneBandEnergies
+} from '../src/utils/sceneBandAnalysis.js';
 
 const SECONDS = 20;
 
@@ -41,6 +46,9 @@ const RAYLIB_STEREO_SAMPLES = 1024;
 const MIDI_NOTE_COUNT = 720;
 const VISIBLE_NOTE_COUNT = 260;
 const ACTIVE_NOTE_RATIO = 0.12;
+const SCENARIO_WARMUP_SAMPLES = 5;
+const SCENARIO_MEASURED_SAMPLES = 21;
+const SCENARIO_ITERATIONS_PER_SAMPLE = 25;
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -173,29 +181,31 @@ const simulateRaylibFrame = ({ includeStereo }) => {
   }
 };
 
-const SCENE_BANDS = [
-  [30, 250],
-  [250, 2000],
-  [2000, 12000],
-  [30, 80],
-  [80, 160],
-  [160, 350],
-  [350, 700],
-  [700, 1400],
-  [1400, 3000],
-  [3000, 6500],
-  [6500, 13000]
-];
-
-const simulateSceneFrame = () => {
+const sceneBandRanges = createSceneBandBinRanges({
+  sampleRate: 48000,
+  fftSize: 1024,
+  binCount: srcFreq.length
+});
+const sceneBandEnergies = new Float64Array(SCENE_FREQUENCY_BANDS.length);
+const simulateLegacySceneFrame = () => {
   const hzPerBin = 48000 / 1024;
   let energy = 0;
-  for (const [lowHz, highHz] of SCENE_BANDS) {
+  for (let band = 0; band < SCENE_FREQUENCY_BANDS.length; band += 1) {
+    const lowHz = SCENE_FREQUENCY_BANDS[band][0];
+    const highHz = SCENE_FREQUENCY_BANDS[band][1];
     const lo = Math.max(0, Math.floor(lowHz / hzPerBin));
     const hi = Math.min(srcFreq.length - 1, Math.ceil(highHz / hzPerBin));
     let sum = 0;
     for (let i = lo; i <= hi; i += 1) sum += srcFreq[i];
-    energy += sum / Math.max(1, hi - lo + 1);
+    energy += sum / (Math.max(1, hi - lo + 1) * 255);
+  }
+  return energy;
+};
+const simulateCachedSceneFrame = () => {
+  sampleSceneBandEnergies(srcFreq, sceneBandRanges, sceneBandEnergies);
+  let energy = 0;
+  for (let band = 0; band < sceneBandEnergies.length; band += 1) {
+    energy += sceneBandEnergies[band];
   }
   return energy;
 };
@@ -206,6 +216,7 @@ const runScenario = ({
   raylibHz,
   radarHz,
   sceneHz,
+  cacheSceneRanges,
   includeStereo,
   particleCount
 }) => {
@@ -213,22 +224,32 @@ const runScenario = ({
   const radarFrames = Math.round(seconds * radarHz);
   const sceneFrames = Math.round(seconds * sceneHz);
 
-  const start = performance.now();
-
-  for (let i = 0; i < raylibFrames; i += 1) {
-    simulateRaylibFrame({ includeStereo });
+  const simulateSceneFrame = cacheSceneRanges
+    ? simulateCachedSceneFrame
+    : simulateLegacySceneFrame;
+  const runWorkload = () => {
+    for (let iteration = 0; iteration < SCENARIO_ITERATIONS_PER_SAMPLE; iteration += 1) {
+      for (let i = 0; i < raylibFrames; i += 1) {
+        simulateRaylibFrame({ includeStereo });
+      }
+      for (let i = 0; i < sceneFrames; i += 1) simulateSceneFrame();
+      for (let i = 0; i < radarFrames; i += 1) {
+        simulateRadarFrame({
+          frameIndex: i,
+          particleCount
+        });
+      }
+    }
+  };
+  for (let sample = 0; sample < SCENARIO_WARMUP_SAMPLES; sample += 1) runWorkload();
+  const timingSamples = [];
+  for (let sample = 0; sample < SCENARIO_MEASURED_SAMPLES; sample += 1) {
+    const start = performance.now();
+    runWorkload();
+    timingSamples.push((performance.now() - start) / SCENARIO_ITERATIONS_PER_SAMPLE);
   }
-
-  for (let i = 0; i < sceneFrames; i += 1) simulateSceneFrame();
-
-  for (let i = 0; i < radarFrames; i += 1) {
-    simulateRadarFrame({
-      frameIndex: i,
-      particleCount
-    });
-  }
-
-  const elapsedMs = performance.now() - start;
+  timingSamples.sort((a, b) => a - b);
+  const elapsedMs = timingSamples[Math.floor(timingSamples.length / 2)];
 
   const analyserSamplesPerRaylibFrame = AUDIO_FREQ_BINS + AUDIO_WAVE_SAMPLES + (includeStereo ? AUDIO_STEREO_SAMPLES * 2 : 0);
   const resampleSamplesPerRaylibFrame = RAYLIB_FREQ_BINS + RAYLIB_WAVE_SAMPLES + (includeStereo ? RAYLIB_STEREO_SAMPLES * 2 : 0);
@@ -236,6 +257,8 @@ const runScenario = ({
   return {
     label,
     elapsedMs,
+    timingSampleCount: SCENARIO_MEASURED_SAMPLES,
+    timingIterationsPerSample: SCENARIO_ITERATIONS_PER_SAMPLE,
     raylibFrames,
     radarFrames,
     sceneFrames,
@@ -243,7 +266,10 @@ const runScenario = ({
     resampleSamples: raylibFrames * resampleSamplesPerRaylibFrame,
     radarNoteEvaluations: radarFrames * VISIBLE_NOTE_COUNT,
     activeNoteEvaluations: Math.round(radarFrames * VISIBLE_NOTE_COUNT * ACTIVE_NOTE_RATIO),
-    sceneBandEvaluations: sceneFrames * SCENE_BANDS.length
+    sceneBandEvaluations: sceneFrames * SCENE_FREQUENCY_BANDS.length,
+    sceneBoundaryEvaluations: cacheSceneRanges
+      ? SCENE_FREQUENCY_BANDS.length * 2
+      : sceneFrames * SCENE_FREQUENCY_BANDS.length * 2
   };
 };
 
@@ -253,6 +279,7 @@ const baseline = runScenario({
   raylibHz: 30,
   radarHz: 20,
   sceneHz: 60,
+  cacheSceneRanges: false,
   includeStereo: true,
   particleCount: 20
 });
@@ -263,6 +290,7 @@ const optimized = runScenario({
   raylibHz: 24,
   radarHz: 20,
   sceneHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
+  cacheSceneRanges: true,
   includeStereo: false,
   particleCount: 20
 });
@@ -467,6 +495,17 @@ const legacyRadarParticleColorBenchmark = runRadarParticleColorBenchmark(
 );
 const cachedRadarParticleColorBenchmark = runRadarParticleColorBenchmark(getRadarParticleColor);
 
+const sceneBandBenchmarkIterations = 20000;
+const runSceneBandBenchmark = (work) => {
+  let checksum = 0;
+  for (let i = 0; i < 1000; i += 1) checksum += work();
+  const startedAt = performance.now();
+  for (let i = 0; i < sceneBandBenchmarkIterations; i += 1) checksum += work();
+  return { elapsedMs: performance.now() - startedAt, checksum };
+};
+const legacySceneBandBenchmark = runSceneBandBenchmark(simulateLegacySceneFrame);
+const cachedSceneBandBenchmark = runSceneBandBenchmark(simulateCachedSceneFrame);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -601,6 +640,24 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyRadarParticleColorBenchmark.elapsedMs,
       cachedRadarParticleColorBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  sceneBandRangePolicy: {
+    bandCount: SCENE_FREQUENCY_BANDS.length,
+    activeFrames: optimized.sceneFrames,
+    boundaryEvaluationsOverBenchmarkBefore:
+      optimized.sceneFrames * SCENE_FREQUENCY_BANDS.length * 2,
+    boundaryEvaluationsOverBenchmarkAfter: SCENE_FREQUENCY_BANDS.length * 2,
+    boundaryEvaluationReductionPercent: Number(reduction(
+      optimized.sceneFrames * SCENE_FREQUENCY_BANDS.length * 2,
+      SCENE_FREQUENCY_BANDS.length * 2
+    ).toFixed(2)),
+    benchmarkIterations: sceneBandBenchmarkIterations,
+    legacyElapsedMs: Number(legacySceneBandBenchmark.elapsedMs.toFixed(2)),
+    cachedElapsedMs: Number(cachedSceneBandBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacySceneBandBenchmark.elapsedMs,
+      cachedSceneBandBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

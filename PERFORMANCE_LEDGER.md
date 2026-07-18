@@ -2059,3 +2059,58 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 41 — configuration-scoped WebGL scene bands
+
+Collected from the WebGL scene's 11-band analyser path, exact 20-second boundary-operation
+counts, an isolated 20,000-frame equivalence workload, warmed normalized-median visual scenarios,
+generated production closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 40 | Batch 41 | Change |
+|---|---:|---:|---:|
+| Scene frequency-boundary evaluations over 20 s active | 13,200 | 22 | -99.83% |
+| Scene boundary evaluations per steady-state frame | 22 | 0 | removed |
+| Isolated scene-band CPU, 20k frames (median of 3) | 6.56 ms | 3.09 ms | -52.96% |
+| Normalized median combined visual CPU vs legacy | single cold sample | -80.41% | methodology hardened |
+| Initial Home JS gzip | 67.85 KiB | 67.86 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 77.59 KiB | 77.86 KiB | +0.27 KiB |
+| Production deployment bytes | 1,481.21 KiB | 1,481.92 KiB | +0.71 KiB |
+| Automated production budgets | 81 | 82 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Precomputed the inclusive FFT-bin ranges for all three scene envelopes and eight Fourier shader
+  bands. The 30 Hz active path now reuses 22 compact boundaries until sample rate, FFT size, or
+  frequency-bin count changes.
+- Replaced 11 frame-local helper calls with one allocation-free sampler over a reusable
+  double-precision output buffer. Exact-equality tests confirm every normalized energy matches the
+  former calculation; smoothing, onset detection, vortex behavior, and shader uniforms are
+  unchanged.
+- Made analyser-buffer sizing configuration-aware so a future FFT-size change rebuilds both the
+  byte buffer and range cache instead of retaining stale dimensions.
+- Hardened the combined visual workload measurement: each scenario now warms for five samples and
+  reports the median of 21 samples, each normalized across 25 equivalent 20-second workloads. This
+  removes the JIT-skewed sub-millisecond cold sample used by earlier batches; the new combined CPU
+  percentage is therefore a methodology reset rather than a comparison with Batch 40's percentage.
+- Added focused boundary/equivalence tests, exact boundary-operation reporting, an isolated
+  legacy-vs-cached scene profile, and a production guard requiring configuration-scoped reuse.
+
+### Batch 41 verification gates
+
+- Full suite: 56 files, 510/510 tests pass, including exact scene-band energy equivalence and all
+  focused Sound Designer, radar, Song Study, canvas, and audio cases.
+- Production delivery/static/dependency/route guardrails: 82/82 pass; the scene reports zero
+  steady-state frequency-boundary evaluations.
+- The median of three isolated scene-band profiles is 6.56 ms to 3.09 ms over 20,000 frames, a
+  52.96% measured CPU-time reduction; individual reductions were 48.64–52.96%. Exact boundary
+  calculations fall 99.83% over a 20-second active session.
+- Three warmed combined-visual runs measured 80.17%, 80.41%, and 80.23% lower normalized median CPU
+  than the legacy reference, with 78.18% fewer analyzer samples, 65.71% fewer resample samples,
+  and 50% fewer scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and repeated saturated heap drift is -38 to -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.1 us per 128-frame block with 6.5x realtime headroom in the final
+  pass (402.4 us and 6.6x in the preceding pass).
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

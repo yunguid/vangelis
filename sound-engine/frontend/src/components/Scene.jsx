@@ -4,6 +4,11 @@ import { getCappedDevicePixelRatio } from '../utils/canvasPerformance.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { VortexField } from '../utils/vizPhysics.js';
 import { resolveSceneFrameInterval } from '../utils/visualFramePolicy.js';
+import {
+  SCENE_FREQUENCY_BANDS,
+  createSceneBandBinRanges,
+  sampleSceneBandEnergies
+} from '../utils/sceneBandAnalysis.js';
 
 // Audio-reactive WebGL2 background.
 // Falls back to the static gradient (the underlay div) when WebGL2 is
@@ -194,17 +199,6 @@ function compileProgram(gl) {
   return program;
 }
 
-// Average byte-frequency bins between two frequencies, normalized 0..1
-function bandEnergy(data, sampleRate, fftSize, lowHz, highHz) {
-  const hzPerBin = sampleRate / fftSize;
-  const lo = Math.max(0, Math.floor(lowHz / hzPerBin));
-  const hi = Math.min(data.length - 1, Math.ceil(highHz / hzPerBin));
-  if (hi <= lo) return 0;
-  let sum = 0;
-  for (let i = lo; i <= hi; i++) sum += data[i];
-  return sum / ((hi - lo + 1) * 255);
-}
-
 const Scene = () => {
   const canvasRef = useRef(null);
 
@@ -273,6 +267,11 @@ const Scene = () => {
     let contextLost = false;
     let analyser = null;
     let freqData = null;
+    let sceneBinRanges = null;
+    let sceneBinSampleRate = 0;
+    let sceneBinFftSize = 0;
+    let sceneBinCount = 0;
+    const sceneBandEnergies = new Float64Array(SCENE_FREQUENCY_BANDS.length);
     // Attack/release smoothed band values — deliberately slow both ways so
     // the scene swells and subsides instead of twitching with the music.
     const smooth = { bass: 0, mid: 0, high: 0, level: 0 };
@@ -303,8 +302,6 @@ const Scene = () => {
     const vortexRad = new Float32Array(VORTEX_SLOTS);
     let lastInjectAt = 0;
 
-    // Log-spaced Fourier band edges (Hz) for the shader's spectral ripple.
-    const BAND_EDGES = [30, 80, 160, 350, 700, 1400, 3000, 6500, 13000];
     const bands = new Float32Array(8);
 
     let stopFrameLoop = () => undefined;
@@ -324,25 +321,41 @@ const Scene = () => {
 
       if (!analyser) {
         analyser = audioEngine.getAnalyser();
-        if (analyser) {
-          freqData = new Uint8Array(analyser.frequencyBinCount);
-        }
       }
 
       let bass = 0;
       let mid = 0;
       let high = 0;
       let level = 0;
-      if (analyser && freqData) {
+      if (analyser) {
+        if (!freqData || freqData.length !== analyser.frequencyBinCount) {
+          freqData = new Uint8Array(analyser.frequencyBinCount);
+        }
         analyser.getByteFrequencyData(freqData);
-        const sr = audioEngine.context?.sampleRate || 48000;
-        const fft = analyser.fftSize;
-        bass = bandEnergy(freqData, sr, fft, 30, 250);
-        mid = bandEnergy(freqData, sr, fft, 250, 2000);
-        high = bandEnergy(freqData, sr, fft, 2000, 12000);
+        const sampleRate = audioEngine.context?.sampleRate || 48000;
+        const fftSize = analyser.fftSize;
+        if (
+          !sceneBinRanges
+          || sceneBinSampleRate !== sampleRate
+          || sceneBinFftSize !== fftSize
+          || sceneBinCount !== freqData.length
+        ) {
+          sceneBinRanges = createSceneBandBinRanges({
+            sampleRate,
+            fftSize,
+            binCount: freqData.length
+          });
+          sceneBinSampleRate = sampleRate;
+          sceneBinFftSize = fftSize;
+          sceneBinCount = freqData.length;
+        }
+        sampleSceneBandEnergies(freqData, sceneBinRanges, sceneBandEnergies);
+        bass = sceneBandEnergies[0];
+        mid = sceneBandEnergies[1];
+        high = sceneBandEnergies[2];
         level = (bass + mid + high) / 3;
         for (let b = 0; b < 8; b++) {
-          const e = bandEnergy(freqData, sr, fft, BAND_EDGES[b], BAND_EDGES[b + 1]);
+          const e = sceneBandEnergies[b + 3];
           // Slow attack/release so the ripple breathes instead of flickering
           bands[b] += (e - bands[b]) * (e > bands[b] ? 0.12 : 0.04);
         }
