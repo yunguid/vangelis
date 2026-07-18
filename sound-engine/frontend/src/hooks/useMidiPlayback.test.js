@@ -6,6 +6,7 @@ import { audioEngine } from '../utils/audioEngine.js';
 vi.mock('../utils/audioEngine.js', () => ({
   audioEngine: {
     context: { currentTime: 0 },
+    ensureWasm: vi.fn(),
     ensureAudioContext: vi.fn(),
     playBufferedSample: vi.fn(),
     playFrequency: vi.fn(),
@@ -23,6 +24,7 @@ describe('useMidiPlayback', () => {
     vi.clearAllMocks();
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     audioEngine.context = { currentTime: 0 };
+    audioEngine.ensureWasm.mockResolvedValue(undefined);
     audioEngine.ensureAudioContext.mockResolvedValue(audioEngine.context);
     audioEngine.playBufferedSample.mockImplementation(({ noteId }) => ({ voiceId: noteId }));
     audioEngine.playFrequency.mockImplementation(({ noteId }) => ({ voiceId: noteId }));

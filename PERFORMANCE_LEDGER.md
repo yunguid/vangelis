@@ -859,3 +859,54 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark: 406.2 us per 128-frame block with 6.6x realtime headroom.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - `git diff --check`: pass.
+
+## Optimization batch 15 — idle/interaction audio graph warmup
+
+Collected from playable-route source attribution, deterministic warmup and first-note tests,
+production closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 14 | Batch 15 | Change |
+|---|---:|---:|---:|
+| Playable routes warming audio during mount | 3 | 0 | removed |
+| Playable routes using idle/interaction warmup | 0 | 3 | complete coverage |
+| Mount-path AudioContext creation triggers | 3 | 0 | deferred |
+| Mount-path synth-worklet request triggers | 3 | 0 | deferred |
+| First cold keyboard note behavior | could be dropped | queued after worklet readiness | fixed |
+| Released pending keyboard note behavior | not applicable | cancelled before playback | guarded |
+| MIDI play readiness | AudioContext only | AudioContext + synth worklet | first note protected |
+| Home startup JS gzip | 83.77 KiB | 84.16 KiB | +0.5% scheduler/safety logic |
+| Song Study startup JS gzip | 78.72 KiB | 79.09 KiB | +0.5% scheduler/safety logic |
+| Sound Designer startup JS gzip | 70.26 KiB | 70.62 KiB | +0.5% scheduler/safety logic |
+| Total production JS raw | 501.96 KiB | 503.12 KiB | +0.2% |
+| Total production JS gzip | 164.99 KiB | 165.37 KiB | +0.2% |
+| Production deployment bytes | 1,488.60 KiB | 1,489.92 KiB | +0.1% |
+| Automated production budgets | 42 | 44 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Home, Sound Designer, and Song Study each created the shared AudioContext and requested the
+  synth worklet inside their mount effect. That work competed with the first visual render even
+  when a visitor never played audio.
+- A shared scheduler now begins preparation on the browser's idle callback (with a bounded
+  timeout) or the first captured pointer/touch/keyboard interaction, whichever happens first.
+  It cancels cleanly on route unmount and remains idempotent under React Strict Mode.
+- Keyboard playback now records a cold first-note request, prepares the worklet, then plays it.
+  Releasing the key or pointer during preparation cancels the pending note, preventing a late or
+  stuck voice. The already-ready path remains synchronous.
+- MIDI play, resume, and seek preparation now explicitly awaits the synth worklet in addition to
+  resuming the AudioContext, preventing the first scheduler window from targeting an unready
+  processor.
+- Added three scheduler tests, three first-note lifecycle tests, and static guards requiring all
+  three playable routes to use the deferred hook with zero direct mount warmup calls.
+
+### Batch 15 verification gates
+
+- Full suite: 45 files, 482/482 tests pass.
+- Production delivery/static/dependency/route guardrails: 44/44 pass.
+- Deterministic visual workload: 93.00% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference; exact workload counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 407.3 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- `git diff --check`: pass.

@@ -8,6 +8,7 @@ import {
   getBuiltInStudy
 } from '../data/songStudies.js';
 import { useMidiPlayback } from '../hooks/useMidiPlayback.js';
+import { useAudioEngineWarmup } from '../hooks/useAudioEngineWarmup.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToName } from '../utils/math.js';
 import { parseMidiFile } from '../utils/midiParser.js';
@@ -242,6 +243,7 @@ const TransportIcon = ({ kind }) => {
 };
 
 const SongStudyPageContent = ({ study }) => {
+  useAudioEngineWarmup();
   const waveformType = study?.waveformType || DEFAULT_STUDY_WAVEFORM;
   const audioParams = study?.audioParams || DEFAULT_STUDY_AUDIO_PARAMS;
   const titleRef = useSingleLineTitle(study?.title || '');
@@ -254,11 +256,6 @@ const SongStudyPageContent = ({ study }) => {
 
   React.useEffect(() => {
     const unsubscribe = audioEngine.subscribe(setEngineStatus);
-
-    audioEngine.ensureWasm().catch(() => {});
-    audioEngine.ensureAudioContext().then(() => {
-      audioEngine.warmGraph();
-    }).catch(() => {});
 
     return () => {
       playback.stop();

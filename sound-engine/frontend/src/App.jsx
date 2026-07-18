@@ -12,6 +12,7 @@ import {
 } from './utils/audioParams.js';
 import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { useWebMidiInput } from './hooks/useWebMidiInput.js';
+import { useAudioEngineWarmup } from './hooks/useAudioEngineWarmup.js';
 import {
   MidiTransportContext,
   SoundControlsContext
@@ -39,6 +40,7 @@ const isTextInputTarget = (target) => {
 };
 
 const App = () => {
+  useAudioEngineWarmup();
   const initialSessionRef = useRef(loadAppSession());
   const initialSession = initialSessionRef.current;
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
@@ -121,11 +123,6 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = audioEngine.subscribe(setEngineStatus);
     const unsubRecording = audioEngine.subscribeRecording(setIsRecording);
-
-    audioEngine.ensureWasm().catch(() => {});
-    audioEngine.ensureAudioContext().then(() => {
-      audioEngine.warmGraph();
-    });
 
     return () => {
       unsubscribe();

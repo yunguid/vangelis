@@ -3,6 +3,7 @@ import { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import PresetShelf from '../components/PresetShelf.jsx';
 import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
+import { useAudioEngineWarmup } from '../hooks/useAudioEngineWarmup.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import {
   AUDIO_PARAM_DEFAULTS,
@@ -104,6 +105,7 @@ const BaseStage = ({ waveformType, onWaveformChange, presetShelfProps, onAdvance
 );
 
 const SoundDesignerPage = () => {
+  useAudioEngineWarmup();
   const [engineStatus, setEngineStatus] = React.useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = React.useState(() => DEFAULT_WAVEFORM);
   const [audioParams, setAudioParams] = React.useState(() => (
@@ -124,11 +126,6 @@ const SoundDesignerPage = () => {
 
   React.useEffect(() => {
     const unsubscribe = audioEngine.subscribe(setEngineStatus);
-
-    audioEngine.ensureWasm().catch(() => {});
-    audioEngine.ensureAudioContext().then(() => {
-      audioEngine.warmGraph();
-    });
 
     return () => {
       unsubscribe();

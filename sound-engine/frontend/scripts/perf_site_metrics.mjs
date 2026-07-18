@@ -160,6 +160,17 @@ const sourceCssPaths = (await walkFiles(sourceDir)).filter((file) => file.endsWi
 const sourceCssText = (await Promise.all(sourceCssPaths.map((file) => readFile(file, 'utf8')))).join('\n');
 const appHeaderSource = await readFile(path.join(sourceDir, 'components', 'AppHeader.jsx'), 'utf8');
 const appHeaderImportsAudioEngine = /from\s+['"][^'"]*audioEngine(?:\.js)?['"]/.test(appHeaderSource);
+const playableRouteSource = (await Promise.all([
+  'App.jsx',
+  path.join('pages', 'SoundDesignerPage.jsx'),
+  path.join('pages', 'SongStudyPage.jsx')
+].map((file) => readFile(path.join(sourceDir, file), 'utf8')))).join('\n');
+const eagerPlayableRouteAudioWarmupCalls = (
+  playableRouteSource.match(/audioEngine\.(?:ensureWasm|ensureAudioContext|warmGraph)\s*\(/g) || []
+).length;
+const deferredAudioWarmupConsumers = (
+  playableRouteSource.match(/useAudioEngineWarmup\s*\(\s*\)/g) || []
+).length;
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -257,7 +268,9 @@ const report = {
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
-    appHeaderImportsAudioEngine
+    appHeaderImportsAudioEngine,
+    eagerPlayableRouteAudioWarmupCalls,
+    deferredAudioWarmupConsumers
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -425,6 +438,20 @@ if (obsoleteWasmBuildPlugins.length > 0) {
 if (report.staticSignals.wasmModuleImports > 0) {
   failures.push({ name: 'Guard retired WASM module imports', actual: report.staticSignals.wasmModuleImports, maximum: 0 });
 }
+if (eagerPlayableRouteAudioWarmupCalls > 0) {
+  failures.push({
+    name: 'Guard eager playable-route audio warmup',
+    actual: eagerPlayableRouteAudioWarmupCalls,
+    maximum: 0
+  });
+}
+if (deferredAudioWarmupConsumers !== 3) {
+  failures.push({
+    name: 'Guard deferred playable-route audio warmup',
+    actual: deferredAudioWarmupConsumers,
+    expected: 3
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -435,7 +462,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 24,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 26,
   failures
 };
 

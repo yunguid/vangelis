@@ -465,6 +465,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   }, [getElapsedOriginalTime, stopInternal]);
 
   const resumeAudioContextIfNeeded = useCallback(async () => {
+    await audioEngine.ensureWasm();
     const ctx = await audioEngine.ensureAudioContext();
     if (typeof ctx?.resume === 'function' && ctx.state === 'suspended') {
       await ctx.resume();
