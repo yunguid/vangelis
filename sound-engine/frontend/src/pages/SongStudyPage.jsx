@@ -580,8 +580,8 @@ const SongStudyPageContent = ({ study }) => {
             {displayMidi ? (
               <React.Suspense
                 fallback={(
-                  <section className="birds-eye-radar" aria-hidden="true">
-                    <div className="birds-eye-radar__stage" />
+                  <section className="birds-eye-radar-placeholder" aria-hidden="true">
+                    <div className="birds-eye-radar-placeholder__stage" />
                   </section>
                 )}
               >
@@ -594,8 +594,8 @@ const SongStudyPageContent = ({ study }) => {
                 />
               </React.Suspense>
             ) : (
-              <section className="birds-eye-radar" aria-hidden="true">
-                <div className="birds-eye-radar__stage" />
+              <section className="birds-eye-radar-placeholder" aria-hidden="true">
+                <div className="birds-eye-radar-placeholder__stage" />
               </section>
             )}
 

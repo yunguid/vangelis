@@ -84,9 +84,11 @@ const audioEngineManifestRecord = Object.values(manifest).find((record) => (
 const audioEngineFile = audioEngineManifestRecord?.file || null;
 const audioEngineRuntimeManifestRecord = manifest['src/utils/audioEngineRuntime.js'] || null;
 const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
-const waveCandyFile = manifest['src/components/WaveCandy.jsx']?.file || null;
+const waveCandyManifestRecord = manifest['src/components/WaveCandy.jsx'] || null;
+const waveCandyFile = waveCandyManifestRecord?.file || null;
 const sceneFile = manifest['src/components/Scene.jsx']?.file || null;
-const birdsEyeRadarFile = manifest['src/components/BirdsEyeRadar.jsx']?.file || null;
+const birdsEyeRadarManifestRecord = manifest['src/components/BirdsEyeRadar.jsx'] || null;
+const birdsEyeRadarFile = birdsEyeRadarManifestRecord?.file || null;
 const advancedSoundDesignerStagesFile = manifest['src/pages/SoundDesignerAdvancedStages.jsx']?.file || null;
 const audioControlPrimitivesFile = Object.entries(manifest)
   .find(([key]) => key.includes('audioControlPrimitives'))?.[1]?.file || null;
@@ -159,6 +161,12 @@ const audioEngineChunk = audioEngineFile ? assetMetricByFile.get(audioEngineFile
 const advancedSoundDesignerStagesChunk = advancedSoundDesignerStagesFile
   ? assetMetricByFile.get(advancedSoundDesignerStagesFile) || null
   : null;
+const deferredWaveCandyCss = (waveCandyManifestRecord?.css || [])
+  .map((file) => assetMetricByFile.get(file))
+  .filter(Boolean);
+const deferredBirdsEyeRadarCss = (birdsEyeRadarManifestRecord?.css || [])
+  .map((file) => assetMetricByFile.get(file))
+  .filter(Boolean);
 const appManifestEntry = manifest['src/App.jsx'];
 const appDefersMidiParser = appManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false;
 const appDefersScene = appManifestEntry?.dynamicImports?.includes('src/components/Scene.jsx') || false;
@@ -226,7 +234,7 @@ const criticalGlobalCssSelectors = [
   '.app-shell',
   '.keyboard-surface',
   '.value-slider',
-  '.wave-candy',
+  '.wave-candy-placeholder',
   '.command-palette',
   '.preset-shelf',
   '.route-loading'
@@ -303,6 +311,16 @@ const report = {
       kb: roundKb(advancedSoundDesignerStagesChunk.bytes),
       gzipKb: roundKb(advancedSoundDesignerStagesChunk.gzipBytes)
     } : null,
+    deferredWaveCandyCss: {
+      assetCount: deferredWaveCandyCss.length,
+      kb: roundKb(sum(deferredWaveCandyCss, 'bytes')),
+      gzipKb: roundKb(sum(deferredWaveCandyCss, 'gzipBytes'))
+    },
+    deferredBirdsEyeRadarCss: {
+      assetCount: deferredBirdsEyeRadarCss.length,
+      kb: roundKb(sum(deferredBirdsEyeRadarCss, 'bytes')),
+      gzipKb: roundKb(sum(deferredBirdsEyeRadarCss, 'gzipBytes'))
+    },
     appDefersMidiParser,
     appDefersScene,
     appDefersWaveCandy,
@@ -524,6 +542,22 @@ if (songStudyClosure?.includesBirdsEyeRadar) {
 if (!soundDesignerDefersWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer import', actual: 'static', expected: 'dynamic' });
 }
+if (deferredWaveCandyCss.length !== 1 || deferredBirdsEyeRadarCss.length !== 1) {
+  failures.push({
+    name: 'Guard deferred visual CSS chunks',
+    waveCandy: deferredWaveCandyCss.length,
+    birdsEyeRadar: deferredBirdsEyeRadarCss.length,
+    expected: 1
+  });
+}
+if (initialCssText.includes('.wave-candy-grid') || initialCssText.includes('.birds-eye-radar__canvas')) {
+  failures.push({
+    name: 'Guard visual CSS critical-path isolation',
+    waveCandy: initialCssText.includes('.wave-candy-grid') ? 'eager' : 'deferred',
+    birdsEyeRadar: initialCssText.includes('.birds-eye-radar__canvas') ? 'eager' : 'deferred',
+    expected: 'deferred'
+  });
+}
 if (soundDesignerClosure?.includesWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer isolation', actual: 'eager', expected: 'deferred' });
 }
@@ -600,7 +634,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 39,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 41,
   failures
 };
 

@@ -383,3 +383,24 @@
     justify-content: flex-start;
   }
 }
+.birds-eye-radar-placeholder {
+  width: 100%;
+}
+
+.birds-eye-radar-placeholder__stage {
+  min-height: clamp(240px, 38vh, 430px);
+  border-radius: 2px;
+  background: rgba(3, 8, 14, 0.96);
+}
+
+@media (max-width: 900px) {
+  .birds-eye-radar-placeholder__stage {
+    min-height: clamp(210px, 30vh, 290px);
+  }
+}
+
+@media (max-width: 520px) {
+  .birds-eye-radar-placeholder__stage {
+    min-height: clamp(144px, 25vh, 194px);
+  }
+}

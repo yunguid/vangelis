@@ -3,6 +3,7 @@ import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp, midiNoteToName } from '../utils/math.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
+import '../styles/birds-eye-radar.css';
 
 const DEFAULT_MIN_MIDI = 21;
 const DEFAULT_MAX_MIDI = 108;

@@ -1,0 +1,63 @@
+/**
+ * Bird's-eye MIDI radar styles.
+ * Loaded with the deferred canvas component rather than the route shell.
+ */
+
+.birds-eye-radar {
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.birds-eye-radar__stage {
+  position: relative;
+  min-height: clamp(240px, 38vh, 430px);
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(3, 8, 14, 0.96);
+  border: 0;
+  box-shadow: none;
+}
+
+.birds-eye-radar__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.birds-eye-radar__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  padding: 14px;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: rgba(222, 236, 252, 0.66);
+  text-shadow: 0 0 20px rgba(1, 5, 10, 0.92);
+}
+
+@media (max-width: 900px) {
+  .birds-eye-radar {
+    padding: 0;
+  }
+
+  .birds-eye-radar__stage {
+    min-height: clamp(210px, 30vh, 290px);
+    border-radius: 2px;
+  }
+}
+
+@media (max-width: 520px) {
+  .birds-eye-radar__stage {
+    min-height: clamp(144px, 25vh, 194px);
+  }
+}

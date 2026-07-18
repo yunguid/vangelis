@@ -9,7 +9,6 @@
 @import './styles/components.css';
 @import './styles/keyboard.css';
 @import './styles/controls.css';
-@import './styles/wave-candy.css';
 @import './styles/overlays.css';
 @import './styles/responsive.css';
 @import './styles/gruvbox.css';
@@ -23,6 +22,20 @@
   font: 0.72rem/1.4 var(--font-mono, monospace);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+/* Stable geometry while the deferred analyser CSS and component load. */
+.wave-candy-placeholder {
+  width: min(1200px, 95vw);
+  min-height: 150px;
+  background: rgba(6, 9, 14, 0.72);
+}
+
+@media (max-width: 900px) {
+  .wave-candy-placeholder {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 #root,

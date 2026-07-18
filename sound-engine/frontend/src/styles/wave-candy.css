@@ -3,9 +3,7 @@
  * Audio visualizer component
  */
 
-.wave-candy,
-.keyboard-surface,
-.controls-surface {
+.wave-candy {
   width: min(1200px, 95vw);
 }
 
@@ -17,11 +15,6 @@
   box-shadow: none;
   backdrop-filter: none;
   overflow: visible;
-}
-
-.wave-candy-placeholder {
-  min-height: 150px;
-  background: rgba(6, 9, 14, 0.72);
 }
 
 .wave-candy-gear {
@@ -114,45 +107,37 @@
   background: rgba(6, 9, 14, 0.9);
 }
 
-/* Bird's-Eye Radar */
-.birds-eye-radar {
-  width: 100%;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
+@media (max-width: 1200px) {
+  .wave-candy {
+    width: min(100%, 96vw);
+  }
 }
 
-.birds-eye-radar__stage {
-  position: relative;
-  min-height: clamp(240px, 38vh, 430px);
-  border-radius: 2px;
-  overflow: hidden;
-  background: rgba(3, 8, 14, 0.96);
-  border: 0;
-  box-shadow: none;
-}
+@media (max-width: 900px) {
+  .wave-candy {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
 
-.birds-eye-radar__canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
+  .wave-candy-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: var(--wave-candy-height);
+  }
 
-.birds-eye-radar__empty {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  pointer-events: none;
-  padding: 14px;
-  font-size: 0.66rem;
-  letter-spacing: 0.12em;
-  text-transform: none;
-  color: rgba(222, 236, 252, 0.66);
-  text-shadow: 0 0 20px rgba(1, 5, 10, 0.92);
+  .candy-tile--spectrogram,
+  .candy-tile--gonio,
+  .candy-meter {
+    display: none;
+  }
+
+  .candy-tile {
+    min-height: 0;
+  }
+
+  .wave-candy-gear {
+    top: 8px;
+    right: 8px;
+    font-size: 0.76rem;
+  }
 }

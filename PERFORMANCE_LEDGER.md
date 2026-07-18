@@ -1137,3 +1137,50 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 23 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 21 — visual-component CSS boundaries
+
+Collected from production CSS manifest ownership, critical/decorated route closures, placeholder
+geometry contracts, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 20 | Batch 21 | Change |
+|---|---:|---:|---:|
+| Initial/global CSS raw | 46.67 KiB | 44.22 KiB | -5.2% |
+| Initial/global CSS gzip | 9.48 KiB | 8.90 KiB | -6.1% |
+| Home critical CSS gzip | 12.51 KiB | 11.94 KiB | -4.6% |
+| Song Study critical CSS gzip | 14.06 KiB | 13.57 KiB | -3.5% |
+| Sound Designer critical CSS gzip | 14.24 KiB | 13.67 KiB | -4.0% |
+| Deferred WaveCandy CSS | mixed into global | 1.85 KiB / 0.78 KiB gzip | component-loaded |
+| Deferred radar CSS | mixed into global | 0.80 KiB / 0.40 KiB gzip | score-loaded |
+| Total production CSS raw | 105.91 KiB | 106.45 KiB | +0.5% split/placeholder overhead |
+| Total production CSS gzip | 23.68 KiB | 24.37 KiB | +2.9% split/placeholder overhead |
+| Production deployment bytes | 1,489.59 KiB | 1,490.43 KiB | +0.06% |
+| Automated production budgets | 57 | 59 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- The global stylesheet shipped the complete five-pane analyser and MIDI radar rules to every
+  route even though both canvas components already loaded after their respective idle/score gates.
+- WaveCandy now owns its visualizer CSS chunk, including its compact responsive layout. The radar
+  owns a separate CSS chunk with its canvas and responsive stage rules.
+- Preserved first-paint geometry with a small global WaveCandy placeholder and a Song Study-owned
+  radar placeholder. This prevents layout shift while avoiding the canvas/component styles on the
+  critical path.
+- Split a previously coupled stylesheet that also overrode keyboard/control width. The final
+  keyboard and control widths remain unchanged, and Gruvbox `!important` theme overrides retain
+  their existing priority independent of dynamic CSS arrival order.
+- Manifest guards require one CSS asset for each deferred visual and fail if either the analyser
+  grid or radar canvas selector returns to the initial stylesheet.
+
+### Batch 21 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 59/59 pass.
+- Deterministic visual workload after activation: 91.11% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 410.8 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 23 total, unchanged.
+- `git diff --check`: pass.
