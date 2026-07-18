@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import SoundDesignerPage from './SoundDesignerPage.jsx';
 import { loadUserPresets } from '../utils/userPresetStorage.js';
 
@@ -36,8 +36,13 @@ const getWorkspace = (container) => {
   return within(workspace);
 };
 
-const goToStage = (workspace, label) => {
+const goToStage = async (workspace, label) => {
   fireEvent.click(workspace.getByRole('button', { name: label }));
+  if (label !== 'Base') {
+    await waitFor(() => {
+      expect(workspace.queryByText('Loading controls…')).not.toBeInTheDocument();
+    });
+  }
 };
 
 describe('SoundDesignerPage', () => {
@@ -76,14 +81,14 @@ describe('SoundDesignerPage', () => {
     expect(workspace.queryByRole('list', { name: /presets$/i })).not.toBeInTheDocument();
   });
 
-  it('allows free navigation: any stage is clickable at any time', () => {
+  it('allows free navigation: any stage is clickable at any time', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
 
-    goToStage(workspace, 'Space');
+    await goToStage(workspace, 'Space');
     expect(workspace.getByText('Delay')).toBeInTheDocument();
 
-    goToStage(workspace, 'Base');
+    await goToStage(workspace, 'Base');
     expect(workspace.getByRole('radiogroup', { name: 'Waveform selection' })).toBeInTheDocument();
   });
 
@@ -107,19 +112,19 @@ describe('SoundDesignerPage', () => {
     expect(baseTab.className).toMatch(/is-visited/);
   });
 
-  it('the Tone stage shows filter and color (distortion) controls', () => {
+  it('the Tone stage shows filter and color (distortion) controls', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
-    goToStage(workspace, 'Tone');
+    await goToStage(workspace, 'Tone');
     expect(workspace.getByText('Tone filter')).toBeInTheDocument();
     expect(workspace.getByText('Color')).toBeInTheDocument();
     expect(workspace.getByText('Distortion')).toBeInTheDocument();
   });
 
-  it('the Motion stage shows the ADSR envelope, FM toggle, LFOs, and mod routes', () => {
+  it('the Motion stage shows the ADSR envelope, FM toggle, LFOs, and mod routes', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
-    goToStage(workspace, 'Motion');
+    await goToStage(workspace, 'Motion');
     expect(workspace.getByText('Amplitude envelope')).toBeInTheDocument();
     expect(workspace.getByText('Attack')).toBeInTheDocument();
     expect(workspace.getByText('Frequency modulation')).toBeInTheDocument();
@@ -127,21 +132,21 @@ describe('SoundDesignerPage', () => {
     expect(workspace.getByRole('group', { name: 'Modulation matrix' })).toBeInTheDocument();
   });
 
-  it('the Space stage shows delay, reverb, and unison controls', () => {
+  it('the Space stage shows delay, reverb, and unison controls', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
-    goToStage(workspace, 'Space');
+    await goToStage(workspace, 'Space');
     expect(workspace.getByText('Delay')).toBeInTheDocument();
     expect(workspace.getByText('Reverb')).toBeInTheDocument();
     expect(workspace.getByText('Unison')).toBeInTheDocument();
   });
 
-  it('a "next" affordance on each stage card advances the wizard thread in order', () => {
+  it('a "next" affordance on each stage card advances the wizard thread in order', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
 
     fireEvent.click(workspace.getByRole('button', { name: /next: Tone/i }));
-    expect(workspace.getByText('Tone filter')).toBeInTheDocument();
+    expect(await workspace.findByText('Tone filter')).toBeInTheDocument();
 
     fireEvent.click(workspace.getByRole('button', { name: /next: Motion/i }));
     expect(workspace.getByText('Amplitude envelope')).toBeInTheDocument();
@@ -153,10 +158,10 @@ describe('SoundDesignerPage', () => {
     expect(workspace.getByLabelText('Name this sound')).toBeInTheDocument();
   });
 
-  it('the Mint stage has no further "next" affordance', () => {
+  it('the Mint stage has no further "next" affordance', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
-    goToStage(workspace, 'Mint');
+    await goToStage(workspace, 'Mint');
     expect(workspace.queryByRole('button', { name: /^next:/i })).not.toBeInTheDocument();
   });
 
@@ -167,20 +172,20 @@ describe('SoundDesignerPage', () => {
     expect(workspace.getByRole('button', { name: /^next:/i })).toBeInTheDocument();
   });
 
-  it('every stage after Base has a "back" affordance that steps backward in order', () => {
+  it('every stage after Base has a "back" affordance that steps backward in order', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
 
-    goToStage(workspace, 'Tone');
+    await goToStage(workspace, 'Tone');
     expect(workspace.getByRole('button', { name: '← back: Base' })).toBeInTheDocument();
 
-    goToStage(workspace, 'Motion');
+    await goToStage(workspace, 'Motion');
     expect(workspace.getByRole('button', { name: '← back: Tone' })).toBeInTheDocument();
 
-    goToStage(workspace, 'Space');
+    await goToStage(workspace, 'Space');
     expect(workspace.getByRole('button', { name: '← back: Motion' })).toBeInTheDocument();
 
-    goToStage(workspace, 'Mint');
+    await goToStage(workspace, 'Mint');
     expect(workspace.getByRole('button', { name: '← back: Space' })).toBeInTheDocument();
 
     // Clicking back actually navigates (not just decorative).
@@ -188,10 +193,10 @@ describe('SoundDesignerPage', () => {
     expect(workspace.getByText('Delay')).toBeInTheDocument();
   });
 
-  it('the Mint stage keeps its "back" affordance alongside having no "next"', () => {
+  it('the Mint stage keeps its "back" affordance alongside having no "next"', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
-    goToStage(workspace, 'Mint');
+    await goToStage(workspace, 'Mint');
     expect(workspace.getByRole('button', { name: '← back: Space' })).toBeInTheDocument();
     expect(workspace.queryByRole('button', { name: /^next:/i })).not.toBeInTheDocument();
   });
@@ -215,9 +220,9 @@ describe('SoundDesignerPage', () => {
     };
 
     await assertScopeVisible();
-    goToStage(workspace, 'Motion');
+    await goToStage(workspace, 'Motion');
     await assertScopeVisible();
-    goToStage(workspace, 'Mint');
+    await goToStage(workspace, 'Mint');
     await assertScopeVisible();
   });
 
@@ -230,20 +235,20 @@ describe('SoundDesignerPage', () => {
   });
 
   describe('minting a sound', () => {
-    it('shows a summary of what was shaped on the Mint stage', () => {
+    it('shows a summary of what was shaped on the Mint stage', async () => {
       const { container } = render(<SoundDesignerPage />);
       const workspace = getWorkspace(container);
-      goToStage(workspace, 'Mint');
+      await goToStage(workspace, 'Mint');
       expect(workspace.getByText(/Sine base/i)).toBeInTheDocument();
       expect(workspace.getByText(/filter off/i)).toBeInTheDocument();
       expect(workspace.getByText(/delay off/i)).toBeInTheDocument();
       expect(workspace.getByText(/reverb off/i)).toBeInTheDocument();
     });
 
-    it('persists a new preset to userPresetStorage (localStorage) on Mint', () => {
+    it('persists a new preset to userPresetStorage (localStorage) on Mint', async () => {
       const { container } = render(<SoundDesignerPage />);
       const workspace = getWorkspace(container);
-      goToStage(workspace, 'Mint');
+      await goToStage(workspace, 'Mint');
 
       const nameInput = workspace.getByLabelText('Name this sound');
       fireEvent.change(nameInput, { target: { value: 'porch light' } });
@@ -258,10 +263,10 @@ describe('SoundDesignerPage', () => {
         .toBe('porch light');
     });
 
-    it('shows a confirmation with a link to use the sound on the main page after minting', () => {
+    it('shows a confirmation with a link to use the sound on the main page after minting', async () => {
       const { container } = render(<SoundDesignerPage />);
       const workspace = getWorkspace(container);
-      goToStage(workspace, 'Mint');
+      await goToStage(workspace, 'Mint');
 
       const nameInput = workspace.getByLabelText('Name this sound');
       fireEvent.change(nameInput, { target: { value: 'bx-90' } });
@@ -275,13 +280,13 @@ describe('SoundDesignerPage', () => {
     it('the minted preset appears in the "Your presets" shelf on the Base stage (once browse is opened)', async () => {
       const { container } = render(<SoundDesignerPage />);
       const workspace = getWorkspace(container);
-      goToStage(workspace, 'Mint');
+      await goToStage(workspace, 'Mint');
 
       const nameInput = workspace.getByLabelText('Name this sound');
       fireEvent.change(nameInput, { target: { value: 'bx-90' } });
       fireEvent.click(workspace.getByRole('button', { name: 'Mint sound' }));
 
-      goToStage(workspace, 'Base');
+      await goToStage(workspace, 'Base');
       fireEvent.click(workspace.getByRole('button', { name: /Browse all presets/i }));
       expect(await workspace.findByRole('button', { name: 'Load preset bx-90' })).toBeInTheDocument();
     });

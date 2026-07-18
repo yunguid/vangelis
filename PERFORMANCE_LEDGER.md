@@ -812,3 +812,50 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark: 406.5 us per 128-frame block with 6.6x realtime headroom.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - `git diff --check`: pass.
+
+## Optimization batch 14 — interaction-loaded Sound Designer stages
+
+Collected from production manifest static/dynamic closures, stage-navigation contract tests,
+the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 13 | Batch 14 | Change |
+|---|---:|---:|---:|
+| Sound Designer Base startup JS gzip | 73.97 KiB | 70.26 KiB | -5.0% |
+| Sound Designer Base startup JS raw | 224.10 KiB | 211.95 KiB | -5.4% |
+| Sound Designer Base static JS assets | 12 | 11 | -1 asset |
+| Advanced stages in Base static closure | all four | 0 | deferred |
+| Advanced control primitives in Base static closure | present | 0 | deferred |
+| Advanced-stage interaction delta | static startup cost | 13.59 KiB / 4.68 KiB gzip | 3 on-demand assets |
+| Sound Designer CSS gzip | 15.83 KiB | 15.85 KiB | +0.1% stable fallback |
+| Total production JS raw | 500.49 KiB | 501.96 KiB | +0.3% split/fallback overhead |
+| Total production JS gzip | 163.97 KiB | 164.99 KiB | +0.6% split/fallback overhead |
+| Production deployment bytes | 1,486.31 KiB | 1,488.60 KiB | +0.2% |
+| Automated production budgets | 40 | 42 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- The default Base screen parsed and initialized the complete Tone, Motion, Space, and Mint
+  component tree plus every advanced slider and modulation primitive, although those controls
+  cannot render before stage navigation.
+- Moved all four advanced stages behind one React lazy boundary. Base retains its waveform and
+  folded-preset workflow, so the immediately useful design surface remains complete.
+- Pointer hover and keyboard focus begin preloading the advanced module before activation. A
+  dimensionally stable, styled card fallback covers direct clicks and slow connections without
+  collapsing the workspace.
+- Updated the page contracts to await the real asynchronous boundary while preserving free stage
+  navigation, ordered back/next controls, parameter groups, mint persistence, and the persistent
+  keyboard and visualizer.
+- Manifest guards require the advanced-stage dynamic edge and fail if either the advanced-stage
+  module or shared audio control primitives returns to the Base static closure.
+
+### Batch 14 verification gates
+
+- Full suite: 43 files, 476/476 tests pass.
+- Production delivery/static/dependency/route guardrails: 42/42 pass.
+- Deterministic visual workload: 92.24% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference; exact workload counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 406.2 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- `git diff --check`: pass.

@@ -156,6 +156,16 @@
   border-radius: 2px;
 }
 
+.stage-card--loading {
+  min-height: 108px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-tertiary);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .stage-card__body {
   width: 100%;
   max-width: 820px;

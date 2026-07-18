@@ -81,6 +81,9 @@ const audioEngineManifestRecord = Object.values(manifest).find((record) => (
 const audioEngineFile = audioEngineManifestRecord?.file || null;
 const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
 const waveCandyFile = manifest['src/components/WaveCandy.jsx']?.file || null;
+const advancedSoundDesignerStagesFile = manifest['src/pages/SoundDesignerAdvancedStages.jsx']?.file || null;
+const audioControlPrimitivesFile = Object.entries(manifest)
+  .find(([key]) => key.includes('audioControlPrimitives'))?.[1]?.file || null;
 
 function collectRouteClosure(entryKeys) {
   const visited = new Set();
@@ -114,7 +117,13 @@ function collectRouteClosure(entryKeys) {
     includesAudioEngine: audioEngineFile ? jsFiles.has(audioEngineFile) : false,
     includesFullSidebar: fullSidebarFile ? jsFiles.has(fullSidebarFile) : false,
     includesSongStudyPlayer: songStudyFile ? jsFiles.has(songStudyFile) : false,
-    includesWaveCandy: waveCandyFile ? jsFiles.has(waveCandyFile) : false
+    includesWaveCandy: waveCandyFile ? jsFiles.has(waveCandyFile) : false,
+    includesAdvancedSoundDesignerStages: advancedSoundDesignerStagesFile
+      ? jsFiles.has(advancedSoundDesignerStagesFile)
+      : false,
+    includesAudioControlPrimitives: audioControlPrimitivesFile
+      ? jsFiles.has(audioControlPrimitivesFile)
+      : false
   };
 }
 
@@ -128,6 +137,9 @@ const soundControlPanelChunk = jsAssets.find(({ file }) => file.includes('SoundT
 const midiParserChunk = jsAssets.find(({ file }) => file.includes('midiParser')) || null;
 const fullSidebarChunk = fullSidebarFile ? assetMetricByFile.get(fullSidebarFile) || null : null;
 const audioEngineChunk = audioEngineFile ? assetMetricByFile.get(audioEngineFile) || null : null;
+const advancedSoundDesignerStagesChunk = advancedSoundDesignerStagesFile
+  ? assetMetricByFile.get(advancedSoundDesignerStagesFile) || null
+  : null;
 const appManifestEntry = manifest['src/App.jsx'];
 const appDefersMidiParser = appManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false;
 const generatedStudyManifestEntry = manifest['src/pages/GeneratedSongStudyPage.jsx'];
@@ -137,6 +149,9 @@ const generatedDefersSongStudyPlayer = (
 const soundDesignerManifestEntry = manifest['src/pages/SoundDesignerPage.jsx'];
 const soundDesignerDefersWaveCandy = (
   soundDesignerManifestEntry?.dynamicImports?.includes('src/components/WaveCandy.jsx') || false
+);
+const soundDesignerDefersAdvancedStages = (
+  soundDesignerManifestEntry?.dynamicImports?.includes('src/pages/SoundDesignerAdvancedStages.jsx') || false
 );
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
@@ -220,9 +235,15 @@ const report = {
       kb: roundKb(audioEngineChunk.bytes),
       gzipKb: roundKb(audioEngineChunk.gzipBytes)
     } : null,
+    deferredSoundDesignerAdvancedStagesChunk: advancedSoundDesignerStagesChunk ? {
+      file: advancedSoundDesignerStagesChunk.file,
+      kb: roundKb(advancedSoundDesignerStagesChunk.bytes),
+      gzipKb: roundKb(advancedSoundDesignerStagesChunk.gzipBytes)
+    } : null,
     appDefersMidiParser,
     generatedDefersSongStudyPlayer,
     soundDesignerDefersWaveCandy,
+    soundDesignerDefersAdvancedStages,
     routeClosures
   },
   staticSignals: {
@@ -385,6 +406,19 @@ if (!soundDesignerDefersWaveCandy) {
 if (soundDesignerClosure?.includesWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer isolation', actual: 'eager', expected: 'deferred' });
 }
+if (!soundDesignerDefersAdvancedStages) {
+  failures.push({ name: 'Guard Sound Designer advanced-stage import', actual: 'static', expected: 'dynamic' });
+}
+if (
+  soundDesignerClosure?.includesAdvancedSoundDesignerStages
+  || soundDesignerClosure?.includesAudioControlPrimitives
+) {
+  failures.push({
+    name: 'Guard Sound Designer Base-stage isolation',
+    actual: 'advanced controls in static closure',
+    expected: 'Base stage only'
+  });
+}
 if (obsoleteWasmBuildPlugins.length > 0) {
   failures.push({ name: 'Guard retired WASM build plugins', dependencies: obsoleteWasmBuildPlugins });
 }
@@ -401,7 +435,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 22,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 24,
   failures
 };
 
