@@ -3,43 +3,6 @@
  * Audio controls panel, waveform selector, control groups
  */
 
-/* Controls Surface */
-.controls-surface {
-  position: relative;
-  width: min(1200px, 95vw);
-  display: grid;
-  grid-template-columns: clamp(220px, 24vw, 300px) minmax(0, 1fr);
-  gap: var(--space-lg);
-  padding: var(--space-lg);
-  align-items: flex-start;
-  border-radius: 4px;
-  background: var(--color-surface-intense);
-  border: var(--border-glass);
-  overflow: hidden;
-}
-
-/* Controls Panel */
-.controls-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  min-width: 0;
-}
-
-.controls-panel.wide {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.controls-surface > .controls-panel:first-child {
-  grid-column: 1;
-}
-
-.controls-surface > .controls-panel.wide {
-  grid-column: 2;
-}
-
 .controls-heading {
   font-size: clamp(0.92rem, 1.1vw, 1.02rem);
   font-weight: 500;
@@ -247,13 +210,6 @@
   gap: 0;
 }
 
-.slider-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
 /* Waveform Panel */
 .waveform-panel {
   display: flex;
@@ -314,6 +270,25 @@
   box-shadow: none;
 }
 
+/* Flat theme overrides travel with the interaction-loaded SoundTab. */
+.waveform-button {
+  background-image: none !important;
+  background: rgba(60, 56, 54, 0.5) !important;
+  border: 1px solid transparent !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: none !important;
+}
+
+.waveform-button[aria-pressed="true"] {
+  background: rgba(214, 93, 14, 0.2) !important;
+  border-color: rgba(214, 93, 14, 0.32) !important;
+}
+
+.waveform-button.is-active {
+  background: rgba(215, 153, 33, 0.2) !important;
+  border-color: rgba(215, 153, 33, 0.32) !important;
+}
+
 .control-groups--compact .control-section {
   gap: 12px;
 }
@@ -345,33 +320,7 @@
   letter-spacing: 0.01em;
 }
 
-.panel-footer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-@media (max-width: 1200px) {
-  .controls-surface {
-    width: min(100%, 96vw);
-  }
-}
-
 @media (max-width: 900px) {
-  .controls-surface {
-    width: 100%;
-    max-width: 100%;
-    padding: 12px;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    border-radius: 2px;
-  }
-
-  .controls-panel,
-  .controls-panel.wide {
-    gap: 12px;
-  }
-
   .control-section-shell {
     padding: 0 0 14px;
     border-radius: 0;
@@ -426,9 +375,6 @@
     transform: none;
   }
 
-  .panel-footer {
-    flex-direction: column;
-  }
 }
 
 @media (max-width: 700px) {
@@ -438,12 +384,5 @@
 
   .waveform-grid--inline {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 520px) {
-  .controls-surface {
-    padding: 10px;
-    gap: 10px;
   }
 }

@@ -39,11 +39,9 @@ body {
 .zone-top,
 .panel,
 .panel.elevated,
-.controls-surface,
 .app-notice,
 .button-icon,
 .button-primary,
-.waveform-button,
 .segment-button,
 .control-select {
   background-image: none !important;
@@ -51,15 +49,13 @@ body {
 
 .zone-top,
 .panel,
-.panel.elevated,
-.controls-surface {
+.panel.elevated {
   background: rgba(40, 40, 40, 0.92) !important;
   border-color: rgba(168, 153, 132, 0.18) !important;
 }
 
 .button-icon,
 .button-primary,
-.waveform-button,
 .segment-button,
 .button-link,
 .control-select {
@@ -75,13 +71,11 @@ body {
 }
 
 .button-primary,
-.segment-button.is-active,
-.waveform-button[aria-pressed="true"] {
+.segment-button.is-active {
   background: rgba(214, 93, 14, 0.2) !important;
   border-color: rgba(214, 93, 14, 0.32) !important;
 }
 
-.wave-candy__canvas,
 .candy-canvas {
   background: rgba(29, 32, 33, 0.96) !important;
   border-color: rgba(168, 153, 132, 0.18) !important;
@@ -194,16 +188,6 @@ h4,
 .header-controls .button-icon.record-button.recording {
   background: rgba(255, 122, 61, 0.3) !important;
   border-color: rgba(255, 122, 61, 0.9) !important;
-}
-
-.waveform-button {
-  background: rgba(60, 56, 54, 0.5) !important;
-  border: 1px solid transparent !important;
-}
-
-.waveform-button.is-active {
-  background: rgba(215, 153, 33, 0.2) !important;
-  border-color: rgba(215, 153, 33, 0.32) !important;
 }
 
 @media (max-width: 900px) {

@@ -1326,3 +1326,52 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 23 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 25 — production-reachable CSS census
+
+Collected from production JSX/class reachability across nine owned stylesheets, generated asset
+sizes, all-route CSS closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 24 | Batch 25 | Change |
+|---|---:|---:|---:|
+| Audited owned CSS files | 0 | 9 | durable census |
+| Audited owned CSS classes | untracked | 156 | guarded |
+| Unreferenced audited classes | 18 families found | 0 | removed |
+| Initial/global CSS raw | 25.68 KiB | 24.59 KiB | -4.2% |
+| Initial/global CSS gzip | 5.63 KiB | 5.46 KiB | -3.0% |
+| Keyboard CSS raw / gzip | 7.28 / 2.00 KiB | 5.63 / 1.71 KiB | -22.7% / -14.5% |
+| SoundTab CSS raw / gzip | 6.34 / 1.52 KiB | 5.68 / 1.39 KiB | -10.4% / -8.6% |
+| WaveCandy CSS raw / gzip | 1.85 / 0.78 KiB | 1.08 / 0.49 KiB | -41.6% / -37.2% |
+| Home critical CSS gzip | 11.66 KiB | 11.19 KiB | -4.0% |
+| Song / Designer critical CSS gzip | 12.29 / 12.39 KiB | 11.83 / 11.93 KiB | -3.7% |
+| Total production CSS raw | 104.59 KiB | 100.42 KiB | -4.0% |
+| Total production CSS gzip | 25.60 KiB | 24.73 KiB | -3.4% |
+| Production deployment bytes | 1,489.15 KiB | 1,484.98 KiB | -4.17 KiB |
+| Automated production budgets | 66 | 67 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Cross-referenced literal production class usage against the global foundation plus owned Home,
+  keyboard, SoundTab, WaveCandy, and radar styles. Tests do not count as production reachability.
+- Removed retired layout tiers/zones/subtitles, a dead control chip and fieldset abstraction,
+  unused control-surface/panel/row/footer layouts, obsolete keyboard header/legend/loading/hints,
+  and the retired Raylib WaveCandy gear/viewport/canvas rules.
+- Moved the final live waveform-button Gruvbox overrides out of global theme CSS and into SoundTab.
+  The generated Sound panel keeps the same final `!important` colors while unrelated routes no
+  longer parse those selectors. Removed the retired Raylib canvas selector from the theme group.
+- The production guard now scans 156 classes across nine explicitly owned CSS files and fails if
+  any loses its production JSX reference. Route CSS with intentional runtime-generated modifier
+  names remains outside this literal-only census.
+
+### Batch 25 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 67/67 pass.
+- Deterministic visual workload after activation: 92.84% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 405.6 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, down by one retired chip selector.
+- `git diff --check`: pass.

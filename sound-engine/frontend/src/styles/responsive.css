@@ -15,8 +15,7 @@
     width: min(1000px, 100%);
   }
 
-  .zone-center,
-  .zone-bottom {
+  .zone-center {
     width: min(100%, 96vw);
   }
 }
@@ -36,8 +35,7 @@
   }
 
   .zone-top,
-  .zone-center,
-  .zone-bottom {
+  .zone-center {
     width: 100%;
     max-width: 100%;
   }
@@ -90,10 +88,6 @@
   .zone-center {
     gap: var(--space-md);
     padding: 0;
-  }
-
-  .zone-bottom {
-    padding-bottom: 0;
   }
 
   .panel {

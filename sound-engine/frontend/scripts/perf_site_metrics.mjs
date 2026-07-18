@@ -211,8 +211,32 @@ const soundDesignerDefersAdvancedStages = (
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
+const productionSourcePaths = sourcePaths.filter((file) => !/\.(?:test|spec)\.[^.]+$/.test(file));
+const productionSourceText = (await Promise.all(
+  productionSourcePaths.map((file) => readFile(file, 'utf8'))
+)).join('\n');
 const sourceCssPaths = (await walkFiles(sourceDir)).filter((file) => file.endsWith('.css'));
 const sourceCssText = (await Promise.all(sourceCssPaths.map((file) => readFile(file, 'utf8')))).join('\n');
+const ownedCssAuditPaths = [
+  path.join(sourceDir, 'styles', 'layout.css'),
+  path.join(sourceDir, 'styles', 'components.css'),
+  path.join(sourceDir, 'styles', 'responsive.css'),
+  path.join(sourceDir, 'styles', 'gruvbox.css'),
+  path.join(sourceDir, 'styles', 'controls.css'),
+  path.join(sourceDir, 'styles', 'keyboard.css'),
+  path.join(sourceDir, 'styles', 'wave-candy.css'),
+  path.join(sourceDir, 'styles', 'birds-eye-radar.css'),
+  path.join(sourceDir, 'styles', 'overlays.css')
+];
+const ownedCssAuditText = (await Promise.all(
+  ownedCssAuditPaths.map((file) => readFile(file, 'utf8'))
+)).join('\n');
+const ownedCssClassNames = [...new Set(
+  [...ownedCssAuditText.matchAll(/\.([_a-zA-Z]+[_a-zA-Z0-9-]*)/g)]
+    .map((match) => match[1])
+)];
+const unreferencedOwnedCssClasses = ownedCssClassNames
+  .filter((className) => !productionSourceText.includes(className));
 const appHeaderSource = await readFile(path.join(sourceDir, 'components', 'AppHeader.jsx'), 'utf8');
 const appHeaderImportsAudioEngine = /from\s+['"][^'"]*audioEngine(?:\.js)?['"]/.test(appHeaderSource);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
@@ -379,6 +403,9 @@ const report = {
     criticalGlobalCssSelectorCount: criticalGlobalCssSelectors.length,
     missingCriticalGlobalCssSelectors,
     retiredOverlaySelectorCount: countCss(/\.(?:command-palette|brandkit-)/g),
+    ownedCssAuditFileCount: ownedCssAuditPaths.length,
+    ownedCssClassCount: ownedCssClassNames.length,
+    unreferencedOwnedCssClasses,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -657,6 +684,12 @@ if (report.staticSignals.retiredOverlaySelectorCount > 0) {
     maximum: 0
   });
 }
+if (unreferencedOwnedCssClasses.length > 0) {
+  failures.push({
+    name: 'Guard owned CSS selector reachability',
+    unreferenced: unreferencedOwnedCssClasses
+  });
+}
 if (soundDesignerClosure?.includesWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer isolation', actual: 'eager', expected: 'deferred' });
 }
@@ -733,7 +766,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 48,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 49,
   failures
 };
 

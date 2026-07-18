@@ -45,11 +45,6 @@
 }
 
 /* Visual hierarchy tiers */
-.tier-focus {
-  box-shadow: var(--shadow-radiant);
-  border: 1px solid rgba(255, 255, 255, 0.32);
-}
-
 .tier-support {
   box-shadow: var(--shadow-floating);
   border: 1px solid rgba(255, 255, 255, 0.24);
@@ -70,11 +65,6 @@
 .content-primary {
   order: 1;
   flex: 1 1 auto;
-}
-
-.content-secondary {
-  order: 2;
-  flex: 0 1 auto;
 }
 
 /* Zone - Top (Header) */
@@ -107,14 +97,6 @@
   padding: var(--space-lg) 0;
 }
 
-/* Zone - Bottom (Controls) */
-.zone-bottom {
-  width: min(1200px, 95vw);
-  display: flex;
-  justify-content: center;
-  padding-bottom: var(--space-lg);
-}
-
 /* Branding */
 .brand-block {
   display: flex;
@@ -132,15 +114,6 @@
   text-shadow: none;
   margin: 0;
   padding-left: 1px;
-}
-
-.brand-subtitle {
-  font-weight: 300;
-  font-size: clamp(0.8rem, 1.2vw, 1rem);
-  letter-spacing: 0.18em;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  opacity: 0.92;
 }
 
 /* Header Controls */
