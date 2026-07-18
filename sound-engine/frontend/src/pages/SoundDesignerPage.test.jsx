@@ -8,6 +8,7 @@ import { loadUserPresets } from '../utils/userPresetStorage.js';
 vi.mock('../utils/audioEngine.js', () => ({
   audioEngine: {
     getStatus: () => ({ wasmReady: false, graphWarmed: false }),
+    getAnalysisNodes: () => null,
     subscribe: vi.fn(() => () => {}),
     subscribeRecording: vi.fn(() => () => {}),
     setGlobalParams: vi.fn(),

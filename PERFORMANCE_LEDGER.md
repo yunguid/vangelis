@@ -1640,3 +1640,47 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 32 — graph-gated analyzer resources
+
+Collected from analyzer mount/resource ordering, canvas controller behavior, generated visual
+closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 31 | Batch 32 | Change |
+|---|---:|---:|---:|
+| Cold analyzer 2D contexts | 5 | 0 | graph-gated |
+| Cold analyzer resize observers | 5 | 0 | graph-gated |
+| Cold analyzer frame cadence | 0 Hz | 0 Hz | preserved |
+| Active analyzer contexts / observers | 5 / 5 | 5 / 5 | preserved |
+| Initial Home JS raw / gzip | 203.05 / 67.81 KiB | 203.05 / 67.81 KiB | unchanged |
+| Fully activated Home visual JS gzip | 77.04 KiB | 77.04 KiB | unchanged |
+| Production deployment bytes | 1,478.87 KiB | 1,478.86 KiB | effectively flat |
+| Automated production budgets | 72 | 73 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Moved all five WaveCandy `getContext('2d')` calls and canvas size-controller constructions
+  inside the graph-readiness boundary introduced in Batch 31. The deferred visualizer shell now
+  costs only its stable DOM/CSS until audio is actually initialized.
+- When graph readiness arrives, contexts and resize observers initialize immediately before the
+  existing visibility-aware frame loop, so active rendering behavior and sizing remain unchanged.
+- Cleanup safely handles both cold/uninitialized and active states, disconnecting only resources
+  that were created.
+- Added reported cold context/observer counts and a source-order production guard. Updated the
+  Sound Designer audio-engine test double to expose the real gateway's cold
+  `getAnalysisNodes() -> null` contract, eliminating timing-sensitive mock behavior.
+
+### Batch 32 verification gates
+
+- Full suite: 49 files, 495/495 tests pass, including two repeated focused Sound Designer runs
+  after correcting the cold gateway mock.
+- Production delivery/static/dependency/route guardrails: 73/73 pass.
+- Deterministic combined visual workload: 83.75% lower CPU time than the legacy reference, with
+  78.18% fewer analyser samples, 65.71% fewer resample samples, and 50% fewer active scene frames
+  and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 406.3 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

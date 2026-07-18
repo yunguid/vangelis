@@ -285,6 +285,12 @@ const waveCandyDefersFrameLoopUntilGraph = (
   /audioEngine\.subscribe\s*\(startFrameLoopIfReady\)/.test(waveCandyCanvasSource)
   && /!audioEngine\.getAnalysisNodes\(\)\?\.analyser/.test(waveCandyCanvasSource)
 );
+const waveCandyDefersCanvasResourcesUntilGraph = (
+  waveCandyCanvasSource.indexOf('!audioEngine.getAnalysisNodes()?.analyser')
+  < waveCandyCanvasSource.indexOf("canvas.getContext('2d')")
+  && waveCandyCanvasSource.indexOf('!audioEngine.getAnalysisNodes()?.analyser')
+  < waveCandyCanvasSource.indexOf('createCanvasSizeController(canvas')
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -462,6 +468,9 @@ const report = {
     sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     waveCandyColdFrameRateHz: waveCandyDefersFrameLoopUntilGraph ? 0 : 30,
     waveCandyDefersFrameLoopUntilGraph,
+    waveCandyColdCanvasContextCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
+    waveCandyColdResizeObserverCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
+    waveCandyDefersCanvasResourcesUntilGraph,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -556,6 +565,13 @@ if (!waveCandyDefersFrameLoopUntilGraph) {
     name: 'Guard cold analyzer frame-loop deferral',
     actual: 'polling before graph readiness',
     expected: 'status-triggered start'
+  });
+}
+if (!waveCandyDefersCanvasResourcesUntilGraph) {
+  failures.push({
+    name: 'Guard cold analyzer canvas-resource deferral',
+    actual: 'canvas resources before graph readiness',
+    expected: 'graph-gated contexts and resize observers'
   });
 }
 const countBudgetChecks = [
@@ -872,7 +888,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 54,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 55,
   failures
 };
 

@@ -345,17 +345,8 @@ const WaveCandyCanvas = () => {
     };
     if (Object.values(canvases).some((canvas) => !canvas)) return () => undefined;
 
-    const contexts = Object.fromEntries(
-      Object.entries(canvases).map(([key, canvas]) => [key, canvas.getContext('2d')])
-    );
-    if (Object.values(contexts).some((context) => !context)) return () => undefined;
-
-    const sizeControllers = Object.fromEntries(
-      Object.entries(canvases).map(([key, canvas]) => [
-        key,
-        createCanvasSizeController(canvas, contexts[key])
-      ])
-    );
+    let contexts = null;
+    let sizeControllers = null;
     let lastFrame = 0;
 
     const render = (time) => {
@@ -448,6 +439,18 @@ const WaveCandyCanvas = () => {
     let stopFrameLoop = null;
     const startFrameLoopIfReady = () => {
       if (stopFrameLoop || !audioEngine.getAnalysisNodes()?.analyser) return;
+
+      contexts = Object.fromEntries(
+        Object.entries(canvases).map(([key, canvas]) => [key, canvas.getContext('2d')])
+      );
+      if (Object.values(contexts).some((context) => !context)) return;
+
+      sizeControllers = Object.fromEntries(
+        Object.entries(canvases).map(([key, canvas]) => [
+          key,
+          createCanvasSizeController(canvas, contexts[key])
+        ])
+      );
       lastFrame = 0;
       stopFrameLoop = startVisibilityAwareRafLoop(render);
     };
@@ -457,7 +460,9 @@ const WaveCandyCanvas = () => {
     return () => {
       unsubscribeStatus();
       stopFrameLoop?.();
-      Object.values(sizeControllers).forEach((controller) => controller.disconnect());
+      if (sizeControllers) {
+        Object.values(sizeControllers).forEach((controller) => controller.disconnect());
+      }
     };
   }, []);
 
