@@ -15,6 +15,7 @@ import { useKeyboardInput } from './hooks/useKeyboardInput';
 import { usePointerInput } from './hooks/usePointerInput';
 import Key from './components/Key';
 import { getNoteMeta } from './utils/noteMeta';
+import '../../styles/keyboard.css';
 
 const COMPACT_QUERY = '(max-width: 900px)';
 

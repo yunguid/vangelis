@@ -44,14 +44,19 @@ const assetPaths = (await walkFiles(assetsDir)).sort();
 const assetMetrics = await Promise.all(assetPaths.map(measureFile));
 const jsAssets = assetMetrics.filter(({ file }) => file.endsWith('.js'));
 const cssAssets = assetMetrics.filter(({ file }) => file.endsWith('.css'));
+const cssTextByFile = new Map(await Promise.all(cssAssets.map(async ({ file }) => (
+  [file, await readFile(path.join(distDir, file), 'utf8')]
+))));
+const keyboardCssAsset = cssAssets.find(({ file }) => (
+  cssTextByFile.get(file)?.includes('.keyboard-wrapper')
+)) || null;
+const keyboardCssFile = keyboardCssAsset?.file || null;
 const initialRefs = [...html.matchAll(/(?:src|href)="\.\/([^"?#]+)|(?:src|href)="\/([^"?#]+)/g)]
   .map((match) => match[1] || match[2])
   .filter(Boolean);
 const initialJs = jsAssets.filter(({ file }) => initialRefs.includes(file));
 const initialCss = cssAssets.filter(({ file }) => initialRefs.includes(file));
-const initialCssText = (await Promise.all(initialCss.map(({ file }) => (
-  readFile(path.join(distDir, file), 'utf8')
-)))).join('\n');
+const initialCssText = initialCss.map(({ file }) => cssTextByFile.get(file) || '').join('\n');
 const routeChunks = jsAssets.filter(({ file }) => (
   /(?:ControlKit|GeneratedSongStudy|MidiPipeline|SongStudy|SoundDesigner|StudySongs|VoiceLoopLab)/.test(file)
 ));
@@ -118,6 +123,7 @@ function collectRouteClosure(entryKeys) {
     cssAssetCount: css.length,
     cssKb: roundKb(sum(css, 'bytes')),
     cssGzipKb: roundKb(sum(css, 'gzipBytes')),
+    includesKeyboardCss: keyboardCssFile ? cssFiles.has(keyboardCssFile) : false,
     includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets')),
     includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController')),
     includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab')),
@@ -232,7 +238,7 @@ const tailwindBuildDependencies = ['tailwindcss']
 const criticalGlobalCssSelectors = [
   '.app-stage',
   '.app-shell',
-  '.keyboard-surface',
+  '.controls-surface',
   '.value-slider',
   '.wave-candy-placeholder',
   '.command-palette',
@@ -321,6 +327,11 @@ const report = {
       kb: roundKb(sum(deferredBirdsEyeRadarCss, 'bytes')),
       gzipKb: roundKb(sum(deferredBirdsEyeRadarCss, 'gzipBytes'))
     },
+    deferredKeyboardCss: keyboardCssAsset ? {
+      file: keyboardCssAsset.file,
+      kb: roundKb(keyboardCssAsset.bytes),
+      gzipKb: roundKb(keyboardCssAsset.gzipBytes)
+    } : null,
     appDefersMidiParser,
     appDefersScene,
     appDefersWaveCandy,
@@ -558,6 +569,27 @@ if (initialCssText.includes('.wave-candy-grid') || initialCssText.includes('.bir
     expected: 'deferred'
   });
 }
+if (!keyboardCssAsset || initialCssText.includes('.keyboard-wrapper')) {
+  failures.push({
+    name: 'Guard keyboard CSS component boundary',
+    asset: keyboardCssAsset?.file || null,
+    initial: initialCssText.includes('.keyboard-wrapper') ? 'eager' : 'deferred',
+    expected: 'one non-initial asset'
+  });
+}
+const playableRouteNames = new Set(['home', 'song-study', 'sound-designer']);
+const routesWithIncorrectKeyboardCss = routeClosures
+  .filter(({ route, includesKeyboardCss }) => (
+    playableRouteNames.has(route) !== includesKeyboardCss
+  ))
+  .map(({ route }) => route);
+if (routesWithIncorrectKeyboardCss.length > 0) {
+  failures.push({
+    name: 'Guard keyboard CSS route ownership',
+    routes: routesWithIncorrectKeyboardCss,
+    expected: 'playable routes only'
+  });
+}
 if (soundDesignerClosure?.includesWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer isolation', actual: 'eager', expected: 'deferred' });
 }
@@ -634,7 +666,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 41,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 43,
   failures
 };
 

@@ -17,7 +17,6 @@
 
   .zone-center,
   .zone-bottom,
-  .keyboard-surface,
   .controls-surface {
     width: min(100%, 96vw);
   }
@@ -40,7 +39,6 @@
   .zone-top,
   .zone-center,
   .zone-bottom,
-  .keyboard-surface,
   .controls-surface {
     width: 100%;
     max-width: 100%;
@@ -98,83 +96,6 @@
 
   .zone-bottom {
     padding-bottom: 0;
-  }
-
-  .keyboard-surface {
-    min-height: 0;
-    max-height: none;
-    padding: 0;
-    gap: 10px;
-    border-radius: 0;
-  }
-
-  .keyboard-header {
-    flex-wrap: wrap;
-    row-gap: 6px;
-    column-gap: 10px;
-    font-size: 0.72rem;
-    letter-spacing: 0.1em;
-  }
-
-  .keyboard-legend {
-    font-size: 0.63rem;
-    letter-spacing: 0.08em;
-  }
-
-  .keyboard-region {
-    gap: 8px;
-  }
-
-  /* Hero keyboard: with only 8 white keys on compact screens, keys get tall
-     and wide enough to actually play with thumbs. */
-  :root {
-    --white-key-height: clamp(140px, 26vh, 230px);
-    --black-key-height: clamp(90px, 16vh, 145px);
-    --black-key-width: clamp(36px, 10vw, 58px);
-  }
-
-  .white-keys {
-    min-height: var(--white-key-height);
-  }
-
-  .key-white .note-label {
-    font-size: clamp(0.62rem, 2.4vw, 0.78rem);
-  }
-
-  /* QWERTY hint letters mean nothing on a touch screen */
-  .key-label {
-    display: none;
-  }
-
-  .key-black {
-    margin-top: 6px;
-    border-radius: 0 0 4px 4px;
-  }
-
-  .keyboard-meta {
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
-    padding: 4px 8px;
-  }
-
-  .keyboard-hints {
-    gap: 8px;
-    font-size: 0.56rem;
-    letter-spacing: 0.06em;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    opacity: 0.65;
-  }
-
-  .warmup-indicator {
-    position: static;
-    max-width: 100%;
-    width: fit-content;
-    padding: 8px 10px;
-    gap: 8px;
-    font-size: 0.6rem;
-    letter-spacing: 0.08em;
-    box-shadow: none;
   }
 
   .controls-surface {
@@ -309,10 +230,6 @@
     justify-content: flex-start;
   }
 
-  .keyboard-hints {
-    display: none;
-  }
-
   .waveform-grid {
     grid-template-columns: 1fr;
   }
@@ -342,24 +259,6 @@
   .header-controls .button-icon {
     width: 40px;
     height: 40px;
-  }
-
-  .keyboard-surface {
-    padding: 0;
-    border-radius: 0;
-  }
-
-  .keyboard-header {
-    font-size: 0.68rem;
-    letter-spacing: 0.08em;
-  }
-
-  .keyboard-legend {
-    font-size: 0.58rem;
-  }
-
-  .white-keys {
-    border-radius: 2px;
   }
 
   .controls-surface {

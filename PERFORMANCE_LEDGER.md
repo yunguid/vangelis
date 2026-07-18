@@ -1184,3 +1184,52 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 23 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 22 — playable-route keyboard CSS ownership
+
+Collected from generated selector attribution, production CSS closures for all eight routes,
+responsive-rule parity, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 21 | Batch 22 | Change |
+|---|---:|---:|---:|
+| Initial/global CSS raw | 44.22 KiB | 37.08 KiB | -16.1% |
+| Initial/global CSS gzip | 8.90 KiB | 7.50 KiB | -15.7% |
+| Keyboard CSS | global | 7.28 KiB / 2.00 KiB gzip | playable-route asset |
+| Control Kit critical CSS gzip | 11.17 KiB | 9.77 KiB | -12.5% |
+| Generated Study shell CSS gzip | 13.57 KiB | 12.17 KiB | -10.3% |
+| MIDI Pipeline critical CSS gzip | 14.08 KiB | 12.68 KiB | -9.9% |
+| Study Library critical CSS gzip | 13.32 KiB | 11.92 KiB | -10.5% |
+| Voice Loop critical CSS gzip | 14.03 KiB | 12.63 KiB | -10.0% |
+| Home / Song / Designer CSS gzip | 11.94 / 13.57 / 13.67 KiB | 12.53 / 14.16 / 14.26 KiB | +0.59 KiB split cost each |
+| Total production CSS raw | 106.45 KiB | 106.59 KiB | +0.1% |
+| Total production CSS gzip | 24.37 KiB | 24.96 KiB | +2.4% split compression cost |
+| Production deployment bytes | 1,490.43 KiB | 1,490.99 KiB | +0.04% |
+| Automated production budgets | 59 | 61 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- The full virtual-keyboard stylesheet blocked every route, including pipeline, library, voice,
+  control-kit, and generated-status screens that cannot render a keyboard.
+- SynthKeyboard now owns its base stylesheet and all of its 1200/900/700/520 px responsive rules,
+  including compact key geometry, touch labels, hints, and audio-warmup placement. This preserves
+  rule order within one component asset rather than relying on a later global responsive file.
+- Vite coalesces the shared keyboard CSS with the existing playable-route module, so Home, Song
+  Study, and Sound Designer load it once while all five passive/status routes omit it.
+- The tradeoff is explicit: playable routes pay one additional parallel CSS asset and about
+  0.59 KiB of gzip split overhead, while initial CSS is 1.40 KiB smaller and every passive route
+  saves that same 1.40 KiB. Total raw CSS is effectively flat.
+- Build guards identify the keyboard asset by its generated selectors, prohibit those selectors
+  in initial CSS, and require keyboard CSS on exactly the three playable route closures.
+
+### Batch 22 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 61/61 pass.
+- Deterministic visual workload after activation: 92.10% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 406.7 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 23 total, unchanged.
+- `git diff --check`: pass.
