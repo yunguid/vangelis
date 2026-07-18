@@ -1596,3 +1596,47 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 31 — graph-gated analyzer loop
+
+Collected from audio gateway/status semantics, WaveCandy frame-loop inspection, generated visual
+closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 30 | Batch 31 | Change |
+|---|---:|---:|---:|
+| Cold analyzer render attempts over 20 s | ~600 | 0 | removed |
+| Cold analyzer frame cadence | ~30 Hz | 0 Hz | status-gated |
+| Hidden-tab analyzer cadence | 0 Hz | 0 Hz | preserved |
+| Active analyzer cadence | ~30 Hz | ~30 Hz | preserved |
+| Initial Home JS raw / gzip | 203.05 / 67.81 KiB | 203.05 / 67.81 KiB | unchanged |
+| Fully activated Home visual JS gzip | 76.98 KiB | 77.04 KiB | +0.06 KiB |
+| Deferred WaveCandy JS raw / gzip | 8.03 / 3.04 KiB | 8.13 / 3.10 KiB | +0.10 / +0.06 KiB |
+| Production deployment bytes | 1,478.77 KiB | 1,478.87 KiB | +0.10 KiB |
+| Automated production budgets | 71 | 72 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- WaveCandy no longer starts a visibility-aware RAF loop immediately after its deferred component
+  mount. It first checks for live analysis nodes, then subscribes to the lightweight engine status
+  channel and starts exactly once when the audio graph publishes readiness.
+- A cold page therefore has no analyzer RAF callbacks, repeated graph lookups, buffer checks, or
+  canvas draws. If the graph already exists when WaveCandy mounts, the synchronous readiness check
+  starts it immediately; later graph creation is caught by the status subscription.
+- Cleanup now removes both the status subscription and an active frame loop. Existing 30 Hz draw
+  throttling and hidden-tab cancellation remain unchanged after activation.
+- Added reported cold-frame cadence plus a production guard requiring the graph-gated start; the
+  critical Home and Sound Designer route closures remain unchanged.
+
+### Batch 31 verification gates
+
+- Full suite: 49 files, 495/495 tests pass.
+- Production delivery/static/dependency/route guardrails: 72/72 pass.
+- Deterministic combined visual workload: 88.55% lower CPU time than the legacy reference, with
+  78.18% fewer analyser samples, 65.71% fewer resample samples, and 50% fewer active scene frames
+  and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.8 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

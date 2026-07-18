@@ -445,9 +445,18 @@ const WaveCandyCanvas = () => {
       Object.values(sizeControllers).forEach((controller) => controller.acknowledgeResize());
     };
 
-    const stopFrameLoop = startVisibilityAwareRafLoop(render);
+    let stopFrameLoop = null;
+    const startFrameLoopIfReady = () => {
+      if (stopFrameLoop || !audioEngine.getAnalysisNodes()?.analyser) return;
+      lastFrame = 0;
+      stopFrameLoop = startVisibilityAwareRafLoop(render);
+    };
+    const unsubscribeStatus = audioEngine.subscribe(startFrameLoopIfReady);
+    startFrameLoopIfReady();
+
     return () => {
-      stopFrameLoop();
+      unsubscribeStatus();
+      stopFrameLoop?.();
       Object.values(sizeControllers).forEach((controller) => controller.disconnect());
     };
   }, []);

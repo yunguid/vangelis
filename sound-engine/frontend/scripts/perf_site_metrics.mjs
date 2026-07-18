@@ -277,6 +277,14 @@ const sidebarIntentPrefetchHandlers = (
 const sidebarEscapeListenerIsOpenOnly = /if\s*\(disabled\s*\|\|\s*!isOpen\)\s*return undefined;/.test(
   sidebarSource
 );
+const waveCandyCanvasSource = await readFile(
+  path.join(sourceDir, 'components', 'WaveCandyCanvas.jsx'),
+  'utf8'
+);
+const waveCandyDefersFrameLoopUntilGraph = (
+  /audioEngine\.subscribe\s*\(startFrameLoopIfReady\)/.test(waveCandyCanvasSource)
+  && /!audioEngine\.getAnalysisNodes\(\)\?\.analyser/.test(waveCandyCanvasSource)
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -452,6 +460,8 @@ const report = {
     sidebarEscapeListenerIsOpenOnly,
     sceneActiveFrameRateHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
     sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
+    waveCandyColdFrameRateHz: waveCandyDefersFrameLoopUntilGraph ? 0 : 30,
+    waveCandyDefersFrameLoopUntilGraph,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -539,6 +549,13 @@ if (
     activeHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
     idleHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     expected: 'active <= 30 Hz and idle <= 20 Hz'
+  });
+}
+if (!waveCandyDefersFrameLoopUntilGraph) {
+  failures.push({
+    name: 'Guard cold analyzer frame-loop deferral',
+    actual: 'polling before graph readiness',
+    expected: 'status-triggered start'
   });
 }
 const countBudgetChecks = [
@@ -855,7 +872,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 53,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 54,
   failures
 };
 
