@@ -6,6 +6,10 @@ import { clamp } from '../utils/math.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { VerletChain, lagrangeEnvelope } from '../utils/vizPhysics.js';
 import { WAVE_CANDY_FRAME_INTERVAL_MS } from '../utils/visualFramePolicy.js';
+import {
+  createLogSpectrumBinRanges,
+  sampleLogSpectrum
+} from '../utils/spectrumAnalysis.js';
 
 // Perceptual visualizer suite (Canvas 2D):
 // - Spectrum: log-frequency, dB scale — the raw FFT is distilled through
@@ -35,45 +39,6 @@ const readTimeDomain = (analyser, floatBuffer, byteBuffer) => {
     floatBuffer[i] = (byteBuffer[i] - 128) / 128;
   }
   return floatBuffer;
-};
-
-// AnalyserNode byte data maps linearly from minDecibels..maxDecibels.
-const byteToDb = (value, minDb, maxDb) => minDb + (value / 255) * (maxDb - minDb);
-
-// Normalized position 0..1 -> frequency on a log scale
-const positionToFreq = (t) => MIN_FREQ * Math.pow(MAX_FREQ / MIN_FREQ, t);
-
-// Peak-preserving log-frequency resampling of FFT byte data into `out`
-// (values in dB), with per-cell attack/release smoothing into `smoothed`.
-const sampleLogSpectrum = ({
-  freqData,
-  sampleRate,
-  fftSize,
-  minDb,
-  maxDb,
-  out,
-  smoothed
-}) => {
-  const cells = out.length;
-  const hzPerBin = sampleRate / fftSize;
-  for (let i = 0; i < cells; i++) {
-    const f0 = positionToFreq(i / cells);
-    const f1 = positionToFreq((i + 1) / cells);
-    let lo = Math.floor(f0 / hzPerBin);
-    let hi = Math.ceil(f1 / hzPerBin);
-    lo = clamp(lo, 0, freqData.length - 1);
-    hi = clamp(hi, lo + 1, freqData.length);
-    let peak = 0;
-    for (let b = lo; b < hi; b++) {
-      if (freqData[b] > peak) peak = freqData[b];
-    }
-    const db = byteToDb(peak, minDb, maxDb);
-    out[i] = db;
-    // Ballistics: fast attack, slower release (per ~33ms frame)
-    const prev = smoothed[i];
-    const k = db > prev ? 0.55 : 0.14;
-    smoothed[i] = prev + (db - prev) * k;
-  }
 };
 
 const dbToUnit = (db) => clamp((db - FLOOR_DB) / (0 - FLOOR_DB), 0, 1);
@@ -331,7 +296,11 @@ const WaveCandyCanvas = () => {
     rightByte: null,
     specDb: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
     specSmoothed: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
-    specEnvelope: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB)
+    specEnvelope: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
+    specBinRanges: null,
+    specBinSampleRate: 0,
+    specBinFftSize: 0,
+    specBinCount: 0
   });
 
   // The spectrum's physical string: Lagrange-envelope targets pull it via
@@ -406,14 +375,33 @@ const WaveCandyCanvas = () => {
       const leftData = readTimeDomain(leftAnalyser, buffers.left, buffers.leftByte);
       const rightData = readTimeDomain(rightAnalyser, buffers.right, buffers.rightByte);
 
+      const sampleRate = audioEngine.context?.sampleRate || 48000;
+      if (
+        !buffers.specBinRanges
+        || buffers.specBinSampleRate !== sampleRate
+        || buffers.specBinFftSize !== analyser.fftSize
+        || buffers.specBinCount !== buffers.freq.length
+      ) {
+        buffers.specBinRanges = createLogSpectrumBinRanges({
+          cells: SPECTRUM_CELLS,
+          sampleRate,
+          fftSize: analyser.fftSize,
+          binCount: buffers.freq.length,
+          minFrequency: MIN_FREQ,
+          maxFrequency: MAX_FREQ
+        });
+        buffers.specBinSampleRate = sampleRate;
+        buffers.specBinFftSize = analyser.fftSize;
+        buffers.specBinCount = buffers.freq.length;
+      }
+
       sampleLogSpectrum({
         freqData: buffers.freq,
-        sampleRate: audioEngine.context?.sampleRate || 48000,
-        fftSize: analyser.fftSize,
         minDb: analyser.minDecibels,
         maxDb: analyser.maxDecibels,
         out: buffers.specDb,
-        smoothed: buffers.specSmoothed
+        smoothed: buffers.specSmoothed,
+        binRanges: buffers.specBinRanges
       });
 
       // Chebyshev/Lagrange envelope of the FFT -> targets for the Verlet

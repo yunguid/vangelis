@@ -11,6 +11,10 @@ import {
   getStereoPairEvaluationsPerFrame,
   getWaveCandySamplesPerFrame
 } from '../src/utils/audioAnalysisPolicy.js';
+import {
+  createLogSpectrumBinRanges,
+  sampleLogSpectrum
+} from '../src/utils/spectrumAnalysis.js';
 
 const SECONDS = 20;
 
@@ -303,6 +307,66 @@ const mergedStereoTraversal = runStereoTraversalBenchmark(
 );
 const activeAnalyzerFrames = Math.round(SECONDS * (1000 / WAVE_CANDY_FRAME_INTERVAL_MS));
 
+const SPECTRUM_CELLS = 96;
+const spectrumMinDb = -100;
+const spectrumMaxDb = -30;
+const legacySpectrumOut = new Float32Array(SPECTRUM_CELLS);
+const legacySpectrumSmoothed = new Float32Array(SPECTRUM_CELLS).fill(-70);
+const cachedSpectrumOut = new Float32Array(SPECTRUM_CELLS);
+const cachedSpectrumSmoothed = new Float32Array(SPECTRUM_CELLS).fill(-70);
+const spectrumBinRanges = createLogSpectrumBinRanges({
+  cells: SPECTRUM_CELLS,
+  sampleRate: 48000,
+  fftSize: 1024,
+  binCount: srcFreq.length
+});
+const sampleLegacySpectrum = () => {
+  const hzPerBin = 48000 / 1024;
+  for (let i = 0; i < SPECTRUM_CELLS; i += 1) {
+    const f0 = 20 * Math.pow(18000 / 20, i / SPECTRUM_CELLS);
+    const f1 = 20 * Math.pow(18000 / 20, (i + 1) / SPECTRUM_CELLS);
+    const lo = clamp(Math.floor(f0 / hzPerBin), 0, srcFreq.length - 1);
+    const hi = clamp(Math.ceil(f1 / hzPerBin), lo + 1, srcFreq.length);
+    let peak = 0;
+    for (let bin = lo; bin < hi; bin += 1) {
+      if (srcFreq[bin] > peak) peak = srcFreq[bin];
+    }
+    const db = spectrumMinDb + (peak / 255) * (spectrumMaxDb - spectrumMinDb);
+    legacySpectrumOut[i] = db;
+    const previous = legacySpectrumSmoothed[i];
+    const smoothing = db > previous ? 0.55 : 0.14;
+    legacySpectrumSmoothed[i] = previous + (db - previous) * smoothing;
+  }
+  return legacySpectrumOut[47];
+};
+const sampleCachedSpectrum = () => {
+  sampleLogSpectrum({
+    freqData: srcFreq,
+    minDb: spectrumMinDb,
+    maxDb: spectrumMaxDb,
+    out: cachedSpectrumOut,
+    smoothed: cachedSpectrumSmoothed,
+    binRanges: spectrumBinRanges
+  });
+  return cachedSpectrumOut[47];
+};
+const runSpectrumBenchmark = (work, iterations) => {
+  let checksum = 0;
+  for (let i = 0; i < 1000; i += 1) checksum += work();
+  const startedAt = performance.now();
+  for (let i = 0; i < iterations; i += 1) checksum += work();
+  return { elapsedMs: performance.now() - startedAt, checksum };
+};
+const spectrumBenchmarkIterations = 20000;
+const legacySpectrumBenchmark = runSpectrumBenchmark(
+  sampleLegacySpectrum,
+  spectrumBenchmarkIterations
+);
+const cachedSpectrumBenchmark = runSpectrumBenchmark(
+  sampleCachedSpectrum,
+  spectrumBenchmarkIterations
+);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -353,6 +417,22 @@ const output = {
       2
     ).toFixed(2)),
     steadyStateAllocationsPerFrame: 0
+  },
+  spectrumBinPolicy: {
+    cells: SPECTRUM_CELLS,
+    boundaryEvaluationsOverBenchmarkBefore: activeAnalyzerFrames * SPECTRUM_CELLS * 2,
+    boundaryEvaluationsOverBenchmarkAfter: SPECTRUM_CELLS * 2,
+    boundaryEvaluationReductionPercent: Number(reduction(
+      activeAnalyzerFrames * SPECTRUM_CELLS * 2,
+      SPECTRUM_CELLS * 2
+    ).toFixed(2)),
+    benchmarkIterations: spectrumBenchmarkIterations,
+    legacyElapsedMs: Number(legacySpectrumBenchmark.elapsedMs.toFixed(2)),
+    cachedElapsedMs: Number(cachedSpectrumBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacySpectrumBenchmark.elapsedMs,
+      cachedSpectrumBenchmark.elapsedMs
+    ).toFixed(2))
   },
   activeAnalyzerPolicy: {
     frameHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,

@@ -1822,3 +1822,50 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 36 — configuration-scoped spectrum bins
+
+Collected from the log-spectrum sampler, an isolated 20,000-iteration equivalence workload,
+exact active-frame transcendental-operation counts, generated production closures, the full suite,
+and isolated audio/visual gates.
+
+| Metric | Batch 35 | Batch 36 | Change |
+|---|---:|---:|---:|
+| Log-frequency boundary evaluations over 20 s | 115,200 | 192 | -99.83% |
+| Steady-state boundary evaluations per frame | 192 | 0 | removed |
+| Isolated spectrum sampler CPU, 20k iterations | 30.77 ms | 7.45 ms | -75.79% |
+| Initial Home JS gzip | 67.86 KiB | 67.85 KiB | -0.01 KiB |
+| Fully activated Home visual JS gzip | 77.24 KiB | 77.38 KiB | +0.14 KiB |
+| Production deployment bytes | 1,479.60 KiB | 1,480.10 KiB | +0.50 KiB |
+| Automated production budgets | 76 | 77 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Moved the 96-cell log-frequency boundary map out of the 30 Hz sampling loop. The renderer now
+  computes 192 lower/upper bin boundaries once and reuses them until sample rate, FFT size, or
+  frequency-bin count changes.
+- Kept peak-preserving bin selection, byte-to-decibel conversion, and the existing fast-attack /
+  slow-release ballistics unchanged; the optimization removes only repeated invariant `Math.pow`,
+  division, floor/ceil, and clamp work.
+- Extracted the range builder and sampler into a focused utility with tests for ordered/clamped
+  ranges and exact attack/release behavior. Added an isolated legacy-vs-cached sampler profile and
+  a production source guard requiring configuration-scoped range reuse.
+
+### Batch 36 verification gates
+
+- Full suite: 51 files, 500/500 tests pass, including the new spectrum-equivalence cases and 20/20
+  focused Sound Designer tests.
+- Production delivery/static/dependency/route guardrails: 77/77 pass.
+- Isolated spectrum sampler profile: 30.77 ms to 7.45 ms over 20,000 iterations, a 75.79% measured
+  CPU-time reduction; exact boundary evaluations fall 99.83% over a 20-second active session.
+- Analyzer gradient allocations remain 99.83% below Batch 34 with zero steady-state allocations;
+  stereo pair work remains 83.33% below the original policy.
+- Deterministic combined visual workload: 86.19% lower measured CPU time than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -23 KB over 4,000 blocks.
+- Isolated DSP benchmark: 400.5 us per 128-frame block with 6.7x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

@@ -309,6 +309,12 @@ const waveCandyCachesGradients = (
   waveCandyGradientCreationSites === 2
   && waveCandyResizeScopedGradientCaches === waveCandyGradientCreationSites
 );
+const waveCandyCachesSpectrumBinRanges = (
+  (waveCandyCanvasSource.match(/createLogSpectrumBinRanges\s*\(/g) || []).length === 1
+  && /buffers\.specBinSampleRate\s*!==\s*sampleRate/.test(waveCandyCanvasSource)
+  && /buffers\.specBinFftSize\s*!==\s*analyser\.fftSize/.test(waveCandyCanvasSource)
+  && /binRanges:\s*buffers\.specBinRanges/.test(waveCandyCanvasSource)
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -492,6 +498,8 @@ const report = {
     waveCandyGradientCreationSites,
     waveCandySteadyStateGradientAllocationsPerFrame: waveCandyCachesGradients ? 0 : 2,
     waveCandyCachesGradients,
+    waveCandySpectrumBoundaryEvaluationsPerFrame: waveCandyCachesSpectrumBinRanges ? 0 : 192,
+    waveCandyCachesSpectrumBinRanges,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -607,6 +615,13 @@ if (!waveCandyCachesGradients) {
     creationSites: waveCandyGradientCreationSites,
     resizeScopedCaches: waveCandyResizeScopedGradientCaches,
     expected: 'all analyzer gradients cached until canvas resize'
+  });
+}
+if (!waveCandyCachesSpectrumBinRanges) {
+  failures.push({
+    name: 'Guard configuration-scoped spectrum bin ranges',
+    actual: 'log-frequency boundaries evaluated in active frame path',
+    expected: 'cached until sample rate, FFT size, or bin count changes'
   });
 }
 if (
@@ -943,7 +958,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 58,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 59,
   failures
 };
 
