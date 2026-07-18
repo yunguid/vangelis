@@ -14,6 +14,11 @@ import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { useWebMidiInput } from './hooks/useWebMidiInput.js';
 import { useAudioEngineWarmup } from './hooks/useAudioEngineWarmup.js';
 import {
+  AMBIENT_VISUAL_IDLE_TIMEOUT_MS,
+  PRIMARY_VISUAL_IDLE_TIMEOUT_MS,
+  useDeferredVisualMount
+} from './hooks/useDeferredVisualMount.js';
+import {
   MidiTransportContext,
   SoundControlsContext
 } from './context/SynthContexts.jsx';
@@ -41,6 +46,8 @@ const isTextInputTarget = (target) => {
 
 const App = () => {
   useAudioEngineWarmup();
+  const showPrimaryVisual = useDeferredVisualMount(PRIMARY_VISUAL_IDLE_TIMEOUT_MS);
+  const showAmbientScene = useDeferredVisualMount(AMBIENT_VISUAL_IDLE_TIMEOUT_MS);
   const initialSessionRef = useRef(loadAppSession());
   const initialSession = initialSessionRef.current;
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
@@ -465,9 +472,11 @@ const App = () => {
   return (
     <ErrorBoundary>
       <div className="app-stage">
-        <React.Suspense fallback={null}>
-          <Scene />
-        </React.Suspense>
+        {showAmbientScene && (
+          <React.Suspense fallback={null}>
+            <Scene />
+          </React.Suspense>
+        )}
         
         <div className="app-shell">
           <AppHeader
@@ -484,9 +493,13 @@ const App = () => {
           />
 
           <main className="zone-center content-primary" aria-label="Keyboard area">
-            <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
-              <WaveCandy />
-            </React.Suspense>
+            {showPrimaryVisual ? (
+              <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
+                <WaveCandy />
+              </React.Suspense>
+            ) : (
+              <div className="wave-candy wave-candy-placeholder" aria-hidden="true" />
+            )}
             <div className="keyboard-surface" role="region" aria-label="Virtual keyboard">
               <div className="keyboard-region">
                 {midiPlayback.currentMidi && (

@@ -56,6 +56,8 @@ describe('App', () => {
   it('renders the app title', async () => {
     render(<App />);
     expect(screen.getByText('Vangelis')).toBeInTheDocument();
+    expect(screen.queryByTestId('scene-mock')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('wave-candy-mock')).not.toBeInTheDocument();
     expect(await screen.findByTestId('scene-mock')).toBeInTheDocument();
     expect(await screen.findByTestId('wave-candy-mock')).toBeInTheDocument();
   });

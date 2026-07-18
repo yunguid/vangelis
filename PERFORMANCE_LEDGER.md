@@ -910,3 +910,52 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark: 407.3 us per 128-frame block with 6.5x realtime headroom.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - `git diff --check`: pass.
+
+## Optimization batch 16 — post-paint idle visual activation
+
+Collected from critical/decorated production manifest closures, deterministic scheduler tests,
+initial-render component assertions, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 15 | Batch 16 | Change |
+|---|---:|---:|---:|
+| Home critical startup JS gzip | 84.16 KiB | 75.43 KiB | -10.4% |
+| Home critical startup JS raw | 247.71 KiB | 227.49 KiB | -8.2% |
+| Home critical startup JS assets | 15 | 11 | -4 assets |
+| Scene/WaveCandy in Home critical closure | both | 0 | deferred |
+| Home decorated-state JS gzip | immediate 84.16 KiB | 84.57 KiB | post-paint idle |
+| Home deferred visual delta | mixed into startup | 21.27 KiB / 9.14 KiB gzip | 4 idle assets |
+| Sound Designer deferred visual delta | immediate after mount | 12.10 KiB / 5.03 KiB gzip | 4 idle assets |
+| Deferred visual mount points | 0 | 3 | Home x2 + Designer x1 |
+| Hidden-document visual allocation | possible | 0 until visible | guarded |
+| Total production JS raw | 503.12 KiB | 504.29 KiB | +0.2% scheduler overhead |
+| Total production JS gzip | 165.37 KiB | 165.83 KiB | +0.3% scheduler overhead |
+| Production deployment bytes | 1,489.92 KiB | 1,491.17 KiB | +0.1% |
+| Automated production budgets | 44 | 47 | +3 guardrails |
+
+Implemented boundaries and controls:
+
+- Home mounted the ambient WebGL scene and five-pane analyser immediately, causing their chunks,
+  canvas setup, WebGL context, shader compilation, analyser buffers, and animation loops to begin
+  alongside the primary keyboard workspace. Sound Designer did the same for its analyser strip.
+- A shared visual scheduler now waits for a committed paint and then uses an idle callback with a
+  bounded timeout. Browsers without idle callbacks use a post-frame timer fallback.
+- Home schedules the visible analyser and ambient WebGL scene independently, allowing the primary
+  visual to activate first. Sound Designer uses the same primary-visual policy while preserving
+  its dimensionally stable analyser placeholder.
+- Hidden documents do not schedule frames, idle work, canvases, or WebGL contexts; activation starts
+  only after visibility returns. All pending frame/idle/timer work cancels on route unmount.
+- The production report now distinguishes critical route closures from fully decorated closures.
+  Manifest/source guards require dynamic Home visual imports, exclude both visual modules from the
+  critical closure, and require all three visual mount points to use deferred scheduling.
+
+### Batch 16 verification gates
+
+- Full suite: 46 files, 485/485 tests pass.
+- Production delivery/static/dependency/route guardrails: 47/47 pass.
+- Deterministic visual workload after activation: 89.48% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -19 KB over 4,000 blocks.
+- Isolated DSP benchmark: 412.0 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- `git diff --check`: pass.

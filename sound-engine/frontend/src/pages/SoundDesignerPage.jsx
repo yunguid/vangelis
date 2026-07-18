@@ -4,6 +4,10 @@ import PresetShelf from '../components/PresetShelf.jsx';
 import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
 import { useAudioEngineWarmup } from '../hooks/useAudioEngineWarmup.js';
+import {
+  PRIMARY_VISUAL_IDLE_TIMEOUT_MS,
+  useDeferredVisualMount
+} from '../hooks/useDeferredVisualMount.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import {
   AUDIO_PARAM_DEFAULTS,
@@ -106,6 +110,7 @@ const BaseStage = ({ waveformType, onWaveformChange, presetShelfProps, onAdvance
 
 const SoundDesignerPage = () => {
   useAudioEngineWarmup();
+  const showWaveCandy = useDeferredVisualMount(PRIMARY_VISUAL_IDLE_TIMEOUT_MS);
   const [engineStatus, setEngineStatus] = React.useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = React.useState(() => DEFAULT_WAVEFORM);
   const [audioParams, setAudioParams] = React.useState(() => (
@@ -185,9 +190,13 @@ const SoundDesignerPage = () => {
 
         <div className="sound-designer-workspace">
           <div className="sound-designer-scope" role="region" aria-label="Live sound visualization">
-            <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
-              <WaveCandy />
-            </React.Suspense>
+            {showWaveCandy ? (
+              <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
+                <WaveCandy />
+              </React.Suspense>
+            ) : (
+              <div className="wave-candy wave-candy-placeholder" aria-hidden="true" />
+            )}
           </div>
 
           <div className="sound-designer-keyboard" role="region" aria-label="Test keyboard">

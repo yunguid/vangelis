@@ -59,7 +59,7 @@ const sum = (metrics, key) => metrics.reduce((total, metric) => total + metric[k
 const routeEntries = [
   {
     route: 'home',
-    entries: ['src/App.jsx', 'src/components/Scene.jsx', 'src/components/WaveCandy.jsx']
+    entries: ['src/App.jsx']
   },
   { route: 'control-kit', entries: ['src/pages/ControlKitPage.jsx'] },
   { route: 'generated-study', entries: ['src/pages/GeneratedSongStudyPage.jsx'] },
@@ -81,6 +81,7 @@ const audioEngineManifestRecord = Object.values(manifest).find((record) => (
 const audioEngineFile = audioEngineManifestRecord?.file || null;
 const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
 const waveCandyFile = manifest['src/components/WaveCandy.jsx']?.file || null;
+const sceneFile = manifest['src/components/Scene.jsx']?.file || null;
 const advancedSoundDesignerStagesFile = manifest['src/pages/SoundDesignerAdvancedStages.jsx']?.file || null;
 const audioControlPrimitivesFile = Object.entries(manifest)
   .find(([key]) => key.includes('audioControlPrimitives'))?.[1]?.file || null;
@@ -118,6 +119,7 @@ function collectRouteClosure(entryKeys) {
     includesFullSidebar: fullSidebarFile ? jsFiles.has(fullSidebarFile) : false,
     includesSongStudyPlayer: songStudyFile ? jsFiles.has(songStudyFile) : false,
     includesWaveCandy: waveCandyFile ? jsFiles.has(waveCandyFile) : false,
+    includesScene: sceneFile ? jsFiles.has(sceneFile) : false,
     includesAdvancedSoundDesignerStages: advancedSoundDesignerStagesFile
       ? jsFiles.has(advancedSoundDesignerStagesFile)
       : false,
@@ -131,6 +133,17 @@ const routeClosures = routeEntries.map(({ route, entries }) => ({
   route,
   ...collectRouteClosure(entries)
 }));
+const deferredVisualClosures = {
+  home: collectRouteClosure([
+    'src/App.jsx',
+    'src/components/Scene.jsx',
+    'src/components/WaveCandy.jsx'
+  ]),
+  soundDesigner: collectRouteClosure([
+    'src/pages/SoundDesignerPage.jsx',
+    'src/components/WaveCandy.jsx'
+  ])
+};
 const factoryPresetChunk = jsAssets.find(({ file }) => file.includes('factoryPresets')) || null;
 const webMidiControllerChunk = jsAssets.find(({ file }) => file.includes('webMidiController')) || null;
 const soundControlPanelChunk = jsAssets.find(({ file }) => file.includes('SoundTab')) || null;
@@ -142,6 +155,8 @@ const advancedSoundDesignerStagesChunk = advancedSoundDesignerStagesFile
   : null;
 const appManifestEntry = manifest['src/App.jsx'];
 const appDefersMidiParser = appManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false;
+const appDefersScene = appManifestEntry?.dynamicImports?.includes('src/components/Scene.jsx') || false;
+const appDefersWaveCandy = appManifestEntry?.dynamicImports?.includes('src/components/WaveCandy.jsx') || false;
 const generatedStudyManifestEntry = manifest['src/pages/GeneratedSongStudyPage.jsx'];
 const generatedDefersSongStudyPlayer = (
   generatedStudyManifestEntry?.dynamicImports?.includes('src/pages/SongStudyPage.jsx') || false
@@ -170,6 +185,9 @@ const eagerPlayableRouteAudioWarmupCalls = (
 ).length;
 const deferredAudioWarmupConsumers = (
   playableRouteSource.match(/useAudioEngineWarmup\s*\(\s*\)/g) || []
+).length;
+const deferredVisualMountConsumers = (
+  playableRouteSource.match(/useDeferredVisualMount\s*\(/g) || []
 ).length;
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -252,9 +270,12 @@ const report = {
       gzipKb: roundKb(advancedSoundDesignerStagesChunk.gzipBytes)
     } : null,
     appDefersMidiParser,
+    appDefersScene,
+    appDefersWaveCandy,
     generatedDefersSongStudyPlayer,
     soundDesignerDefersWaveCandy,
     soundDesignerDefersAdvancedStages,
+    deferredVisualClosures,
     routeClosures
   },
   staticSignals: {
@@ -270,7 +291,8 @@ const report = {
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
     appHeaderImportsAudioEngine,
     eagerPlayableRouteAudioWarmupCalls,
-    deferredAudioWarmupConsumers
+    deferredAudioWarmupConsumers,
+    deferredVisualMountConsumers
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -359,6 +381,21 @@ if (!appDefersMidiParser) {
 }
 if (homeClosure?.includesMidiParser) {
   failures.push({ name: 'Guard home MIDI parser deferral', actual: 'eager', expected: 'deferred' });
+}
+if (!appDefersScene || !appDefersWaveCandy) {
+  failures.push({
+    name: 'Guard Home decorative visual imports',
+    scene: appDefersScene ? 'dynamic' : 'static',
+    waveCandy: appDefersWaveCandy ? 'dynamic' : 'static',
+    expected: 'dynamic'
+  });
+}
+if (homeClosure?.includesScene || homeClosure?.includesWaveCandy) {
+  failures.push({
+    name: 'Guard Home critical visual isolation',
+    actual: 'decorative visual closure included',
+    expected: 'workspace shell only'
+  });
 }
 if (appHeaderImportsAudioEngine) {
   failures.push({ name: 'Guard passive AppHeader engine isolation', actual: 'coupled', expected: 'controlled' });
@@ -452,6 +489,13 @@ if (deferredAudioWarmupConsumers !== 3) {
     expected: 3
   });
 }
+if (deferredVisualMountConsumers !== 3) {
+  failures.push({
+    name: 'Guard deferred visual mount coverage',
+    actual: deferredVisualMountConsumers,
+    expected: 3
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -462,7 +506,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 26,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 29,
   failures
 };
 
