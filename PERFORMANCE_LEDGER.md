@@ -2218,3 +2218,55 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 44 — cached analyzer grid geometry
+
+Collected from WaveCandy's spectrum/meter grid and resize-acknowledgement path, exact active-session
+temporary and invariant-operation counts, three checksum-equivalent 200,000-frame workloads,
+generated production closures, focused Sound Designer tests, the full suite, and isolated
+audio/visual gates.
+
+| Metric | Batch 43 | Batch 44 | Change |
+|---|---:|---:|---:|
+| Explicit static-grid frame temporaries over 20 s | 3,600 | 0 | removed |
+| Static grid logarithms over 20 s | 3,600 | 4 | -99.89% |
+| Static grid normalizations over 20 s | 4,800 | 8 | -99.83% |
+| Isolated grid/setup CPU, 200k frames | 208.63 ms | 48.32 ms | -76.84% |
+| Deferred WaveCandy JS raw / gzip | 9.65 / 3.66 KiB | 9.98 / 3.76 KiB | +0.33 / +0.10 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.86 KiB | unchanged |
+| Fully activated Home visual JS gzip | 78.30 KiB | 78.40 KiB | +0.10 KiB |
+| Production deployment bytes | 1,483.06 KiB | 1,483.38 KiB | +0.32 KiB |
+| Automated production budgets | 84 | 85 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Hoisted the spectrum's three logarithmic x ratios, three fixed dB y ratios, and the meter's five
+  fixed tick ratios/labels to module initialization. The active draw path now performs only canvas-
+  size multiplication for those invariant guides.
+- Moved the spectrum trace helper to module scope instead of constructing a closure in every frame.
+  Raw, filled, and stroked traces retain the same point order and coordinate arithmetic.
+- Replaced the frame-local tick array literals plus `Object.values(...).forEach(...)` resize
+  acknowledgement with indexed constant loops and five direct controller calls. This removes one
+  closure, one callback, four arrays, and their iterators from each active analyzer frame.
+- Added checksum equivalence to the legacy-vs-cached workload, exact temporary/log/normalization
+  reporting, and a production guard requiring module-scoped grid geometry and direct resize
+  acknowledgement.
+
+### Batch 44 verification gates
+
+- Full suite: 56 files, 515/515 tests pass, including 20/20 focused Sound Designer cases and all
+  numerical, radar, Song Study, canvas, and audio cases.
+- Production delivery/static/dependency/route guardrails: 85/85 pass; WaveCandy reports zero
+  explicit static-grid temporaries in steady-state frames.
+- Three corrected 200,000-frame profiles measured 74.55–76.84% lower CPU time; the final pass is
+  208.63 ms to 48.32 ms, a 76.84% reduction. Static logarithms and normalizations fall 99.89% and
+  99.83%, respectively, over a 20-second active session.
+- Warmed combined visual workload: 80.15% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 405.5 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

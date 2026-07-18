@@ -326,6 +326,13 @@ const waveCandyCachesLagrangeEnvelopePlan = (
   && /sampleLagrangeEnvelope\s*\(/.test(waveCandyCanvasSource)
   && !/lagrangeEnvelope\s*\(/.test(waveCandyCanvasSource)
 );
+const waveCandyCachesStaticGridGeometry = (
+  /const SPECTRUM_GRID_X_RATIOS = Float64Array\.from/.test(waveCandyCanvasSource)
+  && /const SPECTRUM_GRID_DB_RATIOS = Float64Array\.from/.test(waveCandyCanvasSource)
+  && /const METER_GRID_RATIOS = Float64Array\.from/.test(waveCandyCanvasSource)
+  && /const traceSpectrumPath = \(ctx, data, width, height\)/.test(waveCandyCanvasSource)
+  && /sizeControllers\.spectrogram\.acknowledgeResize\(\)/.test(waveCandyCanvasSource)
+);
 const birdsEyeRadarSource = await readFile(
   path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
   'utf8'
@@ -580,6 +587,8 @@ const report = {
     waveCandyCachesSpectrogramRowsAndPalette,
     waveCandyLagrangeFrameAllocations: waveCandyCachesLagrangeEnvelopePlan ? 0 : 4,
     waveCandyCachesLagrangeEnvelopePlan,
+    waveCandyStaticGridFrameTemporaries: waveCandyCachesStaticGridGeometry ? 0 : 6,
+    waveCandyCachesStaticGridGeometry,
     radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
     radarPaletteStateLimit: 256,
     radarUsesBoundedPaletteCache,
@@ -725,6 +734,13 @@ if (!waveCandyCachesLagrangeEnvelopePlan) {
     name: 'Guard cached Lagrange envelope plan',
     actual: 'Chebyshev nodes or barycentric weights rebuilt in active analyzer frames',
     expected: 'one reusable interpolation plan per WaveCandy canvas'
+  });
+}
+if (!waveCandyCachesStaticGridGeometry) {
+  failures.push({
+    name: 'Guard cached analyzer grid geometry',
+    actual: 'static grid math or temporary collections recreated in active analyzer frames',
+    expected: 'module-scoped ratios/path helper and direct resize acknowledgement'
   });
 }
 if (!radarUsesBoundedPaletteCache) {
@@ -1096,7 +1112,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 66,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 67,
   failures
 };
 

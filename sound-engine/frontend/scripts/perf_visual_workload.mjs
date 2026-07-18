@@ -629,6 +629,72 @@ const plannedLagrangeBenchmark = runSpectrumBenchmark(
   lagrangeBenchmarkIterations
 );
 
+const analyzerGridBenchmarkIterations = 200000;
+const analyzerControllers = { spectrogram: 1, scope: 2, spectrum: 3, goniometer: 4, meter: 5 };
+const analyzerSpectrumFrequencies = [100, 1000, 10000];
+const analyzerSpectrumDb = [-60, -40, -20];
+const analyzerMeterDb = [0, -12, -24, -36, -48];
+const analyzerSpectrumLogSpan = Math.log(18000 / 20);
+const analyzerSpectrumXRatios = Float64Array.from(
+  analyzerSpectrumFrequencies,
+  (frequency) => Math.log(frequency / 20) / analyzerSpectrumLogSpan
+);
+const analyzerSpectrumDbRatios = Float64Array.from(
+  analyzerSpectrumDb,
+  (db) => clamp((db + 70) / 70, 0, 1)
+);
+const analyzerMeterRatios = Float64Array.from(
+  analyzerMeterDb,
+  (db) => clamp((db + 60) / 60, 0, 1)
+);
+const simulateLegacyAnalyzerGridFrame = () => {
+  let checksum = 0;
+  const tracePath = (data) => {
+    for (let index = 0; index < data.length; index++) checksum += data[index] * 0.000001;
+  };
+  tracePath(srcFreq);
+  for (const frequency of [100, 1000, 10000]) {
+    checksum += Math.log(frequency / 20) / Math.log(18000 / 20);
+  }
+  for (const db of [-60, -40, -20]) checksum += clamp((db + 70) / 70, 0, 1);
+  for (const db of [0, -12, -24, -36, -48]) checksum += clamp((db + 60) / 60, 0, 1);
+  Object.values(analyzerControllers).forEach((controller) => { checksum += controller; });
+  return checksum;
+};
+const simulateCachedAnalyzerGridFrame = () => {
+  let checksum = 0;
+  for (let index = 0; index < srcFreq.length; index++) checksum += srcFreq[index] * 0.000001;
+  for (let index = 0; index < analyzerSpectrumXRatios.length; index++) {
+    checksum += analyzerSpectrumXRatios[index];
+  }
+  for (let index = 0; index < analyzerSpectrumDbRatios.length; index++) {
+    checksum += analyzerSpectrumDbRatios[index];
+  }
+  for (let index = 0; index < analyzerMeterRatios.length; index++) {
+    checksum += analyzerMeterRatios[index];
+  }
+  checksum += analyzerControllers.spectrogram;
+  checksum += analyzerControllers.scope;
+  checksum += analyzerControllers.spectrum;
+  checksum += analyzerControllers.goniometer;
+  checksum += analyzerControllers.meter;
+  return checksum;
+};
+const analyzerGridChecksumDelta = Math.abs(
+  simulateLegacyAnalyzerGridFrame() - simulateCachedAnalyzerGridFrame()
+);
+if (analyzerGridChecksumDelta > 1e-12) {
+  throw new Error(`Analyzer grid checksum mismatch: ${analyzerGridChecksumDelta}`);
+}
+const legacyAnalyzerGridBenchmark = runSpectrumBenchmark(
+  simulateLegacyAnalyzerGridFrame,
+  analyzerGridBenchmarkIterations
+);
+const cachedAnalyzerGridBenchmark = runSpectrumBenchmark(
+  simulateCachedAnalyzerGridFrame,
+  analyzerGridBenchmarkIterations
+);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -817,6 +883,22 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyLagrangeBenchmark.elapsedMs,
       plannedLagrangeBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  analyzerStaticGridPolicy: {
+    activeFrames: activeAnalyzerFrames,
+    explicitFrameTemporariesBefore: activeAnalyzerFrames * 6,
+    explicitFrameTemporariesAfter: 0,
+    logarithmEvaluationsOverBenchmarkBefore: activeAnalyzerFrames * 6,
+    logarithmEvaluationsOverBenchmarkAfter: 4,
+    staticNormalizationEvaluationsOverBenchmarkBefore: activeAnalyzerFrames * 8,
+    staticNormalizationEvaluationsOverBenchmarkAfter: 8,
+    benchmarkIterations: analyzerGridBenchmarkIterations,
+    legacyElapsedMs: Number(legacyAnalyzerGridBenchmark.elapsedMs.toFixed(2)),
+    cachedElapsedMs: Number(cachedAnalyzerGridBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyAnalyzerGridBenchmark.elapsedMs,
+      cachedAnalyzerGridBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

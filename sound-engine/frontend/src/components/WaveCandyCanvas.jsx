@@ -50,6 +50,33 @@ const readTimeDomain = (analyser, floatBuffer, byteBuffer) => {
 };
 
 const dbToUnit = (db) => clamp((db - FLOOR_DB) / (0 - FLOOR_DB), 0, 1);
+const SPECTRUM_GRID_FREQUENCIES = Object.freeze([100, 1000, 10000]);
+const SPECTRUM_LOG_SPAN = Math.log(MAX_FREQ / MIN_FREQ);
+const SPECTRUM_GRID_X_RATIOS = Float64Array.from(
+  SPECTRUM_GRID_FREQUENCIES,
+  (frequency) => Math.log(frequency / MIN_FREQ) / SPECTRUM_LOG_SPAN
+);
+const SPECTRUM_GRID_DB_RATIOS = Float64Array.from(
+  [-60, -40, -20],
+  dbToUnit
+);
+const METER_GRID_DECIBELS = Object.freeze([0, -12, -24, -36, -48]);
+const METER_GRID_RATIOS = Float64Array.from(
+  METER_GRID_DECIBELS,
+  (db) => clamp((db + 60) / 60, 0, 1)
+);
+const METER_GRID_LABELS = Object.freeze(METER_GRID_DECIBELS.map(String));
+
+const traceSpectrumPath = (ctx, data, width, height) => {
+  const cells = data.length;
+  ctx.beginPath();
+  for (let i = 0; i < cells; i++) {
+    const x = (i / (cells - 1)) * width;
+    const y = height - dbToUnit(data[i]) * height;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+};
 
 const drawSpectrum = (ctx, rawDb, chainDb, width, height, resized, gradientCache) => {
   ctx.clearRect(0, 0, width, height);
@@ -60,31 +87,20 @@ const drawSpectrum = (ctx, rawDb, chainDb, width, height, resized, gradientCache
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  for (const f of [100, 1000, 10000]) {
-    const x = (Math.log(f / MIN_FREQ) / Math.log(MAX_FREQ / MIN_FREQ)) * width;
+  for (let i = 0; i < SPECTRUM_GRID_X_RATIOS.length; i++) {
+    const x = SPECTRUM_GRID_X_RATIOS[i] * width;
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
   }
-  for (const db of [-60, -40, -20]) {
-    const y = height - dbToUnit(db) * height;
+  for (let i = 0; i < SPECTRUM_GRID_DB_RATIOS.length; i++) {
+    const y = height - SPECTRUM_GRID_DB_RATIOS[i] * height;
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
   }
   ctx.stroke();
 
-  const tracePath = (data) => {
-    const cells = data.length;
-    ctx.beginPath();
-    for (let i = 0; i < cells; i++) {
-      const x = (i / (cells - 1)) * width;
-      const y = height - dbToUnit(data[i]) * height;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-  };
-
   // Raw FFT (ground truth) as a faint bed under the physical envelope
-  tracePath(rawDb);
+  traceSpectrumPath(ctx, rawDb, width, height);
   ctx.lineTo(width, height);
   ctx.lineTo(0, height);
   ctx.closePath();
@@ -92,7 +108,7 @@ const drawSpectrum = (ctx, rawDb, chainDb, width, height, resized, gradientCache
   ctx.fill();
 
   // Verlet/Lagrange envelope: gradient body + glowing string on top
-  tracePath(chainDb);
+  traceSpectrumPath(ctx, chainDb, width, height);
   ctx.lineTo(width, height);
   ctx.lineTo(0, height);
   ctx.closePath();
@@ -110,7 +126,7 @@ const drawSpectrum = (ctx, rawDb, chainDb, width, height, resized, gradientCache
   ctx.shadowBlur = 6;
   ctx.strokeStyle = 'rgba(170, 230, 255, 0.95)';
   ctx.lineWidth = 1.6;
-  tracePath(chainDb);
+  traceSpectrumPath(ctx, chainDb, width, height);
   ctx.stroke();
   ctx.restore();
 };
@@ -265,13 +281,13 @@ const drawMeter = (ctx, state, width, height, resized, gradientCache) => {
   ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.font = '9px "TX-02-Regular", ui-sans-serif';
   ctx.lineWidth = 1;
-  for (const db of [0, -12, -24, -36, -48]) {
-    const y = height - clamp((db + 60) / 60, 0, 1) * height;
+  for (let i = 0; i < METER_GRID_RATIOS.length; i++) {
+    const y = height - METER_GRID_RATIOS[i] * height;
     ctx.beginPath();
     ctx.moveTo(width * 0.16, y);
     ctx.lineTo(width * 0.84, y);
     ctx.stroke();
-    ctx.fillText(`${db}`, 2, y + 3);
+    ctx.fillText(METER_GRID_LABELS[i], 2, y + 3);
   }
 
   const stHeight = clamp((state.shortTermDb + 60) / 60, 0, 1) * height;
@@ -511,7 +527,11 @@ const WaveCandyCanvas = () => {
         meterSize.resized,
         meterGradientRef
       );
-      Object.values(sizeControllers).forEach((controller) => controller.acknowledgeResize());
+      sizeControllers.spectrogram.acknowledgeResize();
+      sizeControllers.scope.acknowledgeResize();
+      sizeControllers.spectrum.acknowledgeResize();
+      sizeControllers.goniometer.acknowledgeResize();
+      sizeControllers.meter.acknowledgeResize();
     };
 
     let stopFrameLoop = null;
