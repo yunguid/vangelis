@@ -1920,3 +1920,50 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 38 — bounded radar palette cache
+
+Collected from the MIDI birds-eye note loop, exact 20-second render-window counts, an isolated
+200,000-lookup palette workload, endpoint-color equivalence tests, generated production closures,
+the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 37 | Batch 38 | Change |
+|---|---:|---:|---:|
+| Radar palette constructions over 20 s | 104,000 | <=256 | -99.75% or better |
+| Steady-state palette constructions per note | 1 | 0 | removed |
+| Isolated palette workload, 200k calls | 13.60 ms | 3.89 ms | -71.35% |
+| Deferred BirdsEyeRadar JS raw / gzip | 6.28 / 2.74 KiB | 6.35 / 2.79 KiB | +0.07 / +0.05 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.86 KiB | unchanged |
+| Production deployment bytes | 1,480.57 KiB | 1,480.64 KiB | +0.07 KiB |
+| Automated production budgets | 78 | 79 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced per-note palette reconstruction with a module-local numeric-key cache. MIDI is clamped
+  to 0–127 and combined with the active flag, bounding the cache to 256 reusable states without
+  allocating string keys.
+- Removed two temporary RGB arrays, four RGBA template strings, interpolation arithmetic, and a
+  palette object from every visible-note evaluation after each state is first encountered.
+- Preserved the exact blue-to-orange interpolation and active/inactive alpha values. Focused tests
+  verify endpoint colors, active-state separation, same-state reference reuse, and the state bound.
+- Added exact construction-volume reporting, an isolated legacy-vs-cached palette profile, and a
+  production source guard requiring the numeric-key cache on the radar render path.
+
+### Batch 38 verification gates
+
+- Full suite: 53 files, 504/504 tests pass, including palette identity/color cases and focused MIDI
+  birds-eye and Song Study tests.
+- Production delivery/static/dependency/route guardrails: 79/79 pass.
+- Isolated radar palette profile: 13.60 ms to 3.89 ms over 200,000 calls, a 71.35% measured CPU-time
+  reduction; constructions fall at least 99.75% over the 20-second note-window workload.
+- Spectrogram color-string work remains 99.72% below its baseline, spectrum boundary/gradient
+  allocation work remains 99.83% lower, and stereo pair work remains 83.33% lower.
+- Deterministic combined visual workload: 87.35% lower measured CPU time than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 403.5 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

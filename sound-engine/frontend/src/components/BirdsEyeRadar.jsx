@@ -2,11 +2,14 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp, midiNoteToName } from '../utils/math.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
+import {
+  RADAR_MAX_MIDI,
+  RADAR_MIN_MIDI,
+  getRadarMidiPalette
+} from '../utils/radarPalette.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 import '../styles/birds-eye-radar.css';
 
-const DEFAULT_MIN_MIDI = 21;
-const DEFAULT_MAX_MIDI = 108;
 const LOOKAHEAD_SECONDS = 14;
 const LOOKBEHIND_SECONDS = 1.8;
 const PLAYING_FRAME_INTERVAL_MS = 40;
@@ -24,24 +27,6 @@ const createParticles = (count) => Array.from({ length: count }, () => ({
   phase: Math.random(),
   size: 0.8 + Math.random() * 1.5
 }));
-
-const interpolateChannel = (start, end, mix) => Math.round(start + (end - start) * mix);
-
-const colorForMidi = (midi, isActive) => {
-  const mix = clamp((midi - DEFAULT_MIN_MIDI) / (DEFAULT_MAX_MIDI - DEFAULT_MIN_MIDI), 0, 1);
-  const blue = [108, 168, 232];
-  const orange = [255, 164, 112];
-  const r = interpolateChannel(blue[0], orange[0], mix);
-  const g = interpolateChannel(blue[1], orange[1], mix * 0.8);
-  const b = interpolateChannel(blue[2], orange[2], mix);
-
-  return {
-    glow: `rgba(${r}, ${g}, ${b}, ${isActive ? 0.28 : 0.12})`,
-    trail: `rgba(${r}, ${g}, ${b}, ${isActive ? 0.12 : 0.08})`,
-    core: `rgba(${Math.min(255, r + 18)}, ${Math.min(255, g + 16)}, ${Math.min(255, b + 14)}, ${isActive ? 0.9 : 0.72})`,
-    edge: `rgba(245, 248, 252, ${isActive ? 0.86 : 0.46})`
-  };
-};
 
 const BirdsEyeRadar = ({
   currentMidi,
@@ -76,19 +61,19 @@ const BirdsEyeRadar = ({
   const midiRange = useMemo(() => {
     const notes = currentMidi?.notes || [];
     if (notes.length === 0) {
-      return { min: DEFAULT_MIN_MIDI, max: DEFAULT_MAX_MIDI };
+      return { min: RADAR_MIN_MIDI, max: RADAR_MAX_MIDI };
     }
 
-    let min = DEFAULT_MAX_MIDI;
-    let max = DEFAULT_MIN_MIDI;
+    let min = RADAR_MAX_MIDI;
+    let max = RADAR_MIN_MIDI;
     for (const note of notes) {
       if (note.midi < min) min = note.midi;
       if (note.midi > max) max = note.midi;
     }
 
     return {
-      min: Math.min(min, DEFAULT_MIN_MIDI),
-      max: Math.max(max, DEFAULT_MAX_MIDI)
+      min: Math.min(min, RADAR_MIN_MIDI),
+      max: Math.max(max, RADAR_MAX_MIDI)
     };
   }, [currentMidi]);
 
@@ -258,7 +243,7 @@ const BirdsEyeRadar = ({
 
         const noteId = getNoteId(note.midi);
         const isActive = activeNoteSet?.has(noteId);
-        const palette = colorForMidi(note.midi, isActive);
+        const palette = getRadarMidiPalette(note.midi, isActive);
 
         const trail = ctx.createLinearGradient(x, tailTop, x, yHead + 2);
         trail.addColorStop(0, 'rgba(255, 255, 255, 0)');

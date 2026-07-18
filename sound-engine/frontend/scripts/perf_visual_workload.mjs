@@ -19,6 +19,10 @@ import {
   createSpectrogramColorLut,
   createSpectrogramRowRuns
 } from '../src/utils/spectrogramRendering.js';
+import {
+  RADAR_PALETTE_STATE_LIMIT,
+  getRadarMidiPalette
+} from '../src/utils/radarPalette.js';
 
 const SECONDS = 20;
 
@@ -417,6 +421,33 @@ const cachedSpectrogramBenchmark = runSpectrumBenchmark(
   spectrogramBenchmarkIterations
 );
 
+const createLegacyRadarPalette = (midi, isActive) => {
+  const mix = clamp((midi - 21) / (108 - 21), 0, 1);
+  const blue = [108, 168, 232];
+  const orange = [255, 164, 112];
+  const red = Math.round(blue[0] + (orange[0] - blue[0]) * mix);
+  const green = Math.round(blue[1] + (orange[1] - blue[1]) * mix * 0.8);
+  const blueChannel = Math.round(blue[2] + (orange[2] - blue[2]) * mix);
+  return {
+    glow: `rgba(${red}, ${green}, ${blueChannel}, ${isActive ? 0.28 : 0.12})`,
+    trail: `rgba(${red}, ${green}, ${blueChannel}, ${isActive ? 0.12 : 0.08})`,
+    core: `rgba(${Math.min(255, red + 18)}, ${Math.min(255, green + 16)}, ${Math.min(255, blueChannel + 14)}, ${isActive ? 0.9 : 0.72})`,
+    edge: `rgba(245, 248, 252, ${isActive ? 0.86 : 0.46})`
+  };
+};
+const radarPaletteBenchmarkIterations = 200000;
+const runRadarPaletteBenchmark = (factory) => {
+  let checksum = 0;
+  const startedAt = performance.now();
+  for (let i = 0; i < radarPaletteBenchmarkIterations; i += 1) {
+    const palette = factory(i % 128, Boolean((i >> 7) & 1));
+    checksum += palette.core.length;
+  }
+  return { elapsedMs: performance.now() - startedAt, checksum };
+};
+const legacyRadarPaletteBenchmark = runRadarPaletteBenchmark(createLegacyRadarPalette);
+const cachedRadarPaletteBenchmark = runRadarPaletteBenchmark(getRadarMidiPalette);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -505,6 +536,21 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacySpectrogramBenchmark.elapsedMs,
       cachedSpectrogramBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  radarPalettePolicy: {
+    paletteConstructionsOverBenchmarkBefore: optimized.radarNoteEvaluations,
+    paletteConstructionsOverBenchmarkAfterMaximum: RADAR_PALETTE_STATE_LIMIT,
+    constructionReductionPercent: Number(reduction(
+      optimized.radarNoteEvaluations,
+      RADAR_PALETTE_STATE_LIMIT
+    ).toFixed(2)),
+    benchmarkIterations: radarPaletteBenchmarkIterations,
+    legacyElapsedMs: Number(legacyRadarPaletteBenchmark.elapsedMs.toFixed(2)),
+    cachedElapsedMs: Number(cachedRadarPaletteBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyRadarPaletteBenchmark.elapsedMs,
+      cachedRadarPaletteBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

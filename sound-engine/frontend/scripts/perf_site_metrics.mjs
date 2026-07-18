@@ -320,6 +320,19 @@ const waveCandyCachesSpectrogramRowsAndPalette = (
   && (waveCandyCanvasSource.match(/createSpectrogramRowRuns\s*\(/g) || []).length === 1
   && /renderCache\.rowRuns\[cell \* 2 \+ 1\]/.test(waveCandyCanvasSource)
 );
+const birdsEyeRadarSource = await readFile(
+  path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
+  'utf8'
+);
+const radarPaletteSource = await readFile(
+  path.join(sourceDir, 'utils', 'radarPalette.js'),
+  'utf8'
+);
+const radarUsesBoundedPaletteCache = (
+  /getRadarMidiPalette\(note\.midi, isActive\)/.test(birdsEyeRadarSource)
+  && /const paletteCache = new Map\(\)/.test(radarPaletteSource)
+  && /normalizedMidi \* 2 \+ Number\(active\)/.test(radarPaletteSource)
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -510,6 +523,9 @@ const report = {
     waveCandyDesktopSpectrogramFillCallsPerFrame:
       waveCandyCachesSpectrogramRowsAndPalette ? 96 : 150,
     waveCandyCachesSpectrogramRowsAndPalette,
+    radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
+    radarPaletteStateLimit: 256,
+    radarUsesBoundedPaletteCache,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -639,6 +655,13 @@ if (!waveCandyCachesSpectrogramRowsAndPalette) {
     name: 'Guard cached spectrogram rows and palette',
     actual: 'per-pixel row mapping or color formatting in active frame path',
     expected: 'configuration-scoped row runs and color lookup table'
+  });
+}
+if (!radarUsesBoundedPaletteCache) {
+  failures.push({
+    name: 'Guard bounded radar palette cache',
+    actual: 'per-note palette construction in active render path',
+    expected: 'numeric-key cache with at most 256 MIDI/active states'
   });
 }
 if (
@@ -975,7 +998,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 60,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 61,
   failures
 };
 
