@@ -3,8 +3,14 @@ import path from 'node:path';
 import { gzipSync } from 'node:zlib';
 import {
   SCENE_ACTIVE_FRAME_INTERVAL_MS,
-  SCENE_IDLE_FRAME_INTERVAL_MS
+  SCENE_IDLE_FRAME_INTERVAL_MS,
+  WAVE_CANDY_FRAME_INTERVAL_MS
 } from '../src/utils/visualFramePolicy.js';
+import {
+  MONO_ANALYSER_FFT_SIZE,
+  STEREO_ANALYSER_FFT_SIZE,
+  getWaveCandySamplesPerFrame
+} from '../src/utils/audioAnalysisPolicy.js';
 
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
@@ -471,6 +477,10 @@ const report = {
     waveCandyColdCanvasContextCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
     waveCandyColdResizeObserverCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
     waveCandyDefersCanvasResourcesUntilGraph,
+    waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
+    waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
+    waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
+    waveCandySamplesPerFrame: getWaveCandySamplesPerFrame(),
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -572,6 +582,19 @@ if (!waveCandyDefersCanvasResourcesUntilGraph) {
     name: 'Guard cold analyzer canvas-resource deferral',
     actual: 'canvas resources before graph readiness',
     expected: 'graph-gated contexts and resize observers'
+  });
+}
+if (
+  (1000 / WAVE_CANDY_FRAME_INTERVAL_MS) > 30
+  || MONO_ANALYSER_FFT_SIZE > 1024
+  || STEREO_ANALYSER_FFT_SIZE > 1024
+) {
+  failures.push({
+    name: 'Guard active analyzer sampling policy',
+    frameHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
+    monoFftSize: MONO_ANALYSER_FFT_SIZE,
+    stereoFftSize: STEREO_ANALYSER_FFT_SIZE,
+    expected: '<= 30 Hz with <= 1024-sample mono/stereo windows'
   });
 }
 const countBudgetChecks = [
@@ -888,7 +911,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 55,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 56,
   failures
 };
 

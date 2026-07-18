@@ -1,3 +1,8 @@
+import {
+  MONO_ANALYSER_FFT_SIZE,
+  STEREO_ANALYSER_FFT_SIZE
+} from '../audioAnalysisPolicy.js';
+
 function makeFilter(ctx, type, frequency, gain = 0, q = 0.707) {
   const node = ctx.createBiquadFilter();
   node.type = type;
@@ -55,14 +60,14 @@ export function createAudioGraph(ctx, distortionCache) {
   masterLimiter.release.value = 0.08;
 
   const analyser = ctx.createAnalyser();
-  analyser.fftSize = 1024;
+  analyser.fftSize = MONO_ANALYSER_FFT_SIZE;
   analyser.smoothingTimeConstant = 0.84;
 
   const stereoSplitter = ctx.createChannelSplitter(2);
   const leftAnalyser = ctx.createAnalyser();
   const rightAnalyser = ctx.createAnalyser();
-  leftAnalyser.fftSize = 2048;
-  rightAnalyser.fftSize = 2048;
+  leftAnalyser.fftSize = STEREO_ANALYSER_FFT_SIZE;
+  rightAnalyser.fftSize = STEREO_ANALYSER_FFT_SIZE;
   leftAnalyser.smoothingTimeConstant = 0.78;
   rightAnalyser.smoothingTimeConstant = 0.78;
   const silentGain = ctx.createGain();

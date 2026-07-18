@@ -1,8 +1,14 @@
 import { performance } from 'node:perf_hooks';
 import {
   SCENE_ACTIVE_FRAME_INTERVAL_MS,
-  SCENE_IDLE_FRAME_INTERVAL_MS
+  SCENE_IDLE_FRAME_INTERVAL_MS,
+  WAVE_CANDY_FRAME_INTERVAL_MS
 } from '../src/utils/visualFramePolicy.js';
+import {
+  MONO_ANALYSER_FFT_SIZE,
+  STEREO_ANALYSER_FFT_SIZE,
+  getWaveCandySamplesPerFrame
+} from '../src/utils/audioAnalysisPolicy.js';
 
 const SECONDS = 20;
 
@@ -271,6 +277,25 @@ const output = {
     sceneActiveHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
     sceneIdleHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     sceneReducedMotionHz: 0
+  },
+  activeAnalyzerPolicy: {
+    frameHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
+    monoFftSize: MONO_ANALYSER_FFT_SIZE,
+    stereoFftSize: STEREO_ANALYSER_FFT_SIZE,
+    samplesPerFrame: getWaveCandySamplesPerFrame(),
+    samplesOverBenchmark: Math.round(
+      SECONDS * (1000 / WAVE_CANDY_FRAME_INTERVAL_MS) * getWaveCandySamplesPerFrame()
+    ),
+    stereoPairEvaluationsOverBenchmark: Math.round(
+      SECONDS * (1000 / WAVE_CANDY_FRAME_INTERVAL_MS) * STEREO_ANALYSER_FFT_SIZE
+    ),
+    reductionsFrom2048Stereo: {
+      analyzerSamplesPercent: Number(reduction(
+        (MONO_ANALYSER_FFT_SIZE / 2) + MONO_ANALYSER_FFT_SIZE + (2048 * 2),
+        getWaveCandySamplesPerFrame()
+      ).toFixed(2)),
+      stereoPairEvaluationsPercent: Number(reduction(2048, STEREO_ANALYSER_FFT_SIZE).toFixed(2))
+    }
   }
 };
 

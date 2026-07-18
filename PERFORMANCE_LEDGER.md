@@ -1684,3 +1684,48 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 33 — compact stereo analyzer windows
+
+Collected from the live audio graph configuration, WaveCandy sampling loops, generated production
+closures, the deterministic visual workload, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 32 | Batch 33 | Change |
+|---|---:|---:|---:|
+| Active analyzer samples per frame | 5,632 | 3,584 | -36.36% |
+| Active analyzer samples over 20 s | 3,379,200 | 2,150,400 | -36.36% |
+| Stereo pair evaluations over 20 s | 1,228,800 | 614,400 | -50.00% |
+| Mono FFT / scope window | 1,024 | 1,024 | unchanged |
+| Active analyzer cadence | 30 Hz | 30 Hz | unchanged |
+| Initial Home JS raw / gzip | 203.05 / 67.81 KiB | 203.05 / 67.81 KiB | unchanged |
+| Fully activated Home visual JS gzip | 77.04 KiB | 77.07 KiB | +0.03 KiB |
+| Production deployment bytes | 1,478.86 KiB | 1,478.97 KiB | +0.11 KiB |
+| Automated production budgets | 73 | 74 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Reduced the left and right stereo analyzer FFT windows from 2,048 to 1,024 samples. The compact
+  meters and goniometer retain sufficient temporal detail while avoiding half of their former
+  per-channel buffer reads; the mono spectrum and oscilloscope remain at 1,024.
+- Centralized analyzer FFT sizes and the 30 Hz WaveCandy cadence in shared policy modules consumed
+  by the graph, renderer, visual benchmark, and production metrics script. Reported workload now
+  derives from the same constants that configure runtime behavior rather than duplicated literals.
+- Added exact sample-volume reporting and a production guard requiring both active mono and stereo
+  FFT windows to remain at or below 1,024 samples. Added focused policy tests for the configured
+  windows and derived 3,584-sample frame budget.
+- Audio processing topology and sound output are unchanged: only the read-only visualization taps
+  use smaller stereo analysis windows.
+
+### Batch 33 verification gates
+
+- Full suite: 50 files, 497/497 tests pass.
+- Production delivery/static/dependency/route guardrails: 74/74 pass.
+- Deterministic combined visual workload: 86.92% lower CPU time than the legacy reference, with
+  36.36% fewer active analyzer samples and 50% fewer stereo pair evaluations than Batch 32,
+  alongside the existing 50% scene-frame and scene-band reductions.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 404.6 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

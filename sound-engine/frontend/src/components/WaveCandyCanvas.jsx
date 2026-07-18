@@ -4,6 +4,7 @@ import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp } from '../utils/math.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { VerletChain, lagrangeEnvelope } from '../utils/vizPhysics.js';
+import { WAVE_CANDY_FRAME_INTERVAL_MS } from '../utils/visualFramePolicy.js';
 
 // Perceptual visualizer suite (Canvas 2D):
 // - Spectrum: log-frequency, dB scale — the raw FFT is distilled through
@@ -350,8 +351,9 @@ const WaveCandyCanvas = () => {
     let lastFrame = 0;
 
     const render = (time) => {
-      if (time - lastFrame < 33) return;
-      const frameDt = Math.min(0.2, (time - lastFrame) / 1000) || 0.033;
+      if (time - lastFrame < WAVE_CANDY_FRAME_INTERVAL_MS) return;
+      const frameDt = Math.min(0.2, (time - lastFrame) / 1000)
+        || WAVE_CANDY_FRAME_INTERVAL_MS / 1000;
       lastFrame = time;
 
       const nodes = audioEngine.getAnalysisNodes();
