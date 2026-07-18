@@ -1,7 +1,7 @@
 /* Sidebar Container */
 .sidebar-container {
   --sidebar-rail-width: 72px;
-  --sidebar-panel-width: clamp(420px, 33vw, 500px);
+  --sidebar-panel-width: clamp(380px, 30vw, 460px);
   position: fixed;
   top: 0;
   left: 0;
@@ -19,14 +19,52 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 18px 10px;
-  gap: 14px;
-  background: rgba(8, 12, 19, 0.98);
-  border-right: 1px solid rgba(255, 122, 61, 0.08);
-  backdrop-filter: blur(18px);
+  justify-content: space-between;
+  padding: 16px 9px 14px;
+  gap: 12px;
+  background: rgba(20, 22, 23, 0.98);
+  border-right: 1px solid rgba(235, 219, 178, 0.1);
+  backdrop-filter: blur(22px);
   pointer-events: auto;
   z-index: 2;
+}
+
+.sidebar-rail__brand {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(214, 93, 14, 0.42);
+  color: var(--color-core-paper);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  background: rgba(214, 93, 14, 0.08);
+}
+
+.sidebar-rail__nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.sidebar-rail__status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(235, 219, 178, 0.42);
+  font-size: 0.5rem;
+  letter-spacing: 0.12em;
+}
+
+.sidebar-rail__status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b8bb26;
+  box-shadow: 0 0 8px rgba(184, 187, 38, 0.5);
 }
 
 .sidebar-rail__btn {
@@ -105,9 +143,20 @@
 }
 
 .sidebar-rail__btn--active {
-  background: rgba(255, 122, 61, 0.14);
-  border-color: rgba(255, 122, 61, 0.34);
+  background: rgba(214, 93, 14, 0.14);
+  border-color: rgba(214, 93, 14, 0.34);
   color: rgba(255, 210, 186, 1);
+}
+
+.sidebar-rail__btn--current {
+  background: rgba(214, 93, 14, 0.1);
+  border-color: rgba(214, 93, 14, 0.28);
+  color: var(--color-core-paper);
+}
+
+.sidebar-rail__btn--current::before {
+  background: var(--color-core-accent);
+  opacity: 1;
 }
 
 .sidebar-rail__btn--active::before {
@@ -144,9 +193,9 @@
 .sidebar-panel {
   width: var(--sidebar-panel-width);
   height: 100%;
-  background: rgba(10, 15, 24, 0.99);
-  border-right: 1px solid rgba(255, 122, 61, 0.1);
-  backdrop-filter: blur(18px);
+  background: rgba(29, 32, 33, 0.99);
+  border-right: 1px solid rgba(235, 219, 178, 0.12);
+  backdrop-filter: blur(22px);
   display: flex;
   flex-direction: column;
   transform: translateX(-100%);
@@ -160,6 +209,7 @@
   transform: translateX(0);
   opacity: 1;
   pointer-events: auto;
+  box-shadow: 28px 0 70px rgba(0, 0, 0, 0.42);
 }
 
 .sidebar-panel__header {
@@ -279,7 +329,7 @@
   position: fixed;
   inset: 0;
   left: calc(var(--sidebar-rail-width) + var(--sidebar-panel-width));
-  background: transparent;
+  background: linear-gradient(90deg, rgba(10, 12, 12, 0.24), transparent 42%);
   pointer-events: auto;
   z-index: 0;
 }
@@ -529,8 +579,8 @@
   gap: 12px;
   padding: 16px;
   border-radius: 2px;
-  background: rgba(244, 241, 232, 0.045);
-  border: 1px solid rgba(255, 122, 61, 0.12);
+  background: rgba(29, 32, 33, 0.96);
+  border: 1px solid rgba(214, 93, 14, 0.16);
 }
 
 .midi-player__progress {
@@ -542,7 +592,7 @@
 
 .midi-player__progress-bar {
   height: 100%;
-  background: rgba(255, 122, 61, 0.92);
+  background: var(--color-core-accent);
   border-radius: 2px;
   transition: width 100ms linear;
 }
@@ -596,13 +646,13 @@
   width: 54px;
   height: 54px;
   border-radius: 50%;
-  background: rgba(240, 110, 55, 0.95);
-  border-color: rgba(255, 170, 120, 0.5);
+  background: var(--color-core-accent);
+  border-color: rgba(235, 219, 178, 0.34);
   color: rgba(16, 21, 31, 0.95);
 }
 
 .midi-player__btn--play:hover:not(:disabled) {
-  background: rgba(250, 125, 65, 1);
+  background: #e16b22;
   transform: translateY(-1px);
 }
 
@@ -648,7 +698,7 @@
 
 .midi-player__tempo-value {
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 107, 53, 0.9);
+  color: #e16b22;
 }
 
 .midi-player__tempo-slider {
@@ -667,7 +717,7 @@
   appearance: none;
   width: 16px;
   height: 16px;
-  background: rgba(255, 107, 53, 0.9);
+  background: #e16b22;
   border-radius: 50%;
   cursor: pointer;
   transition: transform 100ms ease;
@@ -680,7 +730,7 @@
 .midi-player__tempo-slider::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: rgba(255, 107, 53, 0.9);
+  background: #e16b22;
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -713,6 +763,18 @@
     border-top: 0;
     background: rgba(10, 14, 23, 0.94);
     backdrop-filter: blur(18px);
+  }
+
+  .sidebar-rail__brand,
+  .sidebar-rail__status {
+    display: none;
+  }
+
+  .sidebar-rail__nav {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
   }
 
   .sidebar-rail__btn {

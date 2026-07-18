@@ -21,7 +21,8 @@ const Sidebar = ({
   onOpen = () => {},
   activeTab,
   onTabChange = () => {},
-  disabled = false
+  disabled = false,
+  currentView = 'keyboard'
 }) => {
   const {
     isPlaying,
@@ -117,7 +118,7 @@ const Sidebar = ({
   ];
   const activePanel = tabs.find((tab) => tab.id === activeTab) || tabs[0];
   const panelTitle = activeTab === 'midi'
-    ? 'MIDI library'
+    ? 'MIDI'
     : 'Sound controls';
   const panelSubtitle = activeTab === 'midi'
     ? currentMidi?.name
@@ -127,34 +128,40 @@ const Sidebar = ({
     <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''} ${disabled ? 'sidebar-container--disabled' : ''}`}>
       {/* Icon Rail - always visible */}
       <div className="sidebar-rail">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`sidebar-rail__btn ${isOpen && activeTab === tab.id ? 'sidebar-rail__btn--active' : ''} ${tab.isActive ? 'sidebar-rail__btn--playing' : ''}`}
-            onClick={() => handleRailClick(tab.id)}
-            disabled={disabled}
-            aria-label={disabled ? `${tab.label} panel unavailable on this page` : isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
-            aria-expanded={!disabled && isOpen && activeTab === tab.id}
-            title={disabled ? 'Available on Keyboard' : undefined}
+        <a className="sidebar-rail__brand" href="#/" aria-label="Return to keyboard">V</a>
+        <div className="sidebar-rail__nav">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`sidebar-rail__btn ${isOpen && activeTab === tab.id ? 'sidebar-rail__btn--active' : ''} ${tab.isActive ? 'sidebar-rail__btn--playing' : ''}`}
+              onClick={() => handleRailClick(tab.id)}
+              disabled={disabled}
+              aria-label={disabled ? `${tab.label} panel unavailable on this page` : isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
+              aria-expanded={!disabled && isOpen && activeTab === tab.id}
+              title={disabled ? 'Available on Keyboard' : undefined}
+            >
+              {tab.icon}
+              <span className="sidebar-rail__label">{tab.label}</span>
+              {tab.isActive && <span className="sidebar-rail__indicator" />}
+            </button>
+          ))}
+          <a
+            className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'design' ? 'sidebar-rail__btn--current' : ''}`}
+            href={SOUND_DESIGNER_HREF}
+            aria-label="Open the sound design workspace"
+            aria-current={currentView === 'design' ? 'page' : undefined}
           >
-            {tab.icon}
-            <span className="sidebar-rail__label">{tab.label}</span>
-            {tab.isActive && <span className="sidebar-rail__indicator" />}
-          </button>
-        ))}
-        {/* Nav action, not a panel tab: takes you to the dedicated sound
-            design workspace instead of toggling a rail panel. */}
-        <a
-          className="sidebar-rail__btn sidebar-rail__btn--nav"
-          href={SOUND_DESIGNER_HREF}
-          aria-label="Open the sound design workspace"
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 15 L9 15 L11 9 L14 19 L16 12 L20 12" />
-          </svg>
-          <span className="sidebar-rail__label">Design</span>
-        </a>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 15 L9 15 L11 9 L14 19 L16 12 L20 12" />
+            </svg>
+            <span className="sidebar-rail__label">Design</span>
+          </a>
+        </div>
+        <div className="sidebar-rail__status" aria-label="Audio engine active">
+          <span className="sidebar-rail__status-dot" />
+          DSP
+        </div>
       </div>
 
       {/* Expandable Panel */}

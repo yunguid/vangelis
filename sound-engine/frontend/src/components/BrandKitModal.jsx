@@ -2,9 +2,9 @@ import React from 'react';
 import logoSvg from '../assets/vangelis-logo.svg?raw';
 
 const BRAND_COLORS = [
-  { name: 'Ink', value: '#10151F' },
+  { name: 'Ink', value: '#1D2021' },
   { name: 'Paper', value: '#F4F1E8' },
-  { name: 'Accent', value: '#FF7A3D' }
+  { name: 'Accent', value: '#D65D0E' }
 ];
 
 const BrandKitModal = ({ open, onClose, onNotice }) => {

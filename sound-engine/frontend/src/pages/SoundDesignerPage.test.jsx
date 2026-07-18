@@ -23,10 +23,9 @@ vi.mock('../components/SynthKeyboard', () => ({
   default: () => <div data-testid="keyboard-mock">Synth</div>
 }));
 
-// NOTE: like MidiPipelinePage, this page renders a disabled Sidebar rail
-// alongside its own workspace (`<Sidebar disabled isOpen={false}
-// activeTab="sound" />`). The Sidebar still mounts the matching tab's panel
-// content (hidden via aria-hidden/CSS, not unmounted) even while disabled —
+// The page renders the shared interactive Sidebar rail alongside its own
+// workspace. The Sidebar mounts the matching tab's panel content even while
+// closed —
 // so a *second*, hidden copy of SoundTab (with its own UIOverlay,
 // AudioControls, and PresetShelf) exists in the DOM. Assertions about the
 // page's own visible workspace must be scoped to `.sound-designer-workspace`
@@ -71,9 +70,9 @@ describe('SoundDesignerPage', () => {
     expect(workspace.getByRole('radio', { name: 'Square' })).toBeInTheDocument();
     expect(workspace.getByRole('radio', { name: 'Triangle' })).toBeInTheDocument();
 
-    // Preset browse folded by default (transport + save row still visible).
+    // Preset browse is folded and saving is reserved for the Mint stage.
     expect(workspace.getByRole('button', { name: 'Previous preset' })).toBeInTheDocument();
-    expect(workspace.getByRole('button', { name: /^save$/i })).toBeInTheDocument();
+    expect(workspace.queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument();
     expect(workspace.queryByRole('list', { name: /presets$/i })).not.toBeInTheDocument();
   });
 
@@ -222,10 +221,12 @@ describe('SoundDesignerPage', () => {
     assertScopeVisible();
   });
 
-  it('renders a disabled sidebar rail', () => {
+  it('renders an interactive sidebar rail', () => {
     render(<SoundDesignerPage />);
-    const soundRailButton = screen.getByRole('button', { name: /Sound panel unavailable/i });
-    expect(soundRailButton).toBeDisabled();
+    const soundRailButton = screen.getByRole('button', { name: 'Open Sound controls' });
+    expect(soundRailButton).toBeEnabled();
+    fireEvent.click(soundRailButton);
+    expect(screen.getByRole('complementary', { name: 'Sound controls' })).toBeVisible();
   });
 
   describe('minting a sound', () => {

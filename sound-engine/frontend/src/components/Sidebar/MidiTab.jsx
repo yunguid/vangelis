@@ -2,6 +2,18 @@ import React, { useState, useCallback, useRef } from 'react';
 import { parseMidiFile, getBuiltInMidiFiles } from '../../utils/midiParser.js';
 import MidiPlayer from './MidiPlayer.jsx';
 
+// Keep the underlying IDs and filenames intact while presenting the catalog as
+// anonymous, stable numeric patches. The hash makes the numbers random-looking
+// without changing between renders or sessions.
+const numericPatchName = (id) => {
+  let hash = 2166136261;
+  for (let index = 0; index < id.length; index += 1) {
+    hash ^= id.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return String(100000 + ((hash >>> 0) % 900000));
+};
+
 /**
  * MIDI browser and player tab component
  */
@@ -23,18 +35,16 @@ const MidiTab = ({
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef(null);
 
-  const builtInFiles = getBuiltInMidiFiles();
+  const builtInFiles = getBuiltInMidiFiles().map((file) => ({
+    ...file,
+    displayName: numericPatchName(file.id)
+  }));
   const filteredFiles = builtInFiles.filter((file) => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return true;
-    return `${file.name} ${file.composer || ''}`.toLowerCase().includes(query);
+    return `${file.displayName} ${file.name} ${file.composer || ''}`.toLowerCase().includes(query);
   });
 
-  // Strip a trailing "(Tag)" so the row title displays cleanly.
-  const splitTag = (name) => {
-    const match = /^(.*?)\s*\(([^)]+)\)$/.exec(name);
-    return match ? { title: match[1] } : { title: name };
-  };
   const originals = filteredFiles.filter((file) => file.id.startsWith('original-'));
   const classics = filteredFiles.filter((file) => !file.id.startsWith('original-'));
 
@@ -58,7 +68,7 @@ const MidiTab = ({
       const midiData = await loadMidiWithFallback(file);
       onPlay({
         ...midiData,
-        name: file.name || midiData.name,
+        name: file.displayName,
         sourceFileId: file.id,
         sourcePath: file.path,
         sourceUrl: file.sourceUrl || null,
@@ -103,7 +113,6 @@ const MidiTab = ({
   return (
     <div className="midi-tab">
       <div className="midi-tab__section">
-        <h3 className="midi-tab__heading">Player</h3>
         <MidiPlayer
           isPlaying={isPlaying}
           isPaused={isPaused}
@@ -119,14 +128,13 @@ const MidiTab = ({
       </div>
 
       <div className="midi-tab__section">
-        <h3 className="midi-tab__heading">Library</h3>
         <input
           type="search"
           className="midi-tab__search"
           placeholder="Find title or composer"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          aria-label="Filter MIDI library"
+          aria-label="Filter MIDI files"
         />
         {isLoading ? (
           <div className="midi-tab__skeleton" aria-hidden="true">
@@ -140,13 +148,15 @@ const MidiTab = ({
             { key: 'classics', title: 'Classics', files: classics }
           ].filter((group) => group.files.length > 0).map((group) => (
             <div key={group.key} className="midi-tab__group">
-              <div className="midi-tab__group-header">
-                <h4 className="midi-tab__group-title">{group.title}</h4>
-                <span className="midi-tab__group-count">{group.files.length}</span>
-              </div>
+              {group.key !== 'originals' && (
+                <div className="midi-tab__group-header">
+                  <h4 className="midi-tab__group-title">{group.title}</h4>
+                  <span className="midi-tab__group-count">{group.files.length}</span>
+                </div>
+              )}
               <ul className="midi-tab__list">
                 {group.files.map((file) => {
-                  const { title } = splitTag(file.name);
+                  const title = file.displayName;
                   return (
                     <li key={file.id} className="midi-tab__item">
                       <button

@@ -27,7 +27,8 @@ const PresetShelf = ({
   audioParams,
   onApply,
   activePresetName,
-  foldBrowse = false
+  foldBrowse = false,
+  hideSave = false
 }) => {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [userPresets, setUserPresets] = useState(() => loadUserPresets());
@@ -160,7 +161,7 @@ const PresetShelf = ({
         </button>
       )}
       {(!foldBrowse || browseOpen) && (
-        <>
+        <div className={`preset-shelf__browse${foldBrowse ? ' preset-shelf__browse--capped' : ''}`}>
           {factoryByCategory.map(([category, presets]) => (
             <div key={category} className="preset-shelf__group">
               <h4 className="preset-shelf__category">{category}</h4>
@@ -176,12 +177,14 @@ const PresetShelf = ({
                 {userPresets.map(renderPreset)}
               </ul>
             ) : (
-              <p className="preset-shelf__hint">Shape a sound, name it, save it here.</p>
+              <ul className="preset-shelf__list" aria-label="Your presets">
+                <li className="preset-shelf__hint">Shape a sound, name it, save it here.</li>
+              </ul>
             )}
           </div>
-        </>
+        </div>
       )}
-      <div className="preset-shelf__group preset-shelf__group--save">
+      {!hideSave && <div className="preset-shelf__group preset-shelf__group--save">
         <div className="preset-shelf__save-row">
           <input
             type="text"
@@ -203,7 +206,7 @@ const PresetShelf = ({
             Save
           </button>
         </div>
-      </div>
+      </div>}
     </section>
   );
 };

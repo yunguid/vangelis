@@ -30,6 +30,7 @@ const SoundTab = ({
         waveformType={currentWaveform}
         audioParams={audioParams}
         activePresetName={activePresetName}
+        foldBrowse
         onApply={(preset) => {
           if (preset.waveformType) onWaveformChange?.(preset.waveformType);
           if (preset.audioParams) onParamsChange?.(preset.audioParams);

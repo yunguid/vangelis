@@ -45,7 +45,7 @@ describe('MidiTab', () => {
     const onPlay = vi.fn();
     render(<MidiTab {...defaultProps({ onPlay })} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /piano concerto no\. 2 - i\. moderato/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^\d{6} sergei rachmaninoff$/i }));
 
     await waitFor(() => {
       expect(onPlay).toHaveBeenCalledTimes(1);
@@ -53,7 +53,7 @@ describe('MidiTab', () => {
 
     expect(parseMidiFile).toHaveBeenCalledWith('/midi/rachmaninoff-concerto2-mov1.mid');
     expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({
-      name: 'Piano Concerto No. 2 - I. Moderato',
+      name: expect.stringMatching(/^\d{6}$/),
       sourceFileId: 'rachmaninoff-concerto2-mov1',
       composer: 'Sergei Rachmaninoff'
     }));
@@ -77,7 +77,7 @@ describe('MidiTab', () => {
     }));
   });
 
-  it('renders original cues with a clean title, no tag badge, and no composer byline', () => {
+  it('renders original cues with a numeric title, no tag badge, and no composer byline', () => {
     getBuiltInMidiFiles.mockReturnValue([
       {
         id: 'original-neon-rain',
@@ -88,7 +88,8 @@ describe('MidiTab', () => {
 
     render(<MidiTab {...defaultProps()} />);
 
-    expect(screen.getByText('dial_51')).toBeInTheDocument();
+    expect(screen.getByText(/^\d{6}$/)).toBeInTheDocument();
+    expect(screen.queryByText('Originals')).not.toBeInTheDocument();
     expect(document.querySelector('.midi-tab__badge')).not.toBeInTheDocument();
     expect(document.querySelector('.midi-tab__file-composer')).not.toBeInTheDocument();
   });

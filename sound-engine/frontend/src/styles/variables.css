@@ -6,21 +6,21 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
-  --color-core-ink: #10151f;
+  --color-core-ink: #1d2021;
   --color-core-paper: #f4f1e8;
-  --color-core-accent: #ff7a3d;
+  --color-core-accent: #d65d0e;
 
   --color-bg-sky: var(--color-core-ink);
   --color-bg-deep: var(--color-core-ink);
-  --color-primary-soft: rgba(16, 21, 31, 0.92);
-  --color-primary-dim: rgba(16, 21, 31, 0.98);
+  --color-primary-soft: rgba(29, 32, 33, 0.92);
+  --color-primary-dim: rgba(29, 32, 33, 0.98);
 
-  --color-accent-sheen: rgba(255, 122, 61, 0.2);
-  --color-accent-sheen-strong: rgba(255, 122, 61, 0.42);
-  --color-accent-silver: rgba(255, 122, 61, 0.16);
-  --color-glimmer-one: rgba(255, 122, 61, 1);
-  --color-glimmer-two: rgba(255, 122, 61, 0.75);
-  --color-glimmer-three: rgba(255, 122, 61, 0.42);
+  --color-accent-sheen: rgba(214, 93, 14, 0.2);
+  --color-accent-sheen-strong: rgba(214, 93, 14, 0.42);
+  --color-accent-silver: rgba(214, 93, 14, 0.16);
+  --color-glimmer-one: rgba(214, 93, 14, 1);
+  --color-glimmer-two: rgba(214, 93, 14, 0.75);
+  --color-glimmer-three: rgba(214, 93, 14, 0.42);
 
   /* Text */
   --color-text-primary: rgba(244, 241, 232, 0.96);

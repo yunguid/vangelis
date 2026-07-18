@@ -334,6 +334,8 @@ const SoundDesignerPage = () => {
   const [activeStage, setActiveStage] = React.useState('base');
   const [visitedStages, setVisitedStages] = React.useState(() => new Set(['base']));
   const [mintedName, setMintedName] = React.useState(null);
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [sidebarTab, setSidebarTab] = React.useState('sound');
 
   React.useEffect(() => {
     audioEngine.setGlobalParams(audioParams);
@@ -394,7 +396,8 @@ const SoundDesignerPage = () => {
     audioParams,
     activePresetName,
     onApply: handlePresetApplied,
-    foldBrowse: true
+    foldBrowse: true,
+    hideSave: true
   };
 
   return (
@@ -403,8 +406,33 @@ const SoundDesignerPage = () => {
         <AppHeader activeSection="sound-designer" className="sound-designer-page__header" />
 
         <div className="sound-designer-workspace">
+          <div className="sound-designer-scope" role="region" aria-label="Live sound visualization">
+            <WaveCandy />
+          </div>
+
+          <div className="sound-designer-keyboard" role="region" aria-label="Test keyboard">
+            <div className="keyboard-surface">
+              <div className="keyboard-region">
+                <SynthKeyboard
+                  waveformType={waveformType}
+                  audioParams={audioParams}
+                  wasmLoaded={engineStatus.wasmReady}
+                  externalActiveNotes={NO_EXTERNAL_ACTIVE_NOTES}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="sound-designer-section-header">
+            <div>
+              <span className="sound-designer-section-header__eyebrow">Sound architecture</span>
+              <h1>{STAGES[STAGE_INDEX[activeStage]].label}</h1>
+            </div>
+            <span className="sound-designer-section-header__count">0{STAGE_INDEX[activeStage] + 1} / 05</span>
+          </div>
+
           <nav className="stage-rail" aria-label="Sound design stages">
-            {STAGES.map((stage) => {
+            {STAGES.map((stage, index) => {
               const isActive = activeStage === stage.id;
               const isVisited = visitedStages.has(stage.id);
               return (
@@ -414,8 +442,10 @@ const SoundDesignerPage = () => {
                   className={`stage-rail__tab${isActive ? ' is-active' : ''}${isVisited ? ' is-visited' : ''}`}
                   onClick={() => goToStage(stage.id)}
                   aria-current={isActive ? 'step' : undefined}
+                  aria-label={stage.label}
                 >
-                  {stage.label}
+                  <span className="stage-rail__index">0{index + 1}</span>
+                  <span>{stage.label}</span>
                 </button>
               );
             })}
@@ -462,30 +492,16 @@ const SoundDesignerPage = () => {
             )}
           </div>
 
-          <div className="sound-designer-scope" role="region" aria-label="Live sound visualization">
-            <WaveCandy />
-          </div>
-
-          {/* Panel chrome lives on the wrapper, not on .keyboard-surface:
-              gruvbox.css strips background/border from .keyboard-surface with
-              !important (correct for the main page's full-bleed stage), so the
-              surface stays chrome-less and this wrapper provides the flat
-              bordered dock that matches the rest of the page. */}
-          <div className="sound-designer-keyboard" role="region" aria-label="Test keyboard">
-            <div className="keyboard-surface">
-              <div className="keyboard-region">
-                <SynthKeyboard
-                  waveformType={waveformType}
-                  audioParams={audioParams}
-                  wasmLoaded={engineStatus.wasmReady}
-                  externalActiveNotes={NO_EXTERNAL_ACTIVE_NOTES}
-                />
-              </div>
-            </div>
-          </div>
         </div>
       </main>
-      <Sidebar disabled isOpen={false} activeTab="sound" />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onOpen={() => setSidebarOpen(true)}
+        onClose={() => setSidebarOpen(false)}
+        activeTab={sidebarTab}
+        onTabChange={setSidebarTab}
+        currentView="design"
+      />
     </div>
   );
 };

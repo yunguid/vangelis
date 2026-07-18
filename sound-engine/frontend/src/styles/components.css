@@ -538,6 +538,18 @@ input[type="range"]::-moz-range-thumb:active {
   margin-top: 10px;
 }
 
+.preset-shelf__browse {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.preset-shelf__browse--capped {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .preset-shelf__category {
   margin: 0;
   padding: 0 2px;
