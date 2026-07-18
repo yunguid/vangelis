@@ -9,6 +9,8 @@ import {
 import {
   MONO_ANALYSER_FFT_SIZE,
   STEREO_ANALYSER_FFT_SIZE,
+  STEREO_VISUAL_SAMPLE_STRIDE,
+  getStereoPairEvaluationsPerFrame,
   getWaveCandySamplesPerFrame
 } from '../src/utils/audioAnalysisPolicy.js';
 
@@ -480,7 +482,9 @@ const report = {
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
+    waveCandyStereoVisualSampleStride: STEREO_VISUAL_SAMPLE_STRIDE,
     waveCandySamplesPerFrame: getWaveCandySamplesPerFrame(),
+    waveCandyStereoPairEvaluationsPerFrame: getStereoPairEvaluationsPerFrame(),
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -595,6 +599,13 @@ if (
     monoFftSize: MONO_ANALYSER_FFT_SIZE,
     stereoFftSize: STEREO_ANALYSER_FFT_SIZE,
     expected: '<= 30 Hz with <= 1024-sample mono/stereo windows'
+  });
+}
+if (getStereoPairEvaluationsPerFrame() > 512) {
+  failures.push({
+    name: 'Guard merged stereo visual traversal',
+    stereoPairEvaluationsPerFrame: getStereoPairEvaluationsPerFrame(),
+    expected: '<= 512 shared meter/goniometer pairs per frame'
   });
 }
 const countBudgetChecks = [
@@ -911,7 +922,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 56,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 57,
   failures
 };
 

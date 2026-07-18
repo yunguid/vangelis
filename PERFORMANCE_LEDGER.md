@@ -1694,7 +1694,7 @@ closures, the deterministic visual workload, the full suite, and isolated audio/
 |---|---:|---:|---:|
 | Active analyzer samples per frame | 5,632 | 3,584 | -36.36% |
 | Active analyzer samples over 20 s | 3,379,200 | 2,150,400 | -36.36% |
-| Stereo pair evaluations over 20 s | 1,228,800 | 614,400 | -50.00% |
+| Stereo pair evaluations over 20 s | 1,843,200 | 921,600 | -50.00% |
 | Mono FFT / scope window | 1,024 | 1,024 | unchanged |
 | Active analyzer cadence | 30 Hz | 30 Hz | unchanged |
 | Initial Home JS raw / gzip | 203.05 / 67.81 KiB | 203.05 / 67.81 KiB | unchanged |
@@ -1726,6 +1726,55 @@ Implemented boundaries and controls:
 - Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
   pass, and saturated heap drift is -38 KB over 4,000 blocks.
 - Isolated DSP benchmark: 404.6 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.
+
+## Optimization batch 34 — merged stereo visual traversal
+
+Collected from the WaveCandy meter and goniometer loops, an isolated 20,000-iteration stereo
+traversal profile, exact active-frame operation counts, generated production closures, the full
+suite, and isolated audio/visual gates. This batch also corrects Batch 33's reported pair-evaluation
+totals: its percentage reduction was correct, but the totals had omitted the goniometer traversal.
+
+| Metric | Batch 33 | Batch 34 | Change |
+|---|---:|---:|---:|
+| Stereo pair evaluations per active frame | 1,536 | 512 | -66.67% |
+| Stereo pair evaluations over 20 s | 921,600 | 307,200 | -66.67% |
+| Isolated stereo traversal CPU, 20k iterations | 34.16 ms | 21.50 ms | -37.07% |
+| Active analyzer samples per frame | 3,584 | 3,584 | unchanged |
+| Active analyzer cadence | 30 Hz | 30 Hz | unchanged |
+| Initial Home JS gzip | 67.81 KiB | 67.85 KiB | +0.04 KiB |
+| Fully activated Home visual JS gzip | 77.07 KiB | 77.19 KiB | +0.12 KiB |
+| Production deployment bytes | 1,478.97 KiB | 1,479.46 KiB | +0.49 KiB |
+| Automated production budgets | 74 | 75 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Folded short-term mean-square and peak collection into the goniometer's existing stride-two
+  stereo traversal. The meter no longer performs its own full 1,024-pair walk before the same
+  channels are visited for visualization.
+- Retained 512 sampled pairs per frame—more than the compact visual surface can display—while
+  preserving the existing 400 ms loudness smoothing, 1.5 s peak hold, FFT sizes, analyzer reads,
+  graph topology, and 30 Hz cadence.
+- Reused a stable stereo-statistics object across frames so the merged hot path does not introduce
+  transient result allocations or additional garbage-collection pressure.
+- Added shared stride and exact pair-evaluation policy metrics, a focused policy test, a dedicated
+  isolated traversal benchmark, and a production guard capped at 512 shared pairs per frame.
+
+### Batch 34 verification gates
+
+- Full suite: 50 files, 498/498 tests pass.
+- Production delivery/static/dependency/route guardrails: 75/75 pass.
+- Isolated stereo traversal profile: 34.16 ms to 21.50 ms over 20,000 iterations, a 37.07%
+  measured CPU-time reduction; exact runtime pair evaluations fall 66.67% from Batch 33 and 83.33%
+  cumulatively from the original 2,048-sample stereo policy.
+- Deterministic combined visual workload: 87.25% lower measured CPU time than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 402.1 us per 128-frame block with 6.6x realtime headroom.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
+import { STEREO_VISUAL_SAMPLE_STRIDE } from '../utils/audioAnalysisPolicy.js';
 import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp } from '../utils/math.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
@@ -205,7 +206,7 @@ const drawWaveform = (ctx, data, width, height) => {
   ctx.stroke();
 };
 
-const drawGoniometer = (ctx, left, right, width, height, resized) => {
+const drawGoniometer = (ctx, left, right, width, height, resized, stats) => {
   if (resized) {
     ctx.fillStyle = 'rgb(6, 10, 16)';
     ctx.fillRect(0, 0, width, height);
@@ -238,17 +239,28 @@ const drawGoniometer = (ctx, left, right, width, height, resized) => {
   ctx.lineWidth = 1;
   ctx.beginPath();
   const INV_SQRT2 = Math.SQRT1_2;
-  for (let i = 0; i < len; i += 2) {
+  let sum = 0;
+  let peak = 0;
+  let sampleCount = 0;
+  for (let i = 0; i < len; i += STEREO_VISUAL_SAMPLE_STRIDE) {
+    const l = left[i];
+    const r = right[i];
     // Rotate 45 degrees: x = side, y = mid (up = in-phase)
-    const side = (left[i] - right[i]) * INV_SQRT2;
-    const m = (left[i] + right[i]) * INV_SQRT2;
+    const side = (l - r) * INV_SQRT2;
+    const m = (l + r) * INV_SQRT2;
     const x = cx + side * scale;
     const y = cy - m * scale;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
+    sum += (l * l + r * r) * 0.5;
+    const amplitude = Math.max(Math.abs(l), Math.abs(r));
+    if (amplitude > peak) peak = amplitude;
+    sampleCount += 1;
   }
   ctx.stroke();
   ctx.globalCompositeOperation = prevOp;
+  stats.meanSquare = sum / Math.max(1, sampleCount);
+  stats.peak = peak;
 };
 
 const drawMeter = (ctx, state, width, height) => {
@@ -332,6 +344,7 @@ const WaveCandyCanvas = () => {
     peakHoldDb: -60,
     peakHeldAt: 0
   });
+  const stereoStatsRef = useRef({ meanSquare: 0, peak: 0 });
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof requestAnimationFrame !== 'function') {
@@ -400,23 +413,31 @@ const WaveCandyCanvas = () => {
       lagrangeEnvelope(buffers.specSmoothed, buffers.specEnvelope, 21);
       spectrumChainRef.current.step(buffers.specEnvelope, frameDt);
 
+      const spectroSize = sizeControllers.spectrogram.size;
+      const scopeSize = sizeControllers.scope.size;
+      const spectrumSize = sizeControllers.spectrum.size;
+      const goniometerSize = sizeControllers.goniometer.size;
+      const meterSize = sizeControllers.meter.size;
+
+      // The goniometer and loudness meter consume the same sampled stereo
+      // traversal instead of independently walking overlapping channel data.
+      const stereoFrame = stereoStatsRef.current;
+      drawGoniometer(
+        contexts.goniometer,
+        leftData,
+        rightData,
+        goniometerSize.width,
+        goniometerSize.height,
+        goniometerSize.resized,
+        stereoFrame
+      );
+
       // Loudness: stereo mean square smoothed over ~400ms, peak with 1.5s hold
       const meter = meterStateRef.current;
-      let sum = 0;
-      let peak = 0;
-      const len = Math.min(leftData.length, rightData.length);
-      for (let i = 0; i < len; i++) {
-        const l = leftData[i];
-        const r = rightData[i];
-        sum += (l * l + r * r) * 0.5;
-        const a = Math.max(Math.abs(l), Math.abs(r));
-        if (a > peak) peak = a;
-      }
-      const frameMs = sum / Math.max(1, len);
       const k = 1 - Math.exp(-frameDt / 0.4);
-      meter.meanSquare += (frameMs - meter.meanSquare) * k;
+      meter.meanSquare += (stereoFrame.meanSquare - meter.meanSquare) * k;
       meter.shortTermDb = 10 * Math.log10(meter.meanSquare + 1e-9);
-      const peakDb = 20 * Math.log10(peak + 1e-6);
+      const peakDb = 20 * Math.log10(stereoFrame.peak + 1e-6);
       if (peakDb >= meter.peakHoldDb) {
         meter.peakHoldDb = peakDb;
         meter.peakHeldAt = time;
@@ -424,16 +445,9 @@ const WaveCandyCanvas = () => {
         meter.peakHoldDb -= 12 * frameDt; // 12 dB/s decay after hold
       }
 
-      const spectroSize = sizeControllers.spectrogram.size;
-      const scopeSize = sizeControllers.scope.size;
-      const spectrumSize = sizeControllers.spectrum.size;
-      const goniometerSize = sizeControllers.goniometer.size;
-      const meterSize = sizeControllers.meter.size;
-
       drawSpectrogram(contexts.spectrogram, canvases.spectrogram, buffers.specSmoothed, spectroSize.width, spectroSize.height, spectroSize.resized, spectroSize.dpr);
       drawWaveform(contexts.scope, timeData, scopeSize.width, scopeSize.height);
       drawSpectrum(contexts.spectrum, buffers.specSmoothed, spectrumChainRef.current.positions, spectrumSize.width, spectrumSize.height);
-      drawGoniometer(contexts.goniometer, leftData, rightData, goniometerSize.width, goniometerSize.height, goniometerSize.resized);
       drawMeter(contexts.meter, meterStateRef.current, meterSize.width, meterSize.height);
       Object.values(sizeControllers).forEach((controller) => controller.acknowledgeResize());
     };

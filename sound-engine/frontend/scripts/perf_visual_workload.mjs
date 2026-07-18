@@ -7,6 +7,8 @@ import {
 import {
   MONO_ANALYSER_FFT_SIZE,
   STEREO_ANALYSER_FFT_SIZE,
+  STEREO_VISUAL_SAMPLE_STRIDE,
+  getStereoPairEvaluationsPerFrame,
   getWaveCandySamplesPerFrame
 } from '../src/utils/audioAnalysisPolicy.js';
 
@@ -251,6 +253,55 @@ const optimized = runScenario({
 
 const reduction = (before, after) => ((before - after) / before) * 100;
 
+const stereoLeft = srcLeft.subarray(0, STEREO_ANALYSER_FFT_SIZE);
+const stereoRight = srcRight.subarray(0, STEREO_ANALYSER_FFT_SIZE);
+const simulateBatch33StereoTraversal = () => {
+  let checksum = 0;
+  for (let i = 0; i < stereoLeft.length; i += 1) {
+    const l = stereoLeft[i];
+    const r = stereoRight[i];
+    checksum += (l * l + r * r) * 0.5;
+    checksum += Math.max(Math.abs(l), Math.abs(r));
+  }
+  for (let i = 0; i < stereoLeft.length; i += STEREO_VISUAL_SAMPLE_STRIDE) {
+    checksum += (stereoLeft[i] - stereoRight[i]) * Math.SQRT1_2;
+    checksum += (stereoLeft[i] + stereoRight[i]) * Math.SQRT1_2;
+  }
+  return checksum;
+};
+const simulateMergedStereoTraversal = () => {
+  let checksum = 0;
+  for (let i = 0; i < stereoLeft.length; i += STEREO_VISUAL_SAMPLE_STRIDE) {
+    const l = stereoLeft[i];
+    const r = stereoRight[i];
+    checksum += (l * l + r * r) * 0.5;
+    checksum += Math.max(Math.abs(l), Math.abs(r));
+    checksum += (l - r) * Math.SQRT1_2;
+    checksum += (l + r) * Math.SQRT1_2;
+  }
+  return checksum;
+};
+const runStereoTraversalBenchmark = (work, iterations) => {
+  let checksum = 0;
+  for (let i = 0; i < 1000; i += 1) checksum += work();
+  const startedAt = performance.now();
+  for (let i = 0; i < iterations; i += 1) checksum += work();
+  return {
+    elapsedMs: performance.now() - startedAt,
+    checksum
+  };
+};
+
+const stereoTraversalIterations = 20000;
+const batch33StereoTraversal = runStereoTraversalBenchmark(
+  simulateBatch33StereoTraversal,
+  stereoTraversalIterations
+);
+const mergedStereoTraversal = runStereoTraversalBenchmark(
+  simulateMergedStereoTraversal,
+  stereoTraversalIterations
+);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -259,6 +310,11 @@ const sceneFrameReduction = reduction(baseline.sceneFrames, optimized.sceneFrame
 const sceneBandReduction = reduction(
   baseline.sceneBandEvaluations,
   optimized.sceneBandEvaluations
+);
+const batch33StereoPairEvaluationsPerFrame = STEREO_ANALYSER_FFT_SIZE
+  + Math.ceil(STEREO_ANALYSER_FFT_SIZE / STEREO_VISUAL_SAMPLE_STRIDE);
+const preCompactStereoPairEvaluationsPerFrame = 2048 + Math.ceil(
+  2048 / STEREO_VISUAL_SAMPLE_STRIDE
 );
 
 const output = {
@@ -278,23 +334,45 @@ const output = {
     sceneIdleHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     sceneReducedMotionHz: 0
   },
+  stereoTraversalBenchmark: {
+    iterations: stereoTraversalIterations,
+    batch33ElapsedMs: Number(batch33StereoTraversal.elapsedMs.toFixed(2)),
+    mergedElapsedMs: Number(mergedStereoTraversal.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      batch33StereoTraversal.elapsedMs,
+      mergedStereoTraversal.elapsedMs
+    ).toFixed(2))
+  },
   activeAnalyzerPolicy: {
     frameHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     monoFftSize: MONO_ANALYSER_FFT_SIZE,
     stereoFftSize: STEREO_ANALYSER_FFT_SIZE,
+    stereoVisualSampleStride: STEREO_VISUAL_SAMPLE_STRIDE,
     samplesPerFrame: getWaveCandySamplesPerFrame(),
     samplesOverBenchmark: Math.round(
       SECONDS * (1000 / WAVE_CANDY_FRAME_INTERVAL_MS) * getWaveCandySamplesPerFrame()
     ),
+    stereoPairEvaluationsPerFrame: getStereoPairEvaluationsPerFrame(),
     stereoPairEvaluationsOverBenchmark: Math.round(
-      SECONDS * (1000 / WAVE_CANDY_FRAME_INTERVAL_MS) * STEREO_ANALYSER_FFT_SIZE
+      SECONDS
+      * (1000 / WAVE_CANDY_FRAME_INTERVAL_MS)
+      * getStereoPairEvaluationsPerFrame()
     ),
+    reductionsFromBatch33: {
+      stereoPairEvaluationsPercent: Number(reduction(
+        batch33StereoPairEvaluationsPerFrame,
+        getStereoPairEvaluationsPerFrame()
+      ).toFixed(2))
+    },
     reductionsFrom2048Stereo: {
       analyzerSamplesPercent: Number(reduction(
         (MONO_ANALYSER_FFT_SIZE / 2) + MONO_ANALYSER_FFT_SIZE + (2048 * 2),
         getWaveCandySamplesPerFrame()
       ).toFixed(2)),
-      stereoPairEvaluationsPercent: Number(reduction(2048, STEREO_ANALYSER_FFT_SIZE).toFixed(2))
+      stereoPairEvaluationsPercent: Number(reduction(
+        preCompactStereoPairEvaluationsPerFrame,
+        getStereoPairEvaluationsPerFrame()
+      ).toFixed(2))
     }
   }
 };
