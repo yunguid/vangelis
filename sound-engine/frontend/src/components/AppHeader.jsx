@@ -1,5 +1,4 @@
 import React from 'react';
-import { audioEngine } from '../utils/audioEngine.js';
 
 // The app is keyboard-first now: the voice-loop / MIDI-pipeline / library
 // pages are hidden from navigation (routes still exist if linked directly).
@@ -19,24 +18,10 @@ const AppHeader = ({
   sampleLoading = false
 }) => {
   const uploadInputId = React.useId();
-  const [engineStatus, setEngineStatus] = React.useState(() => audioEngine.getStatus());
-  const [recordingState, setRecordingState] = React.useState(() => audioEngine.getStatus().isRecording);
-  const [localSampleName, setLocalSampleName] = React.useState('');
-  const [localSampleLoading, setLocalSampleLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    const unsubscribe = audioEngine.subscribe(setEngineStatus);
-    const unsubscribeRecording = audioEngine.subscribeRecording(setRecordingState);
-    return () => {
-      unsubscribe();
-      unsubscribeRecording();
-    };
-  }, []);
-
-  const resolvedHasCustomSample = hasCustomSample ?? engineStatus.hasCustomSample;
-  const resolvedIsRecording = isRecording ?? recordingState;
-  const resolvedSampleLoading = sampleLoading || localSampleLoading;
-  const resolvedSampleLabel = sampleLabel || localSampleName;
+  const resolvedHasCustomSample = !!hasCustomSample;
+  const resolvedIsRecording = !!isRecording;
+  const resolvedSampleLoading = !!sampleLoading;
+  const resolvedSampleLabel = sampleLabel;
   const showHeaderActions = Boolean(
     onResetSound
     || onUploadSample
@@ -50,29 +35,9 @@ const AppHeader = ({
   const canToggleRecording = typeof onToggleRecording === 'function';
   const canShowShortcuts = typeof onShowShortcuts === 'function';
 
-  React.useEffect(() => {
-    if (!resolvedHasCustomSample && sampleLabel.length === 0) {
-      setLocalSampleName('');
-    }
-  }, [resolvedHasCustomSample, sampleLabel]);
-
   const handleUploadSample = React.useCallback(async (file) => {
-    if (!file) return;
-
-    if (typeof onUploadSample === 'function') {
-      await onUploadSample(file);
-      return;
-    }
-
-    setLocalSampleLoading(true);
-    try {
-      await audioEngine.loadCustomSample(file);
-      setLocalSampleName(file.name);
-    } catch (error) {
-      console.error('Failed to load sample from shared header:', error);
-    } finally {
-      setLocalSampleLoading(false);
-    }
+    if (!file || typeof onUploadSample !== 'function') return;
+    await onUploadSample(file);
   }, [onUploadSample]);
 
   const handleFileChange = async (event) => {
@@ -83,22 +48,11 @@ const AppHeader = ({
   };
 
   const handleClearSample = () => {
-    if (typeof onClearSample === 'function') {
-      onClearSample();
-      return;
-    }
-
-    audioEngine.clearCustomSample();
-    setLocalSampleName('');
+    onClearSample?.();
   };
 
   const handleRecordToggle = () => {
-    if (typeof onToggleRecording === 'function') {
-      onToggleRecording();
-      return;
-    }
-
-    audioEngine.toggleRecording?.();
+    onToggleRecording?.();
   };
 
   const headerClassName = ['zone-top', 'tier-subtle', 'content-tertiary', className]

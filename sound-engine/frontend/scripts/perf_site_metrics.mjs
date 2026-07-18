@@ -98,7 +98,8 @@ function collectRouteClosure(entryKeys) {
     includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets')),
     includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController')),
     includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab')),
-    includesMidiParser: [...jsFiles].some((file) => file.includes('midiParser'))
+    includesMidiParser: [...jsFiles].some((file) => file.includes('midiParser')),
+    includesAudioEngine: [...jsFiles].some((file) => file.includes('audioEngine'))
   };
 }
 
@@ -117,6 +118,8 @@ const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
 const sourceCssPaths = (await walkFiles(sourceDir)).filter((file) => file.endsWith('.css'));
 const sourceCssText = (await Promise.all(sourceCssPaths.map((file) => readFile(file, 'utf8')))).join('\n');
+const appHeaderSource = await readFile(path.join(sourceDir, 'components', 'AppHeader.jsx'), 'utf8');
+const appHeaderImportsAudioEngine = /from\s+['"][^'"]*audioEngine(?:\.js)?['"]/.test(appHeaderSource);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -190,7 +193,8 @@ const report = {
     addEventListenerCalls: count(/\.addEventListener\s*\(/g),
     externalCssImportCalls: countCss(/@import\s+(?:url\()?['"]?https?:\/\//g),
     canvasElements: count(/<canvas\b/g),
-    webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g)
+    webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
+    appHeaderImportsAudioEngine
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -279,6 +283,20 @@ if (!appDefersMidiParser) {
 if (homeClosure?.includesMidiParser) {
   failures.push({ name: 'Guard home MIDI parser deferral', actual: 'eager', expected: 'deferred' });
 }
+if (appHeaderImportsAudioEngine) {
+  failures.push({ name: 'Guard passive AppHeader engine isolation', actual: 'coupled', expected: 'controlled' });
+}
+const passiveRouteNames = new Set(['control-kit', 'midi-pipeline', 'study-songs', 'voice-loop']);
+const passiveRoutesWithAudioEngine = routeClosures
+  .filter(({ route, includesAudioEngine }) => passiveRouteNames.has(route) && includesAudioEngine)
+  .map(({ route }) => route);
+if (passiveRoutesWithAudioEngine.length > 0) {
+  failures.push({
+    name: 'Guard passive route audio-engine isolation',
+    routes: passiveRoutesWithAudioEngine,
+    expected: 'no audioEngine chunk'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -289,7 +307,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 11,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 13,
   failures
 };
 

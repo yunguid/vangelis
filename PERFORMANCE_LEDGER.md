@@ -618,3 +618,52 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark remains 405.1 us per 128-frame block with 6.6x realtime headroom;
   Batch 9 does not touch the audio engine or worklets.
 - `git diff --check`: pass.
+
+## Optimization batch 10 — pure shared header and route engine isolation
+
+Collected from production module attribution, per-route manifest closures, controlled-header
+component tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 9 | Batch 10 | Change |
+|---|---:|---:|---:|
+| MIDI Pipeline startup JS gzip | 70.24 KiB | 59.35 KiB | -15.5% |
+| Study Library startup JS gzip | 68.17 KiB | 57.27 KiB | -16.0% |
+| Voice Loop startup JS gzip | 78.34 KiB | 64.65 KiB | -17.5% |
+| Home startup JS gzip | 87.71 KiB | 86.11 KiB | -1.8% |
+| Generated Study startup JS gzip | 85.56 KiB | 84.00 KiB | -1.8% |
+| Built-in Study startup JS gzip | 83.89 KiB | 82.30 KiB | -1.9% |
+| Sound Designer startup JS gzip | 83.16 KiB | 81.53 KiB | -2.0% |
+| Passive routes importing shared audio engine | 4 | 0 | removed |
+| AppHeader engine subscriptions per mount | 2 | 0 | removed |
+| Total production JS raw | 571.39 KiB | 546.59 KiB | -4.3% |
+| Total production JS gzip | 168.49 KiB | 166.95 KiB | -0.9% |
+| Production deployment bytes | 1,555.84 KiB | 1,531.77 KiB | -1.5% |
+| Automated production budgets | 29 | 31 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Module attribution showed that the shared AppHeader imported and subscribed to the full
+  audio engine even on routes where it rendered only the brand. This forced engine, graph,
+  recorder, sample-pool, and worklet-loader code into passive route closures.
+- Converted AppHeader to a controlled presentation component. The home App already supplies
+  every sample/recording status value and callback; passive routes supply no actions and now
+  mount a subscription-free brand header.
+- Removed unused local sample/loading/recording fallback state and duplicate engine and
+  recording subscriptions. Sample upload, clear, and record controls retain the same behavior
+  through their existing App-owned callbacks.
+- Added direct passive/controlled header tests and manifest guards that fail if AppHeader
+  imports the engine or if Control Kit, MIDI Pipeline, Study Library, or Voice Loop regain the
+  shared `audioEngine` chunk.
+
+### Batch 10 verification gates
+
+- Full suite: 41 files, 472/472 tests pass.
+- Production delivery/static/dependency/route guardrails: 31/31 pass.
+- Deterministic visual workload: 88.14% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference; exact workload counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.9 us per 128-frame block with 6.5x realtime headroom. A
+  deliberately discarded contended run overlapped the full suite/audio audit; only the
+  isolated run satisfies the collection protocol.
+- `git diff --check`: pass.
