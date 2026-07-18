@@ -578,3 +578,43 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark remains 405.1 us per 128-frame block with 6.6x realtime headroom;
   Batch 8 does not touch the audio engine or worklets.
 - `git diff --check`: pass.
+
+## Optimization batch 9 — interaction-loaded MIDI parsing
+
+Collected from production manifest import edges, route-closure analysis, a pasted-file
+component regression, the full suite, and the audio/visual deterministic gates.
+
+| Metric | Batch 8 | Batch 9 | Change |
+|---|---:|---:|---:|
+| Home startup JS gzip | 91.13 KiB | 87.71 KiB | -3.8% |
+| Home startup JS raw | 317.48 KiB | 302.68 KiB | -4.7% |
+| Home static JS assets | 13 | 12 | -1 asset |
+| MIDI parser in home static closure | 3.55 KiB gzip | 0 | deferred |
+| MIDI parser interaction chunk | static home dependency | 15.23 KiB / 3.55 KiB gzip | on paste/open |
+| Total production JS gzip | 168.33 KiB | 168.49 KiB | +0.1% async-boundary overhead |
+| Production deployment bytes | 1,555.27 KiB | 1,555.84 KiB | +0.04% |
+| Automated production budgets | 26 | 29 | +3 guardrails |
+
+Implemented boundaries and controls:
+
+- Production manifest evidence showed that App statically imported the catalog/parser module
+  only for the global pasted-file handler, adding it to every home visit despite no MIDI use.
+- The paste handler now imports the parser after identifying a `.mid`/`.midi` file. Existing
+  MIDI library and Song Study flows keep their route-appropriate parser imports, while the
+  underlying `@tonejs/midi` decoder remains a second-level dynamic import.
+- Added an App-level regression that pastes a MIDI `File`, awaits the deferred parser, starts
+  playback, opens the MIDI panel, and publishes the success notice.
+- Manifest guards require the parser chunk, require App to list it as a dynamic import, and
+  fail if it returns to the home static route closure.
+
+### Batch 9 verification gates
+
+- Full suite: 40 files, 470/470 tests pass.
+- Production delivery/static/dependency/route guardrails: 29/29 pass.
+- Deterministic visual workload: 92.07% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark remains 405.1 us per 128-frame block with 6.6x realtime headroom;
+  Batch 9 does not touch the audio engine or worklets.
+- `git diff --check`: pass.

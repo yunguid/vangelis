@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
+import { parseMidiFile } from './utils/midiParser.js';
 
 // Mock the audio engine
 vi.mock('./utils/audioEngine.js', () => ({
@@ -40,6 +41,10 @@ vi.mock('./components/WaveCandy', () => ({
 // Mock SynthKeyboard (complex component)
 vi.mock('./components/SynthKeyboard', () => ({
   default: () => <div data-testid="keyboard-mock">Synth</div>,
+}));
+
+vi.mock('./utils/midiParser.js', () => ({
+  parseMidiFile: vi.fn()
 }));
 
 describe('App', () => {
@@ -110,6 +115,24 @@ describe('App', () => {
   it('does not show local save reassurance copy', () => {
     render(<App />);
     expect(screen.queryByText('State saves on this device.')).not.toBeInTheDocument();
+  });
+
+  it('loads the MIDI parser when a MIDI file is pasted', async () => {
+    const midiFile = new File(['midi'], 'pasted.mid', { type: 'audio/midi' });
+    const parsedMidi = {
+      name: 'Pasted score',
+      duration: 10.1,
+      bpm: 120,
+      timeSignature: { numerator: 4, denominator: 4 },
+      notes: [{ midi: 60, time: 10, duration: 0.1, velocity: 1 }]
+    };
+    parseMidiFile.mockResolvedValue(parsedMidi);
+    render(<App />);
+
+    fireEvent.paste(window, { clipboardData: { files: [midiFile] } });
+
+    await waitFor(() => expect(parseMidiFile).toHaveBeenCalledWith(midiFile));
+    expect(await screen.findByText('MIDI pasted.')).toBeInTheDocument();
   });
 
   it('coalesces rapid session changes into one deferred storage write', () => {

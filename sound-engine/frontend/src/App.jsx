@@ -16,7 +16,6 @@ import {
   MidiTransportContext,
   SoundControlsContext
 } from './context/SynthContexts.jsx';
-import { parseMidiFile } from './utils/midiParser.js';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
 
 const Scene = React.lazy(() => import('./components/Scene'));
@@ -266,6 +265,7 @@ const App = () => {
       if (midiFile) {
         event.preventDefault();
         try {
+          const { parseMidiFile } = await import('./utils/midiParser.js');
           const midiData = await parseMidiFile(midiFile);
           midiPlayback.play(midiData);
           setSidebarTab('midi');

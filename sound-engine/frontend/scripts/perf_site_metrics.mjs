@@ -97,7 +97,8 @@ function collectRouteClosure(entryKeys) {
     cssGzipKb: roundKb(sum(css, 'gzipBytes')),
     includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets')),
     includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController')),
-    includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab'))
+    includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab')),
+    includesMidiParser: [...jsFiles].some((file) => file.includes('midiParser'))
   };
 }
 
@@ -108,6 +109,9 @@ const routeClosures = routeEntries.map(({ route, entries }) => ({
 const factoryPresetChunk = jsAssets.find(({ file }) => file.includes('factoryPresets')) || null;
 const webMidiControllerChunk = jsAssets.find(({ file }) => file.includes('webMidiController')) || null;
 const soundControlPanelChunk = jsAssets.find(({ file }) => file.includes('SoundTab')) || null;
+const midiParserChunk = jsAssets.find(({ file }) => file.includes('midiParser')) || null;
+const appManifestEntry = manifest['src/App.jsx'];
+const appDefersMidiParser = appManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false;
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
@@ -169,6 +173,12 @@ const report = {
       kb: roundKb(soundControlPanelChunk.bytes),
       gzipKb: roundKb(soundControlPanelChunk.gzipBytes)
     } : null,
+    deferredMidiParserChunk: midiParserChunk ? {
+      file: midiParserChunk.file,
+      kb: roundKb(midiParserChunk.bytes),
+      gzipKb: roundKb(midiParserChunk.gzipBytes)
+    } : null,
+    appDefersMidiParser,
     routeClosures
   },
   staticSignals: {
@@ -260,6 +270,15 @@ if (!soundControlPanelChunk) {
 if (soundDesignerClosure?.includesSoundControlPanel) {
   failures.push({ name: 'Guard Sound Designer control-panel isolation', actual: 'shared', expected: 'isolated' });
 }
+if (!midiParserChunk) {
+  failures.push({ name: 'Guard deferred MIDI parser chunk', actual: 0, minimum: 1 });
+}
+if (!appDefersMidiParser) {
+  failures.push({ name: 'Guard App MIDI parser interaction import', actual: 'static', expected: 'dynamic' });
+}
+if (homeClosure?.includesMidiParser) {
+  failures.push({ name: 'Guard home MIDI parser deferral', actual: 'eager', expected: 'deferred' });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -270,7 +289,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 8,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 11,
   failures
 };
 
