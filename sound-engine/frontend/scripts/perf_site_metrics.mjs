@@ -80,6 +80,7 @@ const audioEngineManifestRecord = Object.values(manifest).find((record) => (
 ));
 const audioEngineFile = audioEngineManifestRecord?.file || null;
 const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
+const waveCandyFile = manifest['src/components/WaveCandy.jsx']?.file || null;
 
 function collectRouteClosure(entryKeys) {
   const visited = new Set();
@@ -112,7 +113,8 @@ function collectRouteClosure(entryKeys) {
     includesMidiParser: [...jsFiles].some((file) => file.includes('midiParser')),
     includesAudioEngine: audioEngineFile ? jsFiles.has(audioEngineFile) : false,
     includesFullSidebar: fullSidebarFile ? jsFiles.has(fullSidebarFile) : false,
-    includesSongStudyPlayer: songStudyFile ? jsFiles.has(songStudyFile) : false
+    includesSongStudyPlayer: songStudyFile ? jsFiles.has(songStudyFile) : false,
+    includesWaveCandy: waveCandyFile ? jsFiles.has(waveCandyFile) : false
   };
 }
 
@@ -132,6 +134,10 @@ const generatedStudyManifestEntry = manifest['src/pages/GeneratedSongStudyPage.j
 const generatedDefersSongStudyPlayer = (
   generatedStudyManifestEntry?.dynamicImports?.includes('src/pages/SongStudyPage.jsx') || false
 );
+const soundDesignerManifestEntry = manifest['src/pages/SoundDesignerPage.jsx'];
+const soundDesignerDefersWaveCandy = (
+  soundDesignerManifestEntry?.dynamicImports?.includes('src/components/WaveCandy.jsx') || false
+);
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
@@ -145,6 +151,10 @@ const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || nu
 const directRuntimeDependencies = Object.keys(packageJson.dependencies || {});
 const productionLockPackages = Object.entries(packageLock.packages || {})
   .filter(([packagePath, metadata]) => packagePath && !metadata.dev);
+const obsoleteWasmBuildPlugins = [
+  'vite-plugin-top-level-await',
+  'vite-plugin-wasm'
+].filter((dependency) => packageJson.devDependencies?.[dependency]);
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -212,6 +222,7 @@ const report = {
     } : null,
     appDefersMidiParser,
     generatedDefersSongStudyPlayer,
+    soundDesignerDefersWaveCandy,
     routeClosures
   },
   staticSignals: {
@@ -224,6 +235,7 @@ const report = {
     externalCssImportCalls: countCss(/@import\s+(?:url\()?['"]?https?:\/\//g),
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
+    wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
     appHeaderImportsAudioEngine
   },
   networkHints: {
@@ -235,6 +247,7 @@ const report = {
   dependencySignals: {
     directRuntimeCount: directRuntimeDependencies.length,
     directRuntimeDependencies,
+    obsoleteWasmBuildPlugins,
     productionPackageCount: productionLockPackages.length,
     lockPackageCount: Math.max(0, Object.keys(packageLock.packages || {}).length - 1)
   }
@@ -366,6 +379,18 @@ if (
     expected: 'status shell only'
   });
 }
+if (!soundDesignerDefersWaveCandy) {
+  failures.push({ name: 'Guard Sound Designer visualizer import', actual: 'static', expected: 'dynamic' });
+}
+if (soundDesignerClosure?.includesWaveCandy) {
+  failures.push({ name: 'Guard Sound Designer visualizer isolation', actual: 'eager', expected: 'deferred' });
+}
+if (obsoleteWasmBuildPlugins.length > 0) {
+  failures.push({ name: 'Guard retired WASM build plugins', dependencies: obsoleteWasmBuildPlugins });
+}
+if (report.staticSignals.wasmModuleImports > 0) {
+  failures.push({ name: 'Guard retired WASM module imports', actual: report.staticSignals.wasmModuleImports, maximum: 0 });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -376,7 +401,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 18,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 22,
   failures
 };
 

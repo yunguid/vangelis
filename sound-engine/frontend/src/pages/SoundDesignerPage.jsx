@@ -3,7 +3,6 @@ import { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import PresetShelf from '../components/PresetShelf.jsx';
 import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
-import WaveCandy from '../components/WaveCandy';
 import {
   ADSR_SLIDERS,
   DELAY_FEEDBACK_SLIDER,
@@ -31,6 +30,8 @@ import {
 import { saveUserPreset } from '../utils/userPresetStorage.js';
 import { HOME_HREF } from '../utils/routes.js';
 import './SoundDesignerPage.css';
+
+const WaveCandy = React.lazy(() => import('../components/WaveCandy'));
 
 // The wizard thread: five stages, freely navigable (nothing is ever locked —
 // the default BASE is just "whatever waveform is already selected"), with
@@ -408,7 +409,9 @@ const SoundDesignerPage = () => {
 
         <div className="sound-designer-workspace">
           <div className="sound-designer-scope" role="region" aria-label="Live sound visualization">
-            <WaveCandy />
+            <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
+              <WaveCandy />
+            </React.Suspense>
           </div>
 
           <div className="sound-designer-keyboard" role="region" aria-label="Test keyboard">

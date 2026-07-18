@@ -763,3 +763,52 @@ Implemented boundaries and controls:
   thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
 - Isolated DSP benchmark: 408.4 us per 128-frame block with 6.5x realtime headroom.
 - `git diff --check`: pass.
+
+## Optimization batch 13 — deferred Sound Designer visualizer and retired WASM transforms
+
+Collected from production manifest closures, build-plugin/source-import attribution, the
+Sound Designer live-scope contract test, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 12 | Batch 13 | Change |
+|---|---:|---:|---:|
+| Sound Designer startup JS gzip | 80.68 KiB | 73.97 KiB | -8.3% |
+| Sound Designer startup JS raw | 253.94 KiB | 224.10 KiB | -11.7% |
+| Sound Designer static JS assets | 15 | 12 | -3 assets |
+| WaveCandy in Sound Designer static closure | present | 0 | deferred |
+| Home startup JS gzip | 85.94 KiB | 83.76 KiB | -2.5% |
+| Total production JS raw | 548.74 KiB | 500.49 KiB | -8.8% |
+| Total production JS gzip | 167.64 KiB | 163.97 KiB | -2.2% |
+| Production deployment bytes | 1,534.40 KiB | 1,486.31 KiB | -3.1% |
+| Lockfile package entries (excluding root) | 422 | 405 | -4.0% |
+| Obsolete WASM/top-level-await build plugins | 2 | 0 | removed |
+| Source WASM module imports | 0 | 0 | confirmed absent |
+| Production dependency vulnerabilities | 0 | 0 | unchanged |
+| Automated production budgets | 36 | 40 | +4 guardrails |
+
+Implemented boundaries and controls:
+
+- Sound Designer statically imported the complete WaveCandy visualizer even though it is a
+  secondary, decorative readout below the primary design workspace. The route now paints a
+  dimensionally stable placeholder and loads WaveCandy through a post-commit Suspense boundary,
+  matching the already-deferred home-page visualizer pattern.
+- The live-scope contract test now waits for the deferred component and still proves that the
+  oscilloscope, spectrum, level meter, vectorscope, and spectrogram remain mounted together.
+- Source and manifest attribution confirmed that the retired Raylib path left no `.wasm` module
+  imports, but Vite still ran every module through `vite-plugin-wasm` and
+  `vite-plugin-top-level-await`. Removing those transforms eliminated their dependency closure
+  and avoided top-level-await wrapper expansion around nested dynamic routes.
+- Manifest guards now require the Sound Designer-to-WaveCandy dynamic edge, prohibit WaveCandy
+  from the route's static closure, prohibit the obsolete build plugins, and require zero source
+  WASM module imports.
+
+### Batch 13 verification gates
+
+- Full suite: 43 files, 476/476 tests pass.
+- Production delivery/static/dependency/route guardrails: 40/40 pass.
+- Deterministic visual workload: 91.25% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference; exact workload counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 406.5 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- `git diff --check`: pass.

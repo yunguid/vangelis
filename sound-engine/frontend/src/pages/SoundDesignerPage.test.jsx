@@ -202,23 +202,23 @@ describe('SoundDesignerPage', () => {
     expect(screen.getByTestId('keyboard-mock')).toBeInTheDocument();
   });
 
-  it('renders the persistent live scope strip at every stage', () => {
+  it('renders the persistent live scope strip at every stage', async () => {
     const { container } = render(<SoundDesignerPage />);
     const workspace = getWorkspace(container);
 
-    const assertScopeVisible = () => {
+    const assertScopeVisible = async () => {
       const scopeRegion = workspace.getByRole('region', { name: 'Live sound visualization' });
       const scoped = within(scopeRegion);
-      expect(scoped.getByLabelText('Wave Candy visualizer')).toBeInTheDocument();
+      expect(await scoped.findByLabelText('Wave Candy visualizer')).toBeInTheDocument();
       expect(scoped.getByText('Oscilloscope')).toBeInTheDocument();
       expect(scoped.getByText('Spectrum')).toBeInTheDocument();
     };
 
-    assertScopeVisible();
+    await assertScopeVisible();
     goToStage(workspace, 'Motion');
-    assertScopeVisible();
+    await assertScopeVisible();
     goToStage(workspace, 'Mint');
-    assertScopeVisible();
+    await assertScopeVisible();
   });
 
   it('renders an interactive sidebar rail', () => {
