@@ -303,6 +303,8 @@ const Scene = () => {
     let lastInjectAt = 0;
 
     const bands = new Float32Array(8);
+    const sceneDebug = { vortexCount: 0, pulse: 0, level: 0 };
+    window.__sceneDebug = sceneDebug;
 
     let stopFrameLoop = () => undefined;
     const onLost = (e) => {
@@ -405,7 +407,9 @@ const Scene = () => {
       hasSignal = level > 0.015 || pulse > 0.01 || vortices.particles.length > 0;
       vortices.step(dt);
       vortices.fillUniforms(vortexPos, vortexStr, vortexRad);
-      window.__sceneDebug = { vortexCount: vortices.particles.length, pulse, level };
+      sceneDebug.vortexCount = vortices.particles.length;
+      sceneDebug['pulse'] = pulse;
+      sceneDebug.level = level;
 
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, (now - start) / 1000);

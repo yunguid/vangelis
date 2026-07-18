@@ -854,6 +854,47 @@ if (legacyRadarLabelAccepted !== indexedRadarLabelAccepted) {
   throw new Error('Indexed radar label collision scan changed placement decisions');
 }
 
+const sceneDebugBenchmarkIterations = 2000000;
+const legacySceneDebugHost = { current: null };
+const reusableSceneDebugHost = {
+  current: { vortexCount: 0, pulse: 0, level: 0 }
+};
+const runLegacySceneDebugBenchmark = (iterations) => {
+  let checksum = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    legacySceneDebugHost.current = {
+      vortexCount: iteration % 13,
+      pulse: (iteration % 101) / 100,
+      level: (iteration % 67) / 66
+    };
+    const state = legacySceneDebugHost.current;
+    checksum += state.vortexCount + state.pulse + state.level;
+  }
+  return checksum;
+};
+const runReusableSceneDebugBenchmark = (iterations) => {
+  let checksum = 0;
+  const state = reusableSceneDebugHost.current;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    state.vortexCount = iteration % 13;
+    state.pulse = (iteration % 101) / 100;
+    state.level = (iteration % 67) / 66;
+    checksum += state.vortexCount + state.pulse + state.level;
+  }
+  return checksum;
+};
+runLegacySceneDebugBenchmark(10000);
+runReusableSceneDebugBenchmark(10000);
+let sceneDebugStartedAt = performance.now();
+const legacySceneDebugChecksum = runLegacySceneDebugBenchmark(sceneDebugBenchmarkIterations);
+const legacySceneDebugBenchmark = { elapsedMs: performance.now() - sceneDebugStartedAt };
+sceneDebugStartedAt = performance.now();
+const reusableSceneDebugChecksum = runReusableSceneDebugBenchmark(sceneDebugBenchmarkIterations);
+const reusableSceneDebugBenchmark = { elapsedMs: performance.now() - sceneDebugStartedAt };
+if (Math.abs(legacySceneDebugChecksum - reusableSceneDebugChecksum) > 1e-6) {
+  throw new Error('Reusable scene diagnostics changed the benchmark state');
+}
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -1109,6 +1150,23 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyRadarLabelBenchmark.elapsedMs,
       indexedRadarLabelBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  sceneDebugStatePolicy: {
+    activeFrames: optimized.sceneFrames,
+    objectAllocationsOverBenchmarkBefore: optimized.sceneFrames,
+    objectAllocationsOverBenchmarkAfter: 1,
+    steadyStateObjectAllocationsPerFrame: 0,
+    allocationReductionPercent: Number(reduction(
+      optimized.sceneFrames,
+      1
+    ).toFixed(2)),
+    benchmarkIterations: sceneDebugBenchmarkIterations,
+    legacyElapsedMs: Number(legacySceneDebugBenchmark.elapsedMs.toFixed(2)),
+    reusableElapsedMs: Number(reusableSceneDebugBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacySceneDebugBenchmark.elapsedMs,
+      reusableSceneDebugBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

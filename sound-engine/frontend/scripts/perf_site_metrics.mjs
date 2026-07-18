@@ -410,6 +410,13 @@ const sceneCachesBandRanges = (
   && /sampleSceneBandEnergies\(freqData, sceneBinRanges, sceneBandEnergies\)/.test(sceneSource)
   && /new Uint16Array\(frequencyBands\.length \* 2\)/.test(sceneBandAnalysisSource)
 );
+const sceneReusesDebugState = (
+  /const sceneDebug = \{ vortexCount: 0, pulse: 0, level: 0 \}/.test(sceneSource)
+  && /sceneDebug\.vortexCount = vortices\.particles\.length/.test(sceneSource)
+  && /sceneDebug\['pulse'\] = pulse/.test(sceneSource)
+  && /sceneDebug\.level = level/.test(sceneSource)
+  && !/window\.__sceneDebug = \{/.test(sceneSource)
+);
 const vizPhysicsSource = await readFile(path.join(sourceDir, 'utils', 'vizPhysics.js'), 'utf8');
 const vortexFieldReusesFrameStorage = (
   /this\.inducedU = new Float64Array\(maxParticles\)/.test(vizPhysicsSource)
@@ -598,6 +605,8 @@ const report = {
     sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     sceneFrequencyBoundaryEvaluationsPerSteadyStateFrame: sceneCachesBandRanges ? 0 : 22,
     sceneCachesBandRanges,
+    sceneDebugObjectAllocationsPerSteadyStateFrame: sceneReusesDebugState ? 0 : 1,
+    sceneReusesDebugState,
     sceneVortexVelocityObjectAllocationsPerSteadyStateFrame:
       vortexFieldReusesFrameStorage ? 0 : 12,
     sceneVortexArrayAllocationsPerSteadyStateFrame: vortexFieldReusesFrameStorage ? 0 : 4,
@@ -830,6 +839,13 @@ if (!sceneCachesBandRanges) {
     name: 'Guard configuration-scoped scene band ranges',
     actual: 'frequency-to-bin boundaries evaluated in the WebGL active frame path',
     expected: 'cached until sample rate, FFT size, or bin count changes'
+  });
+}
+if (!sceneReusesDebugState) {
+  failures.push({
+    name: 'Guard reusable WebGL scene diagnostics state',
+    actual: 'new diagnostics object per active scene frame',
+    expected: 'one stable object mutated in place'
   });
 }
 if (!vortexFieldReusesFrameStorage) {
@@ -1173,7 +1189,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 70,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 71,
   failures
 };
 

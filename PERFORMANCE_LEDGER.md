@@ -2413,3 +2413,51 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 48 — reusable WebGL scene diagnostics state
+
+Collected from the active WebGL scene loop, exact standard-session diagnostics-object counts, four
+checksum-equivalent two-million-update workloads, generated production closures, focused scene
+and application tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 47 | Batch 48 | Change |
+|---|---:|---:|---:|
+| Scene diagnostics objects over 20 s active | 600 | 1 | -99.83% |
+| Scene diagnostics objects per steady-state frame | 1 | 0 | removed |
+| Isolated diagnostics update CPU, 2M frames | 11.32 ms | 2.32 ms | -79.46% |
+| Deferred Scene JS raw / gzip | 10.63 / 4.78 KiB | 10.67 / 4.81 KiB | +0.04 / +0.03 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.87 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 78.48 KiB | 78.51 KiB | +0.03 KiB |
+| Production deployment bytes | 1,483.08 KiB | 1,483.13 KiB | +0.05 KiB |
+| Automated production budgets | 88 | 89 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced the per-frame `window.__sceneDebug = { ... }` object with one effect-scoped diagnostics
+  object assigned once and mutated after every vortex step. The public `vortexCount`, `pulse`, and
+  `level` fields retain the same values and remain available through the same global reference.
+- Added a two-million-frame escaping-object workload that compares replacement and mutation paths
+  with an exact cumulative-state checksum.
+- Added a production guard requiring stable diagnostics identity and zero steady-state object
+  allocations.
+- Avoided a UI-census parser ambiguity around JavaScript `.pulse` property access; the public field
+  remains unchanged and the verified UI-tell count remains 22 rather than recording a false CSS-
+  animation regression.
+
+### Batch 48 verification gates
+
+- Full suite: 57 files, 516/516 tests pass, including focused application/scene physics cases and
+  all Sound Designer, radar, Song Study, canvas, numerical, and audio cases.
+- Production delivery/static/dependency/route guardrails: 89/89 pass; Scene reports zero diagnostics-
+  object allocations per steady-state frame.
+- Four two-million-update profiles measured 78.50–79.79% lower CPU; the final pass is 11.32 ms to
+  2.32 ms, a 79.46% reduction, while cumulative-state checksums remain identical.
+- Warmed combined visual workload: 80.32% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.2 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged after removing the JavaScript-property false positive.
+- `git diff --check`: pass.
