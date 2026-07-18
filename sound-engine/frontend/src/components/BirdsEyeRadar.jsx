@@ -11,6 +11,7 @@ import {
   createRadarStaticGradientCache,
   getRadarStaticGradients
 } from '../utils/radarGradientCache.js';
+import { getRadarParticleColor } from '../utils/radarParticleColor.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 import '../styles/birds-eye-radar.css';
 
@@ -169,7 +170,7 @@ const BirdsEyeRadar = ({
         const laneX = SIDE_PADDING + particle.lane * playfieldWidth;
         const x = centerX + (laneX - centerX) * spread;
         const alpha = 0.015 + (1 - flow) * 0.12;
-        ctx.fillStyle = `rgba(255, 176, 110, ${alpha.toFixed(3)})`;
+        ctx.fillStyle = getRadarParticleColor(alpha);
         ctx.beginPath();
         ctx.arc(x, y, particle.size, 0, Math.PI * 2);
         ctx.fill();

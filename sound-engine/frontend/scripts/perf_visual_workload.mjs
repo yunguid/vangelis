@@ -23,6 +23,10 @@ import {
   RADAR_PALETTE_STATE_LIMIT,
   getRadarMidiPalette
 } from '../src/utils/radarPalette.js';
+import {
+  RADAR_PARTICLE_COLOR_COUNT,
+  getRadarParticleColor
+} from '../src/utils/radarParticleColor.js';
 
 const SECONDS = 20;
 
@@ -448,6 +452,20 @@ const runRadarPaletteBenchmark = (factory) => {
 const legacyRadarPaletteBenchmark = runRadarPaletteBenchmark(createLegacyRadarPalette);
 const cachedRadarPaletteBenchmark = runRadarPaletteBenchmark(getRadarMidiPalette);
 const radarPlayingFrames = Math.round(SECONDS * 25);
+const radarParticleColorBenchmarkIterations = 200000;
+const runRadarParticleColorBenchmark = (formatter) => {
+  let checksum = 0;
+  const startedAt = performance.now();
+  for (let i = 0; i < radarParticleColorBenchmarkIterations; i += 1) {
+    const alpha = 0.015 + ((i % 1000) / 999) * 0.12;
+    checksum += formatter(alpha).length;
+  }
+  return { elapsedMs: performance.now() - startedAt, checksum };
+};
+const legacyRadarParticleColorBenchmark = runRadarParticleColorBenchmark(
+  (alpha) => `rgba(255, 176, 110, ${alpha.toFixed(3)})`
+);
+const cachedRadarParticleColorBenchmark = runRadarParticleColorBenchmark(getRadarParticleColor);
 
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
@@ -567,6 +585,22 @@ const output = {
     allGradientReductionPercent: Number(reduction(
       radarPlayingFrames * 5,
       radarPlayingFrames + 4
+    ).toFixed(2))
+  },
+  radarParticleColorPolicy: {
+    particleCount: 32,
+    colorStringsOverBenchmarkBefore: radarPlayingFrames * 32,
+    colorStringsOverBenchmarkAfter: RADAR_PARTICLE_COLOR_COUNT,
+    colorStringReductionPercent: Number(reduction(
+      radarPlayingFrames * 32,
+      RADAR_PARTICLE_COLOR_COUNT
+    ).toFixed(2)),
+    benchmarkIterations: radarParticleColorBenchmarkIterations,
+    legacyElapsedMs: Number(legacyRadarParticleColorBenchmark.elapsedMs.toFixed(2)),
+    cachedElapsedMs: Number(cachedRadarParticleColorBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyRadarParticleColorBenchmark.elapsedMs,
+      cachedRadarParticleColorBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

@@ -2015,3 +2015,47 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 40 — bounded radar particle colors
+
+Collected from the 32-particle radar loop, exact 25 Hz playing-session string counts, an isolated
+200,000-conversion workload, three-decimal color equivalence tests, generated production closures,
+the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 39 | Batch 40 | Change |
+|---|---:|---:|---:|
+| Particle RGBA strings over 20 s playing | 16,000 | 121 | -99.24% |
+| Steady-state particle color strings per frame | 32 | 0 | removed |
+| Isolated particle-color workload, 200k calls | 8.95 ms | 1.33 ms | -85.14% |
+| Deferred BirdsEyeRadar JS raw / gzip | 6.80 / 2.98 KiB | 6.93 / 3.05 KiB | +0.13 / +0.07 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.85 KiB | -0.01 KiB |
+| Production deployment bytes | 1,481.08 KiB | 1,481.21 KiB | +0.13 KiB |
+| Automated production budgets | 80 | 81 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced each particle's per-frame `alpha.toFixed(3)` and RGBA template construction with a
+  121-entry lookup table covering the exact 0.015–0.135 alpha range at three-decimal precision.
+- The hot path now performs a numeric multiply/round/clamp and array lookup; the table is created
+  once when the already-deferred radar chunk loads and has a fixed, documented upper bound.
+- Added focused endpoint, quantization, and clamp tests, an isolated legacy-vs-cached conversion
+  profile, exact playing-session string counts, and a production source guard.
+
+### Batch 40 verification gates
+
+- Full suite: 55 files, 507/507 tests pass, including particle-color equivalence and all focused
+  radar/Song Study cases.
+- Production delivery/static/dependency/route guardrails: 81/81 pass.
+- Isolated particle-color profile: 8.95 ms to 1.33 ms over 200,000 calls, an 85.14% measured CPU-time
+  reduction; formatted color strings fall 99.24% over a 20-second playing session.
+- Radar static gradients remain 99.80% lower and note palettes at least 99.75% lower; spectrogram,
+  spectrum, analyzer-allocation, and stereo traversal reductions remain intact.
+- Deterministic combined visual workload: 87.59% lower measured CPU time than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 403.4 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

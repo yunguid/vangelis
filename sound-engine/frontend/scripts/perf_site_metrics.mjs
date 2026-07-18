@@ -332,6 +332,10 @@ const radarGradientCacheSource = await readFile(
   path.join(sourceDir, 'utils', 'radarGradientCache.js'),
   'utf8'
 );
+const radarParticleColorSource = await readFile(
+  path.join(sourceDir, 'utils', 'radarParticleColor.js'),
+  'utf8'
+);
 const radarUsesBoundedPaletteCache = (
   /getRadarMidiPalette\(note\.midi, isActive\)/.test(birdsEyeRadarSource)
   && /const paletteCache = new Map\(\)/.test(radarPaletteSource)
@@ -342,6 +346,11 @@ const radarCachesStaticGradients = (
   && /sizeController\.acknowledgeResize\(\)/.test(birdsEyeRadarSource)
   && /cache\.width === width && cache\.height === height/.test(radarGradientCacheSource)
   && (radarGradientCacheSource.match(/context\.create(?:Linear|Radial)Gradient\s*\(/g) || []).length === 4
+);
+const radarCachesParticleColors = (
+  /getRadarParticleColor\(alpha\)/.test(birdsEyeRadarSource)
+  && /const particleColors = Array\.from\(/.test(radarParticleColorSource)
+  && /RADAR_PARTICLE_COLOR_COUNT/.test(radarParticleColorSource)
 );
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
@@ -538,6 +547,10 @@ const report = {
     radarUsesBoundedPaletteCache,
     radarStaticGradientCreationsPerSteadyStateFrame: radarCachesStaticGradients ? 0 : 4,
     radarCachesStaticGradients,
+    radarParticleColorStringAllocationsPerSteadyStateFrame:
+      radarCachesParticleColors ? 0 : 32,
+    radarParticleColorStateLimit: 121,
+    radarCachesParticleColors,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -681,6 +694,13 @@ if (!radarCachesStaticGradients) {
     name: 'Guard resize-scoped radar gradients',
     actual: 'static backdrop/grid gradients recreated in active frame path',
     expected: 'four cached gradients invalidated only by canvas dimensions'
+  });
+}
+if (!radarCachesParticleColors) {
+  failures.push({
+    name: 'Guard bounded radar particle colors',
+    actual: 'per-particle RGBA string formatting in active frame path',
+    expected: '121-entry three-decimal alpha lookup table'
   });
 }
 if (
@@ -1017,7 +1037,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 62,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 63,
   failures
 };
 
