@@ -4,6 +4,9 @@ import { startWebMidiInput } from './webMidiController.js';
 
 vi.mock('./audioEngine.js', () => ({
   audioEngine: {
+    context: { currentTime: 0 },
+    getStatus: vi.fn(() => ({ wasmReady: true })),
+    ensureWasm: vi.fn(() => Promise.resolve()),
     playFrequency: vi.fn(),
     stopNote: vi.fn(),
     setPitchBend: vi.fn(),
@@ -19,6 +22,9 @@ describe('startWebMidiInput', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    audioEngine.context = { currentTime: 0 };
+    audioEngine.getStatus.mockReturnValue({ wasmReady: true });
+    audioEngine.ensureWasm.mockResolvedValue(undefined);
     input = { state: 'connected', name: 'Studio keys', onmidimessage: null };
     access = {
       inputs: new Map([['keys', input]]),
@@ -95,5 +101,50 @@ describe('startWebMidiInput', () => {
     expect(access.onstatechange).toBeNull();
     expect(audioEngine.setPitchBend).toHaveBeenLastCalledWith(0);
     expect(audioEngine.setModWheel).toHaveBeenLastCalledWith(0);
+  });
+
+  it('queues the first hardware note until the lazy audio runtime is ready', async () => {
+    let resolveWorklet;
+    const workletReady = new Promise((resolve) => {
+      resolveWorklet = resolve;
+    });
+    audioEngine.context = null;
+    audioEngine.getStatus.mockReturnValue({ wasmReady: false });
+    audioEngine.ensureWasm.mockReturnValue(workletReady);
+    const stop = await start();
+
+    input.onmidimessage({ data: [0x90, 60, 100] });
+    expect(callbacks.onNoteOn).toHaveBeenCalledWith(60, 'C4');
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+
+    resolveWorklet();
+    await workletReady;
+    await vi.waitFor(() => {
+      expect(audioEngine.playFrequency).toHaveBeenCalledWith(expect.objectContaining({
+        noteId: 'webmidi-60',
+        velocity: 100 / 127
+      }));
+    });
+    stop();
+  });
+
+  it('cancels a queued hardware note when it is released before readiness', async () => {
+    let resolveWorklet;
+    const workletReady = new Promise((resolve) => {
+      resolveWorklet = resolve;
+    });
+    audioEngine.context = null;
+    audioEngine.getStatus.mockReturnValue({ wasmReady: false });
+    audioEngine.ensureWasm.mockReturnValue(workletReady);
+    const stop = await start();
+
+    input.onmidimessage({ data: [0x90, 60, 100] });
+    input.onmidimessage({ data: [0x80, 60, 0] });
+    resolveWorklet();
+    await workletReady;
+    await Promise.resolve();
+
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    stop();
   });
 });

@@ -29,11 +29,9 @@ export function startWebMidiInput({
   let cancelled = false;
   const attached = new Set();
   const heldMidi = new Set();
+  const pendingNoteTokens = new Map();
 
-  const noteOn = (midi, velocity) => {
-    const frequency = midiNoteToFrequency(midi);
-    if (!frequency) return;
-    const { noteId } = midiNoteToName(midi);
+  const playNote = (midi, frequency, velocity) => {
     audioEngine.playFrequency({
       noteId: `webmidi-${midi}`,
       frequency,
@@ -42,17 +40,41 @@ export function startWebMidiInput({
       velocity,
       allowVoicePhrase: true
     });
+  };
+
+  const noteOn = (midi, velocity) => {
+    const frequency = midiNoteToFrequency(midi);
+    if (!frequency) return;
+    const { noteId } = midiNoteToName(midi);
     heldMidi.add(midi);
     onNoteOn(midi, noteId);
+
+    const status = audioEngine.getStatus();
+    if (audioEngine.context && status.wasmReady) {
+      playNote(midi, frequency, velocity);
+      return;
+    }
+
+    const token = {};
+    pendingNoteTokens.set(midi, token);
+    Promise.resolve(audioEngine.ensureWasm()).then(() => {
+      if (cancelled || !heldMidi.has(midi) || pendingNoteTokens.get(midi) !== token) return;
+      pendingNoteTokens.delete(midi);
+      playNote(midi, frequency, velocity);
+    }).catch(() => {
+      if (pendingNoteTokens.get(midi) === token) pendingNoteTokens.delete(midi);
+    });
   };
 
   const noteOff = (midi) => {
+    pendingNoteTokens.delete(midi);
     audioEngine.stopNote(`webmidi-${midi}`);
     heldMidi.delete(midi);
     onNoteOff(midi);
   };
 
   const stopAllNotes = () => {
+    pendingNoteTokens.clear();
     heldMidi.forEach((midi) => audioEngine.stopNote(`webmidi-${midi}`));
     heldMidi.clear();
     onAllNotesOff();
@@ -132,6 +154,7 @@ export function startWebMidiInput({
     if (access) access.onstatechange = null;
     heldMidi.forEach((midi) => audioEngine.stopNote(`webmidi-${midi}`));
     heldMidi.clear();
+    pendingNoteTokens.clear();
     audioEngine.setPitchBend(0);
     audioEngine.setModWheel(0);
   };

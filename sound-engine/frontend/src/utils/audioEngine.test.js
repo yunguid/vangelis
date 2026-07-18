@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AUDIO_PARAM_DEFAULTS } from './audioParams.js';
-import { audioEngine } from './audioEngine.js';
+import { audioEngine } from './audioEngineRuntime.js';
 
 function createTargetSpy() {
   return {

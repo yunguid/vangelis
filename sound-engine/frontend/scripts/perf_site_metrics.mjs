@@ -82,6 +82,7 @@ const audioEngineManifestRecord = Object.values(manifest).find((record) => (
   && record.assets?.some((file) => file.includes('reverb-worklet'))
 ));
 const audioEngineFile = audioEngineManifestRecord?.file || null;
+const audioEngineRuntimeManifestRecord = manifest['src/utils/audioEngineRuntime.js'] || null;
 const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
 const waveCandyFile = manifest['src/components/WaveCandy.jsx']?.file || null;
 const sceneFile = manifest['src/components/Scene.jsx']?.file || null;
@@ -187,6 +188,13 @@ const sourceCssPaths = (await walkFiles(sourceDir)).filter((file) => file.endsWi
 const sourceCssText = (await Promise.all(sourceCssPaths.map((file) => readFile(file, 'utf8')))).join('\n');
 const appHeaderSource = await readFile(path.join(sourceDir, 'components', 'AppHeader.jsx'), 'utf8');
 const appHeaderImportsAudioEngine = /from\s+['"][^'"]*audioEngine(?:\.js)?['"]/.test(appHeaderSource);
+const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
+const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
+const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
+  .test(audioEngineGatewaySource);
+const hardwareMidiReadinessCalls = (
+  webMidiControllerSource.match(/audioEngine\.ensureWasm\s*\(/g) || []
+).length;
 const playableRouteSource = (await Promise.all([
   'App.jsx',
   path.join('pages', 'SoundDesignerPage.jsx'),
@@ -322,6 +330,9 @@ const report = {
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
     appHeaderImportsAudioEngine,
+    audioGatewayDefersRuntime,
+    audioEngineRuntimeIsDynamicEntry: audioEngineRuntimeManifestRecord?.isDynamicEntry === true,
+    hardwareMidiReadinessCalls,
     eagerPlayableRouteAudioWarmupCalls,
     deferredAudioWarmupConsumers,
     deferredVisualMountConsumers
@@ -433,19 +444,33 @@ if (homeClosure?.includesScene || homeClosure?.includesWaveCandy) {
 if (appHeaderImportsAudioEngine) {
   failures.push({ name: 'Guard passive AppHeader engine isolation', actual: 'coupled', expected: 'controlled' });
 }
-const passiveRouteNames = new Set(['control-kit', 'midi-pipeline', 'study-songs', 'voice-loop']);
-const passiveRoutesWithAudioEngine = routeClosures
-  .filter(({ route, includesAudioEngine }) => passiveRouteNames.has(route) && includesAudioEngine)
+const staticRoutesWithAudioEngine = routeClosures
+  .filter(({ includesAudioEngine }) => includesAudioEngine)
   .map(({ route }) => route);
-if (passiveRoutesWithAudioEngine.length > 0) {
+if (staticRoutesWithAudioEngine.length > 0) {
   failures.push({
-    name: 'Guard passive route audio-engine isolation',
-    routes: passiveRoutesWithAudioEngine,
-    expected: 'no audioEngine chunk'
+    name: 'Guard route audio-runtime isolation',
+    routes: staticRoutesWithAudioEngine,
+    expected: 'interaction-loaded audio runtime'
   });
 }
 if (!audioEngineChunk) {
   failures.push({ name: 'Guard audio-engine chunk identity', actual: 0, minimum: 1 });
+}
+if (!audioGatewayDefersRuntime || audioEngineRuntimeManifestRecord?.isDynamicEntry !== true) {
+  failures.push({
+    name: 'Guard audio-runtime dynamic boundary',
+    sourceImport: audioGatewayDefersRuntime ? 'dynamic' : 'static-or-missing',
+    manifestEntry: audioEngineRuntimeManifestRecord?.isDynamicEntry ? 'dynamic' : 'static-or-missing',
+    expected: 'dynamic'
+  });
+}
+if (hardwareMidiReadinessCalls !== 1) {
+  failures.push({
+    name: 'Guard cold hardware-MIDI readiness',
+    actual: hardwareMidiReadinessCalls,
+    expected: 1
+  });
 }
 if (!fullSidebarChunk) {
   failures.push({ name: 'Guard isolated full sidebar chunk', actual: 0, minimum: 1 });
@@ -575,7 +600,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 37,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 39,
   failures
 };
 

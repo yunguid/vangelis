@@ -1,4 +1,4 @@
-import { audioEngine } from '../../../utils/audioEngine.js';
+import { midiNoteToFrequency, noteNameToMidi } from '../../../utils/math.js';
 import { BASE_OCTAVE, MIN_OFFSET, MAX_OFFSET, clamp } from '../constants';
 
 export const getNoteMeta = (noteName, relativeOctave, octaveOffset) => {
@@ -8,7 +8,8 @@ export const getNoteMeta = (noteName, relativeOctave, octaveOffset) => {
     MAX_OFFSET + BASE_OCTAVE + 1
   );
   const noteId = `${noteName}${octave}`;
-  const frequency = audioEngine.getFrequency(noteName, octave);
+  const midi = noteNameToMidi(noteName, octave);
+  const frequency = midi === null ? null : midiNoteToFrequency(midi);
   return {
     noteName,
     octave,

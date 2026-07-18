@@ -1087,3 +1087,53 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 23 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 20 — interaction-loaded audio runtime
+
+Collected from production manifest closures, gateway lifecycle tests, cold keyboard and hardware-
+MIDI contracts, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 19 | Batch 20 | Change |
+|---|---:|---:|---:|
+| Home critical startup JS gzip | 75.40 KiB | 67.42 KiB | -10.6% |
+| Home critical startup JS raw | 227.45 KiB | 202.17 KiB | -11.1% |
+| Song Study startup JS gzip | 73.05 KiB | 65.10 KiB | -10.9% |
+| Song Study startup JS raw | 219.53 KiB | 194.32 KiB | -11.5% |
+| Sound Designer startup JS gzip | 70.98 KiB | 63.01 KiB | -11.2% |
+| Sound Designer startup JS raw | 214.05 KiB | 188.80 KiB | -11.8% |
+| Static playable-route audio runtime assets | 1 each | 0 | interaction-loaded |
+| Deferred audio runtime chunk | mixed into startup | 28.49 KiB / 8.89 KiB gzip | dynamic entry |
+| Cold hardware-MIDI first note | could be dropped | queued until ready | fixed |
+| Total production JS raw | 504.94 KiB | 509.03 KiB | +0.8% split/gateway overhead |
+| Total production JS gzip | 166.08 KiB | 167.49 KiB | +0.8% split/gateway overhead |
+| Production deployment bytes | 1,485.39 KiB | 1,489.59 KiB | +0.3% |
+| Automated production budgets | 55 | 57 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Audio graph construction was already scheduled after first paint, but every playable route still
+  downloaded the complete singleton, graph builder, worklet clients, recorder, sample pool, and
+  effect helpers during its critical module evaluation.
+- Split the public singleton into a small stateful gateway and a dynamic runtime entry. Cold status,
+  subscription, analyser, playback, and recording contracts remain stable; the gateway replays the
+  latest parameters and transport tempo as soon as the runtime arrives.
+- Keyboard and MIDI transport readiness continue to queue their first requested note/play action.
+  Hardware MIDI now uses the same contract: it updates the visual key immediately, waits for the
+  worklet, plays only if the key is still held, and cancels a pending note on release or teardown.
+- Keyboard note-frequency metadata now uses the existing pure math utilities, avoiding an engine
+  dependency for a synchronous calculation.
+- Manifest guards require the runtime to remain a dynamic entry and prohibit it from all eight
+  static route closures. A source guard requires exactly one hardware-MIDI readiness path.
+
+### Batch 20 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 57/57 pass.
+- Deterministic visual workload after activation: 89.91% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 405.5 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 23 total, unchanged.
+- `git diff --check`: pass.

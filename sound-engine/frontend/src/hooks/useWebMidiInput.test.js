@@ -5,6 +5,9 @@ import { audioEngine } from '../utils/audioEngine.js';
 
 vi.mock('../utils/audioEngine.js', () => ({
   audioEngine: {
+    context: { currentTime: 0 },
+    getStatus: vi.fn(() => ({ wasmReady: true })),
+    ensureWasm: vi.fn(() => Promise.resolve()),
     playFrequency: vi.fn(),
     stopNote: vi.fn(),
     setPitchBend: vi.fn(),
@@ -20,6 +23,9 @@ describe('useWebMidiInput', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    audioEngine.context = { currentTime: 0 };
+    audioEngine.getStatus.mockReturnValue({ wasmReady: true });
+    audioEngine.ensureWasm.mockResolvedValue(undefined);
     input = { state: 'connected', name: 'Test controller', onmidimessage: null };
     access = {
       inputs: new Map([['test', input]]),
