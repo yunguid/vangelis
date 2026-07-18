@@ -2507,3 +2507,56 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 50 — resolution-aware oscilloscope trace
+
+Collected from WaveCandy's 1,024-sample oscilloscope at its 330px desktop tile width, exact point-
+submission counts, four 20,000-frame workloads, smooth multi-harmonic reconstruction error,
+generated production closures, focused policy/Sound Designer tests, the full suite, and isolated
+audio/visual gates.
+
+| Metric | Batch 49 | Batch 50 | Change |
+|---|---:|---:|---:|
+| Scope points per 330px frame | 1,024 | 513 | -49.90% |
+| Scope points over 20 s active | 614,400 | 307,800 | -49.90% |
+| Isolated scope traversal CPU, 20k frames | 12.50 ms | 6.62 ms | -47.00% |
+| Multi-harmonic reconstruction relative RMSE | — | 0.289% | below 1% gate |
+| Audio-analysis policy JS raw / gzip | 0.05 / 0.07 KiB | 0.18 / 0.15 KiB | +0.13 / +0.08 KiB |
+| Deferred WaveCandy JS raw / gzip | 10.27 / 3.86 KiB | 10.33 / 3.89 KiB | +0.06 / +0.03 KiB |
+| Initial Home JS gzip | 67.85 KiB | 67.86 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 78.51 KiB | 78.63 KiB | +0.12 KiB |
+| Production deployment bytes | 1,483.15 KiB | 1,483.33 KiB | +0.18 KiB |
+| Automated production budgets | 90 | 91 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added a resolution-aware scope policy capped at two submitted samples per CSS pixel. A 1,024-
+  sample trace at the 330px desktop tile selects stride two; wider canvases retain stride one and
+  narrower canvases increase the stride only as required by their display resolution.
+- Explicitly submits the final analyser sample when the stride does not land on the endpoint, so
+  the trace still reaches the right canvas edge and preserves the captured window boundary.
+- Added policy tests for full-resolution, desktop, narrow, and degenerate widths; a deterministic
+  reconstruction-error gate; exact point/session counts; repeated traversal timing; and a
+  production guard requiring the density cap and endpoint branch.
+- Profiled and fully rejected a preceding reciprocal dB-normalization experiment because V8
+  already optimized the constant divisor and repeated timings ranged from +0.40% to -16.58%.
+  None of that non-beneficial experiment is present in this checkpoint.
+
+### Batch 50 verification gates
+
+- Full suite: 57 files, 517/517 tests pass, including four analyzer-policy cases and all Sound
+  Designer, radar, Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 91/91 pass; WaveCandy reports a two-point-
+  per-CSS-pixel scope ceiling and endpoint-preserving resolution-aware traversal.
+- Four 20,000-frame profiles measured 45.34–47.48% lower scope-loop CPU; the final pass is 12.50 ms
+  to 6.62 ms, a 47.00% reduction. The 330px path removes 306,600 point submissions per 20 seconds,
+  while multi-harmonic reconstruction error is 0.289% RMS.
+- Warmed combined visual workload: 80.36% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.4 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

@@ -6,8 +6,10 @@ import {
 } from '../src/utils/visualFramePolicy.js';
 import {
   MONO_ANALYSER_FFT_SIZE,
+  SCOPE_SAMPLES_PER_CSS_PIXEL,
   STEREO_ANALYSER_FFT_SIZE,
   STEREO_VISUAL_SAMPLE_STRIDE,
+  getScopeTraceStride,
   getStereoPairEvaluationsPerFrame,
   getWaveCandySamplesPerFrame
 } from '../src/utils/audioAnalysisPolicy.js';
@@ -827,6 +829,87 @@ if (traceScaleChecksumRelativeDelta > 1e-12 || traceCoordinateMaxDelta > 1e-9) {
   throw new Error('Hoisted trace scale exceeded the coordinate fidelity threshold');
 }
 
+const scopeBenchmarkWidth = 330;
+const scopeBenchmarkSpan = AUDIO_WAVE_SAMPLES;
+const scopeBenchmarkStride = getScopeTraceStride(scopeBenchmarkSpan, scopeBenchmarkWidth);
+const getStridedPointCount = (span, stride) => (
+  Math.floor((span - 1) / stride)
+  + 1
+  + Number((span - 1) % stride !== 0)
+);
+const legacyScopePointCount = scopeBenchmarkSpan;
+const decimatedScopePointCount = getStridedPointCount(
+  scopeBenchmarkSpan,
+  scopeBenchmarkStride
+);
+const scopeDecimationBenchmarkIterations = 20000;
+const runLegacyScopeTraceBenchmark = (iterations) => {
+  let checksum = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    for (let index = 0; index < scopeBenchmarkSpan; index += 1) {
+      checksum += srcWave[index] * 0.5 + index * 0.000001;
+    }
+  }
+  return checksum;
+};
+const runDecimatedScopeTraceBenchmark = (iterations) => {
+  let checksum = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    for (let index = 0; index < scopeBenchmarkSpan; index += scopeBenchmarkStride) {
+      checksum += srcWave[index] * 0.5 + index * 0.000001;
+    }
+    if ((scopeBenchmarkSpan - 1) % scopeBenchmarkStride !== 0) {
+      checksum += srcWave[scopeBenchmarkSpan - 1] * 0.5
+        + (scopeBenchmarkSpan - 1) * 0.000001;
+    }
+  }
+  return checksum;
+};
+runLegacyScopeTraceBenchmark(200);
+runDecimatedScopeTraceBenchmark(200);
+let scopeDecimationStartedAt = performance.now();
+runLegacyScopeTraceBenchmark(scopeDecimationBenchmarkIterations);
+const legacyScopeTraceBenchmark = {
+  elapsedMs: performance.now() - scopeDecimationStartedAt
+};
+scopeDecimationStartedAt = performance.now();
+runDecimatedScopeTraceBenchmark(scopeDecimationBenchmarkIterations);
+const decimatedScopeTraceBenchmark = {
+  elapsedMs: performance.now() - scopeDecimationStartedAt
+};
+
+const scopeQualityWave = Float64Array.from(
+  { length: scopeBenchmarkSpan },
+  (_, index) => (
+    Math.sin(index * Math.PI * 6 / scopeBenchmarkSpan) * 0.7
+    + Math.sin(index * Math.PI * 34 / scopeBenchmarkSpan) * 0.22
+    + Math.sin(index * Math.PI * 86 / scopeBenchmarkSpan) * 0.08
+  )
+);
+let scopeSquaredError = 0;
+let scopeSignalEnergy = 0;
+for (let index = 0; index < scopeQualityWave.length; index += 1) {
+  const leftIndex = Math.floor(index / scopeBenchmarkStride) * scopeBenchmarkStride;
+  const rightIndex = Math.min(
+    scopeQualityWave.length - 1,
+    leftIndex + scopeBenchmarkStride
+  );
+  const ratio = rightIndex === leftIndex ? 0 : (index - leftIndex) / (rightIndex - leftIndex);
+  const reconstructed = scopeQualityWave[leftIndex]
+    + (scopeQualityWave[rightIndex] - scopeQualityWave[leftIndex]) * ratio;
+  const error = scopeQualityWave[index] - reconstructed;
+  scopeSquaredError += error * error;
+  scopeSignalEnergy += scopeQualityWave[index] * scopeQualityWave[index];
+}
+const scopeReconstructionRelativeRmse = Math.sqrt(scopeSquaredError / scopeSignalEnergy);
+if (
+  scopeReconstructionRelativeRmse > 0.01
+  || scopeBenchmarkStride < 1
+  || decimatedScopePointCount > Math.ceil(scopeBenchmarkWidth * SCOPE_SAMPLES_PER_CSS_PIXEL)
+) {
+  throw new Error('Scope decimation exceeded its visual-fidelity or point-density budget');
+}
+
 const radarStartTimes = Float64Array.from(midiNotes, (note) => note.time);
 const radarRangeBenchmarkIterations = 500000;
 const reusableRadarRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
@@ -1218,6 +1301,30 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyTraceScaleBenchmark.elapsedMs,
       scaledTraceScaleBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  scopeTraceDecimationPolicy: {
+    activeFrames: activeAnalyzerFrames,
+    cssWidth: scopeBenchmarkWidth,
+    samplesPerCssPixelLimit: SCOPE_SAMPLES_PER_CSS_PIXEL,
+    analyserSamples: scopeBenchmarkSpan,
+    sampleStride: scopeBenchmarkStride,
+    pointsPerFrameBefore: legacyScopePointCount,
+    pointsPerFrameAfter: decimatedScopePointCount,
+    pointsOverBenchmarkBefore: activeAnalyzerFrames * legacyScopePointCount,
+    pointsOverBenchmarkAfter: activeAnalyzerFrames * decimatedScopePointCount,
+    pointReductionPercent: Number(reduction(
+      legacyScopePointCount,
+      decimatedScopePointCount
+    ).toFixed(2)),
+    reconstructionRelativeRmse: scopeReconstructionRelativeRmse,
+    preservesFinalSample: true,
+    benchmarkIterations: scopeDecimationBenchmarkIterations,
+    legacyElapsedMs: Number(legacyScopeTraceBenchmark.elapsedMs.toFixed(2)),
+    decimatedElapsedMs: Number(decimatedScopeTraceBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyScopeTraceBenchmark.elapsedMs,
+      decimatedScopeTraceBenchmark.elapsedMs
     ).toFixed(2))
   },
   radarFrameContainerPolicy: {

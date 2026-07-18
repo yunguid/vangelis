@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
-import { STEREO_VISUAL_SAMPLE_STRIDE } from '../utils/audioAnalysisPolicy.js';
+import {
+  STEREO_VISUAL_SAMPLE_STRIDE,
+  getScopeTraceStride
+} from '../utils/audioAnalysisPolicy.js';
 import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp } from '../utils/math.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
@@ -199,14 +202,18 @@ const drawWaveform = (ctx, data, width, height) => {
   const start = findTrigger(data);
   const span = data.length - start;
   const xScale = span > 1 ? width / (span - 1) : 0;
+  const sampleStride = getScopeTraceStride(span, width);
   ctx.strokeStyle = 'rgba(252, 214, 142, 0.9)';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
-  for (let i = 0; i < span; i++) {
+  for (let i = 0; i < span; i += sampleStride) {
     const x = i * xScale;
     const y = mid - data[start + i] * mid * 0.85;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
+  }
+  if ((span - 1) % sampleStride !== 0) {
+    ctx.lineTo(width, mid - data[data.length - 1] * mid * 0.85);
   }
   ctx.stroke();
 };

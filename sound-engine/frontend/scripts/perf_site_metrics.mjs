@@ -285,6 +285,10 @@ const sidebarIntentPrefetchHandlers = (
 const sidebarEscapeListenerIsOpenOnly = /if\s*\(disabled\s*\|\|\s*!isOpen\)\s*return undefined;/.test(
   sidebarSource
 );
+const audioAnalysisPolicySource = await readFile(
+  path.join(sourceDir, 'utils', 'audioAnalysisPolicy.js'),
+  'utf8'
+);
 const waveCandyCanvasSource = await readFile(
   path.join(sourceDir, 'components', 'WaveCandyCanvas.jsx'),
   'utf8'
@@ -350,6 +354,13 @@ const waveCandyHoistsTraceScales = (
   && /const xScale = span > 1 \? width \/ \(span - 1\) : 0/.test(waveCandyCanvasSource)
   && (waveCandyCanvasSource.match(/const x = i \* xScale/g) || []).length === 2
   && !/const x = \(i \/ \((?:cells|span) - 1\)\) \* width/.test(waveCandyCanvasSource)
+);
+const waveCandyDecimatesScopeTrace = (
+  /export const SCOPE_SAMPLES_PER_CSS_PIXEL = 2/.test(audioAnalysisPolicySource)
+  && /export const getScopeTraceStride = \(sampleCount, cssWidth\)/.test(audioAnalysisPolicySource)
+  && /const sampleStride = getScopeTraceStride\(span, width\)/.test(waveCandyCanvasSource)
+  && /for \(let i = 0; i < span; i \+= sampleStride\)/.test(waveCandyCanvasSource)
+  && /\(span - 1\) % sampleStride !== 0/.test(waveCandyCanvasSource)
 );
 const birdsEyeRadarSource = await readFile(
   path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
@@ -642,6 +653,9 @@ const report = {
     waveCandyTracePointDivisionsPerFrameMaximum: waveCandyHoistsTraceScales ? 0 : 1312,
     waveCandyTraceScaleDivisionsPerFrame: waveCandyHoistsTraceScales ? 4 : 0,
     waveCandyHoistsTraceScales,
+    waveCandyScopeSamplesPerCssPixelLimit: waveCandyDecimatesScopeTrace ? 2 : null,
+    waveCandyScopePointMaximumAt330CssPixels: waveCandyDecimatesScopeTrace ? 660 : 1024,
+    waveCandyDecimatesScopeTrace,
     radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
     radarPaletteStateLimit: 256,
     radarUsesBoundedPaletteCache,
@@ -813,6 +827,13 @@ if (!waveCandyHoistsTraceScales) {
     name: 'Guard hoisted analyzer trace scales',
     actual: 'x-coordinate division inside waveform or spectrum point loop',
     expected: 'one width/span division per trace'
+  });
+}
+if (!waveCandyDecimatesScopeTrace) {
+  failures.push({
+    name: 'Guard resolution-aware analyzer scope trace',
+    actual: 'all analyser samples submitted regardless of canvas resolution',
+    expected: 'at most two points per CSS pixel with final-sample preservation'
   });
 }
 if (!radarUsesBoundedPaletteCache) {
@@ -1205,7 +1226,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 72,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 73,
   failures
 };
 
