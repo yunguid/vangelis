@@ -64,9 +64,10 @@ const SPECTRUM_GRID_DB_RATIOS = Float64Array.from(
 
 const traceSpectrumPath = (ctx, data, width, height) => {
   const cells = data.length;
+  const xScale = cells > 1 ? width / (cells - 1) : 0;
   ctx.beginPath();
   for (let i = 0; i < cells; i++) {
-    const x = (i / (cells - 1)) * width;
+    const x = i * xScale;
     const y = height - dbToUnit(data[i]) * height;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
@@ -197,11 +198,12 @@ const drawWaveform = (ctx, data, width, height) => {
 
   const start = findTrigger(data);
   const span = data.length - start;
+  const xScale = span > 1 ? width / (span - 1) : 0;
   ctx.strokeStyle = 'rgba(252, 214, 142, 0.9)';
   ctx.lineWidth = 1.6;
   ctx.beginPath();
   for (let i = 0; i < span; i++) {
-    const x = (i / (span - 1)) * width;
+    const x = i * xScale;
     const y = mid - data[start + i] * mid * 0.85;
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);

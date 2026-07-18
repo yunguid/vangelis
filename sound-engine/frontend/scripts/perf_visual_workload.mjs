@@ -762,6 +762,71 @@ if (
   throw new Error('Batched meter grid changed guide or label geometry');
 }
 
+const spectrumTraceCallsPerFrame = 3;
+const traceScaleBenchmarkIterations = 20000;
+let traceCoordinateMaxDelta = 0;
+for (const width of [173.5, 320, 511.25]) {
+  for (const points of [SPECTRUM_CELLS, 997, AUDIO_WAVE_SAMPLES]) {
+    const scaledWidth = width / (points - 1);
+    for (let index = 0; index < points; index += 1) {
+      const legacyX = (index / (points - 1)) * width;
+      const scaledX = index * scaledWidth;
+      traceCoordinateMaxDelta = Math.max(
+        traceCoordinateMaxDelta,
+        Math.abs(legacyX - scaledX)
+      );
+    }
+  }
+}
+const runLegacyTraceScaleBenchmark = (iterations) => {
+  let checksum = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const width = 240 + (iteration % 41) * 0.25;
+    const waveformSpan = 898 + (iteration % 127);
+    for (let index = 0; index < waveformSpan; index += 1) {
+      checksum += (index / (waveformSpan - 1)) * width;
+    }
+    for (let trace = 0; trace < spectrumTraceCallsPerFrame; trace += 1) {
+      for (let index = 0; index < SPECTRUM_CELLS; index += 1) {
+        checksum += (index / (SPECTRUM_CELLS - 1)) * width;
+      }
+    }
+  }
+  return checksum;
+};
+const runScaledTraceScaleBenchmark = (iterations) => {
+  let checksum = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const width = 240 + (iteration % 41) * 0.25;
+    const waveformSpan = 898 + (iteration % 127);
+    const waveformXScale = width / (waveformSpan - 1);
+    for (let index = 0; index < waveformSpan; index += 1) {
+      checksum += index * waveformXScale;
+    }
+    const spectrumXScale = width / (SPECTRUM_CELLS - 1);
+    for (let trace = 0; trace < spectrumTraceCallsPerFrame; trace += 1) {
+      for (let index = 0; index < SPECTRUM_CELLS; index += 1) {
+        checksum += index * spectrumXScale;
+      }
+    }
+  }
+  return checksum;
+};
+runLegacyTraceScaleBenchmark(200);
+runScaledTraceScaleBenchmark(200);
+let traceScaleStartedAt = performance.now();
+const legacyTraceScaleChecksum = runLegacyTraceScaleBenchmark(traceScaleBenchmarkIterations);
+const legacyTraceScaleBenchmark = { elapsedMs: performance.now() - traceScaleStartedAt };
+traceScaleStartedAt = performance.now();
+const scaledTraceScaleChecksum = runScaledTraceScaleBenchmark(traceScaleBenchmarkIterations);
+const scaledTraceScaleBenchmark = { elapsedMs: performance.now() - traceScaleStartedAt };
+const traceScaleChecksumRelativeDelta = Math.abs(
+  legacyTraceScaleChecksum - scaledTraceScaleChecksum
+) / Math.abs(legacyTraceScaleChecksum);
+if (traceScaleChecksumRelativeDelta > 1e-12 || traceCoordinateMaxDelta > 1e-9) {
+  throw new Error('Hoisted trace scale exceeded the coordinate fidelity threshold');
+}
+
 const radarStartTimes = Float64Array.from(midiNotes, (note) => note.time);
 const radarRangeBenchmarkIterations = 500000;
 const reusableRadarRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
@@ -1123,6 +1188,36 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyMeterGridBenchmark.elapsedMs,
       batchedMeterGridBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  analyzerTraceScalePolicy: {
+    activeFrames: activeAnalyzerFrames,
+    waveformPointMaximum: AUDIO_WAVE_SAMPLES,
+    spectrumCells: SPECTRUM_CELLS,
+    spectrumTraceCallsPerFrame,
+    pointDivisionsPerFrameUpperBoundBefore:
+      AUDIO_WAVE_SAMPLES + SPECTRUM_CELLS * spectrumTraceCallsPerFrame,
+    pointDivisionsPerFrameUpperBoundAfter: 0,
+    traceScaleDivisionsPerFrameBefore: 0,
+    traceScaleDivisionsPerFrameAfter: spectrumTraceCallsPerFrame + 1,
+    totalDivisionsOverBenchmarkUpperBoundBefore:
+      activeAnalyzerFrames * (
+        AUDIO_WAVE_SAMPLES + SPECTRUM_CELLS * spectrumTraceCallsPerFrame
+      ),
+    totalDivisionsOverBenchmarkUpperBoundAfter:
+      activeAnalyzerFrames * (spectrumTraceCallsPerFrame + 1),
+    divisionReductionPercent: Number(reduction(
+      AUDIO_WAVE_SAMPLES + SPECTRUM_CELLS * spectrumTraceCallsPerFrame,
+      spectrumTraceCallsPerFrame + 1
+    ).toFixed(2)),
+    maximumCoordinateDelta: traceCoordinateMaxDelta,
+    checksumRelativeDelta: traceScaleChecksumRelativeDelta,
+    benchmarkIterations: traceScaleBenchmarkIterations,
+    legacyElapsedMs: Number(legacyTraceScaleBenchmark.elapsedMs.toFixed(2)),
+    scaledElapsedMs: Number(scaledTraceScaleBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyTraceScaleBenchmark.elapsedMs,
+      scaledTraceScaleBenchmark.elapsedMs
     ).toFixed(2))
   },
   radarFrameContainerPolicy: {

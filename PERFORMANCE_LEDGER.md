@@ -2461,3 +2461,49 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged after removing the JavaScript-property false positive.
 - `git diff --check`: pass.
+
+## Optimization batch 49 — hoisted analyzer trace scales
+
+Collected from WaveCandy's oscilloscope and three spectrum path traversals, exact division upper
+bounds, four coordinate/checksum-verified 20,000-frame workloads, generated production closures,
+focused Sound Designer tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 48 | Batch 49 | Change |
+|---|---:|---:|---:|
+| Trace divisions over 20 s active, upper bound | 787,200 | 2,400 | -99.70% |
+| Point-loop divisions per frame, upper bound | 1,312 | 0 | removed |
+| Isolated trace-coordinate CPU, 20k frames | 15.03 ms | 14.18 ms | -5.64% |
+| Maximum coordinate delta | — | 1.14e-13 px | below 1e-9 px gate |
+| Deferred WaveCandy JS raw / gzip | 10.25 / 3.85 KiB | 10.27 / 3.86 KiB | +0.02 / +0.01 KiB |
+| Initial Home JS gzip | 67.87 KiB | 67.85 KiB | -0.02 KiB |
+| Fully activated Home visual JS gzip | 78.51 KiB | 78.51 KiB | unchanged |
+| Production deployment bytes | 1,483.13 KiB | 1,483.15 KiB | +0.02 KiB |
+| Automated production budgets | 89 | 90 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Hoisted `width / (pointCount - 1)` out of the oscilloscope and spectrum point loops. Each trace
+  now computes one scale and uses multiplication for every point instead of dividing every point.
+- Preserved empty/single-point safety with a zero scale when the span is not greater than one.
+- Added varying-width/varying-span legacy-vs-scaled workloads, a cumulative coordinate checksum,
+  an explicit maximum-coordinate-delta scan, exact division upper bounds, and a production guard
+  that rejects division inside either trace loop.
+
+### Batch 49 verification gates
+
+- Full suite: 57 files, 516/516 tests pass, including focused Sound Designer/WaveCandy cases and
+  all radar, Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 90/90 pass; WaveCandy reports zero point-
+  loop trace divisions and four trace-scale divisions per active frame.
+- Four 20,000-frame profiles measured 1.19–6.11% lower CPU; the final pass is 15.03 ms to 14.18 ms,
+  a 5.64% reduction. Maximum coordinate drift is 1.14e-13 pixels and the cumulative checksum delta
+  is zero at the reported precision.
+- Warmed combined visual workload: 80.28% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 410.3 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

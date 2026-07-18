@@ -345,6 +345,12 @@ const waveCandyBatchesMeterGridPaths = (
   && (waveCandyMeterGridSource.match(/ctx\.lineTo\(/g) || []).length === 5
   && (waveCandyMeterGridSource.match(/ctx\.fillText\(/g) || []).length === 5
 );
+const waveCandyHoistsTraceScales = (
+  /const xScale = cells > 1 \? width \/ \(cells - 1\) : 0/.test(waveCandyCanvasSource)
+  && /const xScale = span > 1 \? width \/ \(span - 1\) : 0/.test(waveCandyCanvasSource)
+  && (waveCandyCanvasSource.match(/const x = i \* xScale/g) || []).length === 2
+  && !/const x = \(i \/ \((?:cells|span) - 1\)\) \* width/.test(waveCandyCanvasSource)
+);
 const birdsEyeRadarSource = await readFile(
   path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
   'utf8'
@@ -633,6 +639,9 @@ const report = {
     waveCandyMeterGridBeginPathCallsPerFrame: waveCandyBatchesMeterGridPaths ? 1 : 5,
     waveCandyMeterGridStrokeCallsPerFrame: waveCandyBatchesMeterGridPaths ? 1 : 5,
     waveCandyBatchesMeterGridPaths,
+    waveCandyTracePointDivisionsPerFrameMaximum: waveCandyHoistsTraceScales ? 0 : 1312,
+    waveCandyTraceScaleDivisionsPerFrame: waveCandyHoistsTraceScales ? 4 : 0,
+    waveCandyHoistsTraceScales,
     radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
     radarPaletteStateLimit: 256,
     radarUsesBoundedPaletteCache,
@@ -797,6 +806,13 @@ if (!waveCandyBatchesMeterGridPaths) {
     name: 'Guard batched analyzer meter grid path',
     actual: 'one begin/stroke pair per loudness guide',
     expected: 'one shared begin/stroke pair for all five guides'
+  });
+}
+if (!waveCandyHoistsTraceScales) {
+  failures.push({
+    name: 'Guard hoisted analyzer trace scales',
+    actual: 'x-coordinate division inside waveform or spectrum point loop',
+    expected: 'one width/span division per trace'
   });
 }
 if (!radarUsesBoundedPaletteCache) {
@@ -1189,7 +1205,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 71,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 72,
   failures
 };
 
