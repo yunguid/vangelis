@@ -350,3 +350,100 @@
   flex-direction: column;
   gap: var(--space-sm);
 }
+
+@media (max-width: 1200px) {
+  .controls-surface {
+    width: min(100%, 96vw);
+  }
+}
+
+@media (max-width: 900px) {
+  .controls-surface {
+    width: 100%;
+    max-width: 100%;
+    padding: 12px;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    border-radius: 2px;
+  }
+
+  .controls-panel,
+  .controls-panel.wide {
+    gap: 12px;
+  }
+
+  .control-section-shell {
+    padding: 0 0 14px;
+    border-radius: 0;
+    gap: 10px;
+  }
+
+  .control-section-body {
+    gap: 12px;
+  }
+
+  .effect-macro-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .effect-macro-dial__touch,
+  .effect-macro-dial__canvas {
+    width: min(var(--dial-size, 96px), 96px);
+    height: min(var(--dial-size, 96px), 96px);
+  }
+
+  .controls-heading {
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+  }
+
+  .waveform-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .waveform-grid--inline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .waveform-button {
+    min-height: 56px;
+    padding: 12px;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+  }
+
+  .waveform-button--compact {
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 0.66rem;
+    letter-spacing: 0.02em;
+  }
+
+  .waveform-button.is-active {
+    transform: none;
+  }
+
+  .panel-footer {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 700px) {
+  .waveform-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .waveform-grid--inline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .controls-surface {
+    padding: 10px;
+    gap: 10px;
+  }
+}

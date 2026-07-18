@@ -1233,3 +1233,50 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 23 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 23 — interaction-loaded sound-panel CSS
+
+Collected from JSX selector ownership, SoundTab manifest assets, all-route CSS closures, the full
+suite, and isolated audio/visual gates.
+
+| Metric | Batch 22 | Batch 23 | Change |
+|---|---:|---:|---:|
+| Initial/global CSS raw | 37.08 KiB | 30.87 KiB | -16.7% |
+| Initial/global CSS gzip | 7.50 KiB | 6.49 KiB | -13.5% |
+| Sound-panel CSS | global | 6.34 KiB / 1.52 KiB gzip | interaction-loaded |
+| Home critical CSS gzip | 12.53 KiB | 11.52 KiB | -8.1% |
+| Song Study critical CSS gzip | 14.16 KiB | 13.15 KiB | -7.1% |
+| Sound Designer critical CSS gzip | 14.26 KiB | 13.25 KiB | -7.1% |
+| Max passive-route critical CSS gzip | 12.68 KiB | 11.67 KiB | -8.0% |
+| Critical routes containing SoundTab CSS | 8 | 0 | removed |
+| Total production CSS raw | 106.59 KiB | 106.72 KiB | +0.1% |
+| Total production CSS gzip | 24.96 KiB | 25.47 KiB | +2.0% split compression cost |
+| Production deployment bytes | 1,490.99 KiB | 1,491.21 KiB | +0.01% |
+| Automated production budgets | 61 | 63 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Selector attribution showed that the global controls module belonged entirely to the Sound
+  sidebar: AudioControls, UIOverlay, macro dials, collapsible groups, waveform choices, and their
+  panel layout. The shared slider/select/toggle primitives used by Sound Designer remain in the
+  global component foundation.
+- SoundTab now imports its own base and responsive CSS. Its existing React dynamic boundary loads
+  both code and styling on first Sound-tab interaction, rather than blocking every route.
+- Moved only SoundTab-owned responsive rules (panel grid, macros, waveform choices, and footer)
+  into the component asset. Shared label, slider, toggle, and panel responsive rules remain global,
+  preserving advanced Sound Designer and generic component behavior.
+- Manifest guards require exactly one deferred SoundTab CSS asset, prohibit its identifying
+  selectors in initial CSS, and fail if any static route closure contains that asset.
+
+### Batch 23 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 63/63 pass.
+- Deterministic visual workload after activation: 92.62% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -18 KB over 4,000 blocks.
+- Isolated DSP benchmark: 410.3 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 23 total, unchanged.
+- `git diff --check`: pass.

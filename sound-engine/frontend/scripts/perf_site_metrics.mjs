@@ -82,6 +82,8 @@ const fullSidebarManifestRecord = Object.values(manifest).find((record) => (
   && record.dynamicImports?.includes('src/components/Sidebar/SoundTab.jsx')
 ));
 const fullSidebarFile = fullSidebarManifestRecord?.file || null;
+const soundControlPanelManifestRecord = manifest['src/components/Sidebar/SoundTab.jsx'] || null;
+const soundControlPanelCssFile = soundControlPanelManifestRecord?.css?.[0] || null;
 const audioEngineManifestRecord = Object.values(manifest).find((record) => (
   record.assets?.some((file) => file.includes('delay-worklet'))
   && record.assets?.some((file) => file.includes('reverb-worklet'))
@@ -124,6 +126,9 @@ function collectRouteClosure(entryKeys) {
     cssKb: roundKb(sum(css, 'bytes')),
     cssGzipKb: roundKb(sum(css, 'gzipBytes')),
     includesKeyboardCss: keyboardCssFile ? cssFiles.has(keyboardCssFile) : false,
+    includesSoundControlPanelCss: soundControlPanelCssFile
+      ? cssFiles.has(soundControlPanelCssFile)
+      : false,
     includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets')),
     includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController')),
     includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab')),
@@ -161,6 +166,9 @@ const deferredVisualClosures = {
 const factoryPresetChunk = jsAssets.find(({ file }) => file.includes('factoryPresets')) || null;
 const webMidiControllerChunk = jsAssets.find(({ file }) => file.includes('webMidiController')) || null;
 const soundControlPanelChunk = jsAssets.find(({ file }) => file.includes('SoundTab')) || null;
+const soundControlPanelCss = soundControlPanelCssFile
+  ? assetMetricByFile.get(soundControlPanelCssFile) || null
+  : null;
 const midiParserChunk = jsAssets.find(({ file }) => file.includes('midiParser')) || null;
 const fullSidebarChunk = fullSidebarFile ? assetMetricByFile.get(fullSidebarFile) || null : null;
 const audioEngineChunk = audioEngineFile ? assetMetricByFile.get(audioEngineFile) || null : null;
@@ -238,7 +246,7 @@ const tailwindBuildDependencies = ['tailwindcss']
 const criticalGlobalCssSelectors = [
   '.app-stage',
   '.app-shell',
-  '.controls-surface',
+  '.button-primary',
   '.value-slider',
   '.wave-candy-placeholder',
   '.command-palette',
@@ -296,6 +304,11 @@ const report = {
       file: soundControlPanelChunk.file,
       kb: roundKb(soundControlPanelChunk.bytes),
       gzipKb: roundKb(soundControlPanelChunk.gzipBytes)
+    } : null,
+    deferredSoundControlPanelCss: soundControlPanelCss ? {
+      file: soundControlPanelCss.file,
+      kb: roundKb(soundControlPanelCss.bytes),
+      gzipKb: roundKb(soundControlPanelCss.gzipBytes)
     } : null,
     deferredMidiParserChunk: midiParserChunk ? {
       file: midiParserChunk.file,
@@ -442,6 +455,24 @@ if (homeClosure?.includesWebMidiController) {
 }
 if (!soundControlPanelChunk) {
   failures.push({ name: 'Guard deferred sound control panel chunk', actual: 0, minimum: 1 });
+}
+if (!soundControlPanelCss || initialCssText.includes('.control-groups')) {
+  failures.push({
+    name: 'Guard deferred sound-control CSS',
+    asset: soundControlPanelCss?.file || null,
+    initial: initialCssText.includes('.control-groups') ? 'eager' : 'deferred',
+    expected: 'one interaction-loaded asset'
+  });
+}
+const routesWithSoundControlPanelCss = routeClosures
+  .filter(({ includesSoundControlPanelCss }) => includesSoundControlPanelCss)
+  .map(({ route }) => route);
+if (routesWithSoundControlPanelCss.length > 0) {
+  failures.push({
+    name: 'Guard sound-control CSS route isolation',
+    routes: routesWithSoundControlPanelCss,
+    expected: 'sidebar interaction only'
+  });
 }
 if (soundDesignerClosure?.includesSoundControlPanel) {
   failures.push({ name: 'Guard Sound Designer control-panel isolation', actual: 'shared', expected: 'isolated' });
@@ -666,7 +697,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 43,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 45,
   failures
 };
 
