@@ -95,7 +95,8 @@ function collectRouteClosure(entryKeys) {
     cssAssetCount: css.length,
     cssKb: roundKb(sum(css, 'bytes')),
     cssGzipKb: roundKb(sum(css, 'gzipBytes')),
-    includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets'))
+    includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets')),
+    includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController'))
   };
 }
 
@@ -104,6 +105,7 @@ const routeClosures = routeEntries.map(({ route, entries }) => ({
   ...collectRouteClosure(entries)
 }));
 const factoryPresetChunk = jsAssets.find(({ file }) => file.includes('factoryPresets')) || null;
+const webMidiControllerChunk = jsAssets.find(({ file }) => file.includes('webMidiController')) || null;
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
@@ -154,6 +156,11 @@ const report = {
       file: factoryPresetChunk.file,
       kb: roundKb(factoryPresetChunk.bytes),
       gzipKb: roundKb(factoryPresetChunk.gzipBytes)
+    } : null,
+    deferredWebMidiControllerChunk: webMidiControllerChunk ? {
+      file: webMidiControllerChunk.file,
+      kb: roundKb(webMidiControllerChunk.bytes),
+      gzipKb: roundKb(webMidiControllerChunk.gzipBytes)
     } : null,
     routeClosures
   },
@@ -233,6 +240,13 @@ const soundDesignerClosure = routeClosures.find(({ route }) => route === 'sound-
 if (soundDesignerClosure?.includesFactoryPresetBank) {
   failures.push({ name: 'Guard folded preset bank deferral', actual: 'eager', expected: 'deferred' });
 }
+if (!webMidiControllerChunk) {
+  failures.push({ name: 'Guard deferred Web MIDI controller chunk', actual: 0, minimum: 1 });
+}
+const homeClosure = routeClosures.find(({ route }) => route === 'home');
+if (homeClosure?.includesWebMidiController) {
+  failures.push({ name: 'Guard Web MIDI startup deferral', actual: 'eager', expected: 'deferred' });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -243,7 +257,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 4,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 6,
   failures
 };
 

@@ -495,3 +495,43 @@ Implemented boundaries and controls:
   thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
 - Isolated DSP benchmark: 409.6 us per 128-frame block with 6.5x realtime headroom.
 - `git diff --check`: pass.
+
+## Optimization batch 7 — post-commit Web MIDI startup
+
+Collected from production-manifest route closure analysis, focused hardware-controller
+lifecycle tests, the full suite, and the audio/visual deterministic gates.
+
+| Metric | Batch 6 | Batch 7 | Change |
+|---|---:|---:|---:|
+| Home startup JS gzip | 91.59 KiB | 91.14 KiB | -0.5% |
+| Web MIDI startup path | synchronous in App | post-commit async | moved out |
+| Web MIDI interaction chunk | none | 1.45 KiB / 0.82 KiB gzip | isolated |
+| Initial JS gzip | 47.64 KiB | 47.65 KiB | effectively unchanged |
+| Production deployment bytes | 1,572.73 KiB | 1,573.05 KiB | +0.02% chunk/manifest overhead |
+| Automated production budgets | 22 | 24 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Moved hardware MIDI parsing, browser permission discovery, device hot-plug handling, and
+  audio dispatch into a dynamically imported, React-free controller module.
+- Browsers without `navigator.requestMIDIAccess` now skip the controller download entirely.
+  Supported browsers initialize it after the first application commit while preserving
+  automatic connection behavior.
+- Kept the React hook responsible only for low-frequency visible note snapshots and current
+  synth-parameter references. MIDI note/audio events remain immediate after connection.
+- Cleanup detaches every input and state listener, stops held hardware notes, and resets pitch
+  bend and modulation state. Permission denial and deferred import errors remain non-fatal.
+- Manifest guards require a dedicated Web MIDI controller chunk and fail if it re-enters the
+  synchronous home route closure.
+
+### Batch 7 verification gates
+
+- Full suite: 40 files, 469/469 tests pass, including direct controller note, continuous
+  controller, hot-plug, all-notes-off, and cleanup coverage.
+- Production delivery/static/dependency/route guardrails: 24/24 pass.
+- Deterministic visual workload: 92.57% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 405.1 us per 128-frame block with 6.6x realtime headroom.
+- `git diff --check`: pass.

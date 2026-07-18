@@ -46,6 +46,7 @@ describe('useWebMidiInput', () => {
       audioParams: { volume: 0.7 }
     }));
     await act(async () => {
+      await import('../utils/webMidiController.js');
       await Promise.resolve();
       await Promise.resolve();
     });
