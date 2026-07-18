@@ -111,6 +111,66 @@ describe('VerletChain', () => {
 });
 
 describe('VortexField', () => {
+  it('matches the former allocating step kernel', () => {
+    const field = new VortexField({ maxParticles: 4, decay: 0.12, inertia: 0.18 });
+    const specs = [
+      { x: -0.6, y: 0.1, strength: 0.21, radius: 0.55 },
+      { x: 0.4, y: -0.2, strength: -0.18, radius: 0.48 },
+      { x: 0.1, y: 0.5, strength: 0.09, radius: 0.63 }
+    ];
+    specs.forEach((spec) => field.inject(spec));
+    let legacy = field.particles.map((particle) => ({ ...particle }));
+    const dt = 1 / 60;
+
+    for (let frame = 0; frame < 30; frame++) {
+      const h = Math.min(Math.max(dt, 0.001), 0.05);
+      const decayMul = Math.exp(-field.decay * h);
+      const lambda = 1 - Math.exp(-h / field.inertia);
+      const induced = legacy.map((particle) => {
+        let u = 0;
+        let v = 0;
+        for (const source of legacy) {
+          if (source === particle) continue;
+          const rx = particle.x - source.x;
+          const ry = particle.y - source.y;
+          const d2 = rx * rx + ry * ry;
+          const rad2 = source.radius * source.radius;
+          const fall = 1 - Math.exp(-d2 / rad2);
+          const scale = source.strength * fall / (d2 + rad2 * 0.25);
+          u += -ry * scale;
+          v += rx * scale;
+        }
+        return { u, v };
+      });
+      legacy.forEach((particle, index) => {
+        const { u, v } = induced[index];
+        const nx = particle.x
+          + (particle.x - particle.px) * (1 - lambda)
+          + u * h * lambda;
+        const ny = particle.y
+          + (particle.y - particle.py) * (1 - lambda)
+          + v * h * lambda;
+        particle.px = particle.x;
+        particle.py = particle.y;
+        particle.x = nx;
+        particle.y = ny;
+        particle.strength *= decayMul;
+        particle.age += h;
+      });
+      legacy = legacy.filter(
+        (particle) => Math.abs(particle.strength) > 0.004
+          && Math.abs(particle.x) < 3
+          && Math.abs(particle.y) < 3
+      );
+      field.step(dt);
+    }
+
+    expect(field.particles).toHaveLength(legacy.length);
+    field.particles.forEach((particle, index) => {
+      expect(particle).toEqual(legacy[index]);
+    });
+  });
+
   it('a single vortex induces rotation with the sign of its circulation', () => {
     const field = new VortexField({ random: () => 0.5 });
     field.inject({ x: 0, y: 0, strength: 1.5, radius: 0.5 });
@@ -164,5 +224,66 @@ describe('VortexField', () => {
     expect(pos[0]).toBeCloseTo(-0.5, 6);
     expect(str[2]).toBe(0);
     expect(str[3]).toBe(0);
+  });
+
+  it('reuses step and uniform-selection storage across active frames', () => {
+    const field = new VortexField({ maxParticles: 4, decay: 0, random: () => 0.5 });
+    field.inject({ x: -0.4, y: 0, strength: 0.2, radius: 0.5 });
+    field.inject({ x: 0.4, y: 0, strength: -0.3, radius: 0.5 });
+    const particles = field.particles;
+    const inducedU = field.inducedU;
+    const inducedV = field.inducedV;
+    const uniformSelection = field.uniformSelection;
+    const pos = new Float32Array(8);
+    const str = new Float32Array(4);
+    const rad = new Float32Array(4);
+
+    for (let frame = 0; frame < 10; frame++) {
+      field.step(1 / 60);
+      field.fillUniforms(pos, str, rad);
+    }
+
+    expect(field.particles).toBe(particles);
+    expect(field.inducedU).toBe(inducedU);
+    expect(field.inducedV).toBe(inducedV);
+    expect(field.uniformSelection).toBe(uniformSelection);
+  });
+
+  it('keeps equal-strength uniform selection stable', () => {
+    const field = new VortexField({ maxParticles: 4, decay: 0, random: () => 0.5 });
+    field.inject({ x: 0.1, y: 0, strength: 0.5, radius: 0.4 });
+    field.inject({ x: 0.2, y: 0, strength: -0.5, radius: 0.4 });
+    field.inject({ x: 0.3, y: 0, strength: 0.8, radius: 0.4 });
+    const pos = new Float32Array(6);
+    const str = new Float32Array(3);
+    const rad = new Float32Array(3);
+
+    field.fillUniforms(pos, str, rad);
+
+    expect(str[0]).toBeCloseTo(0.8, 6);
+    expect(str[1]).toBeCloseTo(0.5, 6);
+    expect(str[2]).toBeCloseTo(-0.5, 6);
+    expect(pos[0]).toBeCloseTo(0.3, 6);
+    expect(pos[2]).toBeCloseTo(0.1, 6);
+    expect(pos[4]).toBeCloseTo(0.2, 6);
+  });
+
+  it('releases reusable selection references after particles are culled', () => {
+    const field = new VortexField({ maxParticles: 2, decay: 0 });
+    field.inject({ x: 0, y: 0, strength: 0.3, radius: 0.4 });
+    field.inject({ x: 0.5, y: 0, strength: -0.2, radius: 0.4 });
+    const pos = new Float32Array(4);
+    const str = new Float32Array(2);
+    const rad = new Float32Array(2);
+    field.fillUniforms(pos, str, rad);
+    field.particles.forEach((particle) => { particle.strength = 0; });
+
+    field.step(1 / 60);
+    field.fillUniforms(pos, str, rad);
+
+    expect(field.particles).toHaveLength(0);
+    expect(field.uniformSelection[0]).toBeUndefined();
+    expect(field.uniformSelection[1]).toBeUndefined();
+    expect([...str]).toEqual([0, 0]);
   });
 });

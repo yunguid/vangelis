@@ -185,6 +185,10 @@ export class VortexField {
     this.random = random;
     /** @type {Array<{x:number,y:number,px:number,py:number,strength:number,radius:number,age:number}>} */
     this.particles = [];
+    this.inducedU = new Float64Array(maxParticles);
+    this.inducedV = new Float64Array(maxParticles);
+    this.uniformSelection = new Array(maxParticles);
+    this.uniformSelectionCount = 0;
   }
 
   /** Velocity induced at (x, y) by every particle except `skip`. */
@@ -233,10 +237,33 @@ export class VortexField {
     // steady state is exactly dx/dt = u (Lagrangian advection), while the
     // (1 - lambda) memory term keeps arcs curving through field changes.
     const lambda = 1 - Math.exp(-h / this.inertia);
-    // Sample velocities first so the update is order-independent.
-    const induced = this.particles.map((p) => this.velocityAt(p.x, p.y, p));
-    this.particles.forEach((p, i) => {
-      const { u, v } = induced[i];
+    // Sample velocities first so the update is order-independent. Reuse
+    // component buffers instead of allocating one {u, v} object per vortex.
+    const { particles, inducedU, inducedV } = this;
+    const count = particles.length;
+    for (let i = 0; i < count; i++) {
+      const p = particles[i];
+      let u = 0;
+      let v = 0;
+      for (let j = 0; j < count; j++) {
+        if (j === i) continue;
+        const source = particles[j];
+        const rx = p.x - source.x;
+        const ry = p.y - source.y;
+        const d2 = rx * rx + ry * ry;
+        const rad2 = source.radius * source.radius;
+        const fall = 1 - Math.exp(-d2 / rad2);
+        const scale = source.strength * fall / (d2 + rad2 * 0.25);
+        u += -ry * scale;
+        v += rx * scale;
+      }
+      inducedU[i] = u;
+      inducedV[i] = v;
+    }
+    for (let i = 0; i < count; i++) {
+      const p = particles[i];
+      const u = inducedU[i];
+      const v = inducedV[i];
       const nx = p.x + (p.x - p.px) * (1 - lambda) + u * h * lambda;
       const ny = p.y + (p.y - p.py) * (1 - lambda) + v * h * lambda;
       p.px = p.x;
@@ -247,11 +274,18 @@ export class VortexField {
       }
       p.strength *= decayMul;
       p.age += h;
-    });
-    // Cull spent or escaped vortices.
-    this.particles = this.particles.filter(
-      (p) => Math.abs(p.strength) > 0.004 && Math.abs(p.x) < 3 && Math.abs(p.y) < 3
-    );
+    }
+    // Cull spent or escaped vortices by compacting the existing array so the
+    // active scene retains one stable particle container across frames.
+    let survivorCount = 0;
+    for (let i = 0; i < count; i++) {
+      const p = particles[i];
+      if (Math.abs(p.strength) > 0.004 && Math.abs(p.x) < 3 && Math.abs(p.y) < 3) {
+        particles[survivorCount] = p;
+        survivorCount += 1;
+      }
+    }
+    particles.length = survivorCount;
   }
 
   /**
@@ -263,11 +297,27 @@ export class VortexField {
    */
   fillUniforms(positions, strengths, radii) {
     const slots = strengths.length;
-    const sorted = [...this.particles]
-      .sort((a, b) => Math.abs(b.strength) - Math.abs(a.strength))
-      .slice(0, slots);
+    const count = this.particles.length;
+    const sorted = this.uniformSelection;
+    // Stable insertion sort over the preallocated selection buffer. With at
+    // most 12 particles this is cheaper than copying, sorting, and slicing.
+    for (let i = 0; i < count; i++) {
+      const p = this.particles[i];
+      const magnitude = Math.abs(p.strength);
+      let insertAt = i;
+      while (
+        insertAt > 0
+        && Math.abs(sorted[insertAt - 1].strength) < magnitude
+      ) {
+        sorted[insertAt] = sorted[insertAt - 1];
+        insertAt -= 1;
+      }
+      sorted[insertAt] = p;
+    }
+    for (let i = count; i < this.uniformSelectionCount; i++) sorted[i] = undefined;
+    this.uniformSelectionCount = count;
     for (let i = 0; i < slots; i++) {
-      const p = sorted[i];
+      const p = i < count ? sorted[i] : null;
       // Fade new swirls in so they emerge from the smoke instead of popping.
       const ramp = p && this.rampTime > 0 ? Math.min(1, p.age / this.rampTime) : 1;
       positions[i * 2] = p ? p.x : 0;

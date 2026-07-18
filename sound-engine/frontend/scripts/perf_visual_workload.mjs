@@ -32,6 +32,7 @@ import {
   createSceneBandBinRanges,
   sampleSceneBandEnergies
 } from '../src/utils/sceneBandAnalysis.js';
+import { VortexField } from '../src/utils/vizPhysics.js';
 
 const SECONDS = 20;
 
@@ -506,6 +507,97 @@ const runSceneBandBenchmark = (work) => {
 const legacySceneBandBenchmark = runSceneBandBenchmark(simulateLegacySceneFrame);
 const cachedSceneBandBenchmark = runSceneBandBenchmark(simulateCachedSceneFrame);
 
+class LegacyVortexField extends VortexField {
+  step(dt) {
+    const h = Math.min(Math.max(dt, 0.001), 0.05);
+    const decayMul = Math.exp(-this.decay * h);
+    const lambda = 1 - Math.exp(-h / this.inertia);
+    const induced = this.particles.map((particle) => (
+      this.velocityAt(particle.x, particle.y, particle)
+    ));
+    this.particles.forEach((particle, index) => {
+      const { u, v } = induced[index];
+      const nx = particle.x
+        + (particle.x - particle.px) * (1 - lambda)
+        + u * h * lambda;
+      const ny = particle.y
+        + (particle.y - particle.py) * (1 - lambda)
+        + v * h * lambda;
+      particle.px = particle.x;
+      particle.py = particle.y;
+      if (Number.isFinite(nx) && Number.isFinite(ny)) {
+        particle.x = nx;
+        particle.y = ny;
+      }
+      particle.strength *= decayMul;
+      particle.age += h;
+    });
+    this.particles = this.particles.filter(
+      (particle) => Math.abs(particle.strength) > 0.004
+        && Math.abs(particle.x) < 3
+        && Math.abs(particle.y) < 3
+    );
+  }
+
+  fillUniforms(positions, strengths, radii) {
+    const slots = strengths.length;
+    const sorted = [...this.particles]
+      .sort((left, right) => Math.abs(right.strength) - Math.abs(left.strength))
+      .slice(0, slots);
+    for (let index = 0; index < slots; index += 1) {
+      const particle = sorted[index];
+      const ramp = particle && this.rampTime > 0
+        ? Math.min(1, particle.age / this.rampTime)
+        : 1;
+      positions[index * 2] = particle ? particle.x : 0;
+      positions[index * 2 + 1] = particle ? particle.y : 0;
+      strengths[index] = particle
+        ? particle.strength * ramp * ramp * (3 - 2 * ramp)
+        : 0;
+      radii[index] = particle ? particle.radius : 1;
+    }
+  }
+}
+
+const VORTEX_PARTICLE_COUNT = 12;
+const VORTEX_UNIFORM_SLOTS = 10;
+const vortexBenchmarkIterations = 20000;
+const runVortexBenchmark = (FieldType) => {
+  const field = new FieldType({
+    maxParticles: VORTEX_PARTICLE_COUNT,
+    decay: 0,
+    rampTime: 0.9
+  });
+  for (let index = 0; index < VORTEX_PARTICLE_COUNT; index += 1) {
+    const angle = index * Math.PI / 6;
+    field.inject({
+      x: Math.cos(angle) * 0.7,
+      y: Math.sin(angle) * 0.7,
+      strength: (index % 2 ? -1 : 1) * (0.008 + index * 0.0002),
+      radius: 0.5 + (index % 3) * 0.05
+    });
+  }
+  const positions = new Float32Array(VORTEX_UNIFORM_SLOTS * 2);
+  const strengths = new Float32Array(VORTEX_UNIFORM_SLOTS);
+  const radii = new Float32Array(VORTEX_UNIFORM_SLOTS);
+  for (let iteration = 0; iteration < 1000; iteration += 1) {
+    field.step(0.001);
+    field.fillUniforms(positions, strengths, radii);
+  }
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < vortexBenchmarkIterations; iteration += 1) {
+    field.step(0.001);
+    field.fillUniforms(positions, strengths, radii);
+  }
+  return {
+    elapsedMs: performance.now() - startedAt,
+    checksum: strengths[0] + positions[0] + radii[0],
+    remainingParticles: field.particles.length
+  };
+};
+const legacyVortexBenchmark = runVortexBenchmark(LegacyVortexField);
+const allocationFreeVortexBenchmark = runVortexBenchmark(VortexField);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -659,6 +751,24 @@ const output = {
       legacySceneBandBenchmark.elapsedMs,
       cachedSceneBandBenchmark.elapsedMs
     ).toFixed(2))
+  },
+  vortexFieldPolicy: {
+    particleCount: VORTEX_PARTICLE_COUNT,
+    uniformSlots: VORTEX_UNIFORM_SLOTS,
+    activeFrames: optimized.sceneFrames,
+    velocityObjectAllocationsOverBenchmarkBefore:
+      optimized.sceneFrames * VORTEX_PARTICLE_COUNT,
+    velocityObjectAllocationsOverBenchmarkAfter: 0,
+    frameArrayAllocationsOverBenchmarkBefore: optimized.sceneFrames * 4,
+    frameArrayAllocationsOverBenchmarkAfter: 0,
+    benchmarkIterations: vortexBenchmarkIterations,
+    legacyElapsedMs: Number(legacyVortexBenchmark.elapsedMs.toFixed(2)),
+    allocationFreeElapsedMs: Number(allocationFreeVortexBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyVortexBenchmark.elapsedMs,
+      allocationFreeVortexBenchmark.elapsedMs
+    ).toFixed(2)),
+    remainingParticles: allocationFreeVortexBenchmark.remainingParticles
   },
   activeAnalyzerPolicy: {
     frameHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,

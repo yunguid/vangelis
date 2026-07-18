@@ -2114,3 +2114,55 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 42 — allocation-free vortex frames
+
+Collected from the WebGL scene's 12-particle saturation path, exact 20-second allocation counts,
+four isolated 20,000-frame physics/uniform workloads, exact legacy-kernel equivalence tests,
+generated production closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 41 | Batch 42 | Change |
+|---|---:|---:|---:|
+| Vortex velocity objects over 20 s at capacity | 7,200 | 0 | removed |
+| Vortex temporary arrays over 20 s at capacity | 2,400 | 0 | removed |
+| Total vortex frame temporaries over 20 s | 9,600 | 0 | removed |
+| Isolated vortex physics + uniform CPU, 20k frames | 21.97 ms | 16.66 ms | -24.15% |
+| Shared visual policy/physics JS raw / gzip | 2.92 / 1.33 KiB | 3.49 / 1.53 KiB | +0.57 / +0.20 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.87 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 77.86 KiB | 78.07 KiB | +0.21 KiB |
+| Production deployment bytes | 1,481.92 KiB | 1,482.48 KiB | +0.56 KiB |
+| Automated production budgets | 82 | 83 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced the vortex step's per-particle `{u, v}` results and `map` output with two
+  constructor-scoped `Float64Array` buffers. The mutual-advection loop retains the same source
+  order and arithmetic, and a 30-frame exact-equivalence test matches the former kernel object for
+  object and field for field.
+- Compacted surviving particles into the existing array instead of replacing it with a filtered
+  array every active frame. Particle order and eviction behavior remain unchanged.
+- Replaced spread, native sort, and slice in uniform selection with a stable insertion sort over a
+  fixed selection buffer. At the scene's 12-particle ceiling this removes two more arrays per frame
+  while preserving strongest-first ordering, including equal-magnitude stability.
+- Explicitly clears selection slots after culling so reusable storage cannot retain dead particle
+  objects. Focused tests cover storage identity, stable ordering, culling, and reference release.
+- Added exact saturated-session object/array counts, a legacy-vs-current full physics/uniform
+  profile, and a production guard requiring allocation-free active vortex frames.
+
+### Batch 42 verification gates
+
+- Full suite: 56 files, 514/514 tests pass, including 18 vortex/numerical cases and all existing
+  Sound Designer, radar, Song Study, canvas, and audio cases.
+- Production delivery/static/dependency/route guardrails: 83/83 pass; the scene reports zero
+  steady-state vortex velocity-object and temporary-array allocations.
+- Four isolated 20,000-frame vortex profiles measured 23.34–25.98% lower CPU time; the final pass
+  is 21.97 ms to 16.66 ms, a 24.15% reduction, with all 12 particles still active after the run.
+- Warmed combined visual workload: 80.27% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -18 KB over 4,000 blocks.
+- Isolated DSP benchmark: 409.5 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

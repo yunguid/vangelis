@@ -365,6 +365,17 @@ const sceneCachesBandRanges = (
   && /sampleSceneBandEnergies\(freqData, sceneBinRanges, sceneBandEnergies\)/.test(sceneSource)
   && /new Uint16Array\(frequencyBands\.length \* 2\)/.test(sceneBandAnalysisSource)
 );
+const vizPhysicsSource = await readFile(path.join(sourceDir, 'utils', 'vizPhysics.js'), 'utf8');
+const vortexFieldReusesFrameStorage = (
+  /this\.inducedU = new Float64Array\(maxParticles\)/.test(vizPhysicsSource)
+  && /this\.inducedV = new Float64Array\(maxParticles\)/.test(vizPhysicsSource)
+  && /this\.uniformSelection = new Array\(maxParticles\)/.test(vizPhysicsSource)
+  && /particles\.length = survivorCount/.test(vizPhysicsSource)
+  && /sorted\[i\] = undefined/.test(vizPhysicsSource)
+  && !/this\.particles\.map\(\(p\) => this\.velocityAt/.test(vizPhysicsSource)
+  && !/this\.particles = this\.particles\.filter/.test(vizPhysicsSource)
+  && !/const sorted = \[\.\.\.this\.particles\]/.test(vizPhysicsSource)
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -542,6 +553,10 @@ const report = {
     sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     sceneFrequencyBoundaryEvaluationsPerSteadyStateFrame: sceneCachesBandRanges ? 0 : 22,
     sceneCachesBandRanges,
+    sceneVortexVelocityObjectAllocationsPerSteadyStateFrame:
+      vortexFieldReusesFrameStorage ? 0 : 12,
+    sceneVortexArrayAllocationsPerSteadyStateFrame: vortexFieldReusesFrameStorage ? 0 : 4,
+    vortexFieldReusesFrameStorage,
     waveCandyColdFrameRateHz: waveCandyDefersFrameLoopUntilGraph ? 0 : 30,
     waveCandyDefersFrameLoopUntilGraph,
     waveCandyColdCanvasContextCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
@@ -723,6 +738,13 @@ if (!sceneCachesBandRanges) {
     name: 'Guard configuration-scoped scene band ranges',
     actual: 'frequency-to-bin boundaries evaluated in the WebGL active frame path',
     expected: 'cached until sample rate, FFT size, or bin count changes'
+  });
+}
+if (!vortexFieldReusesFrameStorage) {
+  failures.push({
+    name: 'Guard allocation-free scene vortex frames',
+    actual: 'velocity objects or temporary arrays allocated in active vortex frames',
+    expected: 'preallocated velocity/selection buffers and in-place particle compaction'
   });
 }
 if (
@@ -1059,7 +1081,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 64,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 65,
   failures
 };
 
