@@ -2270,3 +2270,52 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 45 — reusable radar frame containers
+
+Collected from the playing BirdsEye radar draw path, exact 20-second transient-container counts,
+three checksum-equivalent 500,000-range workloads, generated production closures, focused radar
+and Song Study tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 44 | Batch 45 | Change |
+|---|---:|---:|---:|
+| Explicit radar frame containers over 20 s playing | 4,000 | 0 | removed |
+| Radar frame containers per playing frame | 8 | 0 | removed |
+| BirdsEyeRadar JS raw / gzip | 6.93 / 3.05 KiB | 6.30 / 2.87 KiB | -0.63 / -0.18 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.87 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 78.40 KiB | 78.41 KiB | +0.01 KiB |
+| Production deployment bytes | 1,483.38 KiB | 1,482.77 KiB | -0.61 KiB |
+| Automated production budgets | 85 | 86 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Converted the radar gradient, backdrop, grid, particle, note, and visible-range calls from
+  frame-local argument objects to positional internal APIs. The production guard now rejects any
+  reintroduction of the eight explicit playing-frame containers.
+- Added an optional reusable result object to the shared visible-note binary search and retained
+  stable result storage in both BirdsEyeRadar and MidiBirdsEyeView. Empty and populated ranges
+  mutate the same object, including window bounds.
+- Reused one active-label-position array per radar instance and reset its logical length per frame
+  instead of allocating a replacement array.
+- Updated gradient and range unit tests for the positional/reusable contracts. The isolated range
+  workload includes a checksum equivalence assertion so allocation-policy changes cannot alter
+  the visible note window silently.
+
+### Batch 45 verification gates
+
+- Full suite: 56 files, 515/515 tests pass, including focused radar, MidiBirdsEyeView, Song Study,
+  gradient-cache, and range-identity cases.
+- Production delivery/static/dependency/route guardrails: 86/86 pass; the radar reports zero
+  explicit steady-state frame containers and requires reusable frame storage.
+- Three 500,000-range profiles ranged from 6.77% slower to 2.82% faster. This is CPU-neutral at
+  this scale, so no range-compute speedup is claimed; the measured benefit is removal of 4,000
+  explicit containers per 20-second playing session and a 0.18 KiB gzip radar-chunk reduction.
+- Warmed combined visual workload: 80.36% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -3 KB over 4,000 blocks.
+- Isolated DSP benchmark: 410.2 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

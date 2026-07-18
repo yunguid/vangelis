@@ -4,13 +4,13 @@ export const createRadarStaticGradientCache = () => ({
   gradients: null
 });
 
-export const getRadarStaticGradients = ({
+export const getRadarStaticGradients = (
   context,
   cache,
   width,
   height,
   bottomPadding
-}) => {
+) => {
   if (cache.gradients && cache.width === width && cache.height === height) {
     return cache.gradients;
   }

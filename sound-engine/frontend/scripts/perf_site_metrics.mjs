@@ -355,7 +355,7 @@ const radarUsesBoundedPaletteCache = (
   && /normalizedMidi \* 2 \+ Number\(active\)/.test(radarPaletteSource)
 );
 const radarCachesStaticGradients = (
-  /getRadarStaticGradients\(\{/.test(birdsEyeRadarSource)
+  /getRadarStaticGradients\(\s*ctx,\s*staticGradientCache,/.test(birdsEyeRadarSource)
   && /sizeController\.acknowledgeResize\(\)/.test(birdsEyeRadarSource)
   && /cache\.width === width && cache\.height === height/.test(radarGradientCacheSource)
   && (radarGradientCacheSource.match(/context\.create(?:Linear|Radial)Gradient\s*\(/g) || []).length === 4
@@ -364,6 +364,20 @@ const radarCachesParticleColors = (
   /getRadarParticleColor\(alpha\)/.test(birdsEyeRadarSource)
   && /const particleColors = Array\.from\(/.test(radarParticleColorSource)
   && /RADAR_PARTICLE_COLOR_COUNT/.test(radarParticleColorSource)
+);
+const midiBirdsEyeMathSource = await readFile(
+  path.join(sourceDir, 'components', 'midiBirdsEyeMath.js'),
+  'utf8'
+);
+const radarReusesFrameContainers = (
+  /const visibleNoteRange = \{ startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 \}/
+    .test(birdsEyeRadarSource)
+  && /const activeLabelPositions = \[\]/.test(birdsEyeRadarSource)
+  && /activeLabelPositions\.length = 0/.test(birdsEyeRadarSource)
+  && /drawParticles\(nowSeconds, trackTop, trackBottom, centerX, playfieldWidth\)/
+    .test(birdsEyeRadarSource)
+  && /out\.startIndex = lowerBound/.test(midiBirdsEyeMathSource)
+  && /return out;/.test(midiBirdsEyeMathSource)
 );
 const sceneSource = await readFile(path.join(sourceDir, 'components', 'Scene.jsx'), 'utf8');
 const sceneBandAnalysisSource = await readFile(
@@ -598,6 +612,8 @@ const report = {
       radarCachesParticleColors ? 0 : 32,
     radarParticleColorStateLimit: 121,
     radarCachesParticleColors,
+    radarExplicitFrameContainers: radarReusesFrameContainers ? 0 : 8,
+    radarReusesFrameContainers,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -762,6 +778,13 @@ if (!radarCachesParticleColors) {
     name: 'Guard bounded radar particle colors',
     actual: 'per-particle RGBA string formatting in active frame path',
     expected: '121-entry three-decimal alpha lookup table'
+  });
+}
+if (!radarReusesFrameContainers) {
+  failures.push({
+    name: 'Guard reusable radar frame containers',
+    actual: 'argument, visible-range, or active-label containers allocated in playing frames',
+    expected: 'positional draw calls with reusable range and label buffers'
   });
 }
 if (!sceneCachesBandRanges) {
@@ -1112,7 +1135,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 67,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 68,
   failures
 };
 

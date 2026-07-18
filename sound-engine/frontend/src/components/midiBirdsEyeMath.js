@@ -62,25 +62,29 @@ export const buildNoteRenderWindow = (notes = []) => {
   };
 };
 
-export const getVisibleNoteRange = ({
+export const getVisibleNoteRange = (
   startTimes,
   nowTime,
   lookBehindSeconds,
   lookAheadSeconds,
-  maxDuration
-}) => {
+  maxDuration,
+  out = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 }
+) => {
   if (!startTimes?.length) {
-    return { startIndex: 0, endIndex: 0, windowStart: nowTime, windowEnd: nowTime };
+    out.startIndex = 0;
+    out.endIndex = 0;
+    out.windowStart = nowTime;
+    out.windowEnd = nowTime;
+    return out;
   }
 
   const windowStart = nowTime - lookBehindSeconds;
   const windowEnd = nowTime + lookAheadSeconds;
   const earliestRelevantStart = windowStart - maxDuration;
 
-  return {
-    startIndex: lowerBound(startTimes, earliestRelevantStart),
-    endIndex: upperBound(startTimes, windowEnd),
-    windowStart,
-    windowEnd
-  };
+  out.startIndex = lowerBound(startTimes, earliestRelevantStart);
+  out.endIndex = upperBound(startTimes, windowEnd);
+  out.windowStart = windowStart;
+  out.windowEnd = windowEnd;
+  return out;
 };

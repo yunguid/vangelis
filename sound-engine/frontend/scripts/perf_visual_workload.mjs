@@ -38,6 +38,11 @@ import {
   lagrangeEnvelope,
   sampleLagrangeEnvelope
 } from '../src/utils/vizPhysics.js';
+import {
+  getVisibleNoteRange,
+  lowerBound,
+  upperBound
+} from '../src/components/midiBirdsEyeMath.js';
 
 const SECONDS = 20;
 
@@ -695,6 +700,59 @@ const cachedAnalyzerGridBenchmark = runSpectrumBenchmark(
   analyzerGridBenchmarkIterations
 );
 
+const radarStartTimes = Float64Array.from(midiNotes, (note) => note.time);
+const radarRangeBenchmarkIterations = 500000;
+const reusableRadarRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
+const getLegacyVisibleNoteRange = ({
+  startTimes,
+  nowTime,
+  lookBehindSeconds,
+  lookAheadSeconds,
+  maxDuration
+}) => {
+  const windowStart = nowTime - lookBehindSeconds;
+  const windowEnd = nowTime + lookAheadSeconds;
+  const earliestRelevantStart = windowStart - maxDuration;
+  return {
+    startIndex: lowerBound(startTimes, earliestRelevantStart),
+    endIndex: upperBound(startTimes, windowEnd),
+    windowStart,
+    windowEnd
+  };
+};
+const runRadarRangeBenchmark = (sample) => {
+  let checksum = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < radarRangeBenchmarkIterations; iteration += 1) {
+    const range = sample((iteration % 5000) * 0.01);
+    checksum += range.startIndex + range.endIndex + range.windowStart + range.windowEnd;
+  }
+  return { elapsedMs: performance.now() - startedAt, checksum };
+};
+const legacyRadarRangeBenchmark = runRadarRangeBenchmark((nowTime) => (
+  getLegacyVisibleNoteRange({
+    startTimes: radarStartTimes,
+    nowTime,
+    lookBehindSeconds: 1.8,
+    lookAheadSeconds: 14,
+    maxDuration: 0.98
+  })
+));
+const reusableRadarRangeBenchmark = runRadarRangeBenchmark((nowTime) => (
+  getVisibleNoteRange(
+    radarStartTimes,
+    nowTime,
+    1.8,
+    14,
+    0.98,
+    reusableRadarRange
+  )
+));
+
+if (Math.abs(legacyRadarRangeBenchmark.checksum - reusableRadarRangeBenchmark.checksum) > 1e-6) {
+  throw new Error('Reusable radar range calculation changed the benchmark result');
+}
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -899,6 +957,20 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyAnalyzerGridBenchmark.elapsedMs,
       cachedAnalyzerGridBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  radarFrameContainerPolicy: {
+    playingFrames: radarPlayingFrames,
+    explicitContainersPerFrameBefore: 8,
+    explicitContainersPerFrameAfter: 0,
+    explicitContainersOverBenchmarkBefore: radarPlayingFrames * 8,
+    explicitContainersOverBenchmarkAfter: 0,
+    rangeBenchmarkIterations: radarRangeBenchmarkIterations,
+    legacyRangeElapsedMs: Number(legacyRadarRangeBenchmark.elapsedMs.toFixed(2)),
+    reusableRangeElapsedMs: Number(reusableRadarRangeBenchmark.elapsedMs.toFixed(2)),
+    rangeElapsedReductionPercent: Number(reduction(
+      legacyRadarRangeBenchmark.elapsedMs,
+      reusableRadarRangeBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

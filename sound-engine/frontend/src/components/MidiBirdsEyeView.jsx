@@ -62,6 +62,7 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
     };
 
     const sizeController = createCanvasSizeController(canvas, ctx);
+    const visibleNoteRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
 
     const drawPerspectiveGrid = (width, height, trackTop, trackBottom, centerX, playfieldWidth) => {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
@@ -123,13 +124,14 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
       const nowTime = clamp(playbackProgress, 0, 1) * midi.duration;
       const midiSpan = Math.max(1, midiRange.max - midiRange.min);
       const laneBaseWidth = playfieldWidth / (midiSpan + 1);
-      const { startIndex, endIndex, windowStart, windowEnd } = getVisibleNoteRange({
-        startTimes: renderWindow.startTimes,
+      const { startIndex, endIndex, windowStart, windowEnd } = getVisibleNoteRange(
+        renderWindow.startTimes,
         nowTime,
-        lookBehindSeconds: LOOKBEHIND_SECONDS,
-        lookAheadSeconds: LOOKAHEAD_SECONDS,
-        maxDuration: renderWindow.maxDuration
-      });
+        LOOKBEHIND_SECONDS,
+        LOOKAHEAD_SECONDS,
+        renderWindow.maxDuration,
+        visibleNoteRange
+      );
 
       for (let noteIndex = startIndex; noteIndex < endIndex; noteIndex += 1) {
         const note = renderWindow.notes[noteIndex];

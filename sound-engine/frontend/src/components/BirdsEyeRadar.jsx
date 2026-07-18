@@ -100,8 +100,10 @@ const BirdsEyeRadar = ({
 
     const sizeController = createCanvasSizeController(canvas, ctx);
     const staticGradientCache = createRadarStaticGradientCache();
+    const visibleNoteRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
+    const activeLabelPositions = [];
 
-    const drawBackdrop = ({ width, height, nowSeconds, playbackProgress, gradients }) => {
+    const drawBackdrop = (width, height, nowSeconds, playbackProgress, gradients) => {
       ctx.fillStyle = gradients.base;
       ctx.fillRect(0, 0, width, height);
 
@@ -120,14 +122,14 @@ const BirdsEyeRadar = ({
       ctx.fillRect(0, 0, width, height);
     };
 
-    const drawGrid = ({
+    const drawGrid = (
       trackTop,
       trackBottom,
       centerX,
       playfieldWidth,
       vanishY,
       horizonGradient
-    }) => {
+    ) => {
       const depthSpan = trackBottom - trackTop;
       ctx.strokeStyle = 'rgba(129, 164, 196, 0.17)';
       ctx.lineWidth = 1;
@@ -161,7 +163,7 @@ const BirdsEyeRadar = ({
       ctx.stroke();
     };
 
-    const drawParticles = ({ nowSeconds, trackTop, trackBottom, centerX, playfieldWidth }) => {
+    const drawParticles = (nowSeconds, trackTop, trackBottom, centerX, playfieldWidth) => {
       const depthSpan = trackBottom - trackTop;
       for (const particle of particlesRef.current) {
         const flow = (particle.depth + nowSeconds * particle.speed + particle.phase) % 1;
@@ -177,7 +179,7 @@ const BirdsEyeRadar = ({
       }
     };
 
-    const drawNotes = ({
+    const drawNotes = (
       midi,
       playbackProgress,
       activeNoteSet,
@@ -186,21 +188,22 @@ const BirdsEyeRadar = ({
       trackBottom,
       centerX,
       playfieldWidth
-    }) => {
+    ) => {
       if (!midi?.duration || !renderWindow.notes.length) return;
 
       const trackHeight = Math.max(1, trackBottom - trackTop);
       const midiSpan = Math.max(1, midiRange.max - midiRange.min);
       const laneWidth = playfieldWidth / (midiSpan + 1);
       const nowTime = clamp(playbackProgress, 0, 1) * midi.duration;
-      const activeLabels = [];
-      const { startIndex, endIndex, windowStart, windowEnd } = getVisibleNoteRange({
-        startTimes: renderWindow.startTimes,
+      activeLabelPositions.length = 0;
+      const { startIndex, endIndex, windowStart, windowEnd } = getVisibleNoteRange(
+        renderWindow.startTimes,
         nowTime,
-        lookBehindSeconds: LOOKBEHIND_SECONDS,
-        lookAheadSeconds: LOOKAHEAD_SECONDS,
-        maxDuration: renderWindow.maxDuration
-      });
+        LOOKBEHIND_SECONDS,
+        LOOKAHEAD_SECONDS,
+        renderWindow.maxDuration,
+        visibleNoteRange
+      );
 
       for (let noteIndex = startIndex; noteIndex < endIndex; noteIndex += 1) {
         const note = renderWindow.notes[noteIndex];
@@ -263,9 +266,11 @@ const BirdsEyeRadar = ({
           ctx.arc(x, trackBottom - 1.4, 2.5, 0, Math.PI * 2);
           ctx.fill();
 
-          const canPlaceLabel = activeLabels.every((placedX) => Math.abs(placedX - x) > 28);
+          const canPlaceLabel = activeLabelPositions.every(
+            (placedX) => Math.abs(placedX - x) > 28
+          );
           if (canPlaceLabel) {
-            activeLabels.push(x);
+            activeLabelPositions.push(x);
             const labelY = trackBottom - 10;
             ctx.font = '600 10px ui-monospace, Menlo, Monaco, monospace';
             const labelW = ctx.measureText(noteId).width;
@@ -305,22 +310,22 @@ const BirdsEyeRadar = ({
 
       const { width, height } = sizeController.size;
       const nowSeconds = time * 0.001;
-      const staticGradients = getRadarStaticGradients({
-        context: ctx,
-        cache: staticGradientCache,
+      const staticGradients = getRadarStaticGradients(
+        ctx,
+        staticGradientCache,
         width,
         height,
-        bottomPadding: BOTTOM_PADDING
-      });
+        BOTTOM_PADDING
+      );
 
       ctx.clearRect(0, 0, width, height);
-      drawBackdrop({
+      drawBackdrop(
         width,
         height,
         nowSeconds,
         playbackProgress,
-        gradients: staticGradients
-      });
+        staticGradients
+      );
 
       const trackTop = TOP_PADDING;
       const trackBottom = height - BOTTOM_PADDING;
@@ -328,16 +333,16 @@ const BirdsEyeRadar = ({
       const centerX = SIDE_PADDING + playfieldWidth * 0.5;
       const vanishY = trackTop - height * 0.28;
 
-      drawGrid({
+      drawGrid(
         trackTop,
         trackBottom,
         centerX,
         playfieldWidth,
         vanishY,
-        horizonGradient: staticGradients.gridHorizon
-      });
-      drawParticles({ nowSeconds, trackTop, trackBottom, centerX, playfieldWidth });
-      drawNotes({
+        staticGradients.gridHorizon
+      );
+      drawParticles(nowSeconds, trackTop, trackBottom, centerX, playfieldWidth);
+      drawNotes(
         midi,
         playbackProgress,
         activeNoteSet,
@@ -346,7 +351,7 @@ const BirdsEyeRadar = ({
         trackBottom,
         centerX,
         playfieldWidth
-      });
+      );
       sizeController.acknowledgeResize();
 
     };

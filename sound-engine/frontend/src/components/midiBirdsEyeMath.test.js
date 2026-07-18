@@ -37,14 +37,17 @@ describe('midiBirdsEyeMath', () => {
       { midi: 64, time: 6, duration: 1 }
     ]);
 
-    const visible = getVisibleNoteRange({
-      startTimes: renderWindow.startTimes,
-      nowTime: 4,
-      lookBehindSeconds: 1.5,
-      lookAheadSeconds: 2,
-      maxDuration: renderWindow.maxDuration
-    });
+    const out = { startIndex: -1, endIndex: -1, windowStart: -1, windowEnd: -1 };
+    const visible = getVisibleNoteRange(
+      renderWindow.startTimes,
+      4,
+      1.5,
+      2,
+      renderWindow.maxDuration,
+      out
+    );
 
+    expect(visible).toBe(out);
     expect(visible.windowStart).toBe(2.5);
     expect(visible.windowEnd).toBe(6);
     expect(visible.startIndex).toBe(0);
