@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { FACTORY_PRESETS, PRESET_CATEGORIES } from './presetStorage.js';
+import { FACTORY_PRESETS, PRESET_CATEGORIES } from './factoryPresets.js';
+import { FACTORY_PRESET_COUNT } from './presetCatalogMeta.js';
 import {
   AUDIO_PARAM_RANGES,
   WAVEFORM_OPTIONS,
@@ -21,7 +22,7 @@ describe('FACTORY_PRESETS', () => {
   });
 
   it('offers a production-size bank', () => {
-    expect(FACTORY_PRESETS.length).toBeGreaterThanOrEqual(40);
+    expect(FACTORY_PRESETS).toHaveLength(FACTORY_PRESET_COUNT);
   });
 
   it('covers every category with a played-in set', () => {

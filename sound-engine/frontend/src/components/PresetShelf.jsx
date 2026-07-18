@@ -1,11 +1,10 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FACTORY_PRESETS,
-  PRESET_CATEGORIES,
   deleteUserPreset,
   loadUserPresets,
   saveUserPreset
-} from '../utils/presetStorage.js';
+} from '../utils/userPresetStorage.js';
+import { FACTORY_PRESET_COUNT } from '../utils/presetCatalogMeta.js';
 
 /**
  * PresetShelf — categorized preset browser for the Sound tab.
@@ -14,8 +13,8 @@ import {
  * its params over the current sound.
  *
  * `foldBrowse` is optional and additive: when omitted (the Sound tab's use),
- * behavior is unchanged — the transport, save row, and full category/preset
- * lists all render every time, as before. When `true` (the sound-designer
+ * behavior is unchanged after its lazy panel mounts — the transport, save row,
+ * and full category/preset lists all render. When `true` (the sound-designer
  * page's use), the transport + description + save row still always render,
  * but the factory-category groups and the "Your presets" list collapse
  * behind a disclosure button, so a 45-button preset wall doesn't dominate a
@@ -32,31 +31,72 @@ const PresetShelf = ({
 }) => {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [userPresets, setUserPresets] = useState(() => loadUserPresets());
+  const [factoryCatalog, setFactoryCatalog] = useState(null);
+  const [catalogError, setCatalogError] = useState('');
+  const catalogPromiseRef = useRef(null);
+  const mountedRef = useRef(true);
   const [name, setName] = useState('');
-  // Highlight survives remounts (tab switches) by re-deriving the active
-  // entry from the app-level patch name.
-  const [activeId, setActiveId] = useState(() => {
-    if (!activePresetName) return null;
-    const match = [...FACTORY_PRESETS, ...loadUserPresets()]
-      .find((preset) => preset.name === activePresetName);
-    return match?.id || null;
-  });
+  const [activeId, setActiveId] = useState(null);
+  const factoryPresets = factoryCatalog?.FACTORY_PRESETS || [];
+  const presetCategories = factoryCatalog?.PRESET_CATEGORIES || [];
+
+  const ensureFactoryCatalog = useCallback(() => {
+    if (factoryCatalog) return Promise.resolve(factoryCatalog);
+    if (!catalogPromiseRef.current) {
+      catalogPromiseRef.current = import('../utils/factoryPresets.js')
+        .then((catalog) => {
+          if (mountedRef.current) {
+            setFactoryCatalog(catalog);
+            setCatalogError('');
+          }
+          return catalog;
+        })
+        .catch((error) => {
+          catalogPromiseRef.current = null;
+          if (mountedRef.current) setCatalogError('Preset bank failed to load.');
+          throw error;
+        });
+    }
+    return catalogPromiseRef.current;
+  }, [factoryCatalog]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // The Sound tab shows the complete browser, so it fetches the bank as soon
+  // as that already-lazy panel mounts. Sound Designer keeps its folded bank
+  // out of the route's critical path until browse/step interaction.
+  useEffect(() => {
+    if (!foldBrowse) ensureFactoryCatalog().catch(() => {});
+  }, [ensureFactoryCatalog, foldBrowse]);
 
   // Flattened ordering for prev/next cycling: factory bank, then user bank.
   const orderedPresets = useMemo(
-    () => [...FACTORY_PRESETS, ...userPresets],
-    [userPresets]
+    () => [...factoryPresets, ...userPresets],
+    [factoryPresets, userPresets]
   );
+  const presetCount = (factoryCatalog ? factoryPresets.length : FACTORY_PRESET_COUNT)
+    + userPresets.length;
 
   const factoryByCategory = useMemo(() => {
-    const groups = new Map(PRESET_CATEGORIES.map((category) => [category, []]));
-    FACTORY_PRESETS.forEach((preset) => {
+    const groups = new Map(presetCategories.map((category) => [category, []]));
+    factoryPresets.forEach((preset) => {
       const bucket = groups.get(preset.category);
       if (bucket) bucket.push(preset);
       else groups.set(preset.category, [preset]);
     });
     return [...groups.entries()].filter(([, presets]) => presets.length > 0);
-  }, []);
+  }, [factoryPresets, presetCategories]);
+
+  useEffect(() => {
+    if (!activePresetName) return;
+    const match = orderedPresets.find((preset) => preset.name === activePresetName);
+    if (match) setActiveId(match.id);
+  }, [activePresetName, orderedPresets]);
 
   const activePreset = useMemo(
     () => orderedPresets.find((preset) => preset.id === activeId) || null,
@@ -68,14 +108,27 @@ const PresetShelf = ({
     onApply?.(preset);
   }, [onApply]);
 
-  const handleStep = useCallback((direction) => {
-    if (orderedPresets.length === 0) return;
-    const index = orderedPresets.findIndex((preset) => preset.id === activeId);
+  const handleStep = useCallback(async (direction) => {
+    let catalog;
+    try {
+      catalog = factoryCatalog || await ensureFactoryCatalog();
+    } catch {
+      return;
+    }
+    const availablePresets = [...catalog.FACTORY_PRESETS, ...userPresets];
+    if (availablePresets.length === 0) return;
+    const index = availablePresets.findIndex((preset) => preset.id === activeId);
     const nextIndex = index === -1
-      ? (direction > 0 ? 0 : orderedPresets.length - 1)
-      : (index + direction + orderedPresets.length) % orderedPresets.length;
-    handleApply(orderedPresets[nextIndex]);
-  }, [orderedPresets, activeId, handleApply]);
+      ? (direction > 0 ? 0 : availablePresets.length - 1)
+      : (index + direction + availablePresets.length) % availablePresets.length;
+    handleApply(availablePresets[nextIndex]);
+  }, [activeId, ensureFactoryCatalog, factoryCatalog, handleApply, userPresets]);
+
+  const handleBrowseToggle = useCallback(() => {
+    const nextOpen = !browseOpen;
+    setBrowseOpen(nextOpen);
+    if (nextOpen) ensureFactoryCatalog().catch(() => {});
+  }, [browseOpen, ensureFactoryCatalog]);
 
   const handleSave = useCallback(() => {
     const preset = saveUserPreset({ name, waveformType, audioParams });
@@ -130,12 +183,12 @@ const PresetShelf = ({
         </button>
         <div className="preset-shelf__readout" aria-live="polite">
           <span className="preset-shelf__readout-name">
-            {activePreset ? activePreset.name : 'Presets'}
+            {activePreset?.name || activePresetName || 'Presets'}
           </span>
           <span className="preset-shelf__readout-detail">
             {activePreset
               ? (activePreset.category || 'Your preset')
-              : `${orderedPresets.length} patches`}
+              : `${presetCount} patches`}
           </span>
         </div>
         <button
@@ -154,13 +207,17 @@ const PresetShelf = ({
         <button
           type="button"
           className="button-link preset-shelf__browse-toggle"
-          onClick={() => setBrowseOpen((prev) => !prev)}
+          onClick={handleBrowseToggle}
           aria-expanded={browseOpen}
         >
-          {browseOpen ? 'Hide all presets' : `Browse all presets (${orderedPresets.length})`}
+          {browseOpen ? 'Hide all presets' : `Browse all presets (${presetCount})`}
         </button>
       )}
-      {(!foldBrowse || browseOpen) && (
+      {(!foldBrowse || browseOpen) && !factoryCatalog && !catalogError && (
+        <div className="preset-shelf__hint" role="status">Loading preset bank…</div>
+      )}
+      {catalogError && <div className="preset-shelf__hint" role="alert">{catalogError}</div>}
+      {(!foldBrowse || browseOpen) && factoryCatalog && (
         <div className={`preset-shelf__browse${foldBrowse ? ' preset-shelf__browse--capped' : ''}`}>
           {factoryByCategory.map(([category, presets]) => (
             <div key={category} className="preset-shelf__group">

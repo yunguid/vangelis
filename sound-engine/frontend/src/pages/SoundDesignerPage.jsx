@@ -29,7 +29,7 @@ import {
   WAVEFORM_OPTIONS,
   sanitizeAudioParams
 } from '../utils/audioParams.js';
-import { saveUserPreset } from '../utils/presetStorage.js';
+import { saveUserPreset } from '../utils/userPresetStorage.js';
 import { HOME_HREF } from '../utils/routes.js';
 import './SoundDesignerPage.css';
 

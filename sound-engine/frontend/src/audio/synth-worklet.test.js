@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { FACTORY_PRESETS } from '../utils/presetStorage.js';
+import { FACTORY_PRESETS } from '../utils/factoryPresets.js';
 import { sanitizeAudioParams, toWorkletParams } from '../utils/audioParams.js';
 
 /**

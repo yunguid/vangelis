@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import SoundDesignerPage from './SoundDesignerPage.jsx';
-import { loadUserPresets } from '../utils/presetStorage.js';
+import { loadUserPresets } from '../utils/userPresetStorage.js';
 
 // Mock the audio engine the same way App.test.jsx does, so the page can
 // mount without touching real AudioWorklet/Web Audio API in jsdom.
@@ -240,7 +240,7 @@ describe('SoundDesignerPage', () => {
       expect(workspace.getByText(/reverb off/i)).toBeInTheDocument();
     });
 
-    it('persists a new preset to presetStorage (localStorage) on Mint', () => {
+    it('persists a new preset to userPresetStorage (localStorage) on Mint', () => {
       const { container } = render(<SoundDesignerPage />);
       const workspace = getWorkspace(container);
       goToStage(workspace, 'Mint');
@@ -253,7 +253,7 @@ describe('SoundDesignerPage', () => {
       expect(stored).toHaveLength(1);
       expect(stored[0].name).toBe('porch light');
       // This is the same localStorage-backed store the sidebar's Sound tab
-      // reads (utils/presetStorage.js STORAGE_KEY) — no page-local copy.
+      // reads (utils/userPresetStorage.js STORAGE_KEY) — no page-local copy.
       expect(JSON.parse(localStorage.getItem('vangelis.presets.v1'))[0].name)
         .toBe('porch light');
     });
@@ -272,7 +272,7 @@ describe('SoundDesignerPage', () => {
       expect(link).toHaveAttribute('href', '#/');
     });
 
-    it('the minted preset appears in the "Your presets" shelf on the Base stage (once browse is opened)', () => {
+    it('the minted preset appears in the "Your presets" shelf on the Base stage (once browse is opened)', async () => {
       const { container } = render(<SoundDesignerPage />);
       const workspace = getWorkspace(container);
       goToStage(workspace, 'Mint');
@@ -283,7 +283,7 @@ describe('SoundDesignerPage', () => {
 
       goToStage(workspace, 'Base');
       fireEvent.click(workspace.getByRole('button', { name: /Browse all presets/i }));
-      expect(workspace.getByRole('button', { name: 'Load preset bx-90' })).toBeInTheDocument();
+      expect(await workspace.findByRole('button', { name: 'Load preset bx-90' })).toBeInTheDocument();
     });
   });
 });

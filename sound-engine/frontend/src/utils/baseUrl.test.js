@@ -17,27 +17,27 @@ describe('normalizeBase', () => {
 
 describe('withBase', () => {
   it('joins absolute base paths', () => {
-    expect(withBase('raylib/wavecandy.js', '/vangelis/'))
-      .toBe('/vangelis/raylib/wavecandy.js');
+    expect(withBase('assets/favicon.svg', '/vangelis/'))
+      .toBe('/vangelis/assets/favicon.svg');
   });
 
   it('normalizes base before joining', () => {
-    expect(withBase('raylib/wavecandy.js', '/vangelis'))
-      .toBe('/vangelis/raylib/wavecandy.js');
+    expect(withBase('assets/favicon.svg', '/vangelis'))
+      .toBe('/vangelis/assets/favicon.svg');
   });
 
   it('handles root base', () => {
-    expect(withBase('raylib/wavecandy.js', '/'))
-      .toBe('/raylib/wavecandy.js');
+    expect(withBase('assets/favicon.svg', '/'))
+      .toBe('/assets/favicon.svg');
   });
 
   it('handles relative base', () => {
-    expect(withBase('raylib/wavecandy.js', './'))
-      .toBe('./raylib/wavecandy.js');
+    expect(withBase('assets/favicon.svg', './'))
+      .toBe('./assets/favicon.svg');
   });
 
   it('handles absolute URL base', () => {
-    expect(withBase('raylib/wavecandy.js', 'https://example.com/vangelis/'))
-      .toBe('https://example.com/vangelis/raylib/wavecandy.js');
+    expect(withBase('assets/favicon.svg', 'https://example.com/vangelis/'))
+      .toBe('https://example.com/vangelis/assets/favicon.svg');
   });
 });

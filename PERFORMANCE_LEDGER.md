@@ -449,3 +449,49 @@ Implemented boundaries and controls:
 - Build: 161 transformed modules in 799 ms; seven secondary page chunks plus a dedicated home
   application chunk and shared feature chunks.
 - `git diff --check`: pass.
+
+## Optimization batch 6 — deployment hygiene and deferred factory bank
+
+Collected from the production manifest, exact static-file sizes, focused interaction tests,
+the full suite, and the audio/visual deterministic gates.
+
+| Metric | Batch 5 / same-build counterfactual | Batch 6 | Change |
+|---|---:|---:|---:|
+| Public static bytes | 1,180.95 KiB | 860.05 KiB | -27.2% |
+| Production deployment bytes | 1,893.63 KiB | 1,572.73 KiB | -16.9% |
+| Retired Raylib deploy payload | 320.90 KiB | 0 | removed |
+| Retired Raylib public files | 3 | 0 | removed |
+| Sound Designer startup JS gzip | 92.15 KiB | 88.44 KiB | -4.0% |
+| Factory preset bank in folded startup closure | 6.43 KiB gzip | 0 | deferred |
+| Factory preset bank interaction chunk | none | 33.18 KiB / 6.43 KiB gzip | isolated |
+| Initial JS gzip | 47.64 KiB | 47.64 KiB | unchanged |
+| Total production CSS raw | 112.70 KiB | 112.42 KiB | -0.2% |
+| Automated production budgets | 18 | 22 | +4 guardrails |
+
+Implemented boundaries and controls:
+
+- Removed the retired Emscripten Raylib JavaScript/WASM pair, its source/build toolchain, and
+  dead `.wave-candy--raylib` selectors. The current Canvas suite remains the only visualizer.
+- The audit now measures total deployment and `public/` footprint and enforces 1.65 MiB and
+  0.95 MiB raw ceilings, catching static baggage that JS/CSS asset budgets cannot see.
+- Split the 45 fully specified factory patches from localStorage user-preset operations. The
+  Sound Designer retains its 45-patch count and selected user-preset readout without loading
+  the factory parameter tables.
+- The folded Sound Designer bank loads on browse or previous/next interaction. The sidebar's
+  always-open preset browser still starts the load when its already-lazy Sound panel mounts.
+- Dynamic-bank loading deduplicates concurrent requests, exposes loading/error states, avoids
+  post-unmount state publication, and preserves user preset save/delete behavior.
+- Manifest guards require a dedicated factory-bank chunk and fail if it re-enters the folded
+  Sound Designer startup closure.
+
+### Batch 6 verification gates
+
+- Full suite: 39 files, 467/467 tests pass, including 139 factory-patch range invariants and
+  four new user-storage lifecycle tests.
+- Production delivery/static/dependency/route guardrails: 22/22 pass.
+- Deterministic visual workload: 91.83% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 409.6 us per 128-frame block with 6.5x realtime headroom.
+- `git diff --check`: pass.

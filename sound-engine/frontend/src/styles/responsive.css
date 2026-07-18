@@ -106,11 +106,6 @@
     padding: 0;
   }
 
-  .wave-candy--raylib {
-    height: var(--wave-candy-height);
-    min-height: var(--wave-candy-height);
-  }
-
   /* The 5-pane analyzer wall needs ~830px; anything wider than the viewport
      makes phones zoom out to fit, shrinking the entire UI. Keep the two most
      musical panes side by side and let them shrink freely. */
@@ -386,11 +381,6 @@
   .header-controls .button-icon {
     width: 40px;
     height: 40px;
-  }
-
-  .wave-candy--raylib {
-    height: clamp(120px, 22vh, 160px);
-    min-height: clamp(120px, 22vh, 160px);
   }
 
   .birds-eye-radar__stage {

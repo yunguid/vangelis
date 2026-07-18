@@ -1,17 +1,9 @@
 /**
- * Named synth presets: factory patches + user presets in localStorage.
- * @module utils/presetStorage
+ * Named factory synth presets.
+ * @module utils/factoryPresets
  */
 
 import { MOD_SRC, MOD_DST } from '../audio/dsp/constants.js';
-
-const STORAGE_KEY = 'vangelis.presets.v1';
-
-const makeId = () => (
-  typeof crypto !== 'undefined' && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-);
 
 // Short aliases over the engine's mod-matrix enums, for compact patch tables.
 const SRC = Object.freeze({
@@ -1193,42 +1185,3 @@ export const FACTORY_PRESETS = [
     })
   }
 ];
-
-export const loadUserPresets = () => {
-  if (typeof localStorage === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((p) => p && p.id && p.name) : [];
-  } catch {
-    return [];
-  }
-};
-
-const persist = (presets) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
-  } catch {
-    // Storage full or unavailable; preset stays in memory only.
-  }
-};
-
-export const saveUserPreset = ({ name, waveformType, audioParams }) => {
-  const trimmed = (name || '').trim().slice(0, 48) || 'Untitled';
-  const preset = {
-    id: makeId(),
-    name: trimmed,
-    waveformType,
-    audioParams,
-    createdAt: Date.now()
-  };
-  const next = [preset, ...loadUserPresets()].slice(0, 50);
-  persist(next);
-  return preset;
-};
-
-export const deleteUserPreset = (id) => {
-  const next = loadUserPresets().filter((preset) => preset.id !== id);
-  persist(next);
-  return next;
-};

@@ -24,12 +24,6 @@
   background: rgba(6, 9, 14, 0.72);
 }
 
-.wave-candy--raylib {
-  height: var(--wave-candy-height);
-  min-height: var(--wave-candy-height);
-  padding: var(--space-sm);
-}
-
 .wave-candy-gear {
   position: absolute;
   top: 10px;

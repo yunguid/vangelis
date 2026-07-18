@@ -95,7 +95,7 @@ await import('../src/audio/synth-worklet.js');
 await import('../src/audio/delay-worklet.js');
 await import('../src/audio/reverb-worklet.js');
 const ProcessorClass = PROCESSORS['vangelis-synth'];
-const { FACTORY_PRESETS } = await import('../src/utils/presetStorage.js');
+const { FACTORY_PRESETS } = await import('../src/utils/factoryPresets.js');
 const { sanitizeAudioParams, toWorkletParams } = await import('../src/utils/audioParams.js');
 
 // --- DSP helpers -------------------------------------------------------------

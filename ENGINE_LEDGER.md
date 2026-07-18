@@ -121,7 +121,7 @@ phaseOffsetDeg→phaseOffset name maps); the third hidden copy — magic-number 
 `WORKLET_PARAM_DEFAULTS` must deep-equal `DEFAULT_PARAMS`, so drift is a test failure.
 `modRoutes` deliberately kept as a fresh `[]` per object (no shared mutable reference).
 
-Note: `CLEAN_PATCH` in presetStorage.js is preset *content* (deliberately different
+Note: `CLEAN_PATCH` in factoryPresets.js is preset *content* (deliberately different
 values), not a defaults duplicate — left alone. G1 357/357 + smoke ALL PASS.
 G4 225/225 bit-exact (presets fully specify params). G3 7.7x. G2 pass.
 
@@ -130,7 +130,7 @@ G4 225/225 bit-exact (presets fully specify params). G3 7.7x. G2 pass.
 ### Iteration 4 — B3: mod-matrix enum dedup — 2026-07-07
 `MOD_SRC`/`MOD_DST`/`LFO_SHAPES`/`MAX_MOD_ROUTES` now live only in `dsp/constants.js`.
 `audioParams.js` derives its UI option lists and `sanitizeModRoutes` bounds from them
-(and re-exports MAX_MOD_ROUTES for existing UI imports); `presetStorage.js` keeps its
+(and re-exports MAX_MOD_ROUTES for existing UI imports); `factoryPresets.js` keeps its
 compact SRC/DST patch-table aliases but derives every value; the route compiler's
 hardcoded `s > 6 || d > 4` bounds now reference the enums. Adding a mod source/dest is
 now a one-file change. G1 357/357, smoke clean, G4 225/225 bit-exact, G3 7.7x, G2 pass.

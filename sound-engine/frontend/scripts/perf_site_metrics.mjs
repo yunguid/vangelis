@@ -5,6 +5,7 @@ import { gzipSync } from 'node:zlib';
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
 const sourceDir = path.join(root, 'src');
+const publicDir = path.join(root, 'public');
 const assetsDir = path.join(distDir, 'assets');
 const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const packageLock = JSON.parse(await readFile(path.join(root, 'package-lock.json'), 'utf8'));
@@ -33,6 +34,12 @@ const htmlPath = path.join(distDir, 'index.html');
 const html = await readFile(htmlPath, 'utf8');
 const htmlMetric = await measureFile(htmlPath);
 const manifest = JSON.parse(await readFile(path.join(distDir, '.vite', 'manifest.json'), 'utf8'));
+const distPaths = await walkFiles(distDir);
+const publicPaths = await walkFiles(publicDir);
+const deploymentBytes = (await Promise.all(distPaths.map(async (file) => (await stat(file)).size)))
+  .reduce((total, size) => total + size, 0);
+const publicStaticBytes = (await Promise.all(publicPaths.map(async (file) => (await stat(file)).size)))
+  .reduce((total, size) => total + size, 0);
 const assetPaths = (await walkFiles(assetsDir)).sort();
 const assetMetrics = await Promise.all(assetPaths.map(measureFile));
 const jsAssets = assetMetrics.filter(({ file }) => file.endsWith('.js'));
@@ -87,7 +94,8 @@ function collectRouteClosure(entryKeys) {
     jsGzipKb: roundKb(sum(js, 'gzipBytes')),
     cssAssetCount: css.length,
     cssKb: roundKb(sum(css, 'bytes')),
-    cssGzipKb: roundKb(sum(css, 'gzipBytes'))
+    cssGzipKb: roundKb(sum(css, 'gzipBytes')),
+    includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets'))
   };
 }
 
@@ -95,6 +103,7 @@ const routeClosures = routeEntries.map(({ route, entries }) => ({
   route,
   ...collectRouteClosure(entries)
 }));
+const factoryPresetChunk = jsAssets.find(({ file }) => file.includes('factoryPresets')) || null;
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
@@ -110,6 +119,10 @@ const productionLockPackages = Object.entries(packageLock.packages || {})
 const report = {
   generatedAt: new Date().toISOString(),
   build: {
+    deploymentFileCount: distPaths.length,
+    deploymentKb: roundKb(deploymentBytes),
+    publicStaticFileCount: publicPaths.length,
+    publicStaticKb: roundKb(publicStaticBytes),
     htmlKb: roundKb(htmlMetric.bytes),
     htmlGzipKb: roundKb(htmlMetric.gzipBytes),
     jsAssetCount: jsAssets.length,
@@ -137,6 +150,11 @@ const report = {
     })),
     workletKb: roundKb(sum(worklets, 'bytes')),
     workletGzipKb: roundKb(sum(worklets, 'gzipBytes')),
+    deferredFactoryPresetChunk: factoryPresetChunk ? {
+      file: factoryPresetChunk.file,
+      kb: roundKb(factoryPresetChunk.bytes),
+      gzipKb: roundKb(factoryPresetChunk.gzipBytes)
+    } : null,
     routeClosures
   },
   staticSignals: {
@@ -165,6 +183,8 @@ const report = {
 };
 
 const budgetChecks = [
+  ['D00 deployment raw', deploymentBytes, 1.65 * 1024 * 1024],
+  ['D00 public static raw', publicStaticBytes, 0.95 * 1024 * 1024],
   ['D01 HTML raw', htmlMetric.bytes, 5 * 1024],
   ['D02 HTML gzip', htmlMetric.gzipBytes, 2 * 1024],
   ['D03 initial JS raw', sum(initialJs, 'bytes'), 350 * 1024],
@@ -206,6 +226,13 @@ if (unresolvedRouteClosures.length > 0) {
     unresolved: unresolvedRouteClosures.map(({ route }) => route)
   });
 }
+if (!factoryPresetChunk) {
+  failures.push({ name: 'Guard deferred factory preset chunk', actual: 0, minimum: 1 });
+}
+const soundDesignerClosure = routeClosures.find(({ route }) => route === 'sound-designer');
+if (soundDesignerClosure?.includesFactoryPresetBank) {
+  failures.push({ name: 'Guard folded preset bank deferral', actual: 'eager', expected: 'deferred' });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -216,7 +243,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 2,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 4,
   failures
 };
 

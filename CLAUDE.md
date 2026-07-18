@@ -85,7 +85,8 @@ frontend/src/
 ├── utils/
 │   ├── math.js                # Shared math utilities (clamp, MIDI helpers)
 │   ├── midiParser.js          # Parse .mid files using @tonejs/midi
-│   ├── presetStorage.js       # Factory preset bank (categorized) + user presets
+│   ├── factoryPresets.js      # Deferred 45-patch factory bank
+│   ├── userPresetStorage.js   # localStorage-backed user presets
 │   ├── audioParams.js         # Audio parameter definitions and sanitization
 │   │
 │   └── audioEngine/           # Core audio engine modules
@@ -124,7 +125,7 @@ frontend/src/
 - Per-voice envelopes applied to samples
 
 ### Factory Preset Bank
-- 45 hand-designed patches in `utils/presetStorage.js`, grouped by category
+- 45 hand-designed patches in `utils/factoryPresets.js`, grouped by category
   (Leads / Pads & Strings / Bass / Keys & Bells / Motion & Texture), built on
   the CS-80 / Blade Runner palette, classic rare synths (Prophet-5, Jupiter-8,
   Oberheim, PPG, Fairlight, Juno-106, ARP 2600, Memorymoog) and modern
@@ -133,7 +134,7 @@ frontend/src/
   switching is deterministic (nothing leaks from the previous sound)
 - PresetShelf UI: category groups, prev/next cycling, active-patch readout,
   descriptions; user presets persist in localStorage
-- `presetStorage.test.js` pins all patches to legal engine ranges
+- `factoryPresets.test.js` pins all patches to legal engine ranges
 
 ### MIDI Playback
 - Load .mid files (built-in library or upload)
