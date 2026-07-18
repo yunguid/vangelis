@@ -217,26 +217,33 @@ const productionSourceText = (await Promise.all(
 )).join('\n');
 const sourceCssPaths = (await walkFiles(sourceDir)).filter((file) => file.endsWith('.css'));
 const sourceCssText = (await Promise.all(sourceCssPaths.map((file) => readFile(file, 'utf8')))).join('\n');
-const ownedCssAuditPaths = [
-  path.join(sourceDir, 'styles', 'layout.css'),
-  path.join(sourceDir, 'styles', 'components.css'),
-  path.join(sourceDir, 'styles', 'responsive.css'),
-  path.join(sourceDir, 'styles', 'gruvbox.css'),
-  path.join(sourceDir, 'styles', 'controls.css'),
-  path.join(sourceDir, 'styles', 'keyboard.css'),
-  path.join(sourceDir, 'styles', 'wave-candy.css'),
-  path.join(sourceDir, 'styles', 'birds-eye-radar.css'),
-  path.join(sourceDir, 'styles', 'overlays.css')
-];
+const ownedCssAuditPaths = sourceCssPaths;
 const ownedCssAuditText = (await Promise.all(
   ownedCssAuditPaths.map((file) => readFile(file, 'utf8'))
 )).join('\n');
+const dynamicallyComposedCssClasses = new Set([
+  'kit-fader--horizontal',
+  'kit-fader--vertical',
+  'kit-numfield--align-center',
+  'kit-numfield--align-left',
+  'kit-numfield--align-right',
+  'kit-numfield--bare',
+  'kit-numfield--boxed',
+  'kit-togglebtn--sm',
+  'voice-loop-status--error',
+  'voice-loop-status--ready',
+  'voice-loop-status--warn',
+  'voice-loop-status--working'
+]);
 const ownedCssClassNames = [...new Set(
   [...ownedCssAuditText.matchAll(/\.([_a-zA-Z]+[_a-zA-Z0-9-]*)/g)]
     .map((match) => match[1])
 )];
 const unreferencedOwnedCssClasses = ownedCssClassNames
-  .filter((className) => !productionSourceText.includes(className));
+  .filter((className) => (
+    !productionSourceText.includes(className)
+    && !dynamicallyComposedCssClasses.has(className)
+  ));
 const appHeaderSource = await readFile(path.join(sourceDir, 'components', 'AppHeader.jsx'), 'utf8');
 const appHeaderImportsAudioEngine = /from\s+['"][^'"]*audioEngine(?:\.js)?['"]/.test(appHeaderSource);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
@@ -405,6 +412,7 @@ const report = {
     retiredOverlaySelectorCount: countCss(/\.(?:command-palette|brandkit-)/g),
     ownedCssAuditFileCount: ownedCssAuditPaths.length,
     ownedCssClassCount: ownedCssClassNames.length,
+    dynamicallyComposedCssClassCount: dynamicallyComposedCssClasses.size,
     unreferencedOwnedCssClasses,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),

@@ -1375,3 +1375,48 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, down by one retired chip selector.
 - `git diff --check`: pass.
+
+## Optimization batch 26 — full-source CSS reachability
+
+Collected from production JSX/class reachability across every source stylesheet, generated asset
+sizes, all-route CSS closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 25 | Batch 26 | Change |
+|---|---:|---:|---:|
+| Audited CSS files | 9 | 19 | complete source coverage |
+| Audited CSS classes | 156 | 466 | +310 guarded classes |
+| Unexplained unreferenced classes | 15 retired families | 0 | removed |
+| Explicit runtime-composed modifiers | untracked | 12 | allowlisted and counted |
+| Song Study critical CSS raw / gzip | 48.97 / 11.83 KiB | 48.46 / 11.77 KiB | -1.0% / -0.5% |
+| Study Songs critical CSS raw / gzip | 42.92 / 9.87 KiB | 41.14 / 9.56 KiB | -4.1% / -3.1% |
+| Voice Loop critical CSS raw / gzip | 45.94 / 10.58 KiB | 44.54 / 10.32 KiB | -3.0% / -2.5% |
+| Total production CSS raw | 100.42 KiB | 96.72 KiB | -3.7% |
+| Total production CSS gzip | 24.73 KiB | 24.09 KiB | -2.6% |
+| Production deployment bytes | 1,484.98 KiB | 1,481.28 KiB | -3.70 KiB |
+| Automated production budgets | 67 | 67 | existing guard widened |
+
+Implemented boundaries and controls:
+
+- Extended the production selector census from nine explicitly owned global/component files to
+  all 19 CSS files under `src`, including every route and the control-kit surface.
+- Added a narrow, reported allowlist for 12 modifier classes assembled from runtime values: eight
+  control-kit size/orientation/alignment variants and four Voice Loop status tones. Everything
+  else must appear literally in production JS/JSX or the build fails.
+- Removed retired Song Study navigation rules, the superseded Study Songs flow/choice/create UI,
+  and unused Voice Loop phrase/chord/piano/bar-marker presentations. The current route markup and
+  runtime-composed status styling remain unchanged.
+- The critical initial stylesheet is byte-for-byte unchanged; only route-owned payloads and total
+  deployment size decrease.
+
+### Batch 26 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 67/67 pass.
+- Deterministic visual workload after activation: 90.94% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.3 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.
