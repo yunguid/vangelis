@@ -414,9 +414,33 @@ const radarCachesStaticGradients = (
   && (radarGradientCacheSource.match(/context\.create(?:Linear|Radial)Gradient\s*\(/g) || []).length === 4
 );
 const radarCachesParticleColors = (
-  /getRadarParticleColor\(alpha\)/.test(birdsEyeRadarSource)
+  /getRadarParticleBatchColor\(bucket\)/.test(birdsEyeRadarSource)
   && /const particleColors = Array\.from\(/.test(radarParticleColorSource)
+  && /const particleBatchColors = Array\.from\(/.test(radarParticleColorSource)
   && /RADAR_PARTICLE_COLOR_COUNT/.test(radarParticleColorSource)
+);
+const radarBatchesParticlePaths = (
+  /RADAR_PARTICLE_ALPHA_BUCKET_COUNT = 12/.test(radarParticleColorSource)
+  && /counts: new Uint8Array\(RADAR_PARTICLE_ALPHA_BUCKET_COUNT\)/
+    .test(birdsEyeRadarSource)
+  && /new Float64Array\(PARTICLE_COUNT \* 3\)/.test(birdsEyeRadarSource)
+  && /pathBuckets\.counts\.fill\(0\)/.test(birdsEyeRadarSource)
+  && /ctx\.moveTo\(x \+ size, y\)/.test(birdsEyeRadarSource)
+  && /for \(let particleIndex = 0; particleIndex < count; particleIndex \+= 1\)/
+    .test(birdsEyeRadarSource)
+);
+const radarLazilyInitializesParticleState = (
+  /const particlesRef = useRef\(null\)/.test(birdsEyeRadarSource)
+  && /if \(!particlesRef\.current\) particlesRef\.current = createParticles\(PARTICLE_COUNT\)/
+    .test(birdsEyeRadarSource)
+  && /const particlePathBucketsRef = useRef\(null\)/.test(birdsEyeRadarSource)
+  && /particlePathBucketsRef\.current = createParticlePathBuckets\(\)/.test(birdsEyeRadarSource)
+  && /const noteIdCacheRef = useRef\(null\)/.test(birdsEyeRadarSource)
+  && /noteIdCacheRef\.current = new Map\(\)/.test(birdsEyeRadarSource)
+  && /const propsRef = useRef\(null\)/.test(birdsEyeRadarSource)
+  && !/useRef\(createParticles\(/.test(birdsEyeRadarSource)
+  && !/useRef\(createParticlePathBuckets\(/.test(birdsEyeRadarSource)
+  && !/useRef\(new Map\(\)\)/.test(birdsEyeRadarSource)
 );
 const midiBirdsEyeMathSource = await readFile(
   path.join(sourceDir, 'components', 'midiBirdsEyeMath.js'),
@@ -699,6 +723,13 @@ const report = {
       radarCachesParticleColors ? 0 : 32,
     radarParticleColorStateLimit: 121,
     radarCachesParticleColors,
+    radarParticleAlphaBucketCount: 12,
+    radarParticlePathBoundaryCallsPerFrameMaximum: radarBatchesParticlePaths ? 24 : 64,
+    radarParticleTotalPathCommandsPerFrameMaximum: radarBatchesParticlePaths ? 88 : 96,
+    radarBatchesParticlePaths,
+    radarRedundantInitializationAllocationsPerReactRender:
+      radarLazilyInitializesParticleState ? 0 : 35,
+    radarLazilyInitializesParticleState,
     radarExplicitFrameContainers: radarReusesFrameContainers ? 0 : 8,
     radarReusesFrameContainers,
     radarLabelCollisionCallbackAllocationsPerCheck:
@@ -896,6 +927,20 @@ if (!radarCachesParticleColors) {
     name: 'Guard bounded radar particle colors',
     actual: 'per-particle RGBA string formatting in active frame path',
     expected: '121-entry three-decimal alpha lookup table'
+  });
+}
+if (!radarBatchesParticlePaths) {
+  failures.push({
+    name: 'Guard batched radar particle paths',
+    actual: 'one Canvas path boundary pair per ambient particle',
+    expected: 'at most 12 reusable alpha-bucket paths for all 32 particles'
+  });
+}
+if (!radarLazilyInitializesParticleState) {
+  failures.push({
+    name: 'Guard lazy radar particle state initialization',
+    actual: 'particle factories evaluated during React renders',
+    expected: 'particle objects and typed path buffers allocated only on first mount'
   });
 }
 if (!radarReusesFrameContainers) {
@@ -1267,7 +1312,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 74,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 76,
   failures
 };
 

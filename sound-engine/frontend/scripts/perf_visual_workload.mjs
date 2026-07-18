@@ -28,7 +28,10 @@ import {
   getRadarMidiPalette
 } from '../src/utils/radarPalette.js';
 import {
+  RADAR_PARTICLE_ALPHA_BUCKET_COUNT,
   RADAR_PARTICLE_COLOR_COUNT,
+  getRadarParticleAlphaBucket,
+  getRadarParticleBatchAlpha,
   getRadarParticleColor
 } from '../src/utils/radarParticleColor.js';
 import {
@@ -510,6 +513,37 @@ const legacyRadarParticleColorBenchmark = runRadarParticleColorBenchmark(
   (alpha) => `rgba(255, 176, 110, ${alpha.toFixed(3)})`
 );
 const cachedRadarParticleColorBenchmark = runRadarParticleColorBenchmark(getRadarParticleColor);
+
+let radarParticleAlphaSquaredError = 0;
+let radarParticleAlphaSignalEnergy = 0;
+let radarParticleAlphaMaximumError = 0;
+for (let alphaMilli = 15; alphaMilli <= 135; alphaMilli += 1) {
+  const alpha = alphaMilli / 1000;
+  const batchedAlpha = getRadarParticleBatchAlpha(getRadarParticleAlphaBucket(alpha));
+  const error = alpha - batchedAlpha;
+  radarParticleAlphaSquaredError += error * error;
+  radarParticleAlphaSignalEnergy += alpha * alpha;
+  radarParticleAlphaMaximumError = Math.max(radarParticleAlphaMaximumError, Math.abs(error));
+}
+const radarParticleAlphaRelativeRmse = Math.sqrt(
+  radarParticleAlphaSquaredError / radarParticleAlphaSignalEnergy
+);
+let radarParticleOccupiedBucketsOverBenchmark = 0;
+const radarParticleBucketCounts = new Uint8Array(RADAR_PARTICLE_ALPHA_BUCKET_COUNT);
+for (let frame = 0; frame < radarPlayingFrames; frame += 1) {
+  radarParticleBucketCounts.fill(0);
+  for (let particle = 0; particle < 32; particle += 1) {
+    const flow = (particle * 0.137 + frame * 0.0037 + particle * 0.019) % 1;
+    const alpha = 0.015 + (1 - flow) * 0.12;
+    radarParticleBucketCounts[getRadarParticleAlphaBucket(alpha)] += 1;
+  }
+  for (let bucket = 0; bucket < radarParticleBucketCounts.length; bucket += 1) {
+    radarParticleOccupiedBucketsOverBenchmark += Number(radarParticleBucketCounts[bucket] > 0);
+  }
+}
+if (radarParticleAlphaMaximumError > 0.006) {
+  throw new Error('Radar particle alpha batching exceeded its visual-fidelity budget');
+}
 
 const sceneBandBenchmarkIterations = 20000;
 const runSceneBandBenchmark = (work) => {
@@ -1326,6 +1360,32 @@ const output = {
       legacyRadarParticleColorBenchmark.elapsedMs,
       cachedRadarParticleColorBenchmark.elapsedMs
     ).toFixed(2))
+  },
+  radarParticlePathBatchPolicy: {
+    playingFrames: radarPlayingFrames,
+    particleCount: 32,
+    alphaBucketCount: RADAR_PARTICLE_ALPHA_BUCKET_COUNT,
+    redundantInitializationAllocationsPerReactRenderBefore: 35,
+    redundantInitializationAllocationsPerReactRenderAfter: 0,
+    redundantInitializationAllocationsOverBenchmarkBefore: radarPlayingFrames * 35,
+    redundantInitializationAllocationsOverBenchmarkAfter: 0,
+    occupiedBucketsOverBenchmark: radarParticleOccupiedBucketsOverBenchmark,
+    pathBoundaryCallsOverBenchmarkBefore: radarPlayingFrames * 32 * 2,
+    pathBoundaryCallsOverBenchmarkAfter: radarParticleOccupiedBucketsOverBenchmark * 2,
+    pathBoundaryCallReductionPercent: Number(reduction(
+      radarPlayingFrames * 32 * 2,
+      radarParticleOccupiedBucketsOverBenchmark * 2
+    ).toFixed(2)),
+    totalCanvasPathCommandsOverBenchmarkBefore: radarPlayingFrames * 32 * 3,
+    totalCanvasPathCommandsOverBenchmarkAfter:
+      radarPlayingFrames * 32 * 2 + radarParticleOccupiedBucketsOverBenchmark * 2,
+    totalCanvasPathCommandReductionPercent: Number(reduction(
+      radarPlayingFrames * 32 * 3,
+      radarPlayingFrames * 32 * 2 + radarParticleOccupiedBucketsOverBenchmark * 2
+    ).toFixed(2)),
+    particleGeometryDelta: 0,
+    alphaMaximumAbsoluteError: radarParticleAlphaMaximumError,
+    alphaRelativeRmse: radarParticleAlphaRelativeRmse
   },
   sceneBandRangePolicy: {
     bandCount: SCENE_FREQUENCY_BANDS.length,

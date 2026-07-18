@@ -11,7 +11,11 @@ import {
   createRadarStaticGradientCache,
   getRadarStaticGradients
 } from '../utils/radarGradientCache.js';
-import { getRadarParticleColor } from '../utils/radarParticleColor.js';
+import {
+  RADAR_PARTICLE_ALPHA_BUCKET_COUNT,
+  getRadarParticleAlphaBucket,
+  getRadarParticleBatchColor
+} from '../utils/radarParticleColor.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 import '../styles/birds-eye-radar.css';
 
@@ -24,6 +28,7 @@ const TOP_PADDING = 18;
 const BOTTOM_PADDING = 26;
 const SIDE_PADDING = 18;
 const EMPTY_ACTIVE_NOTES = new Set();
+const PARTICLE_COUNT = 32;
 
 const createParticles = (count) => Array.from({ length: count }, () => ({
   lane: Math.random(),
@@ -33,6 +38,14 @@ const createParticles = (count) => Array.from({ length: count }, () => ({
   size: 0.8 + Math.random() * 1.5
 }));
 
+const createParticlePathBuckets = () => ({
+  counts: new Uint8Array(RADAR_PARTICLE_ALPHA_BUCKET_COUNT),
+  geometry: Array.from(
+    { length: RADAR_PARTICLE_ALPHA_BUCKET_COUNT },
+    () => new Float64Array(PARTICLE_COUNT * 3)
+  )
+});
+
 const BirdsEyeRadar = ({
   currentMidi,
   progress,
@@ -41,19 +54,19 @@ const BirdsEyeRadar = ({
   noteRenderWindow: suppliedNoteRenderWindow
 }) => {
   const canvasRef = useRef(null);
-  const noteIdCacheRef = useRef(new Map());
-  const particlesRef = useRef(createParticles(32));
+  const noteIdCacheRef = useRef(null);
+  if (!noteIdCacheRef.current) noteIdCacheRef.current = new Map();
+  const particlesRef = useRef(null);
+  if (!particlesRef.current) particlesRef.current = createParticles(PARTICLE_COUNT);
+  const particlePathBucketsRef = useRef(null);
+  if (!particlePathBucketsRef.current) {
+    particlePathBucketsRef.current = createParticlePathBuckets();
+  }
   const noteRenderWindow = useMemo(
     () => suppliedNoteRenderWindow || buildNoteRenderWindow(currentMidi?.notes || []),
     [currentMidi, suppliedNoteRenderWindow]
   );
-  const propsRef = useRef({
-    currentMidi,
-    progress,
-    activeNotes,
-    isPlaying,
-    noteRenderWindow
-  });
+  const propsRef = useRef(null);
 
   propsRef.current = {
     currentMidi,
@@ -165,6 +178,8 @@ const BirdsEyeRadar = ({
 
     const drawParticles = (nowSeconds, trackTop, trackBottom, centerX, playfieldWidth) => {
       const depthSpan = trackBottom - trackTop;
+      const pathBuckets = particlePathBucketsRef.current;
+      pathBuckets.counts.fill(0);
       for (const particle of particlesRef.current) {
         const flow = (particle.depth + nowSeconds * particle.speed + particle.phase) % 1;
         const y = trackTop + flow * depthSpan;
@@ -172,9 +187,29 @@ const BirdsEyeRadar = ({
         const laneX = SIDE_PADDING + particle.lane * playfieldWidth;
         const x = centerX + (laneX - centerX) * spread;
         const alpha = 0.015 + (1 - flow) * 0.12;
-        ctx.fillStyle = getRadarParticleColor(alpha);
+        const bucket = getRadarParticleAlphaBucket(alpha);
+        const geometry = pathBuckets.geometry[bucket];
+        const offset = pathBuckets.counts[bucket] * 3;
+        geometry[offset] = x;
+        geometry[offset + 1] = y;
+        geometry[offset + 2] = particle.size;
+        pathBuckets.counts[bucket] += 1;
+      }
+
+      for (let bucket = 0; bucket < pathBuckets.counts.length; bucket += 1) {
+        const count = pathBuckets.counts[bucket];
+        if (count === 0) continue;
+        const geometry = pathBuckets.geometry[bucket];
+        ctx.fillStyle = getRadarParticleBatchColor(bucket);
         ctx.beginPath();
-        ctx.arc(x, y, particle.size, 0, Math.PI * 2);
+        for (let particleIndex = 0; particleIndex < count; particleIndex += 1) {
+          const offset = particleIndex * 3;
+          const x = geometry[offset];
+          const y = geometry[offset + 1];
+          const size = geometry[offset + 2];
+          ctx.moveTo(x + size, y);
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+        }
         ctx.fill();
       }
     };

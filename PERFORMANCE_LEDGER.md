@@ -2619,3 +2619,61 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 52 — batched and lazily initialized radar particles
+
+Collected from the 32-particle bird's-eye MIDI radar at its 25Hz playing cadence, exact Canvas
+command counts over 20 seconds, a deterministic 12-bucket occupancy model, exhaustive alpha error
+across all 121 prior palette levels, React render/rerender initialization evidence, generated
+production closures, focused radar tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 51 | Batch 52 | Change |
+|---|---:|---:|---:|
+| Particle path-boundary calls over 20 s | 32,000 | 12,000 | -62.50% |
+| Total particle Canvas path commands over 20 s | 48,000 | 44,000 | -8.33% |
+| Redundant radar initialization allocations per React render | 35 | 0 | removed |
+| Redundant allocations over 500-render model | 17,500 | 0 | removed |
+| Particle geometry delta | — | 0 | exact |
+| Maximum particle-alpha error | — | 0.005 | below 0.006 gate |
+| Particle-alpha relative RMSE | — | 3.783% | bounded low-opacity palette |
+| Deferred BirdsEyeRadar JS raw / gzip | 6.36 / 2.89 KiB | 6.85 / 3.09 KiB | +0.49 / +0.20 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.86 KiB | unchanged |
+| Fully activated Home visual JS gzip | 78.74 KiB | 78.75 KiB | +0.01 KiB |
+| Production deployment bytes | 1,483.62 KiB | 1,484.27 KiB | +0.65 KiB |
+| Automated production budgets | 92 | 94 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Quantized only the ambient particles' 0.015–0.135 alpha range into 12 prebuilt colors. Particle
+  positions, radii, motion, count, and draw cadence remain unchanged; exhaustive palette analysis
+  bounds maximum absolute alpha error at 0.005.
+- Replaced 32 individual begin/fill path pairs with one path per occupied alpha bucket. Every circle
+  receives an explicit `moveTo` before its arc, preventing Canvas from connecting adjacent circles;
+  reusable Float64 geometry buffers retain the original double-precision coordinates.
+- Converted particle creation, bucket buffers, note-ID cache, and the initial props ref to genuine
+  lazy ref initialization. React previously evaluated 32 particle objects plus three container/cache
+  initializers on every render even though `useRef` discarded every result after the first mount.
+- Added endpoint/bucket/clamping cases, exhaustive alpha-quality and occupied-bucket workloads, exact
+  native-command/allocation counts, a render/rerender test proving random particle construction occurs
+  once, and production guards for both batched paths and lazy state initialization.
+
+### Batch 52 verification gates
+
+- Full suite: 58 files, 520/520 tests pass, including the new radar render/rerender case, three
+  particle-palette cases, and all Sound Designer, Song Study, canvas, numerical, scene, and audio
+  cases.
+- Production delivery/static/dependency/route guardrails: 94/94 pass; the radar reports at most 24
+  particle path-boundary calls and 88 total path commands per playing frame, with zero redundant
+  initialization allocations per React render.
+- The deterministic 500-frame occupancy model removes exactly 20,000 begin/fill boundary calls and
+  4,000 total Canvas path commands. All particle geometry remains exact; maximum alpha error is
+  0.005 and relative RMS alpha error is 3.783% within the deliberately low-opacity effect.
+- Warmed combined visual workload: 80.27% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 402.6 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.
