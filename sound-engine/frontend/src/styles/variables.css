@@ -3,8 +3,6 @@
  * Three-color visual system: ink, paper, accent.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
-
 :root {
   --color-core-ink: #1d2021;
   --color-core-paper: #f4f1e8;

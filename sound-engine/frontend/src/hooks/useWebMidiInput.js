@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
+import { useVisibleSnapshotPublisher } from './useVisibleSnapshotPublisher.js';
 
 const NOTE_ON = 0x90;
 const NOTE_OFF = 0x80;
@@ -19,6 +20,7 @@ const CONTROL_CHANGE = 0xb0;
 const PITCH_BEND = 0xe0;
 const CC_MOD_WHEEL = 1;
 const BEND_RANGE_SEMITONES = 2;
+const ACTIVE_NOTES_UPDATE_INTERVAL_MS = 40;
 
 export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
   const [deviceName, setDeviceName] = useState(null);
@@ -27,6 +29,11 @@ export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
   const waveformRef = useRef(waveformType);
   const audioParamsRef = useRef(audioParams);
   const heldRef = useRef(new Map()); // midi number -> display noteId
+  const publishActiveNotes = useVisibleSnapshotPublisher({
+    getSnapshot: () => new Set(heldRef.current.values()),
+    publishSnapshot: setActiveNotes,
+    intervalMs: ACTIVE_NOTES_UPDATE_INTERVAL_MS
+  });
 
   useEffect(() => {
     waveformRef.current = waveformType;
@@ -46,10 +53,6 @@ export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
     let cancelled = false;
     const attached = new Set();
 
-    const syncActiveNotes = () => {
-      setActiveNotes(new Set(heldRef.current.values()));
-    };
-
     const noteOn = (midi, velocity) => {
       const frequency = midiNoteToFrequency(midi);
       if (!frequency) return;
@@ -63,13 +66,13 @@ export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
         allowVoicePhrase: true
       });
       heldRef.current.set(midi, noteId);
-      syncActiveNotes();
+      publishActiveNotes();
     };
 
     const noteOff = (midi) => {
       audioEngine.stopNote(`webmidi-${midi}`);
       if (heldRef.current.delete(midi)) {
-        syncActiveNotes();
+        publishActiveNotes();
       }
     };
 
@@ -101,7 +104,7 @@ export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
             // All notes off
             heldRef.current.forEach((_, midi) => audioEngine.stopNote(`webmidi-${midi}`));
             heldRef.current.clear();
-            syncActiveNotes();
+            publishActiveNotes(true);
           }
           break;
         default:
@@ -153,7 +156,7 @@ export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
       audioEngine.setPitchBend(0);
       audioEngine.setModWheel(0);
     };
-  }, [enabled]);
+  }, [enabled, publishActiveNotes]);
 
   return { deviceName, activeNotes };
 }

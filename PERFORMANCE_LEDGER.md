@@ -351,3 +351,50 @@ Implemented boundaries and controls:
 - Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
   thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
 - `git diff --check`: pass.
+
+## Optimization batch 4 — hidden MIDI lifecycle and font discovery
+
+Collected from lifecycle tests, a production build, and the static delivery audit. Audio event
+timing is intentionally unchanged; only visual publication and document delivery changed.
+
+| Metric | Batch 3 | Batch 4 | Change |
+|---|---:|---:|---:|
+| Static explicit RAF sites | 7 | 5 | -28.6% |
+| Hidden MIDI progress frames | browser-throttled RAF | 0 by scheduler contract | removed |
+| Hidden sequenced-MIDI active-note commits | up to 25 Hz | 0 | removed |
+| Hidden hardware-MIDI active-note commits | every note edge | 0 | removed |
+| Hardware-MIDI visible snapshot cadence | every note edge | <= 25 Hz | bounded |
+| Nested external CSS imports | 1 | 0 | removed |
+| Early font preconnect origins | 0 | 2 | added |
+| Automated production budgets | 14 | 15 | +1 guardrail |
+| Initial JS raw | 311.65 KiB | 313.30 KiB | +0.5% |
+| Initial JS gzip | 81.26 KiB | 81.62 KiB | +0.4% |
+| Initial CSS raw | 66.58 KiB | 66.49 KiB | -0.1% |
+| Initial CSS gzip | 13.44 KiB | 13.36 KiB | -0.6% |
+
+Implemented boundaries and controls:
+
+- MIDI progress now uses the shared visibility-aware animation scheduler. Playback and rolling
+  audio scheduling continue while hidden, but progress painting stops completely and resumes
+  from the audio clock when visible.
+- A shared snapshot publisher decouples immediate audio note edges from rate-limited React
+  visualization. It caps visible updates at 25 Hz, suppresses hidden updates, publishes one
+  fresh snapshot on visibility return, and clears pending work on unmount.
+- Both sequenced MIDI and hardware MIDI use the same tested publication lifecycle. Controller
+  audio calls remain immediate even when multiple visual note changes are coalesced.
+- IBM Plex Mono remains unchanged visually, but its stylesheet moved from a nested CSS import
+  into the document head. Preconnects for the Google Fonts CSS and font origin begin connection
+  setup before the main stylesheet is parsed.
+- The production audit reports external stylesheet/preconnect topology and fails if a nested
+  external CSS import is reintroduced.
+
+### Batch 4 verification gates
+
+- Full suite: 38 files, 463/463 tests pass.
+- Production delivery/static/dependency guardrails: 15/15 enforced budgets pass.
+- Initial production payload: 313.30 KiB raw / 81.62 KiB gzip JS, 66.49 KiB raw /
+  13.36 KiB gzip CSS, seven secondary route chunks.
+- Deterministic visual workload retains exact sample reductions: 78.18% fewer analyser samples
+  and 65.71% fewer resample samples; the 20-second synthetic CPU sample was 91.06% below its
+  legacy reference.
+- `git diff --check`: pass.

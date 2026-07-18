@@ -48,7 +48,10 @@ const worklets = jsAssets.filter(({ file }) => file.includes('worklet'));
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
+const sourceCssPaths = (await walkFiles(sourceDir)).filter((file) => file.endsWith('.css'));
+const sourceCssText = (await Promise.all(sourceCssPaths.map((file) => readFile(file, 'utf8')))).join('\n');
 const count = (pattern) => (sourceText.match(pattern) || []).length;
+const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const sum = (metrics, key) => metrics.reduce((total, metric) => total + metric[key], 0);
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
 const directRuntimeDependencies = Object.keys(packageJson.dependencies || {});
@@ -93,8 +96,15 @@ const report = {
     setIntervalCalls: count(/\bsetInterval\s*\(/g),
     setTimeoutCalls: count(/\bsetTimeout\s*\(/g),
     addEventListenerCalls: count(/\.addEventListener\s*\(/g),
+    externalCssImportCalls: countCss(/@import\s+(?:url\()?['"]?https?:\/\//g),
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g)
+  },
+  networkHints: {
+    earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
+      .map((match) => match[1]),
+    preconnectOrigins: [...html.matchAll(/<link[^>]+rel="preconnect"[^>]+href="(https?:\/\/[^"?#]+)/g)]
+      .map((match) => match[1])
   },
   dependencySignals: {
     directRuntimeCount: directRuntimeDependencies.length,
@@ -125,6 +135,7 @@ const countBudgetChecks = [
   ['Guard initial JS requests', initialJs.length, 2],
   ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 7],
   ['Guard raw interval sites', report.staticSignals.setIntervalCalls, 0],
+  ['Guard nested external CSS imports', report.staticSignals.externalCssImportCalls, 0],
   ['D11 direct runtime dependencies', directRuntimeDependencies.length, 5],
   ['D11 production lock packages', productionLockPackages.length, 10]
 ];

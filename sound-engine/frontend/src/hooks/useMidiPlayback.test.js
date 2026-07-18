@@ -115,6 +115,104 @@ describe('useMidiPlayback', () => {
     expect(result.current.progress).toBeCloseTo(0.4, 5);
   });
 
+  it('stops progress animation frames while the document is hidden', async () => {
+    const frameCallbacks = [];
+    let visibilityState = 'visible';
+    const originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState
+    });
+    global.requestAnimationFrame = vi.fn((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+
+    const { result, unmount } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    try {
+      await act(async () => {
+        result.current.play({
+          duration: 2,
+          bpm: 120,
+          notes: [{ midi: 60, time: 0, duration: 1, velocity: 1 }]
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(frameCallbacks).toHaveLength(1);
+      visibilityState = 'hidden';
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(global.cancelAnimationFrame).toHaveBeenCalledWith(1);
+
+      visibilityState = 'visible';
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(frameCallbacks).toHaveLength(2);
+
+      await act(async () => {
+        audioEngine.context.currentTime = 0.5;
+        frameCallbacks[1](50);
+      });
+      expect(result.current.progress).toBeCloseTo(0.25, 5);
+    } finally {
+      unmount();
+      if (originalVisibilityState) {
+        Object.defineProperty(document, 'visibilityState', originalVisibilityState);
+      } else {
+        delete document.visibilityState;
+      }
+    }
+  });
+
+  it('defers active-note React snapshots while hidden and syncs once visible', async () => {
+    let visibilityState = 'hidden';
+    const originalVisibilityState = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      get: () => visibilityState
+    });
+
+    const { result, unmount } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    try {
+      await act(async () => {
+        result.current.play({
+          duration: 2,
+          bpm: 120,
+          notes: [{ midi: 60, time: 0, duration: 1, velocity: 1 }]
+        });
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(1);
+      });
+
+      expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+      expect(result.current.activeNotes.size).toBe(0);
+
+      await act(async () => {
+        visibilityState = 'visible';
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      expect(result.current.activeNotes).toEqual(new Set(['C4']));
+    } finally {
+      unmount();
+      if (originalVisibilityState) {
+        Object.defineProperty(document, 'visibilityState', originalVisibilityState);
+      } else {
+        delete document.visibilityState;
+      }
+    }
+  });
+
   it('bounds pending timers with a rolling MIDI lookahead window', async () => {
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',

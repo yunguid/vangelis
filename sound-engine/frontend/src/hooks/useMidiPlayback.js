@@ -7,6 +7,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
+import { useVisibleSnapshotPublisher } from './useVisibleSnapshotPublisher.js';
 
 const PROGRESS_UPDATE_INTERVAL_MS = 40;
 const ACTIVE_NOTES_UPDATE_INTERVAL_MS = 40;
@@ -143,17 +145,20 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const activeNoteCountsRef = useRef(new Map());
   const activeVoiceIdsRef = useRef(new Set());
   const scheduledVoiceMapRef = useRef(new Map());
-  const activeNotesPublishTimeoutRef = useRef(null);
-  const lastActiveNotesPublishRef = useRef(Number.NEGATIVE_INFINITY);
   const timeoutsRef = useRef(new Set());
   const schedulerSequenceRef = useRef(0);
-  const rafRef = useRef(null);
+  const stopProgressLoopRef = useRef(null);
   const playRequestSeqRef = useRef(0);
   const playbackRef = useRef({
     startTime: 0,
     pauseOriginalTime: 0,
     elapsedOriginalAtStart: 0,
     midiData: null
+  });
+  const publishActiveNotes = useVisibleSnapshotPublisher({
+    getSnapshot: () => new Set(activeNoteCountsRef.current.keys()),
+    publishSnapshot: setActiveNotes,
+    intervalMs: ACTIVE_NOTES_UPDATE_INTERVAL_MS
   });
 
   // Keep refs in sync with props
@@ -178,17 +183,12 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     return () => {
       playRequestSeqRef.current += 1;
       clearAllTimeouts();
-      if (activeNotesPublishTimeoutRef.current !== null) {
-        clearTimeout(activeNotesPublishTimeoutRef.current);
-        activeNotesPublishTimeoutRef.current = null;
-      }
       activeVoiceIdsRef.current.forEach((voiceId) => audioEngine.stopNote(voiceId));
       activeVoiceIdsRef.current.clear();
       activeNoteCountsRef.current.clear();
       scheduledVoiceMapRef.current.clear();
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
+      stopProgressLoopRef.current?.();
+      stopProgressLoopRef.current = null;
     };
   }, []);
 
@@ -214,30 +214,6 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     }, delay);
     timeoutsRef.current.add(id);
     return id;
-  }, []);
-
-  const publishActiveNotes = useCallback((immediate = false) => {
-    const commit = () => {
-      activeNotesPublishTimeoutRef.current = null;
-      lastActiveNotesPublishRef.current = performance.now();
-      setActiveNotes(new Set(activeNoteCountsRef.current.keys()));
-    };
-    const elapsed = performance.now() - lastActiveNotesPublishRef.current;
-
-    if (immediate || elapsed >= ACTIVE_NOTES_UPDATE_INTERVAL_MS) {
-      if (activeNotesPublishTimeoutRef.current !== null) {
-        clearTimeout(activeNotesPublishTimeoutRef.current);
-      }
-      commit();
-      return;
-    }
-
-    if (activeNotesPublishTimeoutRef.current === null) {
-      activeNotesPublishTimeoutRef.current = setTimeout(
-        commit,
-        ACTIVE_NOTES_UPDATE_INTERVAL_MS - elapsed
-      );
-    }
   }, []);
 
   const registerActiveVoices = useCallback((noteId, voiceIds) => {
@@ -320,10 +296,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     clearAllTimeouts();
     stopAllNotes();
 
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+    stopProgressLoopRef.current?.();
+    stopProgressLoopRef.current = null;
 
     playbackRef.current.startTime = 0;
     playbackRef.current.pauseOriginalTime = 0;
@@ -466,6 +440,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @private
    */
   const startProgressLoop = useCallback((duration) => {
+    stopProgressLoopRef.current?.();
     let lastProgressUpdate = Number.NEGATIVE_INFINITY;
     const updateProgress = (frameTime) => {
       const ctx = audioEngine.context;
@@ -484,10 +459,9 @@ export function useMidiPlayback({ waveformType, audioParams }) {
         setProgress(progressValue);
       }
 
-      rafRef.current = requestAnimationFrame(updateProgress);
     };
 
-    rafRef.current = requestAnimationFrame(updateProgress);
+    stopProgressLoopRef.current = startVisibilityAwareRafLoop(updateProgress);
   }, [getElapsedOriginalTime, stopInternal]);
 
   const resumeAudioContextIfNeeded = useCallback(async () => {
@@ -575,10 +549,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     clearAllTimeouts();
     stopAllNotes();
 
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+    stopProgressLoopRef.current?.();
+    stopProgressLoopRef.current = null;
 
     setIsPaused(true);
     setIsPlaying(false);
@@ -636,10 +608,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     clearAllTimeouts();
     stopAllNotes();
 
-    if (rafRef.current) {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
+    stopProgressLoopRef.current?.();
+    stopProgressLoopRef.current = null;
 
     pb.elapsedOriginalAtStart = clampedTime;
     setProgress(duration > 0 ? clampedTime / duration : 0);
