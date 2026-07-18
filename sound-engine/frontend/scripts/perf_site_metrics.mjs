@@ -391,6 +391,12 @@ const radarReusesFrameContainers = (
   && /out\.startIndex = lowerBound/.test(midiBirdsEyeMathSource)
   && /return out;/.test(midiBirdsEyeMathSource)
 );
+const radarUsesAllocationFreeLabelCollision = (
+  /for \(let labelIndex = 0; labelIndex < activeLabelPositions\.length; labelIndex \+= 1\)/
+    .test(birdsEyeRadarSource)
+  && /Math\.abs\(activeLabelPositions\[labelIndex\] - x\) <= 28/.test(birdsEyeRadarSource)
+  && !/activeLabelPositions\.every\(/.test(birdsEyeRadarSource)
+);
 const sceneSource = await readFile(path.join(sourceDir, 'components', 'Scene.jsx'), 'utf8');
 const sceneBandAnalysisSource = await readFile(
   path.join(sourceDir, 'utils', 'sceneBandAnalysis.js'),
@@ -629,6 +635,9 @@ const report = {
     radarCachesParticleColors,
     radarExplicitFrameContainers: radarReusesFrameContainers ? 0 : 8,
     radarReusesFrameContainers,
+    radarLabelCollisionCallbackAllocationsPerCheck:
+      radarUsesAllocationFreeLabelCollision ? 0 : 1,
+    radarUsesAllocationFreeLabelCollision,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -807,6 +816,13 @@ if (!radarReusesFrameContainers) {
     name: 'Guard reusable radar frame containers',
     actual: 'argument, visible-range, or active-label containers allocated in playing frames',
     expected: 'positional draw calls with reusable range and label buffers'
+  });
+}
+if (!radarUsesAllocationFreeLabelCollision) {
+  failures.push({
+    name: 'Guard allocation-free radar label collision scan',
+    actual: 'per-active-note callback allocation',
+    expected: 'indexed early-exit scan over reusable label positions'
   });
 }
 if (!sceneCachesBandRanges) {
@@ -1157,7 +1173,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 69,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 70,
   failures
 };
 

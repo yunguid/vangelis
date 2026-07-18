@@ -266,9 +266,13 @@ const BirdsEyeRadar = ({
           ctx.arc(x, trackBottom - 1.4, 2.5, 0, Math.PI * 2);
           ctx.fill();
 
-          const canPlaceLabel = activeLabelPositions.every(
-            (placedX) => Math.abs(placedX - x) > 28
-          );
+          let canPlaceLabel = true;
+          for (let labelIndex = 0; labelIndex < activeLabelPositions.length; labelIndex += 1) {
+            if (Math.abs(activeLabelPositions[labelIndex] - x) <= 28) {
+              canPlaceLabel = false;
+              break;
+            }
+          }
           if (canPlaceLabel) {
             activeLabelPositions.push(x);
             const labelY = trackBottom - 10;

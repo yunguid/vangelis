@@ -2368,3 +2368,48 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 47 — allocation-free radar label collision scan
+
+Collected from the active-note label-placement path, exact standard-session callback counts, four
+decision-equivalent one-million-check workloads, generated production closures, focused radar and
+Song Study tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 46 | Batch 47 | Change |
+|---|---:|---:|---:|
+| Label-collision callback allocations over 20 s | 12,480 | 0 | removed |
+| Isolated label-collision CPU, 1M checks | 3.70 ms | 2.77 ms | -25.01% |
+| BirdsEyeRadar JS raw / gzip | 6.30 / 2.87 KiB | 6.36 / 2.89 KiB | +0.06 / +0.02 KiB |
+| Initial Home JS gzip | 67.85 KiB | 67.86 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 78.47 KiB | 78.48 KiB | +0.01 KiB |
+| Production deployment bytes | 1,483.03 KiB | 1,483.08 KiB | +0.05 KiB |
+| Automated production budgets | 87 | 88 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced `activeLabelPositions.every(...)` in the per-active-note radar path with an indexed,
+  allocation-free early-exit scan over the existing reusable positions array. The strict 28-pixel
+  placement boundary and insertion order are unchanged.
+- Rejected an initial extracted-helper version after profiling showed its function boundary made
+  the micro-workload 88–99% slower despite removing the callback. The retained version inlines the
+  scan in the render loop and improves both allocation and CPU metrics.
+- Added a one-million-check legacy-vs-indexed workload with an exact accepted-placement checksum,
+  plus a production guard that rejects callback-based collision scans.
+
+### Batch 47 verification gates
+
+- Full suite: 57 files, 516/516 tests pass, including focused radar, MidiBirdsEyeView, Song Study,
+  range, gradient, Sound Designer, canvas, numerical, and audio cases.
+- Production delivery/static/dependency/route guardrails: 88/88 pass; the radar reports zero label-
+  collision callback allocations per active-note check.
+- Four corrected one-million-check profiles measured 21.24–25.01% lower CPU; the final pass is
+  3.70 ms to 2.77 ms, a 25.01% reduction, while placement-decision checksums remain identical.
+- Warmed combined visual workload: 80.34% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -18 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.3 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

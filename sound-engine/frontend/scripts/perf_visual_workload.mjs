@@ -815,6 +815,45 @@ if (Math.abs(legacyRadarRangeBenchmark.checksum - reusableRadarRangeBenchmark.ch
   throw new Error('Reusable radar range calculation changed the benchmark result');
 }
 
+const radarLabelPositions = [42, 87, 134, 203, 248, 302, 361, 418];
+const radarLabelBenchmarkIterations = 1000000;
+const runLegacyRadarLabelBenchmark = (iterations) => {
+  let accepted = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const candidateX = (iteration % 640) * 0.75;
+    accepted += Number(
+      radarLabelPositions.every((placedX) => Math.abs(placedX - candidateX) > 28)
+    );
+  }
+  return accepted;
+};
+const runIndexedRadarLabelBenchmark = (iterations) => {
+  let accepted = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const candidateX = (iteration % 640) * 0.75;
+    let canPlace = true;
+    for (let index = 0; index < radarLabelPositions.length; index += 1) {
+      if (Math.abs(radarLabelPositions[index] - candidateX) <= 28) {
+        canPlace = false;
+        break;
+      }
+    }
+    accepted += Number(canPlace);
+  }
+  return accepted;
+};
+runLegacyRadarLabelBenchmark(10000);
+runIndexedRadarLabelBenchmark(10000);
+let radarLabelStartedAt = performance.now();
+const legacyRadarLabelAccepted = runLegacyRadarLabelBenchmark(radarLabelBenchmarkIterations);
+const legacyRadarLabelBenchmark = { elapsedMs: performance.now() - radarLabelStartedAt };
+radarLabelStartedAt = performance.now();
+const indexedRadarLabelAccepted = runIndexedRadarLabelBenchmark(radarLabelBenchmarkIterations);
+const indexedRadarLabelBenchmark = { elapsedMs: performance.now() - radarLabelStartedAt };
+if (legacyRadarLabelAccepted !== indexedRadarLabelAccepted) {
+  throw new Error('Indexed radar label collision scan changed placement decisions');
+}
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -1057,6 +1096,19 @@ const output = {
     rangeElapsedReductionPercent: Number(reduction(
       legacyRadarRangeBenchmark.elapsedMs,
       reusableRadarRangeBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  radarLabelCollisionPolicy: {
+    activeNoteChecksOverBenchmark: optimized.activeNoteEvaluations,
+    callbackAllocationsOverBenchmarkBefore: optimized.activeNoteEvaluations,
+    callbackAllocationsOverBenchmarkAfter: 0,
+    callbackAllocationReductionPercent: 100,
+    benchmarkIterations: radarLabelBenchmarkIterations,
+    legacyElapsedMs: Number(legacyRadarLabelBenchmark.elapsedMs.toFixed(2)),
+    indexedElapsedMs: Number(indexedRadarLabelBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyRadarLabelBenchmark.elapsedMs,
+      indexedRadarLabelBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {
