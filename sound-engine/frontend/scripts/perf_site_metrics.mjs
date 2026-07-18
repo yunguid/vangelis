@@ -51,6 +51,10 @@ const keyboardCssAsset = cssAssets.find(({ file }) => (
   cssTextByFile.get(file)?.includes('.keyboard-wrapper')
 )) || null;
 const keyboardCssFile = keyboardCssAsset?.file || null;
+const homeOverlayCssAsset = cssAssets.find(({ file }) => (
+  cssTextByFile.get(file)?.includes('.shortcuts-overlay')
+)) || null;
+const homeOverlayCssFile = homeOverlayCssAsset?.file || null;
 const initialRefs = [...html.matchAll(/(?:src|href)="\.\/([^"?#]+)|(?:src|href)="\/([^"?#]+)/g)]
   .map((match) => match[1] || match[2])
   .filter(Boolean);
@@ -129,6 +133,7 @@ function collectRouteClosure(entryKeys) {
     includesSoundControlPanelCss: soundControlPanelCssFile
       ? cssFiles.has(soundControlPanelCssFile)
       : false,
+    includesHomeOverlayCss: homeOverlayCssFile ? cssFiles.has(homeOverlayCssFile) : false,
     includesFactoryPresetBank: [...jsFiles].some((file) => file.includes('factoryPresets')),
     includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController')),
     includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab')),
@@ -249,7 +254,7 @@ const criticalGlobalCssSelectors = [
   '.button-primary',
   '.value-slider',
   '.wave-candy-placeholder',
-  '.command-palette',
+  '.panel',
   '.preset-shelf',
   '.route-loading'
 ];
@@ -345,6 +350,11 @@ const report = {
       kb: roundKb(keyboardCssAsset.bytes),
       gzipKb: roundKb(keyboardCssAsset.gzipBytes)
     } : null,
+    homeOverlayCss: homeOverlayCssAsset ? {
+      file: homeOverlayCssAsset.file,
+      kb: roundKb(homeOverlayCssAsset.bytes),
+      gzipKb: roundKb(homeOverlayCssAsset.gzipBytes)
+    } : null,
     appDefersMidiParser,
     appDefersScene,
     appDefersWaveCandy,
@@ -368,6 +378,7 @@ const report = {
     generatedTailwindVariableCount: (initialCssText.match(/--tw-/g) || []).length,
     criticalGlobalCssSelectorCount: criticalGlobalCssSelectors.length,
     missingCriticalGlobalCssSelectors,
+    retiredOverlaySelectorCount: countCss(/\.(?:command-palette|brandkit-)/g),
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -621,6 +632,31 @@ if (routesWithIncorrectKeyboardCss.length > 0) {
     expected: 'playable routes only'
   });
 }
+if (!homeOverlayCssAsset || initialCssText.includes('.shortcuts-overlay')) {
+  failures.push({
+    name: 'Guard Home overlay CSS route boundary',
+    asset: homeOverlayCssAsset?.file || null,
+    initial: initialCssText.includes('.shortcuts-overlay') ? 'eager' : 'route-owned',
+    expected: 'one Home-route asset'
+  });
+}
+const routesWithIncorrectHomeOverlayCss = routeClosures
+  .filter(({ route, includesHomeOverlayCss }) => ((route === 'home') !== includesHomeOverlayCss))
+  .map(({ route }) => route);
+if (routesWithIncorrectHomeOverlayCss.length > 0) {
+  failures.push({
+    name: 'Guard Home overlay CSS route ownership',
+    routes: routesWithIncorrectHomeOverlayCss,
+    expected: 'Home only'
+  });
+}
+if (report.staticSignals.retiredOverlaySelectorCount > 0) {
+  failures.push({
+    name: 'Guard retired overlay selectors',
+    actual: report.staticSignals.retiredOverlaySelectorCount,
+    maximum: 0
+  });
+}
 if (soundDesignerClosure?.includesWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer isolation', actual: 'eager', expected: 'deferred' });
 }
@@ -697,7 +733,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 45,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 48,
   failures
 };
 

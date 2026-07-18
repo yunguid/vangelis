@@ -23,6 +23,7 @@ import {
   SoundControlsContext
 } from './context/SynthContexts.jsx';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
+import './styles/overlays.css';
 
 const Scene = React.lazy(() => import('./components/Scene'));
 const WaveCandy = React.lazy(() => import('./components/WaveCandy'));

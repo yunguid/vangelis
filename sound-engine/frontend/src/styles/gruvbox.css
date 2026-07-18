@@ -40,8 +40,6 @@ body {
 .panel,
 .panel.elevated,
 .controls-surface,
-.shortcuts-card,
-.shortcuts-overlay,
 .app-notice,
 .button-icon,
 .button-primary,
@@ -54,8 +52,7 @@ body {
 .zone-top,
 .panel,
 .panel.elevated,
-.controls-surface,
-.shortcuts-card {
+.controls-surface {
   background: rgba(40, 40, 40, 0.92) !important;
   border-color: rgba(168, 153, 132, 0.18) !important;
 }

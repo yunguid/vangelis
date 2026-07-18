@@ -125,19 +125,6 @@
     letter-spacing: 0.05em;
   }
 
-  .shortcuts-overlay {
-    padding: 16px;
-  }
-
-  .shortcuts-card {
-    padding: 16px;
-    gap: 16px;
-  }
-
-  .shortcuts-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
 }
 
 /* Phone landscape */

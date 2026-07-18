@@ -1280,3 +1280,49 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 23 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 24 — Home-owned recovery and shortcut CSS
+
+Collected from component import reachability, generated selector ownership, all-route CSS closures,
+the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 23 | Batch 24 | Change |
+|---|---:|---:|---:|
+| Initial/global CSS raw | 30.87 KiB | 25.68 KiB | -16.8% |
+| Initial/global CSS gzip | 6.49 KiB | 5.63 KiB | -13.3% |
+| Home overlay/recovery CSS | global | 3.06 KiB / 1.00 KiB gzip | Home-owned |
+| Retired command/brand selector occurrences | 19 | 0 | removed |
+| Home critical CSS gzip | 11.52 KiB | 11.66 KiB | +0.14 KiB split cost |
+| Song Study critical CSS gzip | 13.15 KiB | 12.29 KiB | -6.5% |
+| Sound Designer critical CSS gzip | 13.25 KiB | 12.39 KiB | -6.5% |
+| Max passive-route critical CSS gzip | 11.67 KiB | 10.81 KiB | -7.4% |
+| Total production CSS raw | 106.72 KiB | 104.59 KiB | -2.0% |
+| Total production CSS gzip | 25.47 KiB | 25.60 KiB | +0.5% split compression cost |
+| Production deployment bytes | 1,491.21 KiB | 1,489.15 KiB | -2.06 KiB |
+| Automated production budgets | 63 | 66 | +3 guardrails |
+
+Implemented boundaries and controls:
+
+- The overlay stylesheet combined Home's live shortcut dialog and error recovery with command-
+  palette and brand-kit selectors whose components have no import path in the application.
+- Removed 19 retired command/brand selector occurrences and their unused animation keyframes.
+- App now owns the remaining shortcut and ErrorBoundary CSS, including the compact shortcut grid
+  and Gruvbox `!important` overrides. The Home lazy route receives these rules before it renders;
+  the bootstrap shell and seven non-Home route closures no longer include them.
+- The tradeoff is narrow and explicit: Home pays 0.14 KiB gzip of split overhead while every other
+  route saves roughly 0.84–0.86 KiB gzip, and total raw CSS plus deployment size decrease.
+- Generated-selector guards require one Home overlay asset, require it on Home and no other static
+  route, prohibit its selectors in initial CSS, and require zero retired command/brand selectors.
+
+### Batch 24 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 66/66 pass.
+- Deterministic visual workload after activation: 92.45% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -40 KB over 4,000 blocks.
+- Isolated DSP benchmark: 410.9 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 23 total, unchanged.
+- `git diff --check`: pass.
