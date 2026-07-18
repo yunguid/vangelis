@@ -1967,3 +1967,51 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 39 — resize-scoped radar gradients
+
+Collected from the radar backdrop/grid draw path, exact 25 Hz playing-cadence allocation counts,
+mocked Canvas gradient identity tests, generated production closures, the full suite, and isolated
+audio/visual gates.
+
+| Metric | Batch 38 | Batch 39 | Change |
+|---|---:|---:|---:|
+| Static radar gradients over 20 s playing | 2,000 | 4 | -99.80% |
+| All backdrop/grid gradients over 20 s | 2,500 | 504 | -79.84% |
+| Static gradient creations per steady-state frame | 4 | 0 | removed |
+| Deferred BirdsEyeRadar JS raw / gzip | 6.35 / 2.79 KiB | 6.80 / 2.98 KiB | +0.45 / +0.19 KiB |
+| Initial Home JS gzip | 67.86 KiB | 67.86 KiB | unchanged |
+| Production deployment bytes | 1,480.64 KiB | 1,481.08 KiB | +0.44 KiB |
+| Automated production budgets | 79 | 80 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Moved the base, horizon, canopy, and grid-horizon gradients into a cache keyed by canvas width
+  and height. All four native objects are created on the first draw and rebuilt only after a real
+  dimension change.
+- Kept the horizontal sweep gradient frame-local because its coordinates animate with playback and
+  time. Per-note trail/body gradients also remain dynamic; the cache removes only geometry-invariant
+  work and preserves the radar's visual treatment exactly.
+- Began acknowledging the canvas size controller after each completed radar frame, keeping its
+  resize lifecycle accurate for this and future resize-scoped resources.
+- Added mocked Canvas tests proving same-size identity reuse and four-object invalidation after a
+  resize, plus exact playing-session allocation metrics and a production source guard.
+
+### Batch 39 verification gates
+
+- Full suite: 54 files, 505/505 tests pass, including static-gradient cache identity/invalidation
+  and the focused radar/Song Study cases.
+- Production delivery/static/dependency/route guardrails: 80/80 pass.
+- Radar static gradient creation falls 99.80% over 20 seconds; total backdrop/grid gradient creation
+  falls 79.84% while the animated sweep remains unchanged.
+- Radar palette construction remains at least 99.75% lower, spectrogram string work 99.72% lower,
+  analyzer invariant work 99.83% lower, and stereo pair work 83.33% lower than their baselines.
+- Deterministic combined visual workload: 86.47% lower measured CPU time than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -22 KB over 4,000 blocks.
+- Isolated DSP benchmark: 405.5 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

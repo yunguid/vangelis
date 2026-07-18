@@ -7,6 +7,10 @@ import {
   RADAR_MIN_MIDI,
   getRadarMidiPalette
 } from '../utils/radarPalette.js';
+import {
+  createRadarStaticGradientCache,
+  getRadarStaticGradients
+} from '../utils/radarGradientCache.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 import '../styles/birds-eye-radar.css';
 
@@ -94,34 +98,16 @@ const BirdsEyeRadar = ({
     };
 
     const sizeController = createCanvasSizeController(canvas, ctx);
+    const staticGradientCache = createRadarStaticGradientCache();
 
-    const drawBackdrop = ({ width, height, nowSeconds, playbackProgress }) => {
-      const base = ctx.createLinearGradient(0, 0, 0, height);
-      base.addColorStop(0, 'rgba(5, 10, 18, 0.98)');
-      base.addColorStop(0.45, 'rgba(8, 14, 25, 0.98)');
-      base.addColorStop(1, 'rgba(3, 7, 13, 1)');
-      ctx.fillStyle = base;
+    const drawBackdrop = ({ width, height, nowSeconds, playbackProgress, gradients }) => {
+      ctx.fillStyle = gradients.base;
       ctx.fillRect(0, 0, width, height);
 
-      const horizon = ctx.createRadialGradient(
-        width * 0.5,
-        height * 0.78,
-        24,
-        width * 0.5,
-        height * 0.78,
-        width * 0.66
-      );
-      horizon.addColorStop(0, 'rgba(255, 146, 86, 0.24)');
-      horizon.addColorStop(0.38, 'rgba(255, 112, 58, 0.08)');
-      horizon.addColorStop(1, 'rgba(255, 112, 58, 0)');
-      ctx.fillStyle = horizon;
+      ctx.fillStyle = gradients.horizon;
       ctx.fillRect(0, 0, width, height);
 
-      const canopy = ctx.createRadialGradient(width * 0.5, height * 0.08, 10, width * 0.5, height * 0.08, width * 0.7);
-      canopy.addColorStop(0, 'rgba(105, 190, 255, 0.1)');
-      canopy.addColorStop(0.42, 'rgba(40, 112, 174, 0.04)');
-      canopy.addColorStop(1, 'rgba(40, 112, 174, 0)');
-      ctx.fillStyle = canopy;
+      ctx.fillStyle = gradients.canopy;
       ctx.fillRect(0, 0, width, height);
 
       const sweepX = (playbackProgress * width * 1.15 + nowSeconds * 22) % (width * 1.15);
@@ -133,7 +119,14 @@ const BirdsEyeRadar = ({
       ctx.fillRect(0, 0, width, height);
     };
 
-    const drawGrid = ({ trackTop, trackBottom, centerX, playfieldWidth, vanishY }) => {
+    const drawGrid = ({
+      trackTop,
+      trackBottom,
+      centerX,
+      playfieldWidth,
+      vanishY,
+      horizonGradient
+    }) => {
       const depthSpan = trackBottom - trackTop;
       ctx.strokeStyle = 'rgba(129, 164, 196, 0.17)';
       ctx.lineWidth = 1;
@@ -159,10 +152,7 @@ const BirdsEyeRadar = ({
       }
       ctx.stroke();
 
-      const horizon = ctx.createLinearGradient(0, trackBottom - 2, 0, trackBottom + 8);
-      horizon.addColorStop(0, 'rgba(255, 168, 104, 0.96)');
-      horizon.addColorStop(1, 'rgba(255, 110, 56, 0.24)');
-      ctx.strokeStyle = horizon;
+      ctx.strokeStyle = horizonGradient;
       ctx.lineWidth = 2.6;
       ctx.beginPath();
       ctx.moveTo(SIDE_PADDING, trackBottom);
@@ -314,9 +304,22 @@ const BirdsEyeRadar = ({
 
       const { width, height } = sizeController.size;
       const nowSeconds = time * 0.001;
+      const staticGradients = getRadarStaticGradients({
+        context: ctx,
+        cache: staticGradientCache,
+        width,
+        height,
+        bottomPadding: BOTTOM_PADDING
+      });
 
       ctx.clearRect(0, 0, width, height);
-      drawBackdrop({ width, height, nowSeconds, playbackProgress });
+      drawBackdrop({
+        width,
+        height,
+        nowSeconds,
+        playbackProgress,
+        gradients: staticGradients
+      });
 
       const trackTop = TOP_PADDING;
       const trackBottom = height - BOTTOM_PADDING;
@@ -324,7 +327,14 @@ const BirdsEyeRadar = ({
       const centerX = SIDE_PADDING + playfieldWidth * 0.5;
       const vanishY = trackTop - height * 0.28;
 
-      drawGrid({ trackTop, trackBottom, centerX, playfieldWidth, vanishY });
+      drawGrid({
+        trackTop,
+        trackBottom,
+        centerX,
+        playfieldWidth,
+        vanishY,
+        horizonGradient: staticGradients.gridHorizon
+      });
       drawParticles({ nowSeconds, trackTop, trackBottom, centerX, playfieldWidth });
       drawNotes({
         midi,
@@ -336,6 +346,7 @@ const BirdsEyeRadar = ({
         centerX,
         playfieldWidth
       });
+      sizeController.acknowledgeResize();
 
     };
 

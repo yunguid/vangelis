@@ -447,6 +447,7 @@ const runRadarPaletteBenchmark = (factory) => {
 };
 const legacyRadarPaletteBenchmark = runRadarPaletteBenchmark(createLegacyRadarPalette);
 const cachedRadarPaletteBenchmark = runRadarPaletteBenchmark(getRadarMidiPalette);
+const radarPlayingFrames = Math.round(SECONDS * 25);
 
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
@@ -551,6 +552,21 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyRadarPaletteBenchmark.elapsedMs,
       cachedRadarPaletteBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  radarStaticGradientPolicy: {
+    playingFrames: radarPlayingFrames,
+    staticGradientCreationsOverBenchmarkBefore: radarPlayingFrames * 4,
+    staticGradientCreationsOverBenchmarkAfter: 4,
+    staticGradientReductionPercent: Number(reduction(
+      radarPlayingFrames * 4,
+      4
+    ).toFixed(2)),
+    allBackdropAndGridGradientCreationsBefore: radarPlayingFrames * 5,
+    allBackdropAndGridGradientCreationsAfter: radarPlayingFrames + 4,
+    allGradientReductionPercent: Number(reduction(
+      radarPlayingFrames * 5,
+      radarPlayingFrames + 4
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

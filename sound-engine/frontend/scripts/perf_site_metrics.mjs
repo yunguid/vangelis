@@ -328,10 +328,20 @@ const radarPaletteSource = await readFile(
   path.join(sourceDir, 'utils', 'radarPalette.js'),
   'utf8'
 );
+const radarGradientCacheSource = await readFile(
+  path.join(sourceDir, 'utils', 'radarGradientCache.js'),
+  'utf8'
+);
 const radarUsesBoundedPaletteCache = (
   /getRadarMidiPalette\(note\.midi, isActive\)/.test(birdsEyeRadarSource)
   && /const paletteCache = new Map\(\)/.test(radarPaletteSource)
   && /normalizedMidi \* 2 \+ Number\(active\)/.test(radarPaletteSource)
+);
+const radarCachesStaticGradients = (
+  /getRadarStaticGradients\(\{/.test(birdsEyeRadarSource)
+  && /sizeController\.acknowledgeResize\(\)/.test(birdsEyeRadarSource)
+  && /cache\.width === width && cache\.height === height/.test(radarGradientCacheSource)
+  && (radarGradientCacheSource.match(/context\.create(?:Linear|Radial)Gradient\s*\(/g) || []).length === 4
 );
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
@@ -526,6 +536,8 @@ const report = {
     radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
     radarPaletteStateLimit: 256,
     radarUsesBoundedPaletteCache,
+    radarStaticGradientCreationsPerSteadyStateFrame: radarCachesStaticGradients ? 0 : 4,
+    radarCachesStaticGradients,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -662,6 +674,13 @@ if (!radarUsesBoundedPaletteCache) {
     name: 'Guard bounded radar palette cache',
     actual: 'per-note palette construction in active render path',
     expected: 'numeric-key cache with at most 256 MIDI/active states'
+  });
+}
+if (!radarCachesStaticGradients) {
+  failures.push({
+    name: 'Guard resize-scoped radar gradients',
+    actual: 'static backdrop/grid gradients recreated in active frame path',
+    expected: 'four cached gradients invalidated only by canvas dimensions'
   });
 }
 if (
@@ -998,7 +1017,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 61,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 62,
   failures
 };
 
