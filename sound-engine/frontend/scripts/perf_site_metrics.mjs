@@ -82,6 +82,7 @@ const audioEngineFile = audioEngineManifestRecord?.file || null;
 const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
 const waveCandyFile = manifest['src/components/WaveCandy.jsx']?.file || null;
 const sceneFile = manifest['src/components/Scene.jsx']?.file || null;
+const birdsEyeRadarFile = manifest['src/components/BirdsEyeRadar.jsx']?.file || null;
 const advancedSoundDesignerStagesFile = manifest['src/pages/SoundDesignerAdvancedStages.jsx']?.file || null;
 const audioControlPrimitivesFile = Object.entries(manifest)
   .find(([key]) => key.includes('audioControlPrimitives'))?.[1]?.file || null;
@@ -120,6 +121,7 @@ function collectRouteClosure(entryKeys) {
     includesSongStudyPlayer: songStudyFile ? jsFiles.has(songStudyFile) : false,
     includesWaveCandy: waveCandyFile ? jsFiles.has(waveCandyFile) : false,
     includesScene: sceneFile ? jsFiles.has(sceneFile) : false,
+    includesBirdsEyeRadar: birdsEyeRadarFile ? jsFiles.has(birdsEyeRadarFile) : false,
     includesAdvancedSoundDesignerStages: advancedSoundDesignerStagesFile
       ? jsFiles.has(advancedSoundDesignerStagesFile)
       : false,
@@ -165,6 +167,9 @@ const soundDesignerManifestEntry = manifest['src/pages/SoundDesignerPage.jsx'];
 const songStudyManifestEntry = manifest['src/pages/SongStudyPage.jsx'];
 const songStudyDefersMidiParser = (
   songStudyManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false
+);
+const songStudyDefersBirdsEyeRadar = (
+  songStudyManifestEntry?.dynamicImports?.includes('src/components/BirdsEyeRadar.jsx') || false
 );
 const soundDesignerDefersWaveCandy = (
   soundDesignerManifestEntry?.dynamicImports?.includes('src/components/WaveCandy.jsx') || false
@@ -278,6 +283,7 @@ const report = {
     appDefersWaveCandy,
     generatedDefersSongStudyPlayer,
     songStudyDefersMidiParser,
+    songStudyDefersBirdsEyeRadar,
     soundDesignerDefersWaveCandy,
     soundDesignerDefersAdvancedStages,
     deferredVisualClosures,
@@ -462,6 +468,12 @@ if (!songStudyDefersMidiParser) {
 if (songStudyClosure?.includesMidiParser) {
   failures.push({ name: 'Guard Song Study parser isolation', actual: 'eager', expected: 'deferred' });
 }
+if (!songStudyDefersBirdsEyeRadar) {
+  failures.push({ name: 'Guard Song Study radar import', actual: 'static', expected: 'dynamic' });
+}
+if (songStudyClosure?.includesBirdsEyeRadar) {
+  failures.push({ name: 'Guard Song Study loading-shell radar isolation', actual: 'eager', expected: 'score-gated' });
+}
 if (!soundDesignerDefersWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer import', actual: 'static', expected: 'dynamic' });
 }
@@ -518,7 +530,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 31,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 33,
   failures
 };
 

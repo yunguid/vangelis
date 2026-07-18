@@ -1002,3 +1002,45 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark: 409.1 us per 128-frame block with 6.5x realtime headroom.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - `git diff --check`: pass.
+
+## Optimization batch 18 — score-gated Song Study radar
+
+Collected from Song Study loading/ready component transitions, manifest closures, the full suite,
+and isolated audio/visual gates.
+
+| Metric | Batch 17 | Batch 18 | Change |
+|---|---:|---:|---:|
+| Song Study startup JS gzip | 76.00 KiB | 73.04 KiB | -3.9% |
+| Song Study startup JS raw | 226.00 KiB | 219.53 KiB | -2.9% |
+| Song Study static JS assets | 14 | 13 | -1 asset |
+| Radar/physics in score-loading closure | present | 0 | score-gated |
+| Radar canvas allocation before parsed MIDI | 1 | 0 | removed |
+| Loading-stage radar footprint | live empty canvas | stable CSS placeholder | layout preserved |
+| Total production JS raw | 504.53 KiB | 504.94 KiB | +0.08% transition overhead |
+| Total production JS gzip | 165.93 KiB | 166.07 KiB | +0.08% transition overhead |
+| Production deployment bytes | 1,491.44 KiB | 1,492.08 KiB | +0.04% |
+| Automated production budgets | 49 | 51 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Song Study mounted BirdsEyeRadar while its score was still loading, which parsed the radar and
+  canvas helpers, created particles and caches, allocated a canvas, and began an empty-state RAF
+  loop before any MIDI notes existed.
+- Radar is now a lazy component gated by `displayMidi`. The loading and Suspense states use the
+  same `birds-eye-radar__stage` surface and existing fixed clamp height, preventing layout shift.
+- Extended the Song Study transition test to prove the radar is absent while parsing and appears
+  after the score resolves alongside the enabled transport.
+- Manifest guards require the Song Study-to-radar dynamic edge and prohibit the radar chunk from
+  returning to the static score-loading shell.
+
+### Batch 18 verification gates
+
+- Full suite: 47 files, 487/487 tests pass.
+- Production delivery/static/dependency/route guardrails: 51/51 pass.
+- Deterministic visual workload after activation: 93.01% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 411.4 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- `git diff --check`: pass.

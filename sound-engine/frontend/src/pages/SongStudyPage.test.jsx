@@ -82,10 +82,12 @@ describe('SongStudyPage deferred MIDI loading', () => {
     render(<SongStudyPage study={study} />);
     expect(screen.getByText('Loading MIDI')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
+    expect(screen.queryByTestId('radar')).not.toBeInTheDocument();
 
     expect(await screen.findByText('120 BPM')).toBeInTheDocument();
     expect(parseMidiFile).toHaveBeenCalledWith('/midi/test.mid');
     expect(screen.getByRole('button', { name: 'Play' })).toBeEnabled();
+    expect(await screen.findByTestId('radar')).toBeInTheDocument();
   });
 
   it('preserves the existing load error state when deferred parsing fails', async () => {

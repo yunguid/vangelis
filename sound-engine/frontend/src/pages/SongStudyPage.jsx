@@ -1,6 +1,5 @@
 import React from 'react';
 import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
-import BirdsEyeRadar from '../components/BirdsEyeRadar.jsx';
 import SynthKeyboard from '../components/SynthKeyboard';
 import {
   DEFAULT_STUDY_AUDIO_PARAMS,
@@ -14,6 +13,8 @@ import { midiNoteToName } from '../utils/math.js';
 import { buildNoteRenderWindow } from '../components/midiBirdsEyeMath.js';
 import { getStudyNotesAroundTime } from '../utils/songStudyNotes.js';
 import './SongStudyPage.css';
+
+const BirdsEyeRadar = React.lazy(() => import('../components/BirdsEyeRadar.jsx'));
 
 const TEMPO_OPTIONS = [
   { label: '0.75x', value: 0.75 },
@@ -576,13 +577,27 @@ const SongStudyPageContent = ({ study }) => {
 
         <section className="song-study__stage" aria-label="Song follow view">
           <div className="keyboard-region">
-            <BirdsEyeRadar
-              currentMidi={displayMidi}
-              progress={playback.progress}
-              activeNotes={radarActiveNotes}
-              isPlaying={playback.isPlaying}
-              noteRenderWindow={studyNoteWindow}
-            />
+            {displayMidi ? (
+              <React.Suspense
+                fallback={(
+                  <section className="birds-eye-radar" aria-hidden="true">
+                    <div className="birds-eye-radar__stage" />
+                  </section>
+                )}
+              >
+                <BirdsEyeRadar
+                  currentMidi={displayMidi}
+                  progress={playback.progress}
+                  activeNotes={radarActiveNotes}
+                  isPlaying={playback.isPlaying}
+                  noteRenderWindow={studyNoteWindow}
+                />
+              </React.Suspense>
+            ) : (
+              <section className="birds-eye-radar" aria-hidden="true">
+                <div className="birds-eye-radar__stage" />
+              </section>
+            )}
 
             <SynthKeyboard
               waveformType={waveformType}
