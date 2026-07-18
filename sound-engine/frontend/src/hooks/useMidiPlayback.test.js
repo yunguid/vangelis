@@ -243,6 +243,39 @@ describe('useMidiPlayback', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('resumes sustaining notes without allocating a filtered whole-score queue', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 8,
+        bpm: 120,
+        notes: [
+          { midi: 60, time: 0, duration: 7, velocity: 0.8 },
+          { midi: 62, time: 1, duration: 0.1, velocity: 0.8 },
+          { midi: 64, time: 6, duration: 0.1, velocity: 0.8 }
+        ]
+      }, { startAt: 5 });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playFrequency.mock.calls[0][0].noteId).toContain('midi-60-');
+
+    await act(async () => {
+      vi.advanceTimersByTime(999);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+    expect(audioEngine.playFrequency.mock.calls[1][0].noteId).toContain('midi-64-');
+  });
+
   it('feeds later notes into the rolling MIDI window as playback advances', async () => {
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',

@@ -2735,3 +2735,57 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 54 — allocation-free whole-score MIDI scheduler startup
+
+Collected from the normalized MIDI scheduling path used by play, resume, seek, and live tempo
+changes; a 10,000-note score at a 5,000-second timeline offset; three independently launched
+200-operation profiles; exact relevant-note checksums; a pre-offset sustaining-note regression case;
+generated production closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 53 | Batch 54 | Change |
+|---|---:|---:|---:|
+| Wrapper objects per 10k-note schedule | 10,000 | 0 | removed |
+| Whole-score queue arrays per schedule | 2 | 0 | removed |
+| Total setup allocations per schedule | 10,002 | 0 | removed |
+| Scheduler setup CPU, 200 x 10k-note operations | 16.24–16.60 ms | 5.35–5.48 ms | -66.88% to -67.79% |
+| Relevant-note checksum delta | — | 0 | exact |
+| Initial Home JS gzip | 67.94 KiB | 67.90 KiB | -0.04 KiB |
+| Fully activated Home visual JS gzip | 78.86 KiB | 78.83 KiB | -0.03 KiB |
+| Song Study route JS gzip | 65.70 KiB | 65.67 KiB | -0.03 KiB |
+| Production deployment bytes | 1,484.99 KiB | 1,484.94 KiB | -0.05 KiB |
+| Automated production budgets | 96 | 97 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Removed the scheduler's `notes.map(...).filter(...)` startup queue, which created one `{ note,
+  index }` wrapper per normalized note plus map and filter result arrays on every scheduling action.
+- The rolling scheduler now advances an integer directly over the existing time-sorted normalized
+  note array. It skips definitely ended leading notes, retains each original normalized index for
+  stable voice IDs, and performs the existing remaining-duration check as notes enter the lookahead
+  window.
+- Preserved the subtle seek/resume case where a note starts before the requested offset but remains
+  sounding afterward. A focused test starts at five seconds, schedules the sustaining earlier note,
+  skips an already-ended note, and later schedules the next future note.
+- Added an allocation-equivalent legacy-vs-indexed workload over 5,002 relevant notes, exact
+  checksum/count gates, explicit wrapper/array allocation counts, and a production guard that rejects
+  whole-score map/filter queues in the scheduler.
+
+### Batch 54 verification gates
+
+- Full suite: 58 files, 522/522 tests pass, including 18 MIDI playback cases and all Sound Designer,
+  hardware MIDI, keyboard, control-kit, radar, Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 97/97 pass; the 10,000-note scheduler
+  reports zero wrapper objects and zero queue arrays per play/resume/seek/tempo operation.
+- Three 200-operation profiles measured 66.88–67.79% lower setup CPU: 16.24–16.60 ms falls to
+  5.35–5.48 ms. Every run removes 10,002 allocations per operation, preserves 5,002 relevant notes,
+  and produces an identical index checksum.
+- Warmed combined visual workload: 80.24% lower normalized median CPU than the legacy reference on
+  the final stable pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50%
+  fewer scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 411.4 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

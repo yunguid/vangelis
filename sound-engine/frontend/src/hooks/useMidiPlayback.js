@@ -342,10 +342,13 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
     const sequence = schedulerSequenceRef.current + 1;
     schedulerSequenceRef.current = sequence;
-    const pendingNotes = notes
-      .map((note, index) => ({ note, index }))
-      .filter(({ note }) => note.time + note.duration > offset);
     let nextIndex = 0;
+    while (
+      nextIndex < notes.length
+      && notes[nextIndex].time + notes[nextIndex].duration <= offset
+    ) {
+      nextIndex += 1;
+    }
 
     const pump = () => {
       if (sequence !== schedulerSequenceRef.current) return;
@@ -358,8 +361,9 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       const elapsedOriginal = offset + Math.max(0, now - startTime) * tempo;
       const scheduleThrough = elapsedOriginal + SCHEDULER_LOOKAHEAD_SECONDS * tempo;
 
-      while (nextIndex < pendingNotes.length) {
-        const { note, index } = pendingNotes[nextIndex];
+      while (nextIndex < notes.length) {
+        const note = notes[nextIndex];
+        const index = nextIndex;
         if (note.time > scheduleThrough) break;
         nextIndex += 1;
 
@@ -395,7 +399,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
         }, endDelay);
       }
 
-      if (nextIndex < pendingNotes.length) {
+      if (nextIndex < notes.length) {
         scheduleTrackedTimeout(pump, SCHEDULER_TICK_MS);
       }
     };

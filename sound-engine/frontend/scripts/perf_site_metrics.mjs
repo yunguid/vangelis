@@ -523,6 +523,17 @@ const appLoadsSessionOnce = (
   /const \[initialSession\] = useState\(loadAppSession\)/.test(productionSourceText)
   && !/useRef\(loadAppSession\(\)\)/.test(productionSourceText)
 );
+const midiPlaybackSource = await readFile(
+  path.join(sourceDir, 'hooks', 'useMidiPlayback.js'),
+  'utf8'
+);
+const midiSchedulerAvoidsWholeScoreQueue = (
+  !/const pendingNotes = notes\s*\.map\(/.test(midiPlaybackSource)
+  && /notes\[nextIndex\]\.time \+ notes\[nextIndex\]\.duration <= offset/
+    .test(midiPlaybackSource)
+  && /const note = notes\[nextIndex\]/.test(midiPlaybackSource)
+  && /const index = nextIndex/.test(midiPlaybackSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -765,7 +776,12 @@ const report = {
       eagerMutableHookInitializers === 0 ? 0 : 14,
     appSessionStorageReadsPerReactRender: appLoadsSessionOnce ? 0 : 1,
     appSessionStorageReadsPerMount: 1,
-    appLoadsSessionOnce
+    appLoadsSessionOnce,
+    midiSchedulerWrapperAllocationsPer10000NoteSchedule:
+      midiSchedulerAvoidsWholeScoreQueue ? 0 : 10000,
+    midiSchedulerQueueArrayAllocationsPerSchedule:
+      midiSchedulerAvoidsWholeScoreQueue ? 0 : 2,
+    midiSchedulerAvoidsWholeScoreQueue
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1331,6 +1347,13 @@ if (!appLoadsSessionOnce) {
     expected: 'lazy useState initializer invoked once per App mount'
   });
 }
+if (!midiSchedulerAvoidsWholeScoreQueue) {
+  failures.push({
+    name: 'Guard allocation-free MIDI scheduler startup',
+    actual: 'whole-score wrapper/filter queue allocated per schedule operation',
+    expected: 'direct indexed traversal of the normalized note array'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1341,7 +1364,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 78,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 79,
   failures
 };
 

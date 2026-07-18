@@ -129,6 +129,73 @@ if (eagerSessionReadBenchmark.checksum !== cachedSessionReadBenchmark.checksum) 
   throw new Error('Cached app-session initialization changed the restored session');
 }
 
+const schedulerBenchmarkNoteCount = 10000;
+const schedulerBenchmarkOffset = 5000;
+const schedulerBenchmarkIterations = 200;
+const schedulerBenchmarkNotes = Array.from(
+  { length: schedulerBenchmarkNoteCount },
+  (_, index) => ({
+    time: index,
+    duration: index % 97 === 0 ? 200 : 0.25
+  })
+);
+const runLegacySchedulerQueueBenchmark = (iterations) => {
+  let checksum = 0;
+  let relevantCount = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const pendingNotes = schedulerBenchmarkNotes
+      .map((note, index) => ({ note, index }))
+      .filter(({ note }) => note.time + note.duration > schedulerBenchmarkOffset);
+    relevantCount = pendingNotes.length;
+    for (let pendingIndex = 0; pendingIndex < pendingNotes.length; pendingIndex += 1) {
+      checksum += pendingNotes[pendingIndex].index;
+    }
+  }
+  return { checksum, relevantCount, elapsedMs: performance.now() - startedAt };
+};
+const runAllocationFreeSchedulerQueueBenchmark = (iterations) => {
+  let checksum = 0;
+  let relevantCount = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    let nextIndex = 0;
+    while (
+      nextIndex < schedulerBenchmarkNotes.length
+      && (
+        schedulerBenchmarkNotes[nextIndex].time
+        + schedulerBenchmarkNotes[nextIndex].duration
+        <= schedulerBenchmarkOffset
+      )
+    ) {
+      nextIndex += 1;
+    }
+    relevantCount = 0;
+    for (let index = nextIndex; index < schedulerBenchmarkNotes.length; index += 1) {
+      const note = schedulerBenchmarkNotes[index];
+      if (note.time + note.duration <= schedulerBenchmarkOffset) continue;
+      checksum += index;
+      relevantCount += 1;
+    }
+  }
+  return { checksum, relevantCount, elapsedMs: performance.now() - startedAt };
+};
+runLegacySchedulerQueueBenchmark(5);
+runAllocationFreeSchedulerQueueBenchmark(5);
+const legacySchedulerQueueBenchmark = runLegacySchedulerQueueBenchmark(
+  schedulerBenchmarkIterations
+);
+const allocationFreeSchedulerQueueBenchmark = runAllocationFreeSchedulerQueueBenchmark(
+  schedulerBenchmarkIterations
+);
+if (
+  legacySchedulerQueueBenchmark.checksum !== allocationFreeSchedulerQueueBenchmark.checksum
+  || legacySchedulerQueueBenchmark.relevantCount
+    !== allocationFreeSchedulerQueueBenchmark.relevantCount
+) {
+  throw new Error('Allocation-free MIDI scheduler changed the relevant-note set');
+}
+
 const srcFreq = new Uint8Array(AUDIO_FREQ_BINS);
 const srcWave = new Float32Array(AUDIO_WAVE_SAMPLES);
 const srcLeft = new Float32Array(AUDIO_STEREO_SAMPLES);
@@ -1325,6 +1392,28 @@ const output = {
       cachedSessionReadBenchmark.elapsedMs
     ).toFixed(2)),
     restoredSessionChecksumDelta: 0
+  },
+  midiSchedulerStartupPolicy: {
+    scoreNoteCount: schedulerBenchmarkNoteCount,
+    timelineOffsetSeconds: schedulerBenchmarkOffset,
+    relevantNoteCount: legacySchedulerQueueBenchmark.relevantCount,
+    wrapperObjectAllocationsPerScheduleBefore: schedulerBenchmarkNoteCount,
+    wrapperObjectAllocationsPerScheduleAfter: 0,
+    queueArrayAllocationsPerScheduleBefore: 2,
+    queueArrayAllocationsPerScheduleAfter: 0,
+    allocationsPerScheduleBefore: schedulerBenchmarkNoteCount + 2,
+    allocationsPerScheduleAfter: 0,
+    benchmarkIterations: schedulerBenchmarkIterations,
+    legacyElapsedMs: Number(legacySchedulerQueueBenchmark.elapsedMs.toFixed(2)),
+    allocationFreeElapsedMs: Number(
+      allocationFreeSchedulerQueueBenchmark.elapsedMs.toFixed(2)
+    ),
+    elapsedReductionPercent: Number(reduction(
+      legacySchedulerQueueBenchmark.elapsedMs,
+      allocationFreeSchedulerQueueBenchmark.elapsedMs
+    ).toFixed(2)),
+    relevantNoteChecksumDelta: 0,
+    preservesPreOffsetSustainingNotes: true
   },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,
