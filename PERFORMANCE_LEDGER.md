@@ -959,3 +959,46 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark: 412.0 us per 128-frame block with 6.5x realtime headroom.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - `git diff --check`: pass.
+
+## Optimization batch 17 — effect-loaded Song Study parser
+
+Collected from Song Study manifest edges and closures, page-level loading/error contracts, the
+full suite, and isolated audio/visual gates.
+
+| Metric | Batch 16 | Batch 17 | Change |
+|---|---:|---:|---:|
+| Song Study startup JS gzip | 79.10 KiB | 76.00 KiB | -3.9% |
+| Song Study startup JS raw | 236.50 KiB | 226.00 KiB | -4.4% |
+| Song Study static JS assets | 15 | 14 | -1 asset |
+| MIDI parser in Song Study static closure | 10.77 KiB / 3.22 KiB gzip | 0 | deferred |
+| Parser request timing | route evaluation | score-loading effect | moved off render path |
+| Transport before parser readiness | disabled | disabled | preserved |
+| Deferred parser failure UI | existing path | page-level test coverage | guarded |
+| Total production JS raw | 504.29 KiB | 504.53 KiB | +0.05% boundary overhead |
+| Total production JS gzip | 165.83 KiB | 165.93 KiB | +0.06% boundary overhead |
+| Production deployment bytes | 1,491.17 KiB | 1,491.44 KiB | +0.02% |
+| Automated production budgets | 47 | 49 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Song Study statically imported the MIDI parser before rendering its existing score-loading UI,
+  even though parsing could not begin until the loading effect received a study URL.
+- The effect now imports the parser and then parses the requested score. The existing cancellation
+  guard still ignores results after study changes or route unmount, and load errors retain the
+  same visible recovery state.
+- Added page-level tests proving the transport remains disabled while the parser resolves, becomes
+  playable after parsed notes arrive, and exposes the existing alert when deferred parsing fails.
+- Manifest guards require the Song Study-to-parser dynamic edge and fail if the parser returns to
+  the route's static player-shell closure.
+
+### Batch 17 verification gates
+
+- Full suite: 47 files, 487/487 tests pass.
+- Production delivery/static/dependency/route guardrails: 49/49 pass.
+- Deterministic visual workload: 91.96% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 409.1 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- `git diff --check`: pass.

@@ -162,6 +162,10 @@ const generatedDefersSongStudyPlayer = (
   generatedStudyManifestEntry?.dynamicImports?.includes('src/pages/SongStudyPage.jsx') || false
 );
 const soundDesignerManifestEntry = manifest['src/pages/SoundDesignerPage.jsx'];
+const songStudyManifestEntry = manifest['src/pages/SongStudyPage.jsx'];
+const songStudyDefersMidiParser = (
+  songStudyManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false
+);
 const soundDesignerDefersWaveCandy = (
   soundDesignerManifestEntry?.dynamicImports?.includes('src/components/WaveCandy.jsx') || false
 );
@@ -273,6 +277,7 @@ const report = {
     appDefersScene,
     appDefersWaveCandy,
     generatedDefersSongStudyPlayer,
+    songStudyDefersMidiParser,
     soundDesignerDefersWaveCandy,
     soundDesignerDefersAdvancedStages,
     deferredVisualClosures,
@@ -450,6 +455,13 @@ if (
     expected: 'status shell only'
   });
 }
+const songStudyClosure = routeClosures.find(({ route }) => route === 'song-study');
+if (!songStudyDefersMidiParser) {
+  failures.push({ name: 'Guard Song Study parser import', actual: 'static', expected: 'dynamic' });
+}
+if (songStudyClosure?.includesMidiParser) {
+  failures.push({ name: 'Guard Song Study parser isolation', actual: 'eager', expected: 'deferred' });
+}
 if (!soundDesignerDefersWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer import', actual: 'static', expected: 'dynamic' });
 }
@@ -506,7 +518,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 29,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 31,
   failures
 };
 

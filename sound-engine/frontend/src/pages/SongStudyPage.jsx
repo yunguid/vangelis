@@ -11,7 +11,6 @@ import { useMidiPlayback } from '../hooks/useMidiPlayback.js';
 import { useAudioEngineWarmup } from '../hooks/useAudioEngineWarmup.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToName } from '../utils/math.js';
-import { parseMidiFile } from '../utils/midiParser.js';
 import { buildNoteRenderWindow } from '../components/midiBirdsEyeMath.js';
 import { getStudyNotesAroundTime } from '../utils/songStudyNotes.js';
 import './SongStudyPage.css';
@@ -277,7 +276,9 @@ const SongStudyPageContent = ({ study }) => {
     setLoadState('loading');
     setLoadError('');
 
-    parseMidiFile(study.midiUrl).then((midi) => {
+    import('../utils/midiParser.js').then(({ parseMidiFile }) => (
+      parseMidiFile(study.midiUrl)
+    )).then((midi) => {
       if (cancelled) return;
 
       const pitchedNotes = midi.notes.filter((note) => (
