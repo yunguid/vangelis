@@ -2952,3 +2952,59 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 58 — zero-commit keyboard interaction feedback
+
+Collected from the production keyboard note and visual-feedback hooks; a 300-note interaction
+session model; focused normal/profiling-mode note tests; an animation-frame hook render counter;
+generated production closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 57 | Batch 58 | Change |
+|---|---:|---:|---:|
+| Unused velocity state updates per successful note | 1 | 0 | removed |
+| Velocity-only React commits per note-start frame | 1 | 0 | removed |
+| Note timing samples per unprofiled successful note | 2 | 0 | removed |
+| Metrics object allocations per unprofiled successful note | 1 | 0 | removed |
+| Keyboard-local long-task observers per mount | 1 | 0 | removed |
+| Profiling-mode note latency capture | enabled | enabled | preserved |
+| Initial Home JS gzip | 67.93 KiB | 67.69 KiB | -0.24 KiB |
+| Song Study route JS gzip | 65.70 KiB | 65.45 KiB | -0.25 KiB |
+| Sound Designer route JS gzip | 63.46 KiB | 63.21 KiB | -0.25 KiB |
+| Production deployment bytes | 1,485.52 KiB | 1,484.74 KiB | -0.78 KiB |
+| Automated production budgets | 100 | 101 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Removed the keyboard's unused velocity-display state, pending value, and second animation-frame
+  scheduler. No live component consumed that state; the retired `KeyboardMeta` component was never
+  mounted. Key activation remains a coalesced direct dataset update on the affected DOM elements.
+- Removed the keyboard-local `PerformanceObserver`. The dynamically loaded central performance
+  probe already owns long-task observation in development and explicit `?profile` sessions, so
+  production no longer installs a duplicate observer on every playable keyboard mount.
+- Gated the remaining note-latency clock samples and metrics snapshot behind the central profiler's
+  active handle. Normal playback performs no timing calls or metrics-object spread; profiling mode
+  retains frequency, audio-context time, and exact note latency.
+- Added a hook render-count test proving that flushing visual feedback does not commit React state,
+  plus a note test proving metrics stay absent normally and remain populated under the profiler.
+  A production guard rejects velocity state, local observers, or always-on note timing.
+
+### Batch 58 verification gates
+
+- Full suite: 62 files, 533/533 tests pass, including the new zero-commit visual-feedback case,
+  normal/profiling note paths, and all Sound Designer, MIDI playback, keyboard, control-kit, radar,
+  Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 101/101 pass; normal notes report zero
+  velocity-state updates, velocity-only commits, timing samples, metrics allocations, and local
+  long-task observers.
+- A modeled 300-note session removes 300 unused state updates, up to 300 velocity-only commits, 600
+  timing samples, and 300 metrics snapshots. Functional note playback and coalesced key DOM feedback
+  are unchanged, and the focused profiler test retains a 3 ms measured note latency exactly.
+- Warmed combined visual workload: 80.93% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 430.7 us per 128-frame block with 6.2x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

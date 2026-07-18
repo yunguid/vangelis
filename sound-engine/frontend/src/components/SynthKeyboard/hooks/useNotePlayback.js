@@ -6,8 +6,7 @@ export function useNotePlayback({
   waveformRef,
   audioParamsRef,
   wasmReadyRef,
-  scheduleVisualUpdate,
-  updateVelocityDisplay
+  scheduleVisualUpdate
 }) {
   const activeNotesRef = useRef(null);
   if (!activeNotesRef.current) activeNotesRef.current = new Map();
@@ -15,35 +14,6 @@ export function useNotePlayback({
   if (!pendingNotesRef.current) pendingNotesRef.current = new Map();
   const pointerToNoteRef = useRef(null);
   if (!pointerToNoteRef.current) pointerToNoteRef.current = new Map();
-
-  useEffect(() => {
-    if (typeof PerformanceObserver === 'undefined' || typeof window === 'undefined') {
-      return () => undefined;
-    }
-    let observer;
-    try {
-      observer = new PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        if (!entries.length) return;
-        const entry = entries[entries.length - 1];
-        window.__vangelisMetrics = {
-          ...(window.__vangelisMetrics || {}),
-          lastLongTask: {
-            duration: entry.duration,
-            startTime: entry.startTime
-          },
-          lastUpdated: Date.now()
-        };
-      });
-      observer.observe({ type: 'longtask', buffered: true });
-    } catch (_) {
-      if (observer) observer.disconnect();
-      return () => undefined;
-    }
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
 
   const startNote = useCallback((noteMeta, { pointerId = null, velocity = 0.85 } = {}) => {
     if (!noteMeta || !noteMeta.frequency) {
@@ -59,7 +29,11 @@ export function useNotePlayback({
     }
 
     const velocityNormalized = clamp(velocity, 0.05, 1);
-    const perfStart = typeof performance !== 'undefined' ? performance.now() : null;
+    const perfStart = (
+      typeof window !== 'undefined'
+      && window.__vangelisPerf
+      && typeof performance !== 'undefined'
+    ) ? performance.now() : null;
     const playPreparedNote = () => {
       if (activeNotesRef.current.has(noteMeta.noteId)) return;
       const result = audioEngine.playFrequency({
@@ -79,7 +53,6 @@ export function useNotePlayback({
         pointerToNoteRef.current.set(pointerId, noteMeta.noteId);
       }
       scheduleVisualUpdate(noteMeta.noteId, true);
-      updateVelocityDisplay(velocityNormalized);
       if (perfStart === null || typeof window === 'undefined') return;
       const latency = performance.now() - perfStart;
       const ctxTime = audioEngine.context ? audioEngine.context.currentTime : null;
@@ -130,7 +103,7 @@ export function useNotePlayback({
         clearFailedPendingNote();
       }
     });
-  }, [waveformRef, audioParamsRef, wasmReadyRef, scheduleVisualUpdate, updateVelocityDisplay]);
+  }, [waveformRef, audioParamsRef, wasmReadyRef, scheduleVisualUpdate]);
 
   const stopNote = useCallback((noteId, pointerId = null) => {
     if (!noteId) return;

@@ -79,15 +79,14 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
   }, [octaveOffset]);
 
   // Visual feedback (RAF-batched updates)
-  const { scheduleVisualUpdate, updateVelocityDisplay } = useVisualFeedback(keyElementsRef);
+  const { scheduleVisualUpdate } = useVisualFeedback(keyElementsRef);
 
   // Audio playback
   const { startNote, stopNote, switchPointerNote, pointerToNoteRef } = useNotePlayback({
     waveformRef,
     audioParamsRef,
     wasmReadyRef,
-    scheduleVisualUpdate,
-    updateVelocityDisplay
+    scheduleVisualUpdate
   });
 
   // Keyboard input (Z/X for octave, A-L for notes)

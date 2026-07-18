@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { audioEngine } from '../../../utils/audioEngine.js';
 import { useNotePlayback } from './useNotePlayback.js';
 
@@ -26,15 +26,13 @@ const createDeferred = () => {
 
 const renderPlayback = () => {
   const scheduleVisualUpdate = vi.fn();
-  const updateVelocityDisplay = vi.fn();
   const hook = renderHook(() => useNotePlayback({
     waveformRef: { current: 'sine' },
     audioParamsRef: { current: {} },
     wasmReadyRef: { current: false },
-    scheduleVisualUpdate,
-    updateVelocityDisplay
+    scheduleVisualUpdate
   }));
-  return { ...hook, scheduleVisualUpdate, updateVelocityDisplay };
+  return { ...hook, scheduleVisualUpdate };
 };
 
 const note = { noteId: 'C4', frequency: 261.63 };
@@ -42,6 +40,8 @@ const note = { noteId: 'C4', frequency: 261.63 };
 describe('useNotePlayback first-note preparation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    delete window.__vangelisPerf;
+    delete window.__vangelisMetrics;
     audioEngine.context = null;
     audioEngine.getStatus.mockReturnValue({
       wasmReady: false,
@@ -49,6 +49,12 @@ describe('useNotePlayback first-note preparation', () => {
       hasVoicePhrase: false
     });
     audioEngine.playFrequency.mockReturnValue({ voiceId: 'C4' });
+  });
+
+  afterEach(() => {
+    delete window.__vangelisPerf;
+    delete window.__vangelisMetrics;
+    vi.restoreAllMocks();
   });
 
   it('replays the first requested synth note after worklet preparation', async () => {
@@ -104,5 +110,31 @@ describe('useNotePlayback first-note preparation', () => {
 
     expect(audioEngine.ensureWasm).not.toHaveBeenCalled();
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+  });
+
+  it('collects note timing only when the central profiler is active', () => {
+    audioEngine.context = { currentTime: 2 };
+    audioEngine.getStatus.mockReturnValue({
+      wasmReady: true,
+      hasCustomSample: false,
+      hasVoicePhrase: false
+    });
+    const { result } = renderPlayback();
+
+    act(() => result.current.startNote(note));
+    expect(window.__vangelisMetrics).toBeUndefined();
+
+    act(() => result.current.stopNote(note.noteId));
+    window.__vangelisPerf = {};
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce(13);
+    act(() => result.current.startNote({ noteId: 'D4', frequency: 293.66 }));
+
+    expect(window.__vangelisMetrics).toMatchObject({
+      lastNoteLatencyMs: 3,
+      lastNoteFrequency: 293.66,
+      audioContextTime: 2
+    });
   });
 });

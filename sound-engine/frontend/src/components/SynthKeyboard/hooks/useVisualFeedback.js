@@ -1,18 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { clamp } from '../constants';
+import { useCallback, useEffect, useRef } from 'react';
 
 export function useVisualFeedback(keyElementsRef) {
   const visualQueueRef = useRef(null);
   if (!visualQueueRef.current) visualQueueRef.current = new Map();
   const visualRafRef = useRef(null);
-  const velocityPendingRef = useRef(null);
-  const velocityRafRef = useRef(null);
-
-  const [velocityDisplay, setVelocityDisplay] = useState(100);
 
   useEffect(() => () => {
     if (visualRafRef.current) cancelAnimationFrame(visualRafRef.current);
-    if (velocityRafRef.current) cancelAnimationFrame(velocityRafRef.current);
   }, []);
 
   const scheduleVisualUpdate = useCallback((noteId, isActive) => {
@@ -34,21 +28,7 @@ export function useVisualFeedback(keyElementsRef) {
     });
   }, [keyElementsRef]);
 
-  const updateVelocityDisplay = useCallback((normalizedVelocity) => {
-    const midiValue = Math.round(clamp(normalizedVelocity, 0, 1) * 126 + 1);
-    velocityPendingRef.current = midiValue;
-    if (velocityRafRef.current) return;
-    velocityRafRef.current = requestAnimationFrame(() => {
-      velocityRafRef.current = null;
-      if (velocityPendingRef.current != null) {
-        setVelocityDisplay(velocityPendingRef.current);
-      }
-    });
-  }, []);
-
   return {
-    scheduleVisualUpdate,
-    updateVelocityDisplay,
-    velocityDisplay
+    scheduleVisualUpdate
   };
 }

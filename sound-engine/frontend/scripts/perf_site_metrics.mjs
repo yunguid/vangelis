@@ -576,6 +576,22 @@ const voiceLoopDefersScoreRenderUntilInteraction = (
   && /const timeoutId = window\.setTimeout\(async \(\) =>/.test(voiceLoopSource)
   && /\}, 260\)/.test(voiceLoopSource)
 );
+const keyboardNotePlaybackSource = await readFile(
+  path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'useNotePlayback.js'),
+  'utf8'
+);
+const keyboardVisualFeedbackSource = await readFile(
+  path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'useVisualFeedback.js'),
+  'utf8'
+);
+const keyboardAvoidsUnobservedInteractionWork = (
+  !/updateVelocityDisplay/.test(keyboardNotePlaybackSource)
+  && !/updateVelocityDisplay/.test(keyboardVisualFeedbackSource)
+  && !/useState/.test(keyboardVisualFeedbackSource)
+  && !/PerformanceObserver/.test(keyboardNotePlaybackSource)
+  && /window\.__vangelisPerf/.test(keyboardNotePlaybackSource)
+  && /scheduleVisualUpdate\(noteMeta\.noteId, true\)/.test(keyboardNotePlaybackSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -832,7 +848,15 @@ const report = {
     voiceLoopColdAudioContextConstructions:
       voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
     voiceLoopColdScoreRenders: voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
-    voiceLoopDefersScoreRenderUntilInteraction
+    voiceLoopDefersScoreRenderUntilInteraction,
+    keyboardVelocityStateUpdatesPerNote: keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
+    keyboardVelocityOnlyReactCommitsPerFrame:
+      keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
+    keyboardNoteTimingSamplesPerUnprofiledNote:
+      keyboardAvoidsUnobservedInteractionWork ? 0 : 2,
+    keyboardLocalLongTaskObserversPerMount:
+      keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
+    keyboardAvoidsUnobservedInteractionWork
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1426,6 +1450,13 @@ if (!voiceLoopDefersScoreRenderUntilInteraction) {
     expected: 'revision-aware rendering on first play and debounced only while playing'
   });
 }
+if (!keyboardAvoidsUnobservedInteractionWork) {
+  failures.push({
+    name: 'Guard allocation-free unprofiled keyboard interaction path',
+    actual: 'unused velocity state or always-on profiling work remains in note playback',
+    expected: 'DOM-only key feedback and note timing gated by the central performance probe'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1436,7 +1467,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 82,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 83,
   failures
 };
 

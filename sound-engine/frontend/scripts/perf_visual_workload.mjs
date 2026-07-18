@@ -1634,6 +1634,21 @@ const output = {
     livePlaybackRerenderPreserved: true,
     renderInputRevisionTracking: true
   },
+  keyboardInteractionHotPathPolicy: {
+    successfulNotesPerSession: 300,
+    velocityStateUpdatesPerNoteBefore: 1,
+    velocityStateUpdatesPerNoteAfter: 0,
+    velocityOnlyReactCommitsPerFrameBefore: 1,
+    velocityOnlyReactCommitsPerFrameAfter: 0,
+    noteTimingSamplesPerNoteBefore: 2,
+    noteTimingSamplesPerNoteAfter: 0,
+    noteMetricsObjectAllocationsPerNoteBefore: 1,
+    noteMetricsObjectAllocationsPerNoteAfter: 0,
+    keyboardLongTaskObserversPerMountBefore: 1,
+    keyboardLongTaskObserversPerMountAfter: 0,
+    profilingModeNoteTimingPreserved: true,
+    centralPerformanceProbeOwnsLongTaskObservation: true
+  },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,
     batch33ElapsedMs: Number(batch33StereoTraversal.elapsedMs.toFixed(2)),
