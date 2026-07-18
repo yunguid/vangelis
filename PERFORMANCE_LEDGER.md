@@ -3008,3 +3008,57 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 59 — frame-coalesced pointer glissando
+
+Collected from the production keyboard pointer-input hook; a 240 Hz ten-second glissando model on a
+60 Hz display; latest-position, passive-listener, and release-cancellation tests; generated
+production closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 58 | Batch 59 | Change |
+|---|---:|---:|---:|
+| DOM hit tests per 240 Hz pointer frame | 4 | at most 1 | -75.00% |
+| Dataset parses / note metadata objects per pointer frame | 4 | at most 1 | -75.00% |
+| Pointer hot-path objects over 10 seconds | 2,400 | at most 1,200 | -50.00% |
+| Pointer-move listener | non-passive | passive | scrolling contract improved |
+| Pointer down / release dispatch | immediate | immediate | preserved |
+| Initial Home JS gzip | 67.69 KiB | 67.81 KiB | +0.12 KiB |
+| Song Study route JS gzip | 65.45 KiB | 65.58 KiB | +0.13 KiB |
+| Sound Designer route JS gzip | 63.21 KiB | 63.33 KiB | +0.12 KiB |
+| Production deployment bytes | 1,484.74 KiB | 1,485.22 KiB | +0.48 KiB |
+| Automated production budgets | 101 | 102 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced synchronous work on every raw `pointermove` with one shared animation-frame flush. The
+  latest coordinates and pressure are retained independently per active pointer, preserving
+  multitouch while bounding processing to the display rate.
+- Reuses a pointer's pending move record when multiple samples arrive before the frame. On the
+  modeled 240 Hz input, four samples now produce one pending object, one DOM hit test, and at most
+  one note metadata object instead of four metadata objects and four hit tests.
+- Skips metadata parsing and switch dispatch when the frame's key matches the pointer's current
+  note. Key press remains synchronous, and pointer up/cancel/lost-capture cancels pending work before
+  stopping the current note so no stale glissando switch can fire after release.
+- Marked move, up, and cancel listeners passive; the keyboard surface already declares
+  `touch-action: none`, and only pointer down calls `preventDefault`. Added a deterministic four-
+  sample coalescing test that verifies the latest coordinates and a release-cancellation assertion.
+
+### Batch 59 verification gates
+
+- Full suite: 63 files, 534/534 tests pass, including the new pointer coalescing/release case and
+  all Sound Designer, MIDI playback, keyboard, control-kit, radar, Song Study, canvas, numerical,
+  scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 102/102 pass; a 240 Hz input reports at
+  most one pointer DOM hit test per display frame and a passive move listener.
+- The ten-second interaction model reduces 2,400 DOM hit tests and note-metadata objects to at most
+  600 each. The 600 pending move records yield at most 1,200 total hot-path objects, half the prior
+  2,400, while preserving each pointer's latest position at every displayed frame.
+- Warmed combined visual workload: 80.25% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 418.2 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

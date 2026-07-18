@@ -592,6 +592,20 @@ const keyboardAvoidsUnobservedInteractionWork = (
   && /window\.__vangelisPerf/.test(keyboardNotePlaybackSource)
   && /scheduleVisualUpdate\(noteMeta\.noteId, true\)/.test(keyboardNotePlaybackSource)
 );
+const keyboardPointerInputSource = await readFile(
+  path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'usePointerInput.js'),
+  'utf8'
+);
+const keyboardCoalescesPointerMovesByFrame = (
+  /const pendingMoves = new Map\(\)/.test(keyboardPointerInputSource)
+  && /moveFrameId = requestAnimationFrame\(flushPointerMoves\)/.test(keyboardPointerInputSource)
+  && /pendingMove\.clientX = event\.clientX/.test(keyboardPointerInputSource)
+  && /keyElement\.dataset\.note === pointerToNoteRef\.current\.get\(pointerId\)/
+    .test(keyboardPointerInputSource)
+  && /addEventListener\('pointermove', pointerMove, \{ passive: true \}\)/
+    .test(keyboardPointerInputSource)
+  && /cancelAnimationFrame\(moveFrameId\)/.test(keyboardPointerInputSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -856,7 +870,11 @@ const report = {
       keyboardAvoidsUnobservedInteractionWork ? 0 : 2,
     keyboardLocalLongTaskObserversPerMount:
       keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
-    keyboardAvoidsUnobservedInteractionWork
+    keyboardAvoidsUnobservedInteractionWork,
+    keyboardPointerDomHitTestsPer240HzFrame:
+      keyboardCoalescesPointerMovesByFrame ? 1 : 4,
+    keyboardPointerMoveListenerPassive: keyboardCoalescesPointerMovesByFrame,
+    keyboardCoalescesPointerMovesByFrame
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1457,6 +1475,13 @@ if (!keyboardAvoidsUnobservedInteractionWork) {
     expected: 'DOM-only key feedback and note timing gated by the central performance probe'
   });
 }
+if (!keyboardCoalescesPointerMovesByFrame) {
+  failures.push({
+    name: 'Guard frame-coalesced keyboard pointer glissando',
+    actual: 'raw pointer samples trigger synchronous DOM hit-testing and metadata parsing',
+    expected: 'one passive, latest-position pointer update per active pointer per frame'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1467,7 +1492,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 83,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 84,
   failures
 };
 

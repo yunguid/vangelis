@@ -1649,6 +1649,26 @@ const output = {
     profilingModeNoteTimingPreserved: true,
     centralPerformanceProbeOwnsLongTaskObservation: true
   },
+  pointerGlissandoFramePolicy: {
+    activeGlissandoSeconds: 10,
+    rawPointerSampleRateHz: 240,
+    displayFrameRateHz: 60,
+    rawPointerSamples: 2400,
+    processedPointerFrames: 600,
+    elementFromPointCallsBefore: 2400,
+    elementFromPointCallsAfterMaximum: 600,
+    pointerMetadataObjectsBefore: 2400,
+    pointerMetadataObjectsAfterMaximum: 600,
+    pointerMoveStateObjectsBefore: 0,
+    pointerMoveStateObjectsAfterMaximum: 600,
+    netHotPathObjectAllocationsBefore: 2400,
+    netHotPathObjectAllocationsAfterMaximum: 1200,
+    domHitTestReductionPercent: 75,
+    pointerMoveListenerPassiveBefore: false,
+    pointerMoveListenerPassiveAfter: true,
+    immediatePointerDownAndReleasePreserved: true,
+    latestPositionPerPointerPerFramePreserved: true
+  },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,
     batch33ElapsedMs: Number(batch33StereoTraversal.elapsedMs.toFixed(2)),
