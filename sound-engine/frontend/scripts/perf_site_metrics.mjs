@@ -7,9 +7,11 @@ import {
   WAVE_CANDY_FRAME_INTERVAL_MS
 } from '../src/utils/visualFramePolicy.js';
 import {
+  GONIOMETER_POINTS_PER_CSS_PIXEL,
   MONO_ANALYSER_FFT_SIZE,
   STEREO_ANALYSER_FFT_SIZE,
   STEREO_VISUAL_SAMPLE_STRIDE,
+  getGoniometerTraceStride,
   getStereoPairEvaluationsPerFrame,
   getWaveCandySamplesPerFrame
 } from '../src/utils/audioAnalysisPolicy.js';
@@ -362,6 +364,28 @@ const waveCandyDecimatesScopeTrace = (
   && /for \(let i = 0; i < span; i \+= sampleStride\)/.test(waveCandyCanvasSource)
   && /\(span - 1\) % sampleStride !== 0/.test(waveCandyCanvasSource)
 );
+const waveCandyDecimatesGoniometerTrace = (
+  /export const GONIOMETER_POINTS_PER_CSS_PIXEL = 2/.test(audioAnalysisPolicySource)
+  && /export const getGoniometerTraceStride = \(sampleCount, cssWidth, cssHeight\)/
+    .test(audioAnalysisPolicySource)
+  && /getGoniometerTraceStride\(\s*evaluatedPointCount,\s*width,\s*height\s*\)/
+    .test(waveCandyCanvasSource)
+  && /sampleCount === nextDrawSample/.test(waveCandyCanvasSource)
+  && /nextDrawSample \+= traceStride/.test(waveCandyCanvasSource)
+  && /lastDrawnIndex !== lastEvaluatedIndex/.test(waveCandyCanvasSource)
+  && /if \(sampleCount === nextDrawSample\) \{[\s\S]*?\n    \}\n    sum \+= \(l \* l \+ r \* r\) \* 0\.5/
+    .test(waveCandyCanvasSource)
+);
+const goniometerDesktopTraceStride = getGoniometerTraceStride(
+  getStereoPairEvaluationsPerFrame(),
+  230,
+  150
+);
+const goniometerDesktopPointCount = (
+  Math.floor((getStereoPairEvaluationsPerFrame() - 1) / goniometerDesktopTraceStride)
+  + 1
+  + Number((getStereoPairEvaluationsPerFrame() - 1) % goniometerDesktopTraceStride !== 0)
+);
 const birdsEyeRadarSource = await readFile(
   path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
   'utf8'
@@ -656,6 +680,16 @@ const report = {
     waveCandyScopeSamplesPerCssPixelLimit: waveCandyDecimatesScopeTrace ? 2 : null,
     waveCandyScopePointMaximumAt330CssPixels: waveCandyDecimatesScopeTrace ? 660 : 1024,
     waveCandyDecimatesScopeTrace,
+    waveCandyGoniometerPointsPerCssPixelLimit:
+      waveCandyDecimatesGoniometerTrace ? GONIOMETER_POINTS_PER_CSS_PIXEL : null,
+    waveCandyGoniometerTraceStrideAt230x150:
+      waveCandyDecimatesGoniometerTrace ? goniometerDesktopTraceStride : 1,
+    waveCandyGoniometerPointsPerFrameAt230x150:
+      waveCandyDecimatesGoniometerTrace
+        ? goniometerDesktopPointCount
+        : getStereoPairEvaluationsPerFrame(),
+    waveCandyGoniometerMeterEvaluationsPerFrame: getStereoPairEvaluationsPerFrame(),
+    waveCandyDecimatesGoniometerTrace,
     radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
     radarPaletteStateLimit: 256,
     radarUsesBoundedPaletteCache,
@@ -834,6 +868,13 @@ if (!waveCandyDecimatesScopeTrace) {
     name: 'Guard resolution-aware analyzer scope trace',
     actual: 'all analyser samples submitted regardless of canvas resolution',
     expected: 'at most two points per CSS pixel with final-sample preservation'
+  });
+}
+if (!waveCandyDecimatesGoniometerTrace) {
+  failures.push({
+    name: 'Guard resolution-aware analyzer goniometer trace',
+    actual: 'all stereo pairs submitted to Canvas regardless of tile resolution',
+    expected: 'bounded Canvas points while every pair still contributes to meter statistics'
   });
 }
 if (!radarUsesBoundedPaletteCache) {
@@ -1226,7 +1267,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 73,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 74,
   failures
 };
 

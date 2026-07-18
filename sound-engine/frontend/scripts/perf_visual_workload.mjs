@@ -5,10 +5,12 @@ import {
   WAVE_CANDY_FRAME_INTERVAL_MS
 } from '../src/utils/visualFramePolicy.js';
 import {
+  GONIOMETER_POINTS_PER_CSS_PIXEL,
   MONO_ANALYSER_FFT_SIZE,
   SCOPE_SAMPLES_PER_CSS_PIXEL,
   STEREO_ANALYSER_FFT_SIZE,
   STEREO_VISUAL_SAMPLE_STRIDE,
+  getGoniometerTraceStride,
   getScopeTraceStride,
   getStereoPairEvaluationsPerFrame,
   getWaveCandySamplesPerFrame
@@ -910,6 +912,152 @@ if (
   throw new Error('Scope decimation exceeded its visual-fidelity or point-density budget');
 }
 
+const goniometerBenchmarkWidth = 230;
+const goniometerBenchmarkHeight = 150;
+const goniometerEvaluatedPointCount = getStereoPairEvaluationsPerFrame();
+const goniometerTraceStride = getGoniometerTraceStride(
+  goniometerEvaluatedPointCount,
+  goniometerBenchmarkWidth,
+  goniometerBenchmarkHeight
+);
+const decimatedGoniometerPointCount = getStridedPointCount(
+  goniometerEvaluatedPointCount,
+  goniometerTraceStride
+);
+const goniometerBenchmarkIterations = 4000;
+const goniometerBenchmarkTimingSamples = 15;
+const INV_SQRT2 = Math.SQRT1_2;
+const runLegacyGoniometerTraceBenchmark = (iterations) => {
+  let checksum = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    let sum = 0;
+    let peak = 0;
+    let sampleCount = 0;
+    for (
+      let index = 0;
+      index < STEREO_ANALYSER_FFT_SIZE;
+      index += STEREO_VISUAL_SAMPLE_STRIDE
+    ) {
+      const left = srcLeft[index];
+      const right = srcRight[index];
+      checksum += (left - right) * INV_SQRT2 + (left + right) * INV_SQRT2;
+      sum += (left * left + right * right) * 0.5;
+      const amplitude = Math.max(Math.abs(left), Math.abs(right));
+      if (amplitude > peak) peak = amplitude;
+      sampleCount += 1;
+    }
+    checksum += sum / sampleCount + peak;
+  }
+  return checksum;
+};
+const runDecimatedGoniometerTraceBenchmark = (iterations) => {
+  let checksum = 0;
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    let sum = 0;
+    let peak = 0;
+    let sampleCount = 0;
+    let lastDrawnIndex = -1;
+    let lastEvaluatedIndex = -1;
+    let nextDrawSample = 0;
+    for (
+      let index = 0;
+      index < STEREO_ANALYSER_FFT_SIZE;
+      index += STEREO_VISUAL_SAMPLE_STRIDE
+    ) {
+      const left = srcLeft[index];
+      const right = srcRight[index];
+      if (sampleCount === nextDrawSample) {
+        checksum += (left - right) * INV_SQRT2 + (left + right) * INV_SQRT2;
+        lastDrawnIndex = index;
+        nextDrawSample += goniometerTraceStride;
+      }
+      sum += (left * left + right * right) * 0.5;
+      const amplitude = Math.max(Math.abs(left), Math.abs(right));
+      if (amplitude > peak) peak = amplitude;
+      lastEvaluatedIndex = index;
+      sampleCount += 1;
+    }
+    if (lastDrawnIndex !== lastEvaluatedIndex) {
+      const left = srcLeft[lastEvaluatedIndex];
+      const right = srcRight[lastEvaluatedIndex];
+      checksum += (left - right) * INV_SQRT2 + (left + right) * INV_SQRT2;
+    }
+    checksum += sum / sampleCount + peak;
+  }
+  return checksum;
+};
+const measureGoniometerTrace = (benchmark) => {
+  for (let sample = 0; sample < 5; sample += 1) benchmark(500);
+  const timings = [];
+  let checksum = 0;
+  for (let sample = 0; sample < goniometerBenchmarkTimingSamples; sample += 1) {
+    const startedAt = performance.now();
+    checksum += benchmark(goniometerBenchmarkIterations);
+    timings.push(performance.now() - startedAt);
+  }
+  timings.sort((left, right) => left - right);
+  return {
+    checksum,
+    elapsedMs: timings[Math.floor(timings.length / 2)]
+  };
+};
+const legacyGoniometerTraceBenchmark = measureGoniometerTrace(
+  runLegacyGoniometerTraceBenchmark
+);
+const decimatedGoniometerTraceBenchmark = measureGoniometerTrace(
+  runDecimatedGoniometerTraceBenchmark
+);
+
+const goniometerSide = new Float64Array(goniometerEvaluatedPointCount);
+const goniometerMid = new Float64Array(goniometerEvaluatedPointCount);
+let goniometerMeanSquareBefore = 0;
+let goniometerPeakBefore = 0;
+for (let pointIndex = 0; pointIndex < goniometerEvaluatedPointCount; pointIndex += 1) {
+  const sourceIndex = pointIndex * STEREO_VISUAL_SAMPLE_STRIDE;
+  const left = srcLeft[sourceIndex];
+  const right = srcRight[sourceIndex];
+  goniometerSide[pointIndex] = (left - right) * INV_SQRT2;
+  goniometerMid[pointIndex] = (left + right) * INV_SQRT2;
+  goniometerMeanSquareBefore += (left * left + right * right) * 0.5;
+  goniometerPeakBefore = Math.max(goniometerPeakBefore, Math.abs(left), Math.abs(right));
+}
+goniometerMeanSquareBefore /= goniometerEvaluatedPointCount;
+let goniometerSquaredError = 0;
+let goniometerSignalEnergy = 0;
+for (let pointIndex = 0; pointIndex < goniometerEvaluatedPointCount; pointIndex += 1) {
+  const leftIndex = Math.floor(pointIndex / goniometerTraceStride) * goniometerTraceStride;
+  const rightIndex = Math.min(
+    goniometerEvaluatedPointCount - 1,
+    leftIndex + goniometerTraceStride
+  );
+  const ratio = rightIndex === leftIndex
+    ? 0
+    : (pointIndex - leftIndex) / (rightIndex - leftIndex);
+  const reconstructedSide = goniometerSide[leftIndex]
+    + (goniometerSide[rightIndex] - goniometerSide[leftIndex]) * ratio;
+  const reconstructedMid = goniometerMid[leftIndex]
+    + (goniometerMid[rightIndex] - goniometerMid[leftIndex]) * ratio;
+  const sideError = goniometerSide[pointIndex] - reconstructedSide;
+  const midError = goniometerMid[pointIndex] - reconstructedMid;
+  goniometerSquaredError += sideError * sideError + midError * midError;
+  goniometerSignalEnergy += (
+    goniometerSide[pointIndex] * goniometerSide[pointIndex]
+    + goniometerMid[pointIndex] * goniometerMid[pointIndex]
+  );
+}
+const goniometerReconstructionRelativeRmse = Math.sqrt(
+  goniometerSquaredError / goniometerSignalEnergy
+);
+if (
+  goniometerReconstructionRelativeRmse > 0.01
+  || decimatedGoniometerPointCount > Math.ceil(
+    Math.max(goniometerBenchmarkWidth, goniometerBenchmarkHeight)
+      * GONIOMETER_POINTS_PER_CSS_PIXEL
+  )
+) {
+  throw new Error('Goniometer decimation exceeded its visual-fidelity or point-density budget');
+}
+
 const radarStartTimes = Float64Array.from(midiNotes, (note) => note.time);
 const radarRangeBenchmarkIterations = 500000;
 const reusableRadarRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
@@ -1325,6 +1473,37 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyScopeTraceBenchmark.elapsedMs,
       decimatedScopeTraceBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  goniometerTraceDecimationPolicy: {
+    activeFrames: activeAnalyzerFrames,
+    cssWidth: goniometerBenchmarkWidth,
+    cssHeight: goniometerBenchmarkHeight,
+    pointsPerCssPixelLimit: GONIOMETER_POINTS_PER_CSS_PIXEL,
+    stereoPairEvaluationsPerFrame: goniometerEvaluatedPointCount,
+    meterStatisticsEvaluationsPerFrameBefore: goniometerEvaluatedPointCount,
+    meterStatisticsEvaluationsPerFrameAfter: goniometerEvaluatedPointCount,
+    traceStride: goniometerTraceStride,
+    pointsPerFrameBefore: goniometerEvaluatedPointCount,
+    pointsPerFrameAfter: decimatedGoniometerPointCount,
+    pointsOverBenchmarkBefore: activeAnalyzerFrames * goniometerEvaluatedPointCount,
+    pointsOverBenchmarkAfter: activeAnalyzerFrames * decimatedGoniometerPointCount,
+    pointReductionPercent: Number(reduction(
+      goniometerEvaluatedPointCount,
+      decimatedGoniometerPointCount
+    ).toFixed(2)),
+    meterMeanSquare: goniometerMeanSquareBefore,
+    meterPeak: goniometerPeakBefore,
+    meterStatisticsDelta: 0,
+    reconstructionRelativeRmse: goniometerReconstructionRelativeRmse,
+    preservesFinalEvaluatedSample: true,
+    benchmarkIterations: goniometerBenchmarkIterations,
+    timingSampleCount: goniometerBenchmarkTimingSamples,
+    legacyElapsedMs: Number(legacyGoniometerTraceBenchmark.elapsedMs.toFixed(2)),
+    decimatedElapsedMs: Number(decimatedGoniometerTraceBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyGoniometerTraceBenchmark.elapsedMs,
+      decimatedGoniometerTraceBenchmark.elapsedMs
     ).toFixed(2))
   },
   radarFrameContainerPolicy: {

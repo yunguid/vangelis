@@ -2560,3 +2560,62 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 51 — resolution-aware goniometer trace
+
+Collected from WaveCandy's 512-pair stereo phase display at its representative 230x150px desktop
+tile, exact Canvas point-submission and meter-evaluation counts, three independently compiled
+15-sample median workloads, stereo mid/side reconstruction error, generated production closures,
+focused policy tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 50 | Batch 51 | Change |
+|---|---:|---:|---:|
+| Goniometer points per 230x150px frame | 512 | 257 | -49.80% |
+| Goniometer points over 20 s active | 307,200 | 154,200 | -49.80% |
+| Stereo meter evaluations per frame | 512 | 512 | unchanged |
+| Isolated goniometer arithmetic CPU, 4k frames | 2.00–2.03 ms | 1.92–1.97 ms | -1.40% to -5.12% |
+| Mid/side reconstruction relative RMSE | — | 0.0213% | below 1% gate |
+| Audio-analysis policy JS raw / gzip | 0.18 / 0.15 KiB | 0.31 / 0.17 KiB | +0.13 / +0.02 KiB |
+| Deferred WaveCandy JS raw / gzip | 10.33 / 3.89 KiB | 10.25 / 3.89 KiB | -0.08 / unchanged |
+| Initial Home JS gzip | 67.86 KiB | 67.86 KiB | unchanged |
+| Fully activated Home visual JS gzip | 78.63 KiB | 78.74 KiB | +0.11 KiB |
+| Production deployment bytes | 1,483.33 KiB | 1,483.62 KiB | +0.29 KiB |
+| Automated production budgets | 91 | 92 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added a resolution-aware goniometer policy capped at two submitted points per largest CSS-axis
+  pixel. The 512 evaluated stereo pairs at 230x150px select trace stride two; larger displays retain
+  full resolution and smaller tiles increase the stride only when their display resolution requires
+  it.
+- Kept the loudness mean-square and peak accumulation in the complete 512-pair traversal. Only
+  mid/side coordinate transforms and Canvas path submissions are thinned, so meter behavior and
+  audio-analysis cadence are unchanged.
+- Explicitly submits the final evaluated stereo pair when the stride does not land on it, preserving
+  the captured phase-curve endpoint. Replaced a per-pair modulo test with a monotonic next-draw
+  cursor after profiling the arithmetic-only path.
+- Added full-resolution, desktop, narrow, and degenerate policy cases; exact point/session counts;
+  a stereo reconstruction-error gate; three median timing profiles; and a production guard that
+  requires both bounded path construction and full meter-statistics traversal.
+- Discarded timing results from a deliberately concurrent release-gate run and reran publishable
+  performance measurements serially, preventing machine contention from being recorded as product
+  behavior.
+
+### Batch 51 verification gates
+
+- Full suite: 57 files, 518/518 tests pass, including five analyzer-policy cases and all Sound
+  Designer, radar, Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 92/92 pass; WaveCandy reports 257 phase-
+  trace points and 512 meter evaluations per representative desktop frame.
+- Three independently warmed 15-sample medians measured 1.40–5.12% lower arithmetic-loop CPU. The
+  primary render win is exact: 153,000 fewer native Canvas point submissions per 20 seconds, while
+  mid/side reconstruction error is 0.0213% RMS and the final evaluated point is preserved.
+- Warmed combined visual workload: 80.12–80.32% lower normalized median CPU than the legacy
+  reference, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene
+  frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -43 KB over 4,000 blocks.
+- Isolated DSP benchmark: 403.4 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

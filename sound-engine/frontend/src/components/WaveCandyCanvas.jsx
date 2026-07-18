@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import {
   STEREO_VISUAL_SAMPLE_STRIDE,
+  getGoniometerTraceStride,
   getScopeTraceStride
 } from '../utils/audioAnalysisPolicy.js';
 import { createCanvasSizeController } from '../utils/canvasPerformance.js';
@@ -254,20 +255,42 @@ const drawGoniometer = (ctx, left, right, width, height, resized, stats) => {
   let sum = 0;
   let peak = 0;
   let sampleCount = 0;
+  const evaluatedPointCount = Math.ceil(len / STEREO_VISUAL_SAMPLE_STRIDE);
+  const traceStride = getGoniometerTraceStride(
+    evaluatedPointCount,
+    width,
+    height
+  );
+  let lastDrawnIndex = -1;
+  let lastEvaluatedIndex = -1;
+  let nextDrawSample = 0;
   for (let i = 0; i < len; i += STEREO_VISUAL_SAMPLE_STRIDE) {
     const l = left[i];
     const r = right[i];
-    // Rotate 45 degrees: x = side, y = mid (up = in-phase)
-    const side = (l - r) * INV_SQRT2;
-    const m = (l + r) * INV_SQRT2;
-    const x = cx + side * scale;
-    const y = cy - m * scale;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    if (sampleCount === nextDrawSample) {
+      // Rotate 45 degrees: x = side, y = mid (up = in-phase)
+      const side = (l - r) * INV_SQRT2;
+      const m = (l + r) * INV_SQRT2;
+      const x = cx + side * scale;
+      const y = cy - m * scale;
+      if (sampleCount === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      lastDrawnIndex = i;
+      nextDrawSample += traceStride;
+    }
     sum += (l * l + r * r) * 0.5;
     const amplitude = Math.max(Math.abs(l), Math.abs(r));
     if (amplitude > peak) peak = amplitude;
+    lastEvaluatedIndex = i;
     sampleCount += 1;
+  }
+  if (lastEvaluatedIndex >= 0 && lastDrawnIndex !== lastEvaluatedIndex) {
+    const l = left[lastEvaluatedIndex];
+    const r = right[lastEvaluatedIndex];
+    ctx.lineTo(
+      cx + (l - r) * INV_SQRT2 * scale,
+      cy - (l + r) * INV_SQRT2 * scale
+    );
   }
   ctx.stroke();
   ctx.globalCompositeOperation = prevOp;
