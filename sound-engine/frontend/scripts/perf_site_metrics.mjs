@@ -320,6 +320,12 @@ const waveCandyCachesSpectrogramRowsAndPalette = (
   && (waveCandyCanvasSource.match(/createSpectrogramRowRuns\s*\(/g) || []).length === 1
   && /renderCache\.rowRuns\[cell \* 2 \+ 1\]/.test(waveCandyCanvasSource)
 );
+const waveCandyCachesLagrangeEnvelopePlan = (
+  (waveCandyCanvasSource.match(/createLagrangeEnvelopePlan\s*\(/g) || []).length === 1
+  && /spectrumEnvelopePlanRef\.current/.test(waveCandyCanvasSource)
+  && /sampleLagrangeEnvelope\s*\(/.test(waveCandyCanvasSource)
+  && !/lagrangeEnvelope\s*\(/.test(waveCandyCanvasSource)
+);
 const birdsEyeRadarSource = await readFile(
   path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
   'utf8'
@@ -572,6 +578,8 @@ const report = {
     waveCandyDesktopSpectrogramFillCallsPerFrame:
       waveCandyCachesSpectrogramRowsAndPalette ? 96 : 150,
     waveCandyCachesSpectrogramRowsAndPalette,
+    waveCandyLagrangeFrameAllocations: waveCandyCachesLagrangeEnvelopePlan ? 0 : 4,
+    waveCandyCachesLagrangeEnvelopePlan,
     radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
     radarPaletteStateLimit: 256,
     radarUsesBoundedPaletteCache,
@@ -710,6 +718,13 @@ if (!waveCandyCachesSpectrogramRowsAndPalette) {
     name: 'Guard cached spectrogram rows and palette',
     actual: 'per-pixel row mapping or color formatting in active frame path',
     expected: 'configuration-scoped row runs and color lookup table'
+  });
+}
+if (!waveCandyCachesLagrangeEnvelopePlan) {
+  failures.push({
+    name: 'Guard cached Lagrange envelope plan',
+    actual: 'Chebyshev nodes or barycentric weights rebuilt in active analyzer frames',
+    expected: 'one reusable interpolation plan per WaveCandy canvas'
   });
 }
 if (!radarUsesBoundedPaletteCache) {
@@ -1081,7 +1096,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 65,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 66,
   failures
 };
 

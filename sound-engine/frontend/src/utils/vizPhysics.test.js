@@ -4,6 +4,8 @@ import {
   VortexField,
   barycentricLagrange,
   chebyshevNodes,
+  createLagrangeEnvelopePlan,
+  sampleLagrangeEnvelope,
   lagrangeEnvelope
 } from './vizPhysics.js';
 
@@ -61,6 +63,30 @@ describe('lagrangeEnvelope', () => {
     // Envelope peaks near the source peak
     const peakIdx = out.indexOf(Math.max(...out));
     expect(Math.abs(peakIdx / out.length - 40 / 96)).toBeLessThan(0.15);
+  });
+
+  it('reuses a plan while matching the allocating envelope exactly', () => {
+    const src = Float32Array.from(
+      { length: 96 },
+      (_, index) => -70 + 60 * Math.sin((index / 95) * Math.PI) ** 2
+    );
+    const legacyOut = new Float32Array(96);
+    const plannedOut = new Float32Array(96);
+    const plan = createLagrangeEnvelopePlan({
+      sourceLength: src.length,
+      outputLength: plannedOut.length,
+      controlCount: 21
+    });
+    const controlValues = plan.controlValues;
+    const terms = plan.terms;
+
+    lagrangeEnvelope(src, legacyOut, 21);
+    sampleLagrangeEnvelope(src, plannedOut, plan);
+
+    expect([...plannedOut]).toEqual([...legacyOut]);
+    sampleLagrangeEnvelope(src, plannedOut, plan);
+    expect(plan.controlValues).toBe(controlValues);
+    expect(plan.terms).toBe(terms);
   });
 });
 

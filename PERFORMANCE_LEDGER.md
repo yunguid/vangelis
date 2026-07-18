@@ -2166,3 +2166,55 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 43 — reusable Lagrange envelope plan
+
+Collected from WaveCandy's 96-cell, 21-control-point spectrum envelope, exact active-session
+allocation and setup-operation counts, three isolated 20,000-envelope workloads, Float32 output
+identity tests, generated production closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 42 | Batch 43 | Change |
+|---|---:|---:|---:|
+| Lagrange frame allocations over 20 s active | 2,400 | 0 | removed |
+| Invariant weight products over 20 s active | 252,000 | 420 | -99.83% |
+| Isolated envelope CPU, 20k frames | 43.22 ms | 17.80 ms | -58.82% |
+| Shared visual policy/physics JS raw / gzip | 3.49 / 1.53 KiB | 3.97 / 1.73 KiB | +0.48 / +0.20 KiB |
+| Deferred WaveCandy JS raw / gzip | 9.53 / 3.61 KiB | 9.65 / 3.66 KiB | +0.12 / +0.05 KiB |
+| Initial Home JS gzip | 67.87 KiB | 67.86 KiB | -0.01 KiB |
+| Fully activated Home visual JS gzip | 78.07 KiB | 78.30 KiB | +0.23 KiB |
+| Production deployment bytes | 1,482.48 KiB | 1,483.06 KiB | +0.58 KiB |
+| Automated production budgets | 83 | 84 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added a single-consumer interpolation plan that precomputes Chebyshev nodes, source indices,
+  barycentric weights, output terms, exact-node identities, and denominators for WaveCandy's fixed
+  96-by-21 envelope geometry.
+- The 30 Hz frame path now refreshes only the 21 control values and evaluates the existing
+  numerator products. It removes node/weight/control-array reconstruction and the frame-local
+  interpolant closure while retaining the former multiplication order and final denominator
+  division.
+- Float32 identity tests prove every output cell exactly matches the allocating implementation,
+  including exact-node endpoints. The plan's term and control buffers retain identity across
+  repeated samples.
+- Added exact allocation and invariant-weight reporting, a legacy-vs-planned envelope profile, and
+  a production guard requiring one reusable plan per WaveCandy canvas.
+
+### Batch 43 verification gates
+
+- Full suite: 56 files, 515/515 tests pass, including 19 numerical/physics/interpolation cases and
+  all existing Sound Designer, radar, Song Study, canvas, and audio cases.
+- Production delivery/static/dependency/route guardrails: 84/84 pass; WaveCandy reports zero
+  steady-state Lagrange-plan allocations.
+- Three isolated 20,000-envelope profiles measured 56.86–59.08% lower CPU time; the final pass is
+  43.22 ms to 17.80 ms, a 58.82% reduction. Invariant setup multiplication falls 99.83% over an
+  active 20-second session.
+- Warmed combined visual workload: 80.55% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 404.7 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

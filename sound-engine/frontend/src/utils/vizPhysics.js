@@ -153,6 +153,95 @@ export const lagrangeEnvelope = (src, out, controlCount = 17) => {
 };
 
 /**
+ * Precompute the source-independent terms for a repeatedly sampled Lagrange
+ * envelope. The mutable controlValues buffer makes a plan single-consumer.
+ */
+export const createLagrangeEnvelopePlan = ({
+  sourceLength,
+  outputLength,
+  controlCount = 17
+}) => {
+  const count = Math.max(3, Math.min(controlCount, sourceLength));
+  const nodes = chebyshevNodes(count);
+  const weights = new Float64Array(count);
+  const sourceIndices = new Uint16Array(count);
+  for (let i = 0; i < count; i++) {
+    sourceIndices[i] = Math.round(nodes[i] * (sourceLength - 1));
+    let product = 1;
+    for (let j = 0; j < count; j++) {
+      if (j !== i) product *= nodes[i] - nodes[j];
+    }
+    weights[i] = 1 / product;
+  }
+
+  const terms = new Float64Array(outputLength * count);
+  const denominators = new Float64Array(outputLength);
+  const exactNodeIndices = new Int16Array(outputLength).fill(-1);
+  for (let outputIndex = 0; outputIndex < outputLength; outputIndex++) {
+    const x = outputIndex / (outputLength - 1);
+    let exactNodeIndex = -1;
+    for (let controlIndex = 0; controlIndex < count; controlIndex++) {
+      if (x - nodes[controlIndex] === 0) {
+        exactNodeIndex = controlIndex;
+        break;
+      }
+    }
+    if (exactNodeIndex >= 0) {
+      exactNodeIndices[outputIndex] = exactNodeIndex;
+      continue;
+    }
+
+    let denominator = 0;
+    const offset = outputIndex * count;
+    for (let controlIndex = 0; controlIndex < count; controlIndex++) {
+      const term = weights[controlIndex] / (x - nodes[controlIndex]);
+      terms[offset + controlIndex] = term;
+      denominator += term;
+    }
+    denominators[outputIndex] = denominator;
+  }
+
+  return {
+    count,
+    sourceLength,
+    outputLength,
+    sourceIndices,
+    terms,
+    denominators,
+    exactNodeIndices,
+    controlValues: new Float64Array(count)
+  };
+};
+
+export const sampleLagrangeEnvelope = (src, out, plan) => {
+  const {
+    count,
+    sourceIndices,
+    terms,
+    denominators,
+    exactNodeIndices,
+    controlValues
+  } = plan;
+  for (let controlIndex = 0; controlIndex < count; controlIndex++) {
+    controlValues[controlIndex] = src[sourceIndices[controlIndex]];
+  }
+  for (let outputIndex = 0; outputIndex < out.length; outputIndex++) {
+    const exactNodeIndex = exactNodeIndices[outputIndex];
+    if (exactNodeIndex >= 0) {
+      out[outputIndex] = controlValues[exactNodeIndex];
+      continue;
+    }
+    let numerator = 0;
+    const offset = outputIndex * count;
+    for (let controlIndex = 0; controlIndex < count; controlIndex++) {
+      numerator += terms[offset + controlIndex] * controlValues[controlIndex];
+    }
+    out[outputIndex] = numerator / denominators[outputIndex];
+  }
+  return out;
+};
+
+/**
  * 2-D Lagrangian vortex-particle field.
  *
  * Each particle carries a signed circulation and induces the regularized

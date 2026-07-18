@@ -4,7 +4,11 @@ import { STEREO_VISUAL_SAMPLE_STRIDE } from '../utils/audioAnalysisPolicy.js';
 import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp } from '../utils/math.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
-import { VerletChain, lagrangeEnvelope } from '../utils/vizPhysics.js';
+import {
+  VerletChain,
+  createLagrangeEnvelopePlan,
+  sampleLagrangeEnvelope
+} from '../utils/vizPhysics.js';
 import { WAVE_CANDY_FRAME_INTERVAL_MS } from '../utils/visualFramePolicy.js';
 import {
   createLogSpectrumBinRanges,
@@ -339,6 +343,14 @@ const WaveCandyCanvas = () => {
       initial: FLOOR_DB
     })
   );
+  const spectrumEnvelopePlanRef = useRef(null);
+  if (!spectrumEnvelopePlanRef.current) {
+    spectrumEnvelopePlanRef.current = createLagrangeEnvelopePlan({
+      sourceLength: SPECTRUM_CELLS,
+      outputLength: SPECTRUM_CELLS,
+      controlCount: 21
+    });
+  }
 
   // Loudness state: 400ms exponentially-weighted mean square + peak hold
   const meterStateRef = useRef({
@@ -432,7 +444,11 @@ const WaveCandyCanvas = () => {
 
       // Chebyshev/Lagrange envelope of the FFT -> targets for the Verlet
       // string, which supplies the motion (attack pluck, travelling ripple).
-      lagrangeEnvelope(buffers.specSmoothed, buffers.specEnvelope, 21);
+      sampleLagrangeEnvelope(
+        buffers.specSmoothed,
+        buffers.specEnvelope,
+        spectrumEnvelopePlanRef.current
+      );
       spectrumChainRef.current.step(buffers.specEnvelope, frameDt);
 
       const spectroSize = sizeControllers.spectrogram.size;

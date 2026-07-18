@@ -32,7 +32,12 @@ import {
   createSceneBandBinRanges,
   sampleSceneBandEnergies
 } from '../src/utils/sceneBandAnalysis.js';
-import { VortexField } from '../src/utils/vizPhysics.js';
+import {
+  VortexField,
+  createLagrangeEnvelopePlan,
+  lagrangeEnvelope,
+  sampleLagrangeEnvelope
+} from '../src/utils/vizPhysics.js';
 
 const SECONDS = 20;
 
@@ -598,6 +603,32 @@ const runVortexBenchmark = (FieldType) => {
 const legacyVortexBenchmark = runVortexBenchmark(LegacyVortexField);
 const allocationFreeVortexBenchmark = runVortexBenchmark(VortexField);
 
+const LAGRANGE_CONTROL_COUNT = 21;
+const legacyLagrangeOut = new Float32Array(SPECTRUM_CELLS);
+const plannedLagrangeOut = new Float32Array(SPECTRUM_CELLS);
+const lagrangePlan = createLagrangeEnvelopePlan({
+  sourceLength: cachedSpectrumSmoothed.length,
+  outputLength: plannedLagrangeOut.length,
+  controlCount: LAGRANGE_CONTROL_COUNT
+});
+const lagrangeBenchmarkIterations = 20000;
+const legacyLagrangeBenchmark = runSpectrumBenchmark(
+  () => lagrangeEnvelope(
+    cachedSpectrumSmoothed,
+    legacyLagrangeOut,
+    LAGRANGE_CONTROL_COUNT
+  )[47],
+  lagrangeBenchmarkIterations
+);
+const plannedLagrangeBenchmark = runSpectrumBenchmark(
+  () => sampleLagrangeEnvelope(
+    cachedSpectrumSmoothed,
+    plannedLagrangeOut,
+    lagrangePlan
+  )[47],
+  lagrangeBenchmarkIterations
+);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -769,6 +800,24 @@ const output = {
       allocationFreeVortexBenchmark.elapsedMs
     ).toFixed(2)),
     remainingParticles: allocationFreeVortexBenchmark.remainingParticles
+  },
+  lagrangeEnvelopePolicy: {
+    spectrumCells: SPECTRUM_CELLS,
+    controlCount: LAGRANGE_CONTROL_COUNT,
+    activeFrames: activeAnalyzerFrames,
+    frameAllocationsOverBenchmarkBefore: activeAnalyzerFrames * 4,
+    frameAllocationsOverBenchmarkAfter: 0,
+    invariantWeightProductsOverBenchmarkBefore:
+      activeAnalyzerFrames * LAGRANGE_CONTROL_COUNT * (LAGRANGE_CONTROL_COUNT - 1),
+    invariantWeightProductsOverBenchmarkAfter:
+      LAGRANGE_CONTROL_COUNT * (LAGRANGE_CONTROL_COUNT - 1),
+    benchmarkIterations: lagrangeBenchmarkIterations,
+    legacyElapsedMs: Number(legacyLagrangeBenchmark.elapsedMs.toFixed(2)),
+    plannedElapsedMs: Number(plannedLagrangeBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyLagrangeBenchmark.elapsedMs,
+      plannedLagrangeBenchmark.elapsedMs
+    ).toFixed(2))
   },
   activeAnalyzerPolicy: {
     frameHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
