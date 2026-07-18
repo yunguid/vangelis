@@ -7,8 +7,8 @@
  *
  * Chassis is neutral: flat ink faces, paper-alpha hairlines. The single
  * accent color is reserved strictly for VALUE and STATE indication (arcs,
- * fills, LED bars, active text) — never for structural borders. IBM Plex
- * Mono + tabular-nums on every value readout. border-radius stays <= 2px on
+ * fills, LED bars, active text) — never for structural borders. Native
+ * monospace + tabular-nums on every value readout. border-radius stays <= 2px on
  * every control face (circles are drawn as SVG, not CSS border-radius, so
  * the knob body never touches the border-radius census bucket at all).
  */
@@ -36,7 +36,7 @@
 .kit-fader,
 .kit-togglebtn,
 .kit-segment {
-  font-family: 'IBM Plex Mono', 'Menlo', 'Monaco', monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 

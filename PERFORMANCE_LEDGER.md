@@ -1420,3 +1420,46 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 27 — zero-request typography startup
+
+Collected from document network hints, source font attribution, generated HTML/CSS sizes, the full
+suite, and isolated audio/visual gates.
+
+| Metric | Batch 26 | Batch 27 | Change |
+|---|---:|---:|---:|
+| Render-blocking external stylesheets | 1 | 0 | removed |
+| Third-party preconnects | 2 | 0 | removed |
+| Third-party font origins on startup | 2 | 0 | removed |
+| Webfont swap/layout-shift opportunities | 1 family / 3 weights | 0 | removed |
+| HTML raw | 0.96 KiB | 0.75 KiB | -21.9% |
+| HTML gzip | 0.48 KiB | 0.42 KiB | -12.5% |
+| Initial CSS raw / gzip | 24.59 / 5.46 KiB | 24.70 / 5.51 KiB | +0.11 / +0.05 KiB |
+| Production deployment bytes | 1,481.28 KiB | 1,481.17 KiB | -0.11 KiB |
+| Automated production budgets | 67 | 68 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Removed the render-blocking Google Fonts stylesheet and both Google Fonts preconnects. Startup
+  no longer depends on DNS, TLS, CSS, or font responses from a third-party origin.
+- Centralized the existing native monospace fallbacks as one `--font-mono` token and applied it to
+  the document, control kit, error readout, and canvas labels. No font binary is added to the
+  deployment, cache, or memory footprint.
+- Added a tiny inline document background matching the final Gruvbox ink surface and aligned the
+  browser theme color, preventing a light first-paint flash before the local stylesheet arrives.
+- The native stack adds 0.05 KiB gzip to shared CSS, but removes three cross-origin startup hints
+  and the late webfont swap. A production guard now fails on any external critical stylesheet or
+  preconnect reintroduced into the document.
+
+### Batch 27 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 68/68 pass.
+- Deterministic visual workload after activation: 90.71% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 410.3 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

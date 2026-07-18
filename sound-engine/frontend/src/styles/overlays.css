@@ -162,7 +162,7 @@
   font-size: clamp(0.7rem, 0.85vw, 0.8rem);
   line-height: 1.5;
   color: rgba(248, 250, 251, 0.9);
-  font-family: 'IBM Plex Mono', monospace;
+  font-family: var(--font-mono);
 }
 
 .error-boundary-actions {

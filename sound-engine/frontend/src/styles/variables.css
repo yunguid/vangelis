@@ -4,6 +4,9 @@
  */
 
 :root {
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', 'Segoe UI Mono',
+    'Liberation Mono', Menlo, Monaco, Consolas, monospace;
+
   --color-core-ink: #1d2021;
   --color-core-paper: #f4f1e8;
   --color-core-accent: #d65d0e;
@@ -147,7 +150,7 @@ body {
   min-height: 100%;
   background: var(--color-bg-deep);
   color: var(--color-text-primary);
-  font-family: 'IBM Plex Mono', 'Menlo', 'Monaco', monospace;
+  font-family: var(--font-mono);
   line-height: 1.5;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;

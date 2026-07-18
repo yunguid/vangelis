@@ -460,6 +460,17 @@ const failures = budgetChecks
     actualKb: roundKb(actual),
     maximumKb: roundKb(maximum)
   }));
+if (
+  report.networkHints.earlyExternalStylesheets.length > 0
+  || report.networkHints.preconnectOrigins.length > 0
+) {
+  failures.push({
+    name: 'Guard third-party critical-path requests',
+    stylesheets: report.networkHints.earlyExternalStylesheets,
+    preconnects: report.networkHints.preconnectOrigins,
+    expected: 'none'
+  });
+}
 const countBudgetChecks = [
   ['Guard initial JS requests', initialJs.length, 2],
   ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 7],
@@ -774,7 +785,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 49,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 50,
   failures
 };
 

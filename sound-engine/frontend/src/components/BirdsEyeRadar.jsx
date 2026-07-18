@@ -291,7 +291,7 @@ const BirdsEyeRadar = ({
           if (canPlaceLabel) {
             activeLabels.push(x);
             const labelY = trackBottom - 10;
-            ctx.font = '600 10px "IBM Plex Mono", monospace';
+            ctx.font = '600 10px ui-monospace, Menlo, Monaco, monospace';
             const labelW = ctx.measureText(noteId).width;
             const chipX = x - labelW * 0.5 - 6;
             const chipY = labelY - 12;
