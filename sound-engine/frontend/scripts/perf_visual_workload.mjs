@@ -52,6 +52,7 @@ import {
 } from '../src/components/midiBirdsEyeMath.js';
 import { drawWaveCandyMeterGrid } from '../src/utils/waveCandyMeterGrid.js';
 import { loadAppSession } from '../src/utils/appSession.js';
+import { normalizeMidiNotes } from '../src/utils/midiPlaybackNotes.js';
 
 const SECONDS = 20;
 
@@ -194,6 +195,83 @@ if (
     !== allocationFreeSchedulerQueueBenchmark.relevantCount
 ) {
   throw new Error('Allocation-free MIDI scheduler changed the relevant-note set');
+}
+
+const normalizationBenchmarkNoteCount = 10000;
+const normalizationBenchmarkIterations = 50;
+const normalizationBenchmarkNotes = Array.from(
+  { length: normalizationBenchmarkNoteCount },
+  (_, index) => ({
+    midi: 36 + (index % 60),
+    time: index * 0.01,
+    duration: index % 137 === 0 ? 0 : 0.25,
+    velocity: (index % 128) / 127,
+    instrumentFamily: '  PIANO  ',
+    instrumentName: ' Main '
+  })
+);
+const legacyNormalizeMidiNotes = (notes) => notes
+  .map((note) => {
+    const midi = Number(note?.midi);
+    const time = Number(note?.time);
+    const duration = Number(note?.duration);
+    const velocityRaw = Number(note?.velocity);
+    if (!Number.isFinite(midi) || !Number.isFinite(time) || !Number.isFinite(duration)) {
+      return null;
+    }
+    const normalizedMidi = Math.round(midi);
+    if (!Number.isInteger(normalizedMidi) || normalizedMidi < 0 || normalizedMidi > 127) {
+      return null;
+    }
+    const normalizedDuration = Math.max(0, duration);
+    if (normalizedDuration <= 0) return null;
+    return {
+      ...note,
+      midi: normalizedMidi,
+      time: Math.max(0, time),
+      duration: normalizedDuration,
+      velocity: Number.isFinite(velocityRaw)
+        ? Math.min(1, Math.max(0, velocityRaw))
+        : 1,
+      instrumentFamily: typeof note?.instrumentFamily === 'string'
+        ? note.instrumentFamily.trim().toLowerCase()
+        : note?.instrumentFamily,
+      instrumentName: typeof note?.instrumentName === 'string'
+        ? note.instrumentName.trim()
+        : note?.instrumentName
+    };
+  })
+  .filter(Boolean)
+  .sort((left, right) => left.time - right.time);
+const runMidiNormalizationBenchmark = (iterations, normalize) => {
+  let checksum = 0;
+  let normalizedCount = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const normalized = normalize(normalizationBenchmarkNotes);
+    normalizedCount = normalized.length;
+    for (let index = 0; index < normalized.length; index += 1) {
+      checksum += normalized[index].midi + normalized[index].time + normalized[index].velocity;
+    }
+  }
+  return { checksum, normalizedCount, elapsedMs: performance.now() - startedAt };
+};
+runMidiNormalizationBenchmark(2, legacyNormalizeMidiNotes);
+runMidiNormalizationBenchmark(2, normalizeMidiNotes);
+const legacyMidiNormalizationBenchmark = runMidiNormalizationBenchmark(
+  normalizationBenchmarkIterations,
+  legacyNormalizeMidiNotes
+);
+const onePassMidiNormalizationBenchmark = runMidiNormalizationBenchmark(
+  normalizationBenchmarkIterations,
+  normalizeMidiNotes
+);
+if (
+  legacyMidiNormalizationBenchmark.checksum !== onePassMidiNormalizationBenchmark.checksum
+  || legacyMidiNormalizationBenchmark.normalizedCount
+    !== onePassMidiNormalizationBenchmark.normalizedCount
+) {
+  throw new Error('One-pass MIDI normalization changed sorted-score output');
 }
 
 const srcFreq = new Uint8Array(AUDIO_FREQ_BINS);
@@ -1414,6 +1492,27 @@ const output = {
     ).toFixed(2)),
     relevantNoteChecksumDelta: 0,
     preservesPreOffsetSustainingNotes: true
+  },
+  midiNormalizationPolicy: {
+    sourceNoteCount: normalizationBenchmarkNoteCount,
+    normalizedNoteCount: legacyMidiNormalizationBenchmark.normalizedCount,
+    arrayAllocationsPerNormalizationBefore: 2,
+    arrayAllocationsPerNormalizationAfter: 1,
+    arrayAllocationReductionPercent: 50,
+    mapFilterCallbackInvocationsPerNormalizationBefore:
+      normalizationBenchmarkNoteCount * 2,
+    mapFilterCallbackInvocationsPerNormalizationAfter: 0,
+    sortedInputSortCallsBefore: 1,
+    sortedInputSortCallsAfter: 0,
+    benchmarkIterations: normalizationBenchmarkIterations,
+    legacyElapsedMs: Number(legacyMidiNormalizationBenchmark.elapsedMs.toFixed(2)),
+    onePassElapsedMs: Number(onePassMidiNormalizationBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyMidiNormalizationBenchmark.elapsedMs,
+      onePassMidiNormalizationBenchmark.elapsedMs
+    ).toFixed(2)),
+    normalizedChecksumDelta: 0,
+    preservesUnsortedInputOrdering: true
   },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,

@@ -616,6 +616,28 @@ describe('useMidiPlayback', () => {
     expect(result.current.currentMidi?.notes?.[0]?.velocity).toBe(1);
   });
 
+  it('sorts unsorted external notes while preserving normalized playback order', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 3,
+        notes: [
+          { midi: 64, time: 2, duration: 0.1, velocity: 0.8 },
+          { midi: 60, time: 0, duration: 0.1, velocity: 0.8 },
+          { midi: 62, time: 1, duration: 0.1, velocity: 0.8 }
+        ]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.currentMidi?.notes.map((note) => note.time)).toEqual([0, 1, 2]);
+  });
+
   it('warns and does not start when all notes are invalid', async () => {
     const { result } = renderHook(() => useMidiPlayback({
       waveformType: 'sine',

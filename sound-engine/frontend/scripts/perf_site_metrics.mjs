@@ -534,6 +534,19 @@ const midiSchedulerAvoidsWholeScoreQueue = (
   && /const note = notes\[nextIndex\]/.test(midiPlaybackSource)
   && /const index = nextIndex/.test(midiPlaybackSource)
 );
+const midiPlaybackNotesSource = await readFile(
+  path.join(sourceDir, 'utils', 'midiPlaybackNotes.js'),
+  'utf8'
+);
+const midiNormalizerUsesOnePassFastPath = (
+  /const normalizedNotes = \[\]/.test(midiPlaybackNotesSource)
+  && /for \(let index = 0; index < notes\.length; index \+= 1\)/
+    .test(midiPlaybackNotesSource)
+  && /normalizedNotes\.push\(\{/.test(midiPlaybackNotesSource)
+  && /if \(!isSorted\) normalizedNotes\.sort\(/.test(midiPlaybackNotesSource)
+  && !/notes\s*\.map\(/.test(midiPlaybackNotesSource)
+  && !/\.filter\(Boolean\)/.test(midiPlaybackNotesSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -781,7 +794,10 @@ const report = {
       midiSchedulerAvoidsWholeScoreQueue ? 0 : 10000,
     midiSchedulerQueueArrayAllocationsPerSchedule:
       midiSchedulerAvoidsWholeScoreQueue ? 0 : 2,
-    midiSchedulerAvoidsWholeScoreQueue
+    midiSchedulerAvoidsWholeScoreQueue,
+    midiNormalizerArraysPerImport: midiNormalizerUsesOnePassFastPath ? 1 : 2,
+    midiNormalizerSortedInputSortCalls: midiNormalizerUsesOnePassFastPath ? 0 : 1,
+    midiNormalizerUsesOnePassFastPath
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1354,6 +1370,13 @@ if (!midiSchedulerAvoidsWholeScoreQueue) {
     expected: 'direct indexed traversal of the normalized note array'
   });
 }
+if (!midiNormalizerUsesOnePassFastPath) {
+  failures.push({
+    name: 'Guard one-pass MIDI note normalization',
+    actual: 'map/filter intermediates or unconditional sorting in import path',
+    expected: 'one output array with sorting only for detected unsorted input'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1364,7 +1387,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 79,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 80,
   failures
 };
 

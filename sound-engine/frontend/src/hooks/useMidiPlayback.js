@@ -7,6 +7,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
+import { normalizeMidiNotes } from '../utils/midiPlaybackNotes.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { useVisibleSnapshotPublisher } from './useVisibleSnapshotPublisher.js';
 
@@ -35,50 +36,6 @@ function resolveMidiDuration(midiData) {
   });
 
   return derivedDuration > 0 ? derivedDuration : 1;
-}
-
-function normalizeMidiNotes(notes) {
-  if (!Array.isArray(notes)) return [];
-
-  return notes
-    .map((note) => {
-      const midi = Number(note?.midi);
-      const time = Number(note?.time);
-      const duration = Number(note?.duration);
-      const velocityRaw = Number(note?.velocity);
-
-      if (!Number.isFinite(midi) || !Number.isFinite(time) || !Number.isFinite(duration)) {
-        return null;
-      }
-
-      const normalizedMidi = Math.round(midi);
-      if (!Number.isInteger(normalizedMidi) || normalizedMidi < 0 || normalizedMidi > 127) {
-        return null;
-      }
-
-      const normalizedDuration = Math.max(0, duration);
-      if (normalizedDuration <= 0) {
-        return null;
-      }
-
-      return {
-        ...note,
-        midi: normalizedMidi,
-        time: Math.max(0, time),
-        duration: normalizedDuration,
-        velocity: Number.isFinite(velocityRaw)
-          ? Math.min(1, Math.max(0, velocityRaw))
-          : 1,
-        instrumentFamily: typeof note?.instrumentFamily === 'string'
-          ? note.instrumentFamily.trim().toLowerCase()
-          : note?.instrumentFamily,
-        instrumentName: typeof note?.instrumentName === 'string'
-          ? note.instrumentName.trim()
-          : note?.instrumentName
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.time - b.time);
 }
 
 /**

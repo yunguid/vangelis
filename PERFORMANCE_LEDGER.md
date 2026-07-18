@@ -2789,3 +2789,59 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 55 — one-pass MIDI normalization with sorted-input fast path
+
+Collected from the production note normalizer used before every MIDI play; a 10,000-note ordered
+score containing 73 deliberately invalid durations; four independently launched 50-import profiles;
+exact normalized-note checksums; sorted and unsorted input tests; generated production closures; the
+full suite; and isolated audio/visual gates.
+
+| Metric | Batch 54 | Batch 55 | Change |
+|---|---:|---:|---:|
+| Arrays per MIDI normalization | 2 | 1 | -50.00% |
+| Map/filter callbacks per 10k-note import | 20,000 | 0 | removed |
+| Sort calls for already sorted parser output | 1 | 0 | removed |
+| Normalization CPU, 50 x 10k-note imports | 26.51–27.24 ms | 20.58–21.50 ms | -20.74% to -23.63% |
+| Normalized-note checksum delta | — | 0 | exact |
+| Initial Home JS gzip | 67.90 KiB | 67.94 KiB | +0.04 KiB |
+| Fully activated Home visual JS gzip | 78.83 KiB | 78.86 KiB | +0.03 KiB |
+| Song Study route JS gzip | 65.67 KiB | 65.70 KiB | +0.03 KiB |
+| Production deployment bytes | 1,484.94 KiB | 1,485.04 KiB | +0.10 KiB |
+| Automated production budgets | 97 | 98 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced the normalization pipeline's map/filter callback chain with one indexed loop and one
+  output array. Valid notes are normalized and appended directly; invalid pitch/time/duration entries
+  are skipped without null placeholders or a second array.
+- Tracks normalized time order during the same traversal. Standard parser output is already sorted,
+  so it now bypasses sorting entirely; genuinely unsorted external input still receives the original
+  ascending-time sort before scheduling.
+- Preserved caller isolation by continuing to create normalized note objects rather than mutating the
+  imported score. Pitch rounding/range checks, time and duration clamping, velocity normalization,
+  and instrument string cleanup remain equivalent.
+- Extracted the production normalizer into a focused utility exercised directly by the performance
+  workload. Added three unit cases for sorted normalization, unsorted ordering, and invalid-note
+  removal, retained the end-to-end playback ordering case, and added a production guard rejecting
+  map/filter intermediates or unconditional sorting.
+
+### Batch 55 verification gates
+
+- Full suite: 59 files, 526/526 tests pass, including three focused normalizer cases, 19 playback
+  cases, and all Sound Designer, hardware MIDI, keyboard, control-kit, radar, Song Study, canvas,
+  numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 98/98 pass; normalized imports report one
+  output array and zero sort calls for already ordered input.
+- Four 50-import profiles measured 20.74–23.63% lower CPU: 26.51–27.24 ms falls to 20.58–21.50 ms.
+  Each 10,000-note import removes 20,000 callback invocations and one array, produces 9,927 normalized
+  notes, and retains an identical cumulative checksum.
+- Warmed combined visual workload: 80.20% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 434.3 us per 128-frame block with 6.1x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.
