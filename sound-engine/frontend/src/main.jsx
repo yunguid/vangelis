@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './style.css';
-import { withBase } from './utils/baseUrl.js';
 import {
   getActiveRoute,
   getStudyRouteMatch,
@@ -108,12 +107,4 @@ if (profilingRequested) {
   };
   if (document.readyState === 'complete') startProbe();
   else window.addEventListener('load', startProbe, { once: true });
-}
-
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register(withBase('sw.js')).catch(() => {
-      /* silent */
-    });
-  });
 }

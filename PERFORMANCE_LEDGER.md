@@ -1463,3 +1463,48 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 28 — inert worker and orphan public assets
+
+Collected from complete public-file attribution, production service-worker registration scans,
+generated bundle closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 27 | Batch 28 | Change |
+|---|---:|---:|---:|
+| Public files | 82 | 79 | -3 orphan/inert files |
+| Public static bytes | 860.05 KiB | 856.13 KiB | -3.92 KiB |
+| Production deployment bytes | 1,481.17 KiB | 1,477.73 KiB | -3.44 KiB |
+| Production service-worker registrations | 1 | 0 | removed |
+| Post-load worker request/lifecycle task | 1 | 0 | removed |
+| Static event-listener sites | 32 | 31 | -1 |
+| Initial JS raw / gzip | 145.24 / 47.25 KiB | 144.96 / 47.13 KiB | -0.28 / -0.12 KiB |
+| Total JS asset count | 44 | 45 | +1 tiny shared helper chunk |
+| Automated production budgets | 68 | 69 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Attributed all remaining public files: 78 selectable MIDI files are generated into the built-in
+  library, and the favicon is linked by the document. Removed two unreferenced legacy synthwave
+  texture SVGs.
+- Removed the production service-worker registration and its 442-byte worker. The worker had no
+  fetch handler or offline/cache delivery path; it created a post-load request and lifecycle work
+  solely to delete old caches.
+- Dropped the bootstrap's now-unused base-URL import. Vite keeps the 0.19 KiB gzip helper as a
+  shared deferred chunk for the four data-oriented routes that actually use it, saving 0.12 KiB
+  gzip on every initial load at the cost of one tiny cached request on those secondary routes.
+- A production guard now fails if the retired worker/textures or any service-worker registration
+  reappears. Fresh installs have no worker lifecycle work; previously installed inert workers have
+  no fetch handler and therefore do not intercept application requests.
+
+### Batch 28 verification gates
+
+- Full suite: 48 files, 492/492 tests pass.
+- Production delivery/static/dependency/route guardrails: 69/69 pass.
+- Deterministic visual workload after activation: 90.85% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 415.7 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

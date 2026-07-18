@@ -40,6 +40,7 @@ const deploymentBytes = (await Promise.all(distPaths.map(async (file) => (await 
   .reduce((total, size) => total + size, 0);
 const publicStaticBytes = (await Promise.all(publicPaths.map(async (file) => (await stat(file)).size)))
   .reduce((total, size) => total + size, 0);
+const publicRelativePaths = publicPaths.map((file) => path.relative(publicDir, file));
 const assetPaths = (await walkFiles(assetsDir)).sort();
 const assetMetrics = await Promise.all(assetPaths.map(measureFile));
 const jsAssets = assetMetrics.filter(({ file }) => file.endsWith('.js'));
@@ -244,6 +245,14 @@ const unreferencedOwnedCssClasses = ownedCssClassNames
     !productionSourceText.includes(className)
     && !dynamicallyComposedCssClasses.has(className)
   ));
+const retiredPublicArtifacts = [
+  'sw.js',
+  path.join('assets', 'textures', 'retro-grid.svg'),
+  path.join('assets', 'textures', 'skyline.svg')
+].filter((file) => publicRelativePaths.includes(file));
+const productionServiceWorkerRegistrationCalls = (
+  productionSourceText.match(/serviceWorker\.register\s*\(/g) || []
+).length;
 const appHeaderSource = await readFile(path.join(sourceDir, 'components', 'AppHeader.jsx'), 'utf8');
 const appHeaderImportsAudioEngine = /from\s+['"][^'"]*audioEngine(?:\.js)?['"]/.test(appHeaderSource);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
@@ -414,6 +423,8 @@ const report = {
     ownedCssClassCount: ownedCssClassNames.length,
     dynamicallyComposedCssClassCount: dynamicallyComposedCssClasses.size,
     unreferencedOwnedCssClasses,
+    retiredPublicArtifacts,
+    productionServiceWorkerRegistrationCalls,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -468,6 +479,14 @@ if (
     name: 'Guard third-party critical-path requests',
     stylesheets: report.networkHints.earlyExternalStylesheets,
     preconnects: report.networkHints.preconnectOrigins,
+    expected: 'none'
+  });
+}
+if (retiredPublicArtifacts.length > 0 || productionServiceWorkerRegistrationCalls > 0) {
+  failures.push({
+    name: 'Guard inert service worker and orphan public assets',
+    artifacts: retiredPublicArtifacts,
+    serviceWorkerRegistrations: productionServiceWorkerRegistrationCalls,
     expected: 'none'
   });
 }
@@ -785,7 +804,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 50,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 51,
   failures
 };
 
