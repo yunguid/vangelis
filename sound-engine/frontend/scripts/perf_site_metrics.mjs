@@ -315,6 +315,11 @@ const waveCandyCachesSpectrumBinRanges = (
   && /buffers\.specBinFftSize\s*!==\s*analyser\.fftSize/.test(waveCandyCanvasSource)
   && /binRanges:\s*buffers\.specBinRanges/.test(waveCandyCanvasSource)
 );
+const waveCandyCachesSpectrogramRowsAndPalette = (
+  (waveCandyCanvasSource.match(/createSpectrogramColorLut\s*\(/g) || []).length === 1
+  && (waveCandyCanvasSource.match(/createSpectrogramRowRuns\s*\(/g) || []).length === 1
+  && /renderCache\.rowRuns\[cell \* 2 \+ 1\]/.test(waveCandyCanvasSource)
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -500,6 +505,11 @@ const report = {
     waveCandyCachesGradients,
     waveCandySpectrumBoundaryEvaluationsPerFrame: waveCandyCachesSpectrumBinRanges ? 0 : 192,
     waveCandyCachesSpectrumBinRanges,
+    waveCandySteadyStateSpectrogramColorStringAllocationsPerFrame:
+      waveCandyCachesSpectrogramRowsAndPalette ? 0 : 150,
+    waveCandyDesktopSpectrogramFillCallsPerFrame:
+      waveCandyCachesSpectrogramRowsAndPalette ? 96 : 150,
+    waveCandyCachesSpectrogramRowsAndPalette,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -622,6 +632,13 @@ if (!waveCandyCachesSpectrumBinRanges) {
     name: 'Guard configuration-scoped spectrum bin ranges',
     actual: 'log-frequency boundaries evaluated in active frame path',
     expected: 'cached until sample rate, FFT size, or bin count changes'
+  });
+}
+if (!waveCandyCachesSpectrogramRowsAndPalette) {
+  failures.push({
+    name: 'Guard cached spectrogram rows and palette',
+    actual: 'per-pixel row mapping or color formatting in active frame path',
+    expected: 'configuration-scoped row runs and color lookup table'
   });
 }
 if (
@@ -958,7 +975,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 59,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 60,
   failures
 };
 

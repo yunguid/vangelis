@@ -15,6 +15,10 @@ import {
   createLogSpectrumBinRanges,
   sampleLogSpectrum
 } from '../src/utils/spectrumAnalysis.js';
+import {
+  createSpectrogramColorLut,
+  createSpectrogramRowRuns
+} from '../src/utils/spectrogramRendering.js';
 
 const SECONDS = 20;
 
@@ -367,6 +371,52 @@ const cachedSpectrumBenchmark = runSpectrumBenchmark(
   spectrumBenchmarkIterations
 );
 
+const SPECTROGRAM_HEIGHT = 150;
+const spectrogramDb = Float32Array.from(
+  { length: SPECTRUM_CELLS },
+  (_, index) => -70 + (index / (SPECTRUM_CELLS - 1)) * 70
+);
+const spectrogramColorLut = createSpectrogramColorLut();
+const spectrogramRowRuns = createSpectrogramRowRuns({
+  height: SPECTROGRAM_HEIGHT,
+  cells: SPECTRUM_CELLS
+});
+const simulateLegacySpectrogramColumn = () => {
+  let checksum = 0;
+  for (let y = 0; y < SPECTROGRAM_HEIGHT; y += 1) {
+    const cell = Math.min(
+      SPECTRUM_CELLS - 1,
+      Math.floor((y / SPECTROGRAM_HEIGHT) * SPECTRUM_CELLS)
+    );
+    const unit = clamp((spectrogramDb[cell] + 70) / 70, 0, 1);
+    const hue = 30 - unit * 14;
+    const saturation = 60 + unit * 30;
+    const lightness = 6 + unit * 66;
+    checksum += `hsl(${hue}, ${saturation}%, ${lightness}%)`.length;
+  }
+  return checksum;
+};
+const simulateCachedSpectrogramColumn = () => {
+  let checksum = 0;
+  const maxColorIndex = spectrogramColorLut.length - 1;
+  for (let cell = 0; cell < SPECTRUM_CELLS; cell += 1) {
+    const runHeight = spectrogramRowRuns[cell * 2 + 1];
+    if (runHeight === 0) continue;
+    const unit = clamp((spectrogramDb[cell] + 70) / 70, 0, 1);
+    checksum += spectrogramColorLut[Math.round(unit * maxColorIndex)].length;
+  }
+  return checksum;
+};
+const spectrogramBenchmarkIterations = 20000;
+const legacySpectrogramBenchmark = runSpectrumBenchmark(
+  simulateLegacySpectrogramColumn,
+  spectrogramBenchmarkIterations
+);
+const cachedSpectrogramBenchmark = runSpectrumBenchmark(
+  simulateCachedSpectrogramColumn,
+  spectrogramBenchmarkIterations
+);
+
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
@@ -432,6 +482,29 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacySpectrumBenchmark.elapsedMs,
       cachedSpectrumBenchmark.elapsedMs
+    ).toFixed(2))
+  },
+  spectrogramColumnPolicy: {
+    desktopHeight: SPECTROGRAM_HEIGHT,
+    spectrumCells: SPECTRUM_CELLS,
+    colorStringsOverBenchmarkBefore: activeAnalyzerFrames * SPECTROGRAM_HEIGHT,
+    colorStringsOverBenchmarkAfter: spectrogramColorLut.length,
+    colorStringReductionPercent: Number(reduction(
+      activeAnalyzerFrames * SPECTROGRAM_HEIGHT,
+      spectrogramColorLut.length
+    ).toFixed(2)),
+    fillCallsOverBenchmarkBefore: activeAnalyzerFrames * SPECTROGRAM_HEIGHT,
+    fillCallsOverBenchmarkAfter: activeAnalyzerFrames * SPECTRUM_CELLS,
+    fillCallReductionPercent: Number(reduction(
+      activeAnalyzerFrames * SPECTROGRAM_HEIGHT,
+      activeAnalyzerFrames * SPECTRUM_CELLS
+    ).toFixed(2)),
+    benchmarkIterations: spectrogramBenchmarkIterations,
+    legacyElapsedMs: Number(legacySpectrogramBenchmark.elapsedMs.toFixed(2)),
+    cachedElapsedMs: Number(cachedSpectrogramBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacySpectrogramBenchmark.elapsedMs,
+      cachedSpectrogramBenchmark.elapsedMs
     ).toFixed(2))
   },
   activeAnalyzerPolicy: {

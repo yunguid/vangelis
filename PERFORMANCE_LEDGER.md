@@ -1869,3 +1869,54 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 37 — cached spectrogram rows and palette
+
+Collected from the 150-pixel desktop spectrogram column renderer, exact 20-second allocation and
+draw-call counts, an isolated 20,000-column workload, row-coverage equivalence tests, generated
+production closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 36 | Batch 37 | Change |
+|---|---:|---:|---:|
+| Spectrogram color strings over 20 s | 90,000 | 256 | -99.72% |
+| Steady-state color-string allocations per frame | 150 | 0 | removed |
+| Spectrogram column fill calls over 20 s | 90,000 | 57,600 | -36.00% |
+| Isolated column renderer CPU, 20k iterations | 85.56 ms | 2.49 ms | -97.09% |
+| Initial Home JS gzip | 67.85 KiB | 67.86 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 77.38 KiB | 77.60 KiB | +0.22 KiB |
+| Production deployment bytes | 1,480.10 KiB | 1,480.57 KiB | +0.47 KiB |
+| Automated production budgets | 77 | 78 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced per-pixel HSL template formatting with a deferred 256-entry ember-to-amber lookup
+  table. The palette is created only when the graph-backed visualizer first renders, then reused
+  without steady-state string allocation.
+- Precomputed contiguous canvas row spans for the 96 spectrum cells whenever the spectrogram
+  height or cell count changes. Each frame now paints at most 96 vertical runs instead of 150
+  individual pixels on the desktop tile.
+- Preserved the original frequency-cell mapping exactly: focused coverage tests prove every one of
+  the 150 rows is painted once and maps to the same reversed source cell as the previous loop.
+  Palette quantization is limited to 256 levels, exceeding the tile's vertical resolution.
+- Added an isolated legacy-vs-cached column profile and a production guard requiring both the row
+  map and palette to remain configuration-scoped.
+
+### Batch 37 verification gates
+
+- Full suite: 52 files, 502/502 tests pass, including row-coverage/palette cases and 20/20 focused
+  Sound Designer tests.
+- Production delivery/static/dependency/route guardrails: 78/78 pass.
+- Isolated spectrogram column profile: 85.56 ms to 2.49 ms over 20,000 iterations, a 97.09%
+  measured CPU-time reduction; steady-state color-string allocations are eliminated and fill calls
+  fall 36% over the desktop workload.
+- Spectrum boundary evaluations and canvas gradient allocations remain 99.83% below their
+  respective baselines; stereo pair work remains 83.33% below the original policy.
+- Deterministic combined visual workload: 87.12% lower measured CPU time than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 404.7 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

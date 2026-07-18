@@ -10,6 +10,10 @@ import {
   createLogSpectrumBinRanges,
   sampleLogSpectrum
 } from '../utils/spectrumAnalysis.js';
+import {
+  createSpectrogramColorLut,
+  createSpectrogramRowRuns
+} from '../utils/spectrogramRendering.js';
 
 // Perceptual visualizer suite (Canvas 2D):
 // - Spectrum: log-frequency, dB scale — the raw FFT is distilled through
@@ -107,15 +111,16 @@ const drawSpectrum = (ctx, rawDb, chainDb, width, height, resized, gradientCache
   ctx.restore();
 };
 
-const spectroColor = (unit) => {
-  // Dark charcoal -> ember -> amber -> near-white ramp
-  const hue = 30 - unit * 14;
-  const sat = 60 + unit * 30;
-  const light = 6 + unit * 66;
-  return `hsl(${hue}, ${sat}%, ${light}%)`;
-};
-
-const drawSpectrogram = (ctx, canvas, smoothedDb, width, height, resized, dpr) => {
+const drawSpectrogram = (
+  ctx,
+  canvas,
+  smoothedDb,
+  width,
+  height,
+  resized,
+  dpr,
+  renderCache
+) => {
   if (resized) {
     ctx.fillStyle = 'rgb(8, 8, 8)';
     ctx.fillRect(0, 0, width, height);
@@ -129,12 +134,27 @@ const drawSpectrogram = (ctx, canvas, smoothedDb, width, height, resized, dpr) =
   ctx.restore();
   const columnX = width - 1;
   const cells = smoothedDb.length;
-  for (let y = 0; y < height; y++) {
-    const t = y / height; // 0 bottom (low freq) after flip below
-    const cell = Math.min(cells - 1, Math.floor(t * cells));
+  if (!renderCache.colorLut) {
+    renderCache.colorLut = createSpectrogramColorLut();
+  }
+  if (
+    resized
+    || !renderCache.rowRuns
+    || renderCache.height !== height
+    || renderCache.cells !== cells
+  ) {
+    renderCache.rowRuns = createSpectrogramRowRuns({ height, cells });
+    renderCache.height = height;
+    renderCache.cells = cells;
+  }
+  const maxColorIndex = renderCache.colorLut.length - 1;
+  for (let cell = 0; cell < cells; cell += 1) {
+    const canvasY = renderCache.rowRuns[cell * 2];
+    const runHeight = renderCache.rowRuns[cell * 2 + 1];
+    if (runHeight === 0) continue;
     const unit = dbToUnit(smoothedDb[cell]);
-    ctx.fillStyle = spectroColor(unit);
-    ctx.fillRect(columnX, height - 1 - y, 1, 1);
+    ctx.fillStyle = renderCache.colorLut[Math.round(unit * maxColorIndex)];
+    ctx.fillRect(columnX, canvasY, 1, runHeight);
   }
 };
 
@@ -285,6 +305,12 @@ const WaveCandyCanvas = () => {
   const meterRef = useRef(null);
   const spectrumGradientRef = useRef(null);
   const meterGradientRef = useRef(null);
+  const spectrogramRenderCacheRef = useRef({
+    colorLut: null,
+    rowRuns: null,
+    height: 0,
+    cells: 0
+  });
 
   const buffersRef = useRef({
     freq: null,
@@ -441,7 +467,16 @@ const WaveCandyCanvas = () => {
         meter.peakHoldDb -= 12 * frameDt; // 12 dB/s decay after hold
       }
 
-      drawSpectrogram(contexts.spectrogram, canvases.spectrogram, buffers.specSmoothed, spectroSize.width, spectroSize.height, spectroSize.resized, spectroSize.dpr);
+      drawSpectrogram(
+        contexts.spectrogram,
+        canvases.spectrogram,
+        buffers.specSmoothed,
+        spectroSize.width,
+        spectroSize.height,
+        spectroSize.resized,
+        spectroSize.dpr,
+        spectrogramRenderCacheRef.current
+      );
       drawWaveform(contexts.scope, timeData, scopeSize.width, scopeSize.height);
       drawSpectrum(
         contexts.spectrum,
