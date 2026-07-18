@@ -1,7 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import { getBuiltInStudy } from './data/songStudies.js';
 import './style.css';
 import { withBase } from './utils/baseUrl.js';
 import {
@@ -15,6 +13,7 @@ import {
 } from './utils/routes.js';
 
 const ControlKitPage = React.lazy(() => import('./pages/ControlKitPage.jsx'));
+const App = React.lazy(() => import('./App.jsx'));
 const GeneratedSongStudyPage = React.lazy(() => import('./pages/GeneratedSongStudyPage.jsx'));
 const MidiPipelinePage = React.lazy(() => import('./pages/MidiPipelinePage.jsx'));
 const SongStudyPage = React.lazy(() => import('./pages/SongStudyPage.jsx'));
@@ -55,10 +54,7 @@ const Root = () => {
   }, [route]);
 
   if (studyRoute?.kind === 'builtin') {
-    const study = getBuiltInStudy(studyRoute.slug);
-    if (study) {
-      return <SongStudyPage study={study} />;
-    }
+    return <SongStudyPage studySlug={studyRoute.slug} />;
   }
 
   if (studyRoute?.kind === 'generated') {

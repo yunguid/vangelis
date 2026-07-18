@@ -398,3 +398,54 @@ Implemented boundaries and controls:
   and 65.71% fewer resample samples; the 20-second synthetic CPU sample was 91.06% below its
   legacy reference.
 - `git diff --check`: pass.
+
+## Optimization batch 5 — per-route application boundary
+
+Collected from the Vite production manifest and its complete synchronous import closures.
+Home includes Scene and Wave Candy because both lazy components mount immediately; conditional
+Birds Eye Radar and closed sidebar panels remain excluded until requested.
+
+| Metric | Batch 4 | Batch 5 | Change |
+|---|---:|---:|---:|
+| Common entry JS raw | 313.30 KiB | 147.59 KiB | -52.9% |
+| Common entry JS gzip | 81.62 KiB | 47.64 KiB | -41.6% |
+| Common entry CSS raw | 66.49 KiB | 53.70 KiB | -19.2% |
+| Common entry CSS gzip | 13.36 KiB | 11.13 KiB | -16.7% |
+| Common entry requests | 2 JS / 1 CSS | 2 JS / 1 CSS | unchanged |
+| Route closures resolved | not enforced | 8/8 | target met |
+| Maximum route JS gzip | not enforced | 92.15 KiB | < 100 KiB |
+| Maximum route CSS gzip | not enforced | 16.30 KiB | < 18 KiB |
+| Automated production budgets | 15 | 18 | +3 guardrails |
+
+Production route closures:
+
+| Route | JS assets | JS gzip | CSS assets | CSS gzip |
+|---|---:|---:|---:|---:|
+| Home, including immediate Scene/Wave Candy | 13 | 91.59 KiB | 2 | 14.16 KiB |
+| Control Kit | 4 | 54.37 KiB | 2 | 13.40 KiB |
+| Generated Study | 15 | 85.50 KiB | 3 | 15.71 KiB |
+| MIDI Pipeline | 8 | 70.24 KiB | 3 | 16.30 KiB |
+| Song Study | 12 | 83.82 KiB | 3 | 15.71 KiB |
+| Sound Designer | 12 | 92.15 KiB | 3 | 15.87 KiB |
+| Study Songs | 8 | 68.16 KiB | 3 | 15.54 KiB |
+| Voice Loop | 8 | 78.33 KiB | 3 | 16.25 KiB |
+
+Implemented boundaries and controls:
+
+- The home synthesizer is now a route-level lazy entry, so direct visits to Sound Designer,
+  Studies, Pipeline, Voice Loop, and Control Kit do not download the home MIDI scheduler,
+  keyboard interaction stack, sidebar shell, or home-only audio orchestration before routing.
+- Built-in study slug resolution moved into the Song Study chunk. The bootstrap no longer
+  imports the audio parameter model, math helpers, or DSP constants merely to validate a URL.
+- The production build emits a Vite manifest. The audit recursively resolves static imports
+  and CSS for eight route entry points, rather than relying only on HTML-linked asset size.
+- Three new gates require every route closure to resolve and cap the maximum route closure at
+  100 KiB gzip JS and 18 KiB gzip CSS.
+
+### Batch 5 verification gates
+
+- Full suite: 38 files, 463/463 tests pass.
+- Production delivery/static/dependency/route guardrails: 18/18 pass.
+- Build: 161 transformed modules in 799 ms; seven secondary page chunks plus a dedicated home
+  application chunk and shared feature chunks.
+- `git diff --check`: pass.

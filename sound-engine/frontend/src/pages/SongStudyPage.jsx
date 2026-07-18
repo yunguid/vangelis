@@ -3,7 +3,11 @@ import AppHeader from '../components/AppHeader.jsx';
 import BirdsEyeRadar from '../components/BirdsEyeRadar.jsx';
 import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
-import { DEFAULT_STUDY_AUDIO_PARAMS, DEFAULT_STUDY_WAVEFORM } from '../data/songStudies.js';
+import {
+  DEFAULT_STUDY_AUDIO_PARAMS,
+  DEFAULT_STUDY_WAVEFORM,
+  getBuiltInStudy
+} from '../data/songStudies.js';
 import { useMidiPlayback } from '../hooks/useMidiPlayback.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToName } from '../utils/math.js';
@@ -238,7 +242,7 @@ const TransportIcon = ({ kind }) => {
   );
 };
 
-const SongStudyPage = ({ study }) => {
+const SongStudyPageContent = ({ study }) => {
   const waveformType = study?.waveformType || DEFAULT_STUDY_WAVEFORM;
   const audioParams = study?.audioParams || DEFAULT_STUDY_AUDIO_PARAMS;
   const titleRef = useSingleLineTitle(study?.title || '');
@@ -603,6 +607,18 @@ const SongStudyPage = ({ study }) => {
       <Sidebar disabled isOpen={false} activeTab="midi" />
     </div>
   );
+};
+
+const SongStudyPage = ({ study, studySlug }) => {
+  const resolvedStudy = study || (studySlug ? getBuiltInStudy(studySlug) : null);
+  if (!resolvedStudy) {
+    return (
+      <div className="route-loading" role="status">
+        Study not found.
+      </div>
+    );
+  }
+  return <SongStudyPageContent study={resolvedStudy} />;
 };
 
 export default SongStudyPage;

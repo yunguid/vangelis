@@ -32,6 +32,7 @@ async function measureFile(file) {
 const htmlPath = path.join(distDir, 'index.html');
 const html = await readFile(htmlPath, 'utf8');
 const htmlMetric = await measureFile(htmlPath);
+const manifest = JSON.parse(await readFile(path.join(distDir, '.vite', 'manifest.json'), 'utf8'));
 const assetPaths = (await walkFiles(assetsDir)).sort();
 const assetMetrics = await Promise.all(assetPaths.map(measureFile));
 const jsAssets = assetMetrics.filter(({ file }) => file.endsWith('.js'));
@@ -45,6 +46,55 @@ const routeChunks = jsAssets.filter(({ file }) => (
   /(?:ControlKit|GeneratedSongStudy|MidiPipeline|SongStudy|SoundDesigner|StudySongs|VoiceLoopLab)/.test(file)
 ));
 const worklets = jsAssets.filter(({ file }) => file.includes('worklet'));
+const assetMetricByFile = new Map(assetMetrics.map((metric) => [metric.file, metric]));
+const sum = (metrics, key) => metrics.reduce((total, metric) => total + metric[key], 0);
+
+const routeEntries = [
+  {
+    route: 'home',
+    entries: ['src/App.jsx', 'src/components/Scene.jsx', 'src/components/WaveCandy.jsx']
+  },
+  { route: 'control-kit', entries: ['src/pages/ControlKitPage.jsx'] },
+  { route: 'generated-study', entries: ['src/pages/GeneratedSongStudyPage.jsx'] },
+  { route: 'midi-pipeline', entries: ['src/pages/MidiPipelinePage.jsx'] },
+  { route: 'song-study', entries: ['src/pages/SongStudyPage.jsx'] },
+  { route: 'sound-designer', entries: ['src/pages/SoundDesignerPage.jsx'] },
+  { route: 'study-songs', entries: ['src/pages/StudySongsPage.jsx'] },
+  { route: 'voice-loop', entries: ['src/pages/VoiceLoopLabPage.jsx'] }
+];
+
+function collectRouteClosure(entryKeys) {
+  const visited = new Set();
+  const jsFiles = new Set();
+  const cssFiles = new Set();
+
+  const visit = (key) => {
+    if (visited.has(key)) return;
+    visited.add(key);
+    const record = manifest[key];
+    if (!record) return;
+    if (record.file?.endsWith('.js')) jsFiles.add(record.file);
+    (record.css || []).forEach((file) => cssFiles.add(file));
+    (record.imports || []).forEach(visit);
+  };
+  entryKeys.forEach(visit);
+
+  const js = [...jsFiles].map((file) => assetMetricByFile.get(file)).filter(Boolean);
+  const css = [...cssFiles].map((file) => assetMetricByFile.get(file)).filter(Boolean);
+  return {
+    jsAssetCount: js.length,
+    jsKb: roundKb(sum(js, 'bytes')),
+    jsGzipKb: roundKb(sum(js, 'gzipBytes')),
+    cssAssetCount: css.length,
+    cssKb: roundKb(sum(css, 'bytes')),
+    cssGzipKb: roundKb(sum(css, 'gzipBytes'))
+  };
+}
+
+const routeClosures = routeEntries.map(({ route, entries }) => ({
+  route,
+  ...collectRouteClosure(entries)
+}));
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
@@ -52,7 +102,6 @@ const sourceCssPaths = (await walkFiles(sourceDir)).filter((file) => file.endsWi
 const sourceCssText = (await Promise.all(sourceCssPaths.map((file) => readFile(file, 'utf8')))).join('\n');
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
-const sum = (metrics, key) => metrics.reduce((total, metric) => total + metric[key], 0);
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
 const directRuntimeDependencies = Object.keys(packageJson.dependencies || {});
 const productionLockPackages = Object.entries(packageLock.packages || {})
@@ -87,7 +136,8 @@ const report = {
       gzipKb: roundKb(gzipBytes)
     })),
     workletKb: roundKb(sum(worklets, 'bytes')),
-    workletGzipKb: roundKb(sum(worklets, 'gzipBytes'))
+    workletGzipKb: roundKb(sum(worklets, 'gzipBytes')),
+    routeClosures
   },
   staticSignals: {
     sourceModuleCount: sourcePaths.length,
@@ -142,6 +192,20 @@ const countBudgetChecks = [
 failures.push(...countBudgetChecks
   .filter(([, actual, maximum]) => actual > maximum)
   .map(([name, actual, maximum]) => ({ name, actual, maximum })));
+const routeBudgetChecks = [
+  ['D12 max route JS gzip', Math.max(...routeClosures.map(({ jsGzipKb }) => jsGzipKb)), 100],
+  ['D13 max route CSS gzip', Math.max(...routeClosures.map(({ cssGzipKb }) => cssGzipKb)), 18]
+];
+failures.push(...routeBudgetChecks
+  .filter(([, actual, maximum]) => actual > maximum)
+  .map(([name, actual, maximum]) => ({ name, actualKb: actual, maximumKb: maximum })));
+const unresolvedRouteClosures = routeClosures.filter(({ jsAssetCount }) => jsAssetCount === 0);
+if (unresolvedRouteClosures.length > 0) {
+  failures.push({
+    name: 'Guard manifest route closures',
+    unresolved: unresolvedRouteClosures.map(({ route }) => route)
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -152,7 +216,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + 1,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 2,
   failures
 };
 

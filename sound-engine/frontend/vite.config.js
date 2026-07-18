@@ -121,6 +121,7 @@ export default defineConfig({
     outDir: 'dist',
     target: 'esnext',
     assetsDir: 'assets',
+    manifest: true,
     rollupOptions: {
       output: {
         manualChunks(id) {
