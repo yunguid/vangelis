@@ -1,5 +1,5 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader.jsx';
+import { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import PresetShelf from '../components/PresetShelf.jsx';
 import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
@@ -404,7 +404,7 @@ const SoundDesignerPage = () => {
   return (
     <div className="sound-designer-page">
       <main className="sound-designer-page__shell">
-        <AppHeader activeSection="sound-designer" className="sound-designer-page__header" />
+        <BrandHeader className="sound-designer-page__header" />
 
         <div className="sound-designer-workspace">
           <div className="sound-designer-scope" role="region" aria-label="Live sound visualization">

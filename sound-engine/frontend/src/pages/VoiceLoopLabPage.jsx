@@ -1,6 +1,5 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader.jsx';
-import Sidebar from '../components/Sidebar';
+import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import { fetchJson } from '../utils/fetchJson.js';
 import { encodeWav } from '../utils/audioEngine/wav.js';
 import { renderVoiceScore } from '../utils/voicePhrase.js';
@@ -452,7 +451,7 @@ const VoiceLoopLabPage = () => {
   return (
     <div className="voice-loop-page">
       <main className="voice-loop-shell">
-        <AppHeader activeSection="voice-loop" className="voice-loop-header" />
+        <BrandHeader className="voice-loop-header" />
 
         <section className="voice-loop-workspace" aria-label="Voice loop generator">
           <form className="voice-loop-controls" onSubmit={handleGenerate}>
@@ -697,7 +696,7 @@ const VoiceLoopLabPage = () => {
           </section>
         </section>
       </main>
-      <Sidebar disabled isOpen={false} activeTab="voice" />
+      <SidebarNavigation />
     </div>
   );
 };

@@ -1,7 +1,6 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader.jsx';
+import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import BirdsEyeRadar from '../components/BirdsEyeRadar.jsx';
-import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
 import {
   DEFAULT_STUDY_AUDIO_PARAMS,
@@ -418,7 +417,7 @@ const SongStudyPageContent = ({ study }) => {
       <div className="song-study__backdrop" aria-hidden="true" />
 
       <main className="song-study__shell">
-        <AppHeader activeSection="studies" />
+        <BrandHeader />
 
         <header className="song-study__masthead">
           <div className="song-study__title-group">
@@ -604,7 +603,7 @@ const SongStudyPageContent = ({ study }) => {
           </div>
         </section>
       </main>
-      <Sidebar disabled isOpen={false} activeTab="midi" />
+      <SidebarNavigation />
     </div>
   );
 };

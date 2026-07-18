@@ -667,3 +667,52 @@ Implemented boundaries and controls:
   deliberately discarded contended run overlapped the full suite/audio audit; only the
   isolated run satisfies the collection protocol.
 - `git diff --check`: pass.
+
+## Optimization batch 11 — rail-only chrome for passive routes
+
+Collected from production module attribution, manifest-derived sidebar identity, per-route
+closures, navigation-contract tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 10 | Batch 11 | Change |
+|---|---:|---:|---:|
+| Generated Study startup JS gzip | 84.00 KiB | 81.12 KiB | -3.4% |
+| MIDI Pipeline startup JS gzip | 59.35 KiB | 56.82 KiB | -4.3% |
+| Built-in Study startup JS gzip | 82.30 KiB | 79.44 KiB | -3.5% |
+| Study Library startup JS gzip | 57.27 KiB | 54.74 KiB | -4.4% |
+| Voice Loop startup JS gzip | 64.65 KiB | 62.12 KiB | -3.9% |
+| Sound Designer startup JS gzip | 81.53 KiB | 80.69 KiB | -1.0% |
+| Navigation-only routes with full sidebar controller | 5 | 0 | removed |
+| Full sidebar controller chunk | mixed into shared chrome | 7.03 KiB / 1.98 KiB gzip | isolated |
+| Shared rail chunk | mixed into full sidebar | 2.57 KiB / 0.99 KiB gzip | reusable |
+| Passive brand/navigation wrapper | mixed into full sidebar | 0.53 KiB / 0.32 KiB gzip | reusable |
+| Direct passive-route static JS assets | baseline | +1 small shared asset | explicit trade |
+| Total production JS raw | 546.59 KiB | 543.12 KiB | -0.6% |
+| Total production JS gzip | 166.95 KiB | 167.07 KiB | +0.1% split overhead |
+| Production deployment bytes | 1,531.77 KiB | 1,528.77 KiB | -0.2% |
+| Automated production budgets | 31 | 33 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Navigation-only pages intentionally showed a disabled rail, but did so by mounting the full
+  Sidebar component. They therefore parsed panel state, mobile body-lock effects, Escape-key
+  listeners, context consumers, backdrop logic, and lazy MIDI/Sound panel loaders that could
+  never become active on those pages.
+- Extracted the visual/navigation rail into a memoized shared component used by both the full
+  interactive Sidebar and a lightweight passive wrapper. The brand masthead and passive wrapper
+  share one module to limit small-chunk request fan-out.
+- Home and Sound Designer retain the complete interactive sidebar. Generated Study, MIDI
+  Pipeline, built-in Study, Study Library, and Voice Loop retain the same disabled Sound/MIDI
+  buttons, keyboard link, Design link, rail styling, and DSP status without panel machinery.
+- Added a direct passive-rail contract test and manifest guards that identify the full Sidebar
+  by its MIDI/Sound lazy imports, then fail if any navigation-only route regains that chunk.
+
+### Batch 11 verification gates
+
+- Full suite: 42 files, 474/474 tests pass.
+- Production delivery/static/dependency/route guardrails: 33/33 pass.
+- Deterministic visual workload: 89.89% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference; exact workload counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 409.8 us per 128-frame block with 6.5x realtime headroom.
+- `git diff --check`: pass.

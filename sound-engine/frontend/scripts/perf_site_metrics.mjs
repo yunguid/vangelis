@@ -69,6 +69,11 @@ const routeEntries = [
   { route: 'study-songs', entries: ['src/pages/StudySongsPage.jsx'] },
   { route: 'voice-loop', entries: ['src/pages/VoiceLoopLabPage.jsx'] }
 ];
+const fullSidebarManifestRecord = Object.values(manifest).find((record) => (
+  record.dynamicImports?.includes('src/components/Sidebar/MidiTab.jsx')
+  && record.dynamicImports?.includes('src/components/Sidebar/SoundTab.jsx')
+));
+const fullSidebarFile = fullSidebarManifestRecord?.file || null;
 
 function collectRouteClosure(entryKeys) {
   const visited = new Set();
@@ -99,7 +104,8 @@ function collectRouteClosure(entryKeys) {
     includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController')),
     includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab')),
     includesMidiParser: [...jsFiles].some((file) => file.includes('midiParser')),
-    includesAudioEngine: [...jsFiles].some((file) => file.includes('audioEngine'))
+    includesAudioEngine: [...jsFiles].some((file) => file.includes('audioEngine')),
+    includesFullSidebar: fullSidebarFile ? jsFiles.has(fullSidebarFile) : false
   };
 }
 
@@ -111,6 +117,7 @@ const factoryPresetChunk = jsAssets.find(({ file }) => file.includes('factoryPre
 const webMidiControllerChunk = jsAssets.find(({ file }) => file.includes('webMidiController')) || null;
 const soundControlPanelChunk = jsAssets.find(({ file }) => file.includes('SoundTab')) || null;
 const midiParserChunk = jsAssets.find(({ file }) => file.includes('midiParser')) || null;
+const fullSidebarChunk = fullSidebarFile ? assetMetricByFile.get(fullSidebarFile) || null : null;
 const appManifestEntry = manifest['src/App.jsx'];
 const appDefersMidiParser = appManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false;
 
@@ -180,6 +187,11 @@ const report = {
       file: midiParserChunk.file,
       kb: roundKb(midiParserChunk.bytes),
       gzipKb: roundKb(midiParserChunk.gzipBytes)
+    } : null,
+    fullSidebarChunk: fullSidebarChunk ? {
+      file: fullSidebarChunk.file,
+      kb: roundKb(fullSidebarChunk.bytes),
+      gzipKb: roundKb(fullSidebarChunk.gzipBytes)
     } : null,
     appDefersMidiParser,
     routeClosures
@@ -297,6 +309,27 @@ if (passiveRoutesWithAudioEngine.length > 0) {
     expected: 'no audioEngine chunk'
   });
 }
+if (!fullSidebarChunk) {
+  failures.push({ name: 'Guard isolated full sidebar chunk', actual: 0, minimum: 1 });
+}
+const navigationOnlyRouteNames = new Set([
+  'control-kit',
+  'generated-study',
+  'midi-pipeline',
+  'song-study',
+  'study-songs',
+  'voice-loop'
+]);
+const navigationRoutesWithFullSidebar = routeClosures
+  .filter(({ route, includesFullSidebar }) => navigationOnlyRouteNames.has(route) && includesFullSidebar)
+  .map(({ route }) => route);
+if (navigationRoutesWithFullSidebar.length > 0) {
+  failures.push({
+    name: 'Guard navigation-only route sidebar isolation',
+    routes: navigationRoutesWithFullSidebar,
+    expected: 'rail-only chrome'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -307,7 +340,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 13,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 15,
   failures
 };
 

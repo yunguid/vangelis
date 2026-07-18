@@ -1,6 +1,5 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader.jsx';
-import Sidebar from '../components/Sidebar';
+import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import { BUILT_IN_STUDIES, createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
@@ -84,7 +83,7 @@ const StudySongsPage = () => {
   return (
     <div className="study-library">
       <main className="study-library__shell">
-        <AppHeader activeSection="studies" />
+        <BrandHeader />
 
         <section className="study-library__panel" aria-label="Uploaded song library">
           <div className="study-library__toolbar">
@@ -167,7 +166,7 @@ const StudySongsPage = () => {
           )}
         </section>
       </main>
-      <Sidebar disabled isOpen={false} activeTab="midi" />
+      <SidebarNavigation />
     </div>
   );
 };

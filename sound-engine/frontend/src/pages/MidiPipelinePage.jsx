@@ -1,6 +1,5 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader.jsx';
-import Sidebar from '../components/Sidebar';
+import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import { getGeneratedStudyHref } from '../utils/routes.js';
 import SparkleSpinner from '../components/SparkleSpinner.jsx';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
@@ -242,7 +241,7 @@ const MidiPipelinePage = () => {
   return (
     <div className="pipeline-page">
       <main className="pipeline-page__shell">
-        <AppHeader activeSection="pipeline" className="pipeline-page__header" />
+        <BrandHeader className="pipeline-page__header" />
 
         <div className={`pipeline-flow ${stepCount === 1 ? 'pipeline-flow--single' : ''}`}>
           <section className="pipeline-step" aria-label="Step 1: pick a source">
@@ -509,7 +508,7 @@ const MidiPipelinePage = () => {
           )}
         </div>
       </main>
-      <Sidebar disabled isOpen={false} activeTab="midi" />
+      <SidebarNavigation />
     </div>
   );
 };

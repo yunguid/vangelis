@@ -1,6 +1,5 @@
 import React from 'react';
-import AppHeader from '../components/AppHeader.jsx';
-import Sidebar from '../components/Sidebar';
+import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
@@ -45,7 +44,7 @@ const GeneratedSongStudyPage = ({ jobId }) => {
       <div className="song-study__backdrop" aria-hidden="true" />
 
       <main className="song-study__shell">
-        <AppHeader activeSection="studies" />
+        <BrandHeader />
 
         <header className="song-study__masthead">
           <div className="song-study__title-group">
@@ -87,7 +86,7 @@ const GeneratedSongStudyPage = ({ jobId }) => {
           </section>
         )}
       </main>
-      <Sidebar disabled isOpen={false} activeTab="midi" />
+      <SidebarNavigation />
     </div>
   );
 };
