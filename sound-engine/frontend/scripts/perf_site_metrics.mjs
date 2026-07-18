@@ -49,6 +49,9 @@ const initialRefs = [...html.matchAll(/(?:src|href)="\.\/([^"?#]+)|(?:src|href)=
   .filter(Boolean);
 const initialJs = jsAssets.filter(({ file }) => initialRefs.includes(file));
 const initialCss = cssAssets.filter(({ file }) => initialRefs.includes(file));
+const initialCssText = (await Promise.all(initialCss.map(({ file }) => (
+  readFile(path.join(distDir, file), 'utf8')
+)))).join('\n');
 const routeChunks = jsAssets.filter(({ file }) => (
   /(?:ControlKit|GeneratedSongStudy|MidiPipeline|SongStudy|SoundDesigner|StudySongs|VoiceLoopLab)/.test(file)
 ));
@@ -208,6 +211,20 @@ const obsoleteWasmBuildPlugins = [
   'vite-plugin-top-level-await',
   'vite-plugin-wasm'
 ].filter((dependency) => packageJson.devDependencies?.[dependency]);
+const tailwindBuildDependencies = ['tailwindcss']
+  .filter((dependency) => packageJson.devDependencies?.[dependency]);
+const criticalGlobalCssSelectors = [
+  '.app-stage',
+  '.app-shell',
+  '.keyboard-surface',
+  '.value-slider',
+  '.wave-candy',
+  '.command-palette',
+  '.preset-shelf',
+  '.route-loading'
+];
+const missingCriticalGlobalCssSelectors = criticalGlobalCssSelectors
+  .filter((selector) => !initialCssText.includes(selector));
 
 const report = {
   generatedAt: new Date().toISOString(),
@@ -297,6 +314,10 @@ const report = {
     setTimeoutCalls: count(/\bsetTimeout\s*\(/g),
     addEventListenerCalls: count(/\.addEventListener\s*\(/g),
     externalCssImportCalls: countCss(/@import\s+(?:url\()?['"]?https?:\/\//g),
+    tailwindDirectiveCount: countCss(/@tailwind\b/g),
+    generatedTailwindVariableCount: (initialCssText.match(/--tw-/g) || []).length,
+    criticalGlobalCssSelectorCount: criticalGlobalCssSelectors.length,
+    missingCriticalGlobalCssSelectors,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -315,6 +336,7 @@ const report = {
     directRuntimeCount: directRuntimeDependencies.length,
     directRuntimeDependencies,
     obsoleteWasmBuildPlugins,
+    tailwindBuildDependencies,
     productionPackageCount: productionLockPackages.length,
     lockPackageCount: Math.max(0, Object.keys(packageLock.packages || {}).length - 1)
   }
@@ -496,6 +518,29 @@ if (
 if (obsoleteWasmBuildPlugins.length > 0) {
   failures.push({ name: 'Guard retired WASM build plugins', dependencies: obsoleteWasmBuildPlugins });
 }
+if (tailwindBuildDependencies.length > 0) {
+  failures.push({ name: 'Guard unused Tailwind build dependency', dependencies: tailwindBuildDependencies });
+}
+if (report.staticSignals.tailwindDirectiveCount > 0) {
+  failures.push({
+    name: 'Guard unused Tailwind source directives',
+    actual: report.staticSignals.tailwindDirectiveCount,
+    maximum: 0
+  });
+}
+if (report.staticSignals.generatedTailwindVariableCount > 0) {
+  failures.push({
+    name: 'Guard generated Tailwind CSS variables',
+    actual: report.staticSignals.generatedTailwindVariableCount,
+    maximum: 0
+  });
+}
+if (missingCriticalGlobalCssSelectors.length > 0) {
+  failures.push({
+    name: 'Guard critical global CSS selectors',
+    missing: missingCriticalGlobalCssSelectors
+  });
+}
 if (report.staticSignals.wasmModuleImports > 0) {
   failures.push({ name: 'Guard retired WASM module imports', actual: report.staticSignals.wasmModuleImports, maximum: 0 });
 }
@@ -530,7 +575,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 33,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 37,
   failures
 };
 

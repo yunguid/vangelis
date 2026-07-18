@@ -3,7 +3,7 @@
  * Main entry point - imports all style modules
  */
 
-/* Style Modules (must come before Tailwind) */
+/* Style modules */
 @import './styles/variables.css';
 @import './styles/layout.css';
 @import './styles/components.css';
@@ -24,11 +24,6 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
-
-/* Tailwind (if used) */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 #root,
 #root * {

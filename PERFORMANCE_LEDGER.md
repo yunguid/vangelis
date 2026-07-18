@@ -1044,3 +1044,46 @@ Implemented boundaries and controls:
 - Isolated DSP benchmark: 411.4 us per 128-frame block with 6.5x realtime headroom.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - `git diff --check`: pass.
+
+## Optimization batch 19 — purpose-built global CSS pipeline
+
+Collected from source-class attribution, generated-CSS inspection, production bundle metrics,
+dependency-lock analysis, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 18 | Batch 19 | Change |
+|---|---:|---:|---:|
+| Initial/global CSS raw | 53.42 KiB | 46.67 KiB | -12.6% |
+| Initial/global CSS gzip | 11.11 KiB | 9.48 KiB | -14.7% |
+| Generated Tailwind custom-property occurrences | 153 | 0 | removed |
+| Tailwind source directives | 3 | 0 | removed |
+| Tailwind build dependency | present | 0 | removed |
+| Lockfile packages | 405 | 314 | -91 packages / -22.5% |
+| Production deployment bytes | 1,492.08 KiB | 1,485.39 KiB | -6.69 KiB |
+| Automated production budgets | 51 | 55 | +4 guardrails |
+
+Implemented boundaries and controls:
+
+- Source analysis found no Tailwind utility classes, `@apply`, theme lookups, or plugins, while
+  the three Tailwind directives still emitted the complete preflight, 53 distinct `--tw-*`
+  variables, global backdrop state, and unused positional/display utility selectors.
+- Removed Tailwind from PostCSS, the development dependency graph, the lockfile, and project
+  configuration. Autoprefixer and PostCSS remain in place to preserve browser compatibility.
+- Replaced the broad generated preflight with a compact, explicit normalization layer for the
+  elements this application actually renders: headings and copy, lists, links, forms, tables,
+  media/canvas elements, borders, and hidden content. Existing app typography, control, and
+  layout rules remain authoritative.
+- Added production guards that prohibit Tailwind dependencies, source directives, and generated
+  `--tw-*` variables, plus a selector-presence guard for eight critical global UI surfaces.
+
+### Batch 19 verification gates
+
+- Full suite: 47 files, 487/487 tests pass.
+- Production delivery/static/dependency/route guardrails: 55/55 pass.
+- Deterministic visual workload after activation: 90.96% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 422.5 us per 128-frame block with 6.3x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 23 total, unchanged.
+- `git diff --check`: pass.
