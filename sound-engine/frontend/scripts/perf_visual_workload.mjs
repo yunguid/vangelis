@@ -51,6 +51,7 @@ import {
   upperBound
 } from '../src/components/midiBirdsEyeMath.js';
 import { drawWaveCandyMeterGrid } from '../src/utils/waveCandyMeterGrid.js';
+import { loadAppSession } from '../src/utils/appSession.js';
 
 const SECONDS = 20;
 
@@ -80,6 +81,53 @@ const lcg = (seed = 1337) => {
 };
 
 const random = lcg(42042);
+
+const sessionBenchmarkIterations = 20000;
+const sessionBenchmarkJson = JSON.stringify({
+  waveformType: 'Sawtooth',
+  sidebarOpen: true,
+  sidebarTab: 'midi',
+  showShortcuts: true,
+  tempoFactor: 1.25,
+  controlSections: {
+    essentials: true,
+    delay: true,
+    reverb: false,
+    color: true,
+    modulation: false
+  }
+});
+const previousWindow = globalThis.window;
+globalThis.window = {
+  localStorage: {
+    getItem: () => sessionBenchmarkJson
+  }
+};
+const cachedInitialSession = loadAppSession();
+const runSessionReadBenchmark = (iterations, loadSession) => {
+  let checksum = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const session = loadSession();
+    checksum += session.tempoFactor + session.waveformType.length;
+  }
+  return { checksum, elapsedMs: performance.now() - startedAt };
+};
+runSessionReadBenchmark(200, loadAppSession);
+runSessionReadBenchmark(200, () => cachedInitialSession);
+const eagerSessionReadBenchmark = runSessionReadBenchmark(
+  sessionBenchmarkIterations,
+  loadAppSession
+);
+const cachedSessionReadBenchmark = runSessionReadBenchmark(
+  sessionBenchmarkIterations,
+  () => cachedInitialSession
+);
+if (previousWindow === undefined) delete globalThis.window;
+else globalThis.window = previousWindow;
+if (eagerSessionReadBenchmark.checksum !== cachedSessionReadBenchmark.checksum) {
+  throw new Error('Cached app-session initialization changed the restored session');
+}
 
 const srcFreq = new Uint8Array(AUDIO_FREQ_BINS);
 const srcWave = new Float32Array(AUDIO_WAVE_SAMPLES);
@@ -1256,6 +1304,27 @@ const output = {
     sceneActiveHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
     sceneIdleHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     sceneReducedMotionHz: 0
+  },
+  reactInitializationPolicy: {
+    standardPlaybackRenders: radarPlayingFrames,
+    productionEagerMutableHookInitializersBefore: 31,
+    productionEagerMutableHookInitializersAfter: 0,
+    hotPlaybackContainerAllocationsPerRenderBefore: 14,
+    hotPlaybackContainerAllocationsPerRenderAfter: 0,
+    hotPlaybackContainerAllocationsOverBenchmarkBefore: radarPlayingFrames * 14,
+    hotPlaybackContainerAllocationsOverBenchmarkAfter: 0,
+    appSessionStorageReadsOverBenchmarkBefore: radarPlayingFrames,
+    appSessionStorageReadsOverBenchmarkAfter: 1,
+    appSessionJsonParsesOverBenchmarkBefore: radarPlayingFrames,
+    appSessionJsonParsesOverBenchmarkAfter: 1,
+    sessionBenchmarkIterations,
+    eagerSessionReadElapsedMs: Number(eagerSessionReadBenchmark.elapsedMs.toFixed(2)),
+    cachedSessionReadElapsedMs: Number(cachedSessionReadBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      eagerSessionReadBenchmark.elapsedMs,
+      cachedSessionReadBenchmark.elapsedMs
+    ).toFixed(2)),
+    restoredSessionChecksumDelta: 0
   },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,

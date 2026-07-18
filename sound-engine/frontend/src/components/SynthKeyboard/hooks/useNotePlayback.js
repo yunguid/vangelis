@@ -9,9 +9,12 @@ export function useNotePlayback({
   scheduleVisualUpdate,
   updateVelocityDisplay
 }) {
-  const activeNotesRef = useRef(new Map());
-  const pendingNotesRef = useRef(new Map());
-  const pointerToNoteRef = useRef(new Map());
+  const activeNotesRef = useRef(null);
+  if (!activeNotesRef.current) activeNotesRef.current = new Map();
+  const pendingNotesRef = useRef(null);
+  if (!pendingNotesRef.current) pendingNotesRef.current = new Map();
+  const pointerToNoteRef = useRef(null);
+  if (!pointerToNoteRef.current) pointerToNoteRef.current = new Map();
 
   useEffect(() => {
     if (typeof PerformanceObserver === 'undefined' || typeof window === 'undefined') {

@@ -337,6 +337,23 @@ const drawMeter = (ctx, state, width, height, resized, gradientCache) => {
 
 const SPECTRUM_CELLS = 96;
 
+const createSpectrumBuffers = () => ({
+  freq: null,
+  time: null,
+  timeByte: null,
+  left: null,
+  leftByte: null,
+  right: null,
+  rightByte: null,
+  specDb: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
+  specSmoothed: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
+  specEnvelope: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
+  specBinRanges: null,
+  specBinSampleRate: 0,
+  specBinFftSize: 0,
+  specBinCount: 0
+});
+
 const WaveCandyCanvas = () => {
   const spectrogramRef = useRef(null);
   const scopeRef = useRef(null);
@@ -345,40 +362,30 @@ const WaveCandyCanvas = () => {
   const meterRef = useRef(null);
   const spectrumGradientRef = useRef(null);
   const meterGradientRef = useRef(null);
-  const spectrogramRenderCacheRef = useRef({
-    colorLut: null,
-    rowRuns: null,
-    height: 0,
-    cells: 0
-  });
+  const spectrogramRenderCacheRef = useRef(null);
+  if (!spectrogramRenderCacheRef.current) {
+    spectrogramRenderCacheRef.current = {
+      colorLut: null,
+      rowRuns: null,
+      height: 0,
+      cells: 0
+    };
+  }
 
-  const buffersRef = useRef({
-    freq: null,
-    time: null,
-    timeByte: null,
-    left: null,
-    leftByte: null,
-    right: null,
-    rightByte: null,
-    specDb: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
-    specSmoothed: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
-    specEnvelope: new Float32Array(SPECTRUM_CELLS).fill(FLOOR_DB),
-    specBinRanges: null,
-    specBinSampleRate: 0,
-    specBinFftSize: 0,
-    specBinCount: 0
-  });
+  const buffersRef = useRef(null);
+  if (!buffersRef.current) buffersRef.current = createSpectrumBuffers();
 
   // The spectrum's physical string: Lagrange-envelope targets pull it via
   // springs while wave-equation tension lets transients ripple outward.
-  const spectrumChainRef = useRef(
-    new VerletChain(SPECTRUM_CELLS, {
+  const spectrumChainRef = useRef(null);
+  if (!spectrumChainRef.current) {
+    spectrumChainRef.current = new VerletChain(SPECTRUM_CELLS, {
       stiffness: 130,
       tension: 300,
       damping: 0.9,
       initial: FLOOR_DB
-    })
-  );
+    });
+  }
   const spectrumEnvelopePlanRef = useRef(null);
   if (!spectrumEnvelopePlanRef.current) {
     spectrumEnvelopePlanRef.current = createLagrangeEnvelopePlan({
@@ -389,13 +396,17 @@ const WaveCandyCanvas = () => {
   }
 
   // Loudness state: 400ms exponentially-weighted mean square + peak hold
-  const meterStateRef = useRef({
-    meanSquare: 0,
-    shortTermDb: -60,
-    peakHoldDb: -60,
-    peakHeldAt: 0
-  });
-  const stereoStatsRef = useRef({ meanSquare: 0, peak: 0 });
+  const meterStateRef = useRef(null);
+  if (!meterStateRef.current) {
+    meterStateRef.current = {
+      meanSquare: 0,
+      shortTermDb: -60,
+      peakHoldDb: -60,
+      peakHeldAt: 0
+    };
+  }
+  const stereoStatsRef = useRef(null);
+  if (!stereoStatsRef.current) stereoStatsRef.current = { meanSquare: 0, peak: 0 };
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof requestAnimationFrame !== 'function') {

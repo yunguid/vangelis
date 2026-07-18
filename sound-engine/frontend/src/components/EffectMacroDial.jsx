@@ -127,12 +127,15 @@ const EffectMacroDial = ({
   compact = false
 }) => {
   const canvasRef = useRef(null);
-  const dragRef = useRef({
-    active: false,
-    pointerId: null,
-    startY: 0,
-    startValue: 0
-  });
+  const dragRef = useRef(null);
+  if (!dragRef.current) {
+    dragRef.current = {
+      active: false,
+      pointerId: null,
+      startY: 0,
+      startValue: 0
+    };
+  }
   const [isAudioActive, setIsAudioActive] = React.useState(
     () => !!audioEngine.getActivity()?.isActive
   );

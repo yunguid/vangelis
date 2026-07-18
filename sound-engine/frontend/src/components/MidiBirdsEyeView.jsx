@@ -18,8 +18,9 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
     () => buildNoteRenderWindow(currentMidi?.notes || []),
     [currentMidi]
   );
-  const propsRef = useRef({ currentMidi, progress, activeNotes, isPlaying, noteRenderWindow });
-  const noteIdCacheRef = useRef(new Map());
+  const propsRef = useRef(null);
+  const noteIdCacheRef = useRef(null);
+  if (!noteIdCacheRef.current) noteIdCacheRef.current = new Map();
 
   propsRef.current = { currentMidi, progress, activeNotes, isPlaying, noteRenderWindow };
 

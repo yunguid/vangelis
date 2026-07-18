@@ -160,18 +160,18 @@ function stopSource(runtimeRef) {
 }
 
 const VoiceLoopLabPage = () => {
-  const [form, setForm] = React.useState({
+  const [form, setForm] = React.useState(() => ({
     seed: STARTER_LOOP.blurb,
     key: STARTER_LOOP.key,
     bpm: STARTER_LOOP.bpm,
     density: 'very high',
     carrier: 'AA',
     glide: 'medium'
-  });
+  }));
   const [score, setScore] = React.useState(STARTER_SCORE);
   const [activeLoopId, setActiveLoopId] = React.useState(STARTER_LOOP.id);
   const [rendered, setRendered] = React.useState(null);
-  const [controls, setControls] = React.useState({
+  const [controls, setControls] = React.useState(() => ({
     speed: 1,
     tone: 4200,
     wet: 0.16,
@@ -184,14 +184,18 @@ const VoiceLoopLabPage = () => {
     tremoloDepth: 0.04,
     tremoloRate: 5,
     ...STARTER_LOOP.controls
-  });
-  const [meta, setMeta] = React.useState({ source: 'loopbook', warning: '', notes: STARTER_LOOP.notes });
+  }));
+  const [meta, setMeta] = React.useState(() => ({
+    source: 'loopbook',
+    warning: '',
+    notes: STARTER_LOOP.notes
+  }));
   const [generating, setGenerating] = React.useState(false);
   const [recording, setRecording] = React.useState(false);
-  const [generationStatus, setGenerationStatus] = React.useState({
+  const [generationStatus, setGenerationStatus] = React.useState(() => ({
     tone: 'idle',
     label: ''
-  });
+  }));
   const [error, setError] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [playhead, setPlayhead] = React.useState(0);

@@ -34,7 +34,7 @@ const buildReadyStudyEntries = (jobs) => {
 };
 
 const StudySongsPage = () => {
-  const [jobs, setJobs] = React.useState([]);
+  const [jobs, setJobs] = React.useState(() => []);
   const [error, setError] = React.useState('');
   const [deleteError, setDeleteError] = React.useState('');
   const [deletingJobId, setDeletingJobId] = React.useState('');

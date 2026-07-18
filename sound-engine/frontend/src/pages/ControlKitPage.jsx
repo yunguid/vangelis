@@ -84,7 +84,7 @@ const ControlKitPage = () => {
   const [numMs, setNumMs] = useState(240);
   const [faderContinuous, setFaderContinuous] = useState(0.6);
   const [faderStepped, setFaderStepped] = useState(3);
-  const [faderTrio, setFaderTrio] = useState([0.7, 0.4, 0.9]);
+  const [faderTrio, setFaderTrio] = useState(() => [0.7, 0.4, 0.9]);
   const [toggleOn, setToggleOn] = useState(true);
   const [toggleOff, setToggleOff] = useState(false);
   const [segmentWaveform, setSegmentWaveform] = useState('sine');

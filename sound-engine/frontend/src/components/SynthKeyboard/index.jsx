@@ -33,7 +33,8 @@ const TOUCH_VELOCITIES = [
 
 const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = new Set() }) => {
   const keyboardRef = useRef(null);
-  const keyElementsRef = useRef(new Map());
+  const keyElementsRef = useRef(null);
+  if (!keyElementsRef.current) keyElementsRef.current = new Map();
 
   const audioParamsRef = useRef(audioParams);
   const waveformRef = useRef(waveformType);

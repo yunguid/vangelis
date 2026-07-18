@@ -121,7 +121,8 @@ const Knob = ({
   // nudge/disabled live in a ref so the native listener is attached once
   // per mount instead of churning on every value change.
   const bodyRef = useRef(null);
-  const wheelStateRef = useRef({ disabled, nudge });
+  const wheelStateRef = useRef(null);
+  if (!wheelStateRef.current) wheelStateRef.current = { disabled, nudge };
 
   useEffect(() => {
     wheelStateRef.current = { disabled, nudge };

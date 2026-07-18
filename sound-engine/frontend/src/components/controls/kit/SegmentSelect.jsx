@@ -40,7 +40,8 @@ const SegmentSelect = ({
 }) => {
   const generatedId = useId();
   const groupId = id || `kit-segment-${generatedId}`;
-  const cellRefs = useRef([]);
+  const cellRefs = useRef(null);
+  if (!cellRefs.current) cellRefs.current = [];
 
   const selectedIndex = options.findIndex((opt) => opt.value === value);
   const focusableIndex = selectedIndex === -1 ? 0 : selectedIndex;

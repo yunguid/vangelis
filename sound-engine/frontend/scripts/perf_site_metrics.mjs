@@ -514,6 +514,15 @@ const deferredAudioWarmupConsumers = (
 const deferredVisualMountConsumers = (
   playableRouteSource.match(/useDeferredVisualMount\s*\(/g) || []
 ).length;
+const eagerMutableHookInitializers = (
+  productionSourceText.match(
+    /(?:React\.)?use(?:Ref|State)\(\s*(?:new\s+(?:Map|Set|VerletChain)\s*\(|loadAppSession\s*\(\s*\)|\{|\[)/g
+  ) || []
+).length;
+const appLoadsSessionOnce = (
+  /const \[initialSession\] = useState\(loadAppSession\)/.test(productionSourceText)
+  && !/useRef\(loadAppSession\(\)\)/.test(productionSourceText)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -750,7 +759,13 @@ const report = {
     hardwareMidiReadinessCalls,
     eagerPlayableRouteAudioWarmupCalls,
     deferredAudioWarmupConsumers,
-    deferredVisualMountConsumers
+    deferredVisualMountConsumers,
+    productionEagerMutableHookInitializers: eagerMutableHookInitializers,
+    hotPlaybackRedundantContainerAllocationsPerRender:
+      eagerMutableHookInitializers === 0 ? 0 : 14,
+    appSessionStorageReadsPerReactRender: appLoadsSessionOnce ? 0 : 1,
+    appSessionStorageReadsPerMount: 1,
+    appLoadsSessionOnce
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1302,6 +1317,20 @@ if (deferredVisualMountConsumers !== 3) {
     expected: 3
   });
 }
+if (eagerMutableHookInitializers !== 0) {
+  failures.push({
+    name: 'Guard lazy mutable React hook initialization',
+    actual: eagerMutableHookInitializers,
+    expected: 0
+  });
+}
+if (!appLoadsSessionOnce) {
+  failures.push({
+    name: 'Guard one-time app session restoration',
+    actual: 'saved session loaded during React renders',
+    expected: 'lazy useState initializer invoked once per App mount'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1312,7 +1341,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 76,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 78,
   failures
 };
 

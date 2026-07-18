@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { clamp } from '../constants';
 
 export function useVisualFeedback(keyElementsRef) {
-  const visualQueueRef = useRef(new Map());
+  const visualQueueRef = useRef(null);
+  if (!visualQueueRef.current) visualQueueRef.current = new Map();
   const visualRafRef = useRef(null);
   const velocityPendingRef = useRef(null);
   const velocityRafRef = useRef(null);

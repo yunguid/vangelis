@@ -20,7 +20,8 @@ export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
 
   const waveformRef = useRef(waveformType);
   const audioParamsRef = useRef(audioParams);
-  const heldRef = useRef(new Map()); // midi number -> display noteId
+  const heldRef = useRef(null); // midi number -> display noteId
+  if (!heldRef.current) heldRef.current = new Map();
   const publishActiveNotes = useVisibleSnapshotPublisher({
     getSnapshot: () => new Set(heldRef.current.values()),
     publishSnapshot: setActiveNotes,

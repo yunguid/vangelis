@@ -14,8 +14,10 @@ export function useKeyboardInput({
   startNote,
   stopNote
 }) {
-  const keyToNoteRef = useRef(new Map());
-  const keyboardVelocityRef = useRef(new Map());
+  const keyToNoteRef = useRef(null);
+  if (!keyToNoteRef.current) keyToNoteRef.current = new Map();
+  const keyboardVelocityRef = useRef(null);
+  if (!keyboardVelocityRef.current) keyboardVelocityRef.current = new Map();
 
   const velocityFromKeyboard = useCallback((key) => {
     const now = performance.now();

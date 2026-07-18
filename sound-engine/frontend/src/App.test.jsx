@@ -67,6 +67,21 @@ describe('App', () => {
     expect(screen.getByRole('region', { name: 'Virtual keyboard' })).toBeInTheDocument();
   });
 
+  it('loads the persisted session only once across App renders', () => {
+    const getItemSpy = vi.spyOn(window.localStorage, 'getItem');
+    try {
+      render(<App />);
+      expect(getItemSpy).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByLabelText('View keyboard shortcuts'));
+      fireEvent.click(screen.getByLabelText('Close shortcuts'));
+
+      expect(getItemSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      getItemSpy.mockRestore();
+    }
+  });
+
   it('does not render birds-eye performance toggle', () => {
     render(<App />);
     expect(screen.queryByRole('tab', { name: 'Keys' })).not.toBeInTheDocument();

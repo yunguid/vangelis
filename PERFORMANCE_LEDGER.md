@@ -2677,3 +2677,61 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 53 — site-wide lazy mutable hook initialization
+
+Collected from a production-source census across every route, the hot Home/playback/keyboard render
+chain, direct saved-session restoration workloads, three independently launched 20,000-iteration
+profiles, React render/rerender evidence, generated production closures, focused App/playback/
+keyboard/control tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 52 | Batch 53 | Change |
+|---|---:|---:|---:|
+| Production eager mutable hook initializers | 31 | 0 | removed |
+| Discarded containers per hot playback render | 14 | 0 | removed |
+| Discarded containers over 500-render model | 7,000 | 0 | removed |
+| Session storage reads / JSON parses over 500 renders | 500 / 500 | 1 / 1 | -99.80% each |
+| Session restoration model CPU, 20k renders | 69.41–70.51 ms | 0.09–0.10 ms | -99.86% to -99.87% |
+| Restored-session checksum delta | — | 0 | exact |
+| Initial Home JS gzip | 67.86 KiB | 67.94 KiB | +0.08 KiB |
+| Fully activated Home visual JS gzip | 78.75 KiB | 78.86 KiB | +0.11 KiB |
+| Sound Designer route JS gzip | 63.41 KiB | 63.45 KiB | +0.04 KiB |
+| Production deployment bytes | 1,484.27 KiB | 1,484.99 KiB | +0.72 KiB |
+| Automated production budgets | 94 | 96 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Replaced `useRef(loadAppSession())` with React's lazy `useState(loadAppSession)` initializer.
+  App renders no longer reread local storage, parse JSON, sanitize parameters, or rebuild restored
+  state; the initializer still runs once for every genuine App mount.
+- Converted all eager Map, Set, array, object, typed-buffer, and Verlet-chain hook initializers to
+  lazy first-render initialization. The audit covers Home, MIDI playback, hardware MIDI, keyboard
+  input/feedback/playback, WaveCandy, legacy MIDI view, macro dials, control-kit widgets, Voice Loop,
+  Study Songs, and Control Kit.
+- Converted mutable `useState` literals to lazy initializer functions on secondary routes, including
+  Voice Loop form/control/status state, Control Kit's fader trio, Study Songs jobs, and playback's
+  active-note Set.
+- Added an App interaction test proving local storage is read once across state-driven rerenders; a
+  direct real-`loadAppSession` benchmark with checksum equivalence; exact per-render/session allocation
+  counts; and a production-wide guard that rejects eager mutable `useRef` or `useState` initializers.
+
+### Batch 53 verification gates
+
+- Full suite: 58 files, 521/521 tests pass, including the new one-read App session case and all
+  Sound Designer, playback, hardware MIDI, keyboard, control-kit, radar, Song Study, canvas,
+  numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 96/96 pass; production source reports zero
+  eager mutable hook initializers, zero redundant hot-playback containers per render, and zero saved-
+  session reads per rerender.
+- Three 20,000-render profiles measured 99.86–99.87% lower session-access CPU: 69.41–70.51 ms falls
+  to 0.09–0.10 ms. The 500-render playback model removes 7,000 container allocations plus 499 storage
+  reads and 499 JSON parses, with an identical restored-session checksum.
+- Warmed combined visual workload: 80.24% lower normalized median CPU than the legacy reference on
+  the final independent pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and
+  50% fewer scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 405.7 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

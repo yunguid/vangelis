@@ -132,7 +132,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [activeNotes, setActiveNotes] = useState(new Set());
+  const [activeNotes, setActiveNotes] = useState(() => new Set());
   const [currentMidi, setCurrentMidi] = useState(null);
   const [tempoFactor, setTempoFactorState] = useState(1.0);
 
@@ -142,19 +142,26 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const tempoFactorRef = useRef(1.0);
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
-  const activeNoteCountsRef = useRef(new Map());
-  const activeVoiceIdsRef = useRef(new Set());
-  const scheduledVoiceMapRef = useRef(new Map());
-  const timeoutsRef = useRef(new Set());
+  const activeNoteCountsRef = useRef(null);
+  if (!activeNoteCountsRef.current) activeNoteCountsRef.current = new Map();
+  const activeVoiceIdsRef = useRef(null);
+  if (!activeVoiceIdsRef.current) activeVoiceIdsRef.current = new Set();
+  const scheduledVoiceMapRef = useRef(null);
+  if (!scheduledVoiceMapRef.current) scheduledVoiceMapRef.current = new Map();
+  const timeoutsRef = useRef(null);
+  if (!timeoutsRef.current) timeoutsRef.current = new Set();
   const schedulerSequenceRef = useRef(0);
   const stopProgressLoopRef = useRef(null);
   const playRequestSeqRef = useRef(0);
-  const playbackRef = useRef({
-    startTime: 0,
-    pauseOriginalTime: 0,
-    elapsedOriginalAtStart: 0,
-    midiData: null
-  });
+  const playbackRef = useRef(null);
+  if (!playbackRef.current) {
+    playbackRef.current = {
+      startTime: 0,
+      pauseOriginalTime: 0,
+      elapsedOriginalAtStart: 0,
+      midiData: null
+    };
+  }
   const publishActiveNotes = useVisibleSnapshotPublisher({
     getSnapshot: () => new Set(activeNoteCountsRef.current.keys()),
     publishSnapshot: setActiveNotes,

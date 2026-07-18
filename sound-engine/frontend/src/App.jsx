@@ -49,8 +49,7 @@ const App = () => {
   useAudioEngineWarmup();
   const showPrimaryVisual = useDeferredVisualMount(PRIMARY_VISUAL_IDLE_TIMEOUT_MS);
   const showAmbientScene = useDeferredVisualMount(AMBIENT_VISUAL_IDLE_TIMEOUT_MS);
-  const initialSessionRef = useRef(loadAppSession());
-  const initialSession = initialSessionRef.current;
+  const [initialSession] = useState(loadAppSession);
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = useState(() => initialSession.waveformType || DEFAULT_WAVEFORM);
   const [audioParams, setAudioParams] = useState(() => (
