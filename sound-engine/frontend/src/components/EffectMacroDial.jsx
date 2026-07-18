@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 
 const CANVAS_SIZE = 112;
 const TRACK_START = Math.PI * 0.72;
 const TRACK_END = Math.PI * 2.28;
 const TRACK_SPAN = TRACK_END - TRACK_START;
+const ACTIVE_FRAME_INTERVAL_MS = 1000 / 24;
 
 const clamp01 = (value) => Math.min(Math.max(value, 0), 1);
 
@@ -131,10 +133,12 @@ const EffectMacroDial = ({
     startY: 0,
     startValue: 0
   });
-  const activityRef = useRef(audioEngine.getActivity());
+  const [isAudioActive, setIsAudioActive] = React.useState(
+    () => !!audioEngine.getActivity()?.isActive
+  );
 
   useEffect(() => audioEngine.subscribeActivity((activity) => {
-    activityRef.current = activity;
+    setIsAudioActive(!!activity?.isActive);
   }), []);
 
   useEffect(() => {
@@ -143,24 +147,29 @@ const EffectMacroDial = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return () => undefined;
 
-    let rafId = 0;
     const seed = Array.from(label).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-    const render = () => {
+    const draw = () => {
       drawDial(
         ctx,
         canvas.width,
         value,
         accent,
-        !!activityRef.current?.isActive,
+        isAudioActive,
         disabled,
         seed
       );
-      rafId = requestAnimationFrame(render);
     };
 
-    rafId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(rafId);
-  }, [accent, disabled, label, value]);
+    draw();
+    if (!isAudioActive) return () => undefined;
+
+    let lastFrame = 0;
+    return startVisibilityAwareRafLoop((time) => {
+      if (time - lastFrame < ACTIVE_FRAME_INTERVAL_MS) return;
+      lastFrame = time;
+      draw();
+    });
+  }, [accent, disabled, isAudioActive, label, value]);
 
   const updateFromDelta = (clientY) => {
     const drag = dragRef.current;

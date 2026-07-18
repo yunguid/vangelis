@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
+import { getCappedDevicePixelRatio } from '../utils/canvasPerformance.js';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { VortexField } from '../utils/vizPhysics.js';
 
 // Audio-reactive WebGL2 background.
@@ -249,9 +251,8 @@ const Scene = () => {
     const uBands = gl.getUniformLocation(program, 'uBands');
 
     // Cap DPR: a soft background does not need retina resolution
-    const dprCap = 1.25;
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
+      const dpr = getCappedDevicePixelRatio(1.25);
       const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
       const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
       if (canvas.width !== w || canvas.height !== h) {
@@ -261,9 +262,12 @@ const Scene = () => {
       }
     };
     resize();
-    window.addEventListener('resize', resize);
+    const resizeObserver = typeof ResizeObserver === 'function'
+      ? new ResizeObserver(resize)
+      : null;
+    if (resizeObserver) resizeObserver.observe(canvas);
+    else window.addEventListener('resize', resize);
 
-    let raf = 0;
     let running = true;
     let contextLost = false;
     let analyser = null;
@@ -300,17 +304,18 @@ const Scene = () => {
     const BAND_EDGES = [30, 80, 160, 350, 700, 1400, 3000, 6500, 13000];
     const bands = new Float32Array(8);
 
+    let stopFrameLoop = () => undefined;
     const onLost = (e) => {
       e.preventDefault();
       contextLost = true;
+      stopFrameLoop();
     };
     canvas.addEventListener('webglcontextlost', onLost);
 
     const start = performance.now();
     const frame = () => {
       if (!running) return;
-      raf = requestAnimationFrame(frame);
-      if (contextLost || document.hidden) return;
+      if (contextLost) return;
 
       if (!analyser) {
         analyser = audioEngine.getAnalyser();
@@ -383,7 +388,6 @@ const Scene = () => {
       vortices.fillUniforms(vortexPos, vortexStr, vortexRad);
       window.__sceneDebug = { vortexCount: vortices.particles.length, pulse, level };
 
-      resize();
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, (now - start) / 1000);
       gl.uniform1f(uBass, follow('bass', bass));
@@ -398,12 +402,13 @@ const Scene = () => {
       gl.uniform1fv(uBands, bands);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
-    raf = requestAnimationFrame(frame);
+    stopFrameLoop = startVisibilityAwareRafLoop(frame);
 
     return () => {
       running = false;
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', resize);
+      stopFrameLoop();
+      resizeObserver?.disconnect();
+      if (!resizeObserver) window.removeEventListener('resize', resize);
       canvas.removeEventListener('webglcontextlost', onLost);
       // Do NOT force-lose the context here: the canvas element survives a
       // StrictMode remount, and a force-lost context stays dead on the next
@@ -430,4 +435,4 @@ const Scene = () => {
   );
 };
 
-export default Scene;
+export default React.memo(Scene);

@@ -1,13 +1,21 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Sidebar from './index.jsx';
+import { MidiTransportContext, SoundControlsContext } from '../../context/SynthContexts.jsx';
+
+const { soundTabRenderSpy } = vi.hoisted(() => ({
+  soundTabRenderSpy: vi.fn()
+}));
 
 vi.mock('./MidiTab.jsx', () => ({
   default: () => <div data-testid="midi-tab">MIDI content</div>
 }));
 
 vi.mock('./SoundTab.jsx', () => ({
-  default: () => <div data-testid="sound-tab">Sound content</div>
+  default: () => {
+    soundTabRenderSpy();
+    return <div data-testid="sound-tab">Sound content</div>;
+  }
 }));
 
 const buildProps = (overrides = {}) => ({
@@ -74,19 +82,45 @@ describe('Sidebar', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
-  it('closes panel when active tab button is clicked while open', () => {
+  it('closes panel when active tab button is clicked while open', async () => {
     const onClose = vi.fn();
     render(<Sidebar {...buildProps({ isOpen: true, activeTab: 'midi', onClose })} />);
 
+    expect(await screen.findByTestId('midi-tab')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /close midi browser/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the sound tab panel content', () => {
+  it('renders the sound tab panel content', async () => {
     render(<Sidebar {...buildProps({ isOpen: true, activeTab: 'sound' })} />);
 
     expect(screen.getByText('Sound controls')).toBeInTheDocument();
-    expect(screen.getByTestId('sound-tab')).toBeInTheDocument();
+    expect(await screen.findByTestId('sound-tab')).toBeInTheDocument();
+  });
+
+  it('does not rerender the sound panel when only MIDI progress changes', async () => {
+    const props = buildProps({ isOpen: true, activeTab: 'sound' });
+    const soundValue = { waveformType: 'Sine', audioParams: {} };
+    const midiValue = { isPlaying: true, progress: 0.1 };
+    const view = render(
+      <SoundControlsContext.Provider value={soundValue}>
+        <MidiTransportContext.Provider value={midiValue}>
+          <Sidebar {...props} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    expect(await screen.findByTestId('sound-tab')).toBeInTheDocument();
+    const renderCount = soundTabRenderSpy.mock.calls.length;
+
+    view.rerender(
+      <SoundControlsContext.Provider value={soundValue}>
+        <MidiTransportContext.Provider value={{ ...midiValue, progress: 0.2 }}>
+          <Sidebar {...props} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+
+    expect(soundTabRenderSpy).toHaveBeenCalledTimes(renderCount);
   });
 
   it('closes when escape is pressed', () => {

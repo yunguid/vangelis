@@ -3,6 +3,7 @@ import AppHeader from '../components/AppHeader.jsx';
 import Sidebar from '../components/Sidebar';
 import { BUILT_IN_STUDIES, createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
+import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
 import {
   MIDI_PIPELINE_HREF,
   getGeneratedStudyHref,
@@ -53,16 +54,8 @@ const StudySongsPage = () => {
     loadJobs();
   }, [loadJobs]);
 
-  React.useEffect(() => {
-    if (!jobs.some((job) => !TERMINAL_JOB_STATES.has(job.status))) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(loadJobs, POLL_INTERVAL_MS);
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [jobs, loadJobs]);
+  const hasRunningJobs = jobs.some((job) => !TERMINAL_JOB_STATES.has(job.status));
+  useVisiblePolling(loadJobs, POLL_INTERVAL_MS, hasRunningJobs);
 
   const readyStudies = React.useMemo(() => buildReadyStudyEntries(jobs), [jobs]);
   const backgroundRuns = React.useMemo(

@@ -5,4 +5,4 @@ import WaveCandyCanvas from './WaveCandyCanvas.jsx';
 // see PROGRESS.md ("retire the Raylib/WASM WaveCandy path") for rationale.
 const WaveCandy = () => <WaveCandyCanvas />;
 
-export default WaveCandy;
+export default React.memo(WaveCandy);

@@ -1,6 +1,4 @@
 import React, { useEffect, useCallback } from 'react';
-import MidiTab from './MidiTab.jsx';
-import SoundTab from './SoundTab.jsx';
 import {
   useMidiTransport,
   useSoundControls
@@ -9,6 +7,83 @@ import { SOUND_DESIGNER_HREF } from '../../utils/routes.js';
 import './Sidebar.css';
 
 const MOBILE_BREAKPOINT_QUERY = '(max-width: 900px)';
+
+let midiTabPromise;
+let soundTabPromise;
+const loadMidiTab = () => {
+  midiTabPromise ||= import('./MidiTab.jsx');
+  return midiTabPromise;
+};
+const loadSoundTab = () => {
+  soundTabPromise ||= import('./SoundTab.jsx');
+  return soundTabPromise;
+};
+const MidiTab = React.lazy(loadMidiTab);
+const SoundTab = React.lazy(loadSoundTab);
+const preloadPanel = (tab) => {
+  const promise = tab === 'midi' ? loadMidiTab() : loadSoundTab();
+  promise.catch(() => undefined);
+};
+
+const MidiPanelContent = () => {
+  const {
+    isPlaying,
+    isPaused,
+    progress,
+    currentMidi,
+    tempoFactor,
+    onPlay,
+    onPause,
+    onResume,
+    onStop,
+    onTempoChange
+  } = useMidiTransport();
+
+  return (
+    <MidiTab
+      isPlaying={isPlaying}
+      isPaused={isPaused}
+      progress={progress}
+      currentMidi={currentMidi}
+      tempoFactor={tempoFactor}
+      onPlay={onPlay}
+      onPause={onPause}
+      onResume={onResume}
+      onStop={onStop}
+      onTempoChange={onTempoChange}
+    />
+  );
+};
+
+const SoundPanelContent = () => {
+  const {
+    waveformType,
+    onWaveformChange,
+    audioParams,
+    onParamChange,
+    onParamsChange,
+    transportBpm,
+    controlSections,
+    onControlSectionToggle,
+    activePresetName,
+    onPresetApplied
+  } = useSoundControls();
+
+  return (
+    <SoundTab
+      currentWaveform={waveformType}
+      onWaveformChange={onWaveformChange}
+      audioParams={audioParams}
+      onParamChange={onParamChange}
+      onParamsChange={onParamsChange}
+      transportBpm={transportBpm}
+      sections={controlSections}
+      onSectionToggle={onControlSectionToggle}
+      onPresetApplied={onPresetApplied}
+      activePresetName={activePresetName}
+    />
+  );
+};
 
 /**
  * Collapsed sidebar rail with expandable panel
@@ -22,32 +97,12 @@ const Sidebar = ({
   activeTab,
   onTabChange = () => {},
   disabled = false,
-  currentView = 'keyboard'
+  currentView = 'keyboard',
+  isMidiPlaying = false,
+  midiName = '',
+  soundLabel = ''
 }) => {
-  const {
-    isPlaying,
-    isPaused,
-    progress,
-    currentMidi,
-    tempoFactor,
-    onPlay,
-    onPause,
-    onResume,
-    onStop,
-    onTempoChange
-  } = useMidiTransport();
-  const {
-    waveformType,
-    onWaveformChange,
-    audioParams,
-    onParamChange,
-    onParamsChange,
-    transportBpm,
-    controlSections,
-    onControlSectionToggle,
-    activePresetName,
-    onPresetApplied
-  } = useSoundControls();
+  const [hasOpened, setHasOpened] = React.useState(isOpen);
   // Close on escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -76,6 +131,10 @@ const Sidebar = ({
       document.body.style.overflow = previousOverflow;
       document.body.style.touchAction = previousTouchAction;
     };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) setHasOpened(true);
   }, [isOpen]);
 
   const handleRailClick = useCallback((tab) => {
@@ -113,7 +172,7 @@ const Sidebar = ({
           <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
         </svg>
       ),
-      isActive: !disabled && isPlaying
+      isActive: !disabled && isMidiPlaying
     },
   ];
   const activePanel = tabs.find((tab) => tab.id === activeTab) || tabs[0];
@@ -121,8 +180,8 @@ const Sidebar = ({
     ? 'MIDI'
     : 'Sound controls';
   const panelSubtitle = activeTab === 'midi'
-    ? currentMidi?.name
-    : (activePresetName || waveformType);
+    ? midiName
+    : soundLabel;
 
   return (
     <div className={`sidebar-container ${isOpen ? 'sidebar-container--open' : ''} ${disabled ? 'sidebar-container--disabled' : ''}`}>
@@ -136,6 +195,8 @@ const Sidebar = ({
               type="button"
               className={`sidebar-rail__btn ${isOpen && activeTab === tab.id ? 'sidebar-rail__btn--active' : ''} ${tab.isActive ? 'sidebar-rail__btn--playing' : ''}`}
               onClick={() => handleRailClick(tab.id)}
+              onPointerEnter={() => preloadPanel(tab.id)}
+              onFocus={() => preloadPanel(tab.id)}
               disabled={disabled}
               aria-label={disabled ? `${tab.label} panel unavailable on this page` : isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
               aria-expanded={!disabled && isOpen && activeTab === tab.id}
@@ -187,33 +248,15 @@ const Sidebar = ({
           </button>
         </div>
         <div className="sidebar-panel__content">
-          {activeTab === 'midi' && (
-            <MidiTab
-              isPlaying={isPlaying}
-              isPaused={isPaused}
-              progress={progress}
-              currentMidi={currentMidi}
-              tempoFactor={tempoFactor}
-              onPlay={onPlay}
-              onPause={onPause}
-              onResume={onResume}
-              onStop={onStop}
-              onTempoChange={onTempoChange}
-            />
-          )}
-          {activeTab === 'sound' && (
-            <SoundTab
-              currentWaveform={waveformType}
-              onWaveformChange={onWaveformChange}
-              audioParams={audioParams}
-              onParamChange={onParamChange}
-              onParamsChange={onParamsChange}
-              transportBpm={transportBpm}
-              sections={controlSections}
-              onSectionToggle={onControlSectionToggle}
-              onPresetApplied={onPresetApplied}
-              activePresetName={activePresetName}
-            />
+          {(hasOpened || isOpen) && (
+            <React.Suspense fallback={<div className="sidebar-panel__loading" role="status">Loading controls…</div>}>
+              {activeTab === 'midi' && (
+                <MidiPanelContent />
+              )}
+              {activeTab === 'sound' && (
+                <SoundPanelContent />
+              )}
+            </React.Suspense>
           )}
         </div>
       </div>
@@ -230,4 +273,4 @@ const Sidebar = ({
   );
 };
 
-export default Sidebar;
+export default React.memo(Sidebar);

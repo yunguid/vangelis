@@ -2,13 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { getBuiltInStudy } from './data/songStudies.js';
-import ControlKitPage from './pages/ControlKitPage.jsx';
-import GeneratedSongStudyPage from './pages/GeneratedSongStudyPage.jsx';
-import MidiPipelinePage from './pages/MidiPipelinePage.jsx';
-import SongStudyPage from './pages/SongStudyPage.jsx';
-import SoundDesignerPage from './pages/SoundDesignerPage.jsx';
-import StudySongsPage from './pages/StudySongsPage.jsx';
-import VoiceLoopLabPage from './pages/VoiceLoopLabPage.jsx';
 import './style.css';
 import { withBase } from './utils/baseUrl.js';
 import {
@@ -20,6 +13,20 @@ import {
   isStudySongsRoute,
   isVoiceLoopRoute
 } from './utils/routes.js';
+
+const ControlKitPage = React.lazy(() => import('./pages/ControlKitPage.jsx'));
+const GeneratedSongStudyPage = React.lazy(() => import('./pages/GeneratedSongStudyPage.jsx'));
+const MidiPipelinePage = React.lazy(() => import('./pages/MidiPipelinePage.jsx'));
+const SongStudyPage = React.lazy(() => import('./pages/SongStudyPage.jsx'));
+const SoundDesignerPage = React.lazy(() => import('./pages/SoundDesignerPage.jsx'));
+const StudySongsPage = React.lazy(() => import('./pages/StudySongsPage.jsx'));
+const VoiceLoopLabPage = React.lazy(() => import('./pages/VoiceLoopLabPage.jsx'));
+
+const RouteLoading = () => (
+  <div className="route-loading" role="status" aria-live="polite">
+    Loading workspace…
+  </div>
+);
 
 const Root = () => {
   const [route, setRoute] = React.useState(() => getActiveRoute());
@@ -83,9 +90,29 @@ const Root = () => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Root />
+    <React.Suspense fallback={<RouteLoading />}>
+      <Root />
+    </React.Suspense>
   </React.StrictMode>
 );
+
+const profilingRequested = (
+  import.meta.env.DEV
+  || new URLSearchParams(window.location.search).has('profile')
+);
+if (profilingRequested) {
+  const startProbe = () => {
+    const schedule = window.requestIdleCallback
+      || ((callback) => window.setTimeout(callback, 0));
+    schedule(() => {
+      import('./utils/performanceProbe.js')
+        .then(({ startPerformanceProbe }) => startPerformanceProbe())
+        .catch(() => {});
+    });
+  };
+  if (document.readyState === 'complete') startProbe();
+  else window.addEventListener('load', startProbe, { once: true });
+}
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

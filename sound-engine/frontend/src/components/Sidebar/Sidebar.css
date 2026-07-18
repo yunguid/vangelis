@@ -280,6 +280,15 @@
   scrollbar-color: rgba(255, 122, 61, 0.3) transparent;
 }
 
+.sidebar-panel__loading {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
 .sidebar-panel__content::-webkit-scrollbar {
   width: 6px;
 }

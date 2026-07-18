@@ -73,6 +73,165 @@ describe('useMidiPlayback', () => {
     expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
   });
 
+  it('limits React progress updates to the 25 Hz visual budget', async () => {
+    const frameCallbacks = [];
+    global.requestAnimationFrame = vi.fn((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.9, velocity: 1 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      audioEngine.context.currentTime = 0.1;
+      frameCallbacks[0](0);
+    });
+    expect(result.current.progress).toBeCloseTo(0.1, 5);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 0.2;
+      frameCallbacks[1](16);
+      audioEngine.context.currentTime = 0.3;
+      frameCallbacks[2](32);
+    });
+    expect(result.current.progress).toBeCloseTo(0.1, 5);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 0.4;
+      frameCallbacks[3](48);
+    });
+    expect(result.current.progress).toBeCloseTo(0.4, 5);
+  });
+
+  it('bounds pending timers with a rolling MIDI lookahead window', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+    const notes = Array.from({ length: 10_000 }, (_, index) => ({
+      midi: 60 + (index % 12),
+      time: index,
+      duration: 0.1,
+      velocity: 0.8
+    }));
+
+    await act(async () => {
+      result.current.play({ duration: 10_000, bpm: 120, notes });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // Three note pairs fit in the inclusive two-second horizon, plus one scheduler
+    // pump. The progress RAF is mocked and therefore is not a timer here.
+    expect(vi.getTimerCount()).toBeLessThanOrEqual(7);
+
+    await act(async () => {
+      result.current.stop();
+    });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('feeds later notes into the rolling MIDI window as playback advances', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 5,
+        bpm: 120,
+        notes: [{ midi: 67, time: 3, duration: 0.1, velocity: 0.8 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+
+    await act(async () => {
+      audioEngine.context.currentTime = 1;
+      vi.advanceTimersByTime(500);
+      audioEngine.context.currentTime = 3;
+      vi.advanceTimersByTime(2_000);
+    });
+
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playFrequency.mock.calls[0][0].noteId).toContain('midi-67-');
+  });
+
+  it('caps active-note visualization snapshots without delaying audio events', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [
+          { midi: 60, time: 0, duration: 0.5, velocity: 0.8 },
+          { midi: 61, time: 0.01, duration: 0.5, velocity: 0.8 }
+        ]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(result.current.activeNotes.size).toBe(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(9);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+    expect(result.current.activeNotes.size).toBe(0);
+
+    await act(async () => {
+      vi.advanceTimersByTime(30);
+    });
+    expect(result.current.activeNotes.size).toBe(2);
+  });
+
+  it('stops active MIDI voices when the playback hook unmounts', async () => {
+    const { result, unmount } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 2,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+
+    unmount();
+    expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('ignores stale play request that resolves after a newer play starts', async () => {
     const firstLoad = createDeferred();
     audioEngine.ensureAudioContext

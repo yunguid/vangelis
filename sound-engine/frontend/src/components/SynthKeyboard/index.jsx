@@ -248,4 +248,4 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
   );
 };
 
-export default SynthKeyboard;
+export default React.memo(SynthKeyboard);

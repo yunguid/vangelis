@@ -2,9 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import AppHeader from './components/AppHeader.jsx';
 import SynthKeyboard from './components/SynthKeyboard';
 import ErrorBoundary from './components/ErrorBoundary';
-import Scene from './components/Scene';
-import WaveCandy from './components/WaveCandy';
-import BirdsEyeRadar from './components/BirdsEyeRadar';
 import Sidebar from './components/Sidebar';
 import { audioEngine } from './utils/audioEngine.js';
 import {
@@ -17,20 +14,17 @@ import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { useWebMidiInput } from './hooks/useWebMidiInput.js';
 import {
   MidiTransportContext,
-  SoundControlsContext,
-  VoicePhraseContext
+  SoundControlsContext
 } from './context/SynthContexts.jsx';
 import { parseMidiFile } from './utils/midiParser.js';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
-import { fetchJson } from './utils/fetchJson.js';
-import {
-  DEFAULT_VOICE_TEXT,
-  VOICE_BASE_FREQUENCY,
-  renderVoicePhrase,
-  textToVoiceChunks
-} from './utils/voicePhrase.js';
+
+const Scene = React.lazy(() => import('./components/Scene'));
+const WaveCandy = React.lazy(() => import('./components/WaveCandy'));
+const BirdsEyeRadar = React.lazy(() => import('./components/BirdsEyeRadar'));
 
 const NOTICE_TIMEOUT_MS = 2200;
+const SESSION_SAVE_DELAY_MS = 200;
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
   delay: false,
@@ -68,12 +62,7 @@ const App = () => {
   const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'sound');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
-  const [voiceText, setVoiceText] = useState(() => initialSession.voiceText || DEFAULT_VOICE_TEXT);
-  const [voicePreparing, setVoicePreparing] = useState(false);
-  const [voiceGenerating, setVoiceGenerating] = useState(false);
-  const [voiceError, setVoiceError] = useState('');
-  const [voiceStatus, setVoiceStatus] = useState(() => audioEngine.getVoicePhraseStatus());
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const voiceText = initialSession.voiceText;
   const [notice, setNotice] = useState('');
   const [activePresetName, setActivePresetName] = useState(null);
   const [controlSections, setControlSections] = useState(() => (
@@ -81,9 +70,10 @@ const App = () => {
   ));
   const scrollRaf = useRef(null);
   const noticeTimeoutRef = useRef(null);
+  const sessionSaveTimeoutRef = useRef(null);
+  const sessionSnapshotRef = useRef(null);
   const wasmLoaded = engineStatus.wasmReady;
   const isGraphWarm = engineStatus.graphWarmed;
-  const voicePreviewChunks = useMemo(() => textToVoiceChunks(voiceText), [voiceText]);
 
   // MIDI playback hook
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
@@ -132,7 +122,6 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = audioEngine.subscribe(setEngineStatus);
     const unsubRecording = audioEngine.subscribeRecording(setIsRecording);
-    const unsubVoicePhrase = audioEngine.subscribeVoicePhrase(setVoiceStatus);
 
     audioEngine.ensureWasm().catch(() => {});
     audioEngine.ensureAudioContext().then(() => {
@@ -142,56 +131,8 @@ const App = () => {
     return () => {
       unsubscribe();
       unsubRecording();
-      unsubVoicePhrase();
     };
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (voicePreviewChunks.length === 0) {
-      audioEngine.clearVoicePhrase();
-      setVoicePreparing(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setVoicePreparing(true);
-    setVoiceError('');
-
-    const timeoutId = window.setTimeout(async () => {
-      try {
-        const ctx = await audioEngine.ensureAudioContext();
-        if (cancelled) return;
-
-        const renderedChunks = renderVoicePhrase(ctx, voiceText);
-        if (cancelled) return;
-
-        const warnings = renderedChunks.flatMap((chunk) => chunk.warnings || []);
-        audioEngine.setVoicePhrase({
-          chunks: renderedChunks,
-          sourceText: voiceText,
-          enabled: voiceEnabled,
-          baseFrequency: VOICE_BASE_FREQUENCY
-        });
-        setVoiceError(warnings.length > 0 ? warnings.join(' ') : '');
-      } catch (error) {
-        if (cancelled) return;
-        console.error('Failed to prepare voice phrase:', error);
-        setVoiceError('Voice render failed.');
-      } finally {
-        if (!cancelled) {
-          setVoicePreparing(false);
-        }
-      }
-    }, 260);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeoutId);
-    };
-  }, [voiceEnabled, voicePreviewChunks.length, voiceText]);
 
   useEffect(() => {
     if (Math.abs(initialSession.tempoFactor - 1) < 0.001) return;
@@ -378,7 +319,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    saveAppSession({
+    const snapshot = {
       waveformType,
       audioParams,
       controlSections,
@@ -389,7 +330,23 @@ const App = () => {
       voiceText,
       showShortcuts,
       tempoFactor: midiPlayback.tempoFactor
-    });
+    };
+    sessionSnapshotRef.current = snapshot;
+
+    const timeoutId = window.setTimeout(() => {
+      saveAppSession(snapshot);
+      if (sessionSaveTimeoutRef.current === timeoutId) {
+        sessionSaveTimeoutRef.current = null;
+      }
+    }, SESSION_SAVE_DELAY_MS);
+    sessionSaveTimeoutRef.current = timeoutId;
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (sessionSaveTimeoutRef.current === timeoutId) {
+        sessionSaveTimeoutRef.current = null;
+      }
+    };
   }, [
     activeSampleId,
     audioParams,
@@ -403,25 +360,50 @@ const App = () => {
     waveformType
   ]);
 
-  const handleAudioParamChange = (paramName, value) => {
+  useEffect(() => {
+    const flushSession = () => {
+      if (sessionSaveTimeoutRef.current !== null) {
+        window.clearTimeout(sessionSaveTimeoutRef.current);
+        sessionSaveTimeoutRef.current = null;
+      }
+      if (sessionSnapshotRef.current) {
+        saveAppSession(sessionSnapshotRef.current);
+      }
+    };
+
+    window.addEventListener('pagehide', flushSession);
+    return () => {
+      window.removeEventListener('pagehide', flushSession);
+      flushSession();
+    };
+  }, []);
+
+  const handleAudioParamChange = useCallback((paramName, value) => {
     setAudioParams((prev) => sanitizeAudioParams({
       ...prev,
       [paramName]: value
     }));
-  };
+  }, []);
 
-  const handleAudioParamsChange = (nextParams) => {
+  const handleAudioParamsChange = useCallback((nextParams) => {
     setAudioParams((prev) => sanitizeAudioParams({
       ...prev,
       ...nextParams
     }));
-  };
+  }, []);
 
   const handleResetSound = useCallback(() => {
     setAudioParams(sanitizeAudioParams(AUDIO_PARAM_DEFAULTS));
     setActivePresetName(null);
     pushNotice('Sound reset to dry defaults.');
   }, [pushNotice]);
+
+  const handleShowShortcuts = useCallback(() => {
+    setShowShortcuts(true);
+  }, []);
+
+  const handleSidebarOpen = useCallback(() => setSidebarOpen(true), []);
+  const handleSidebarClose = useCallback(() => setSidebarOpen(false), []);
 
   const handlePresetApplied = useCallback((presetName) => {
     setActivePresetName(presetName || null);
@@ -435,51 +417,6 @@ const App = () => {
       [section]: !prev[section]
     }));
   }, []);
-
-  const handleVoiceTextChange = useCallback((nextText) => {
-    setVoiceText(nextText);
-    setVoiceError('');
-    audioEngine.clearVoicePhrase();
-  }, []);
-
-  const handleVoicePresetSelect = useCallback((preset) => {
-    setVoiceText(preset);
-    setVoiceError('');
-    audioEngine.clearVoicePhrase();
-  }, []);
-
-  const handleVoiceToggle = useCallback((enabled) => {
-    setVoiceEnabled(enabled);
-    audioEngine.setVoicePhraseEnabled(enabled);
-  }, []);
-
-  const handleVoiceClear = useCallback(() => {
-    audioEngine.clearVoicePhrase();
-    setVoiceText('');
-    setVoiceError('');
-  }, []);
-
-  const handleVoiceRandomize = useCallback(async () => {
-    setVoiceGenerating(true);
-    setVoiceError('');
-
-    try {
-      const result = await fetchJson('/api/voice-phrase', {
-        method: 'POST',
-        body: JSON.stringify({ currentText: voiceText })
-      });
-      if (result.phrase) {
-        setVoiceText(result.phrase);
-        audioEngine.clearVoicePhrase();
-      }
-      setVoiceError(result.warning || '');
-    } catch (error) {
-      console.error('Failed to generate voice phrase:', error);
-      setVoiceError('Phrase generation failed.');
-    } finally {
-      setVoiceGenerating(false);
-    }
-  }, [voiceText]);
 
   const soundControlsValue = useMemo(() => ({
     waveformType,
@@ -497,6 +434,8 @@ const App = () => {
     audioParams,
     transportBpm,
     controlSections,
+    handleAudioParamChange,
+    handleAudioParamsChange,
     handleControlSectionToggle,
     activePresetName,
     handlePresetApplied
@@ -526,36 +465,12 @@ const App = () => {
     midiPlayback.setTempo
   ]);
 
-  const voicePhraseValue = useMemo(() => ({
-    voiceText,
-    voicePreviewChunks,
-    voiceStatus,
-    voicePreparing,
-    voiceGenerating,
-    voiceError,
-    onVoiceTextChange: handleVoiceTextChange,
-    onVoicePresetSelect: handleVoicePresetSelect,
-    onVoiceRandomize: handleVoiceRandomize,
-    onVoiceToggle: handleVoiceToggle,
-    onVoiceClear: handleVoiceClear
-  }), [
-    voiceText,
-    voicePreviewChunks,
-    voiceStatus,
-    voicePreparing,
-    voiceGenerating,
-    voiceError,
-    handleVoiceTextChange,
-    handleVoicePresetSelect,
-    handleVoiceRandomize,
-    handleVoiceToggle,
-    handleVoiceClear
-  ]);
-
   return (
     <ErrorBoundary>
       <div className="app-stage">
-        <Scene />
+        <React.Suspense fallback={null}>
+          <Scene />
+        </React.Suspense>
         
         <div className="app-shell">
           <AppHeader
@@ -564,7 +479,7 @@ const App = () => {
             onUploadSample={handleAudioFileImport}
             onClearSample={handleClearSample}
             onToggleRecording={handleRecordToggle}
-            onShowShortcuts={() => setShowShortcuts(true)}
+            onShowShortcuts={handleShowShortcuts}
             hasCustomSample={engineStatus.hasCustomSample}
             isRecording={isRecording}
             sampleLabel={sampleInfo?.name || sampleSelection?.name || ''}
@@ -572,16 +487,20 @@ const App = () => {
           />
 
           <main className="zone-center content-primary" aria-label="Keyboard area">
-            <WaveCandy />
+            <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
+              <WaveCandy />
+            </React.Suspense>
             <div className="keyboard-surface" role="region" aria-label="Virtual keyboard">
               <div className="keyboard-region">
                 {midiPlayback.currentMidi && (
-                  <BirdsEyeRadar
-                    currentMidi={midiPlayback.currentMidi}
-                    progress={midiPlayback.progress}
-                    activeNotes={midiPlayback.activeNotes}
-                    isPlaying={midiPlayback.isPlaying}
-                  />
+                  <React.Suspense fallback={null}>
+                    <BirdsEyeRadar
+                      currentMidi={midiPlayback.currentMidi}
+                      progress={midiPlayback.progress}
+                      activeNotes={midiPlayback.activeNotes}
+                      isPlaying={midiPlayback.isPlaying}
+                    />
+                  </React.Suspense>
                 )}
                 <SynthKeyboard
                   waveformType={waveformType}
@@ -653,15 +572,16 @@ const App = () => {
 
         <SoundControlsContext.Provider value={soundControlsValue}>
           <MidiTransportContext.Provider value={midiTransportValue}>
-            <VoicePhraseContext.Provider value={voicePhraseValue}>
-              <Sidebar
-                isOpen={sidebarOpen}
-                onOpen={() => setSidebarOpen(true)}
-                onClose={() => setSidebarOpen(false)}
-                activeTab={sidebarTab}
-                onTabChange={setSidebarTab}
-              />
-            </VoicePhraseContext.Provider>
+            <Sidebar
+              isOpen={sidebarOpen}
+              onOpen={handleSidebarOpen}
+              onClose={handleSidebarClose}
+              activeTab={sidebarTab}
+              onTabChange={setSidebarTab}
+              isMidiPlaying={midiPlayback.isPlaying}
+              midiName={midiPlayback.currentMidi?.name || ''}
+              soundLabel={activePresetName || waveformType}
+            />
           </MidiTransportContext.Provider>
         </SoundControlsContext.Provider>
 

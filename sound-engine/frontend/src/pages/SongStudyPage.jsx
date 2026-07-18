@@ -8,6 +8,8 @@ import { useMidiPlayback } from '../hooks/useMidiPlayback.js';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToName } from '../utils/math.js';
 import { parseMidiFile } from '../utils/midiParser.js';
+import { buildNoteRenderWindow } from '../components/midiBirdsEyeMath.js';
+import { getStudyNotesAroundTime } from '../utils/songStudyNotes.js';
 import './SongStudyPage.css';
 
 const TEMPO_OPTIONS = [
@@ -28,9 +30,6 @@ const CHORD_PATTERNS = [
 ];
 const KEYBOARD_MIN_MIDI = 60;
 const KEYBOARD_MAX_MIDI = 77;
-const LOOK_BEHIND_SECONDS = 0.08;
-const LOOK_AHEAD_SECONDS = 0.24;
-const FALLBACK_LOOK_AHEAD_SECONDS = 0.42;
 
 const formatPitchClass = (pitchClass) => FLAT_PITCH_NAMES[((pitchClass % 12) + 12) % 12];
 
@@ -51,29 +50,6 @@ const resolveDuration = (notes, fallbackDuration) => {
     0
   );
   return derivedDuration > 0 ? derivedDuration : fallbackDuration;
-};
-
-const getNotesAroundTime = (notes, time) => {
-  const activeNotes = notes.filter((note) => (
-    note.time <= time + LOOK_BEHIND_SECONDS
-    && note.time + note.duration >= time - LOOK_BEHIND_SECONDS
-  ));
-
-  if (activeNotes.length > 0) {
-    return activeNotes;
-  }
-
-  const upcomingNotes = notes.filter((note) => (
-    note.time >= time
-    && note.time <= time + FALLBACK_LOOK_AHEAD_SECONDS
-  ));
-
-  if (upcomingNotes.length === 0) {
-    return [];
-  }
-
-  const anchorTime = upcomingNotes[0].time;
-  return upcomingNotes.filter((note) => Math.abs(note.time - anchorTime) <= LOOK_AHEAD_SECONDS);
 };
 
 const detectChordLabel = (notes) => {
@@ -351,10 +327,14 @@ const SongStudyPage = ({ study }) => {
   )
     ? transportPosition
     : firstNoteTime;
+  const studyNoteWindow = React.useMemo(
+    () => buildNoteRenderWindow(displayMidi?.notes || []),
+    [displayMidi]
+  );
 
   const visibleNotes = React.useMemo(
-    () => (displayMidi ? getNotesAroundTime(displayMidi.notes, previewTime) : []),
-    [displayMidi, previewTime]
+    () => getStudyNotesAroundTime(studyNoteWindow, previewTime),
+    [previewTime, studyNoteWindow]
   );
 
   const bassNote = React.useMemo(() => (
@@ -600,6 +580,7 @@ const SongStudyPage = ({ study }) => {
               progress={playback.progress}
               activeNotes={radarActiveNotes}
               isPlaying={playback.isPlaying}
+              noteRenderWindow={studyNoteWindow}
             />
 
             <SynthKeyboard

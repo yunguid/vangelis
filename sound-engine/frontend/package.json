@@ -1,12 +1,14 @@
 {
     "name": "vangelis-synth",
     "version": "0.1.0",
+    "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
         "audit:audio": "node --expose-gc scripts/audit_audio.mjs",
         "audit:audio:bless": "node --expose-gc scripts/audit_audio.mjs --bless",
         "audit:ui": "node scripts/audit_ui_tells.mjs",
+        "perf:site": "vite build && node scripts/perf_site_metrics.mjs",
         "perf:visual": "node scripts/perf_visual_workload.mjs",
         "sync:midis": "node scripts/sync_russian_midis.mjs",
         "preview": "vite preview",
@@ -15,27 +17,20 @@
         "test:coverage": "vitest run --coverage"
     },
     "dependencies": {
-        "@react-three/drei": "^9.99.0",
-        "@react-three/fiber": "^8.15.16",
-        "@react-three/postprocessing": "^2.16.0",
         "@tonejs/midi": "^2.0.28",
-        "autoprefixer": "^10.4.17",
-        "framer-motion": "^11.0.5",
         "klattsch": "0.3.0",
-        "openai": "^4.87.3",
-        "postcss": "^8.4.35",
-        "postprocessing": "^6.34.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "sql.js": "^1.14.1",
-        "tailwindcss": "^3.4.1",
-        "three": "^0.161.0"
+        "sql.js": "^1.14.1"
     },
     "devDependencies": {
         "@testing-library/jest-dom": "^6.4.0",
         "@testing-library/react": "^14.2.0",
         "@vitejs/plugin-react": "^4.2.1",
+        "autoprefixer": "^10.4.17",
         "jsdom": "^24.0.0",
+        "postcss": "^8.4.35",
+        "tailwindcss": "^3.4.1",
         "vite": "^5.0.0",
         "vite-plugin-top-level-await": "^1.5.0",
         "vite-plugin-wasm": "^3.4.1",

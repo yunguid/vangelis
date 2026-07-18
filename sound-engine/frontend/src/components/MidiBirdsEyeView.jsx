@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
+import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp, midiNoteToName } from '../utils/math.js';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 
 const DEFAULT_MIN_MIDI = 21;
@@ -59,21 +61,7 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
       return noteId;
     };
 
-    const syncCanvasSize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const width = Math.max(1, Math.floor(rect.width));
-      const height = Math.max(1, Math.floor(rect.height));
-      const displayWidth = Math.floor(width * dpr);
-      const displayHeight = Math.floor(height * dpr);
-
-      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
-      }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return { width, height };
-    };
+    const sizeController = createCanvasSizeController(canvas, ctx);
 
     const drawPerspectiveGrid = (width, height, trackTop, trackBottom, centerX, playfieldWidth) => {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
@@ -107,7 +95,7 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
         activeNotes: activeNoteSet,
         noteRenderWindow: renderWindow
       } = propsRef.current;
-      const { width, height } = syncCanvasSize();
+      const { width, height } = sizeController.size;
 
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = 'rgba(5, 9, 14, 0.92)';
@@ -186,14 +174,11 @@ const MidiBirdsEyeView = ({ currentMidi, progress, activeNotes, isPlaying }) => 
       ctx.shadowBlur = 0;
     };
 
-    let rafId;
-    const loop = () => {
-      draw();
-      rafId = requestAnimationFrame(loop);
+    const stopFrameLoop = startVisibilityAwareRafLoop(draw);
+    return () => {
+      stopFrameLoop();
+      sizeController.disconnect();
     };
-    rafId = requestAnimationFrame(loop);
-
-    return () => cancelAnimationFrame(rafId);
   }, [midiRange.max, midiRange.min]);
 
   return (

@@ -5,6 +5,7 @@ import { getGeneratedStudyHref } from '../utils/routes.js';
 import SparkleSpinner from '../components/SparkleSpinner.jsx';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
+import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
 import './MidiPipelinePage.css';
 
 const INITIAL_FORM = {
@@ -134,19 +135,12 @@ const MidiPipelinePage = () => {
     }
   }, [loadJob]);
 
-  React.useEffect(() => {
-    if (!job?.id || TERMINAL_JOB_STATES.has(job.status)) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => {
-      loadJob(job.id);
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [job?.id, job?.status, loadJob]);
+  const pollJob = React.useCallback(() => loadJob(job?.id), [job?.id, loadJob]);
+  useVisiblePolling(
+    pollJob,
+    POLL_INTERVAL_MS,
+    Boolean(job?.id) && !TERMINAL_JOB_STATES.has(job?.status)
+  );
 
   const missingTools = React.useMemo(
     () => (health?.tools || []).filter((tool) => !tool.ready),

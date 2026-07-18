@@ -125,14 +125,15 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            if (
+              id.includes('@tonejs/midi')
+              || id.includes('/midi-file/')
+              || id.includes('/array-flatten/')
+            ) {
+              return undefined;
+            }
             if (id.includes('react') || id.includes('scheduler')) {
               return 'vendor-react';
-            }
-            if (id.includes('three') || id.includes('@react-three') || id.includes('postprocessing')) {
-              return 'vendor-three';
-            }
-            if (id.includes('@tonejs/midi')) {
-              return 'vendor-midi';
             }
             return 'vendor-misc';
           }
@@ -147,12 +148,6 @@ export default defineConfig({
       '/api': 'http://127.0.0.1:8000',
       '/generated': 'http://127.0.0.1:8000'
     }
-  },
-  optimizeDeps: {
-    include: ['react-dial-knob'],
-    esbuildOptions: {
-      target: 'es2020',
-    },
   },
   resolve: {
     dedupe: ['react', 'react-dom'],

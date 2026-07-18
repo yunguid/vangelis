@@ -3,6 +3,7 @@ import AppHeader from '../components/AppHeader.jsx';
 import Sidebar from '../components/Sidebar';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
+import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
 import SongStudyPage from './SongStudyPage.jsx';
 import './SongStudyPage.css';
 
@@ -27,16 +28,11 @@ const GeneratedSongStudyPage = ({ jobId }) => {
     loadJob();
   }, [loadJob]);
 
-  React.useEffect(() => {
-    if (!job?.id || TERMINAL_JOB_STATES.has(job.status)) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(loadJob, POLL_INTERVAL_MS);
-    return () => {
-      window.clearInterval(intervalId);
-    };
-  }, [job?.id, job?.status, loadJob]);
+  useVisiblePolling(
+    loadJob,
+    POLL_INTERVAL_MS,
+    Boolean(job?.id) && !TERMINAL_JOB_STATES.has(job?.status)
+  );
 
   const study = React.useMemo(() => createGeneratedStudyFromJob(job), [job]);
 

@@ -8,6 +8,11 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
 
+const PROGRESS_UPDATE_INTERVAL_MS = 40;
+const ACTIVE_NOTES_UPDATE_INTERVAL_MS = 40;
+const SCHEDULER_LOOKAHEAD_SECONDS = 2;
+const SCHEDULER_TICK_MS = 500;
+
 function resolveMidiDuration(midiData) {
   const declaredDuration = Number(midiData?.duration);
   const hasDeclaredDuration = Number.isFinite(declaredDuration) && declaredDuration > 0;
@@ -138,7 +143,10 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   const activeNoteCountsRef = useRef(new Map());
   const activeVoiceIdsRef = useRef(new Set());
   const scheduledVoiceMapRef = useRef(new Map());
-  const timeoutsRef = useRef([]);
+  const activeNotesPublishTimeoutRef = useRef(null);
+  const lastActiveNotesPublishRef = useRef(Number.NEGATIVE_INFINITY);
+  const timeoutsRef = useRef(new Set());
+  const schedulerSequenceRef = useRef(0);
   const rafRef = useRef(null);
   const playRequestSeqRef = useRef(0);
   const playbackRef = useRef({
@@ -170,6 +178,14 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     return () => {
       playRequestSeqRef.current += 1;
       clearAllTimeouts();
+      if (activeNotesPublishTimeoutRef.current !== null) {
+        clearTimeout(activeNotesPublishTimeoutRef.current);
+        activeNotesPublishTimeoutRef.current = null;
+      }
+      activeVoiceIdsRef.current.forEach((voiceId) => audioEngine.stopNote(voiceId));
+      activeVoiceIdsRef.current.clear();
+      activeNoteCountsRef.current.clear();
+      scheduledVoiceMapRef.current.clear();
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
       }
@@ -181,8 +197,47 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @private
    */
   const clearAllTimeouts = useCallback(() => {
+    schedulerSequenceRef.current += 1;
     timeoutsRef.current.forEach(id => clearTimeout(id));
-    timeoutsRef.current = [];
+    timeoutsRef.current.clear();
+  }, []);
+
+  /**
+   * Track a timeout only while it is pending so completed MIDI events do not
+   * remain retained for the duration of a long score.
+   * @private
+   */
+  const scheduleTrackedTimeout = useCallback((callback, delay) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current.delete(id);
+      callback();
+    }, delay);
+    timeoutsRef.current.add(id);
+    return id;
+  }, []);
+
+  const publishActiveNotes = useCallback((immediate = false) => {
+    const commit = () => {
+      activeNotesPublishTimeoutRef.current = null;
+      lastActiveNotesPublishRef.current = performance.now();
+      setActiveNotes(new Set(activeNoteCountsRef.current.keys()));
+    };
+    const elapsed = performance.now() - lastActiveNotesPublishRef.current;
+
+    if (immediate || elapsed >= ACTIVE_NOTES_UPDATE_INTERVAL_MS) {
+      if (activeNotesPublishTimeoutRef.current !== null) {
+        clearTimeout(activeNotesPublishTimeoutRef.current);
+      }
+      commit();
+      return;
+    }
+
+    if (activeNotesPublishTimeoutRef.current === null) {
+      activeNotesPublishTimeoutRef.current = setTimeout(
+        commit,
+        ACTIVE_NOTES_UPDATE_INTERVAL_MS - elapsed
+      );
+    }
   }, []);
 
   const registerActiveVoices = useCallback((noteId, voiceIds) => {
@@ -191,8 +246,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     const counts = activeNoteCountsRef.current;
     counts.set(noteId, (counts.get(noteId) || 0) + voiceIds.length);
     voiceIds.forEach((id) => activeVoiceIdsRef.current.add(id));
-    setActiveNotes(new Set(counts.keys()));
-  }, []);
+    publishActiveNotes();
+  }, [publishActiveNotes]);
 
   /**
    * Trigger a note on event
@@ -240,8 +295,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     } else {
       counts.delete(noteId);
     }
-    setActiveNotes(new Set(counts.keys()));
-  }, []);
+    publishActiveNotes();
+  }, [publishActiveNotes]);
 
   /**
    * Stop all currently playing notes
@@ -254,8 +309,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     activeVoiceIdsRef.current.clear();
     activeNoteCountsRef.current.clear();
     scheduledVoiceMapRef.current.clear();
-    setActiveNotes(new Set());
-  }, []);
+    publishActiveNotes(true);
+  }, [publishActiveNotes]);
 
   /**
    * Internal stop handler - clears state and stops playback
@@ -293,7 +348,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   }, []);
 
   /**
-   * Schedule notes for playback using setTimeout
+   * Schedule notes through a rolling lookahead window. This prevents large
+   * scores from allocating two timeout handles for every note up front.
    * @param {Array} notes - Array of MIDI notes to schedule
    * @param {number} offset - Time offset for resuming (0 for new playback)
    * @param {number} startTime - Audio context start time
@@ -303,50 +359,68 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     const ctx = audioEngine.context;
     if (!ctx) return;
 
-    const now = ctx.currentTime;
-    const tempo = tempoFactorRef.current;
+    const sequence = schedulerSequenceRef.current + 1;
+    schedulerSequenceRef.current = sequence;
+    const pendingNotes = notes
+      .map((note, index) => ({ note, index }))
+      .filter(({ note }) => note.time + note.duration > offset);
+    let nextIndex = 0;
 
-    notes.forEach((note, index) => {
-      const noteEnd = note.time + note.duration;
-      if (noteEnd <= offset) return;
+    const pump = () => {
+      if (sequence !== schedulerSequenceRef.current) return;
 
-      const noteLead = Math.max(0, note.time - offset);
-      const remainingOriginalDuration = Math.max(0, noteEnd - Math.max(offset, note.time));
-      if (remainingOriginalDuration <= 0) return;
+      const currentContext = audioEngine.context;
+      if (!currentContext) return;
 
-      // Scale note timings by tempo factor (higher tempo = shorter times)
-      const noteTime = noteLead / tempo;
-      const noteDuration = remainingOriginalDuration / tempo;
-      const scheduledStart = startTime + noteTime;
-      const scheduledEnd = scheduledStart + noteDuration;
+      const now = currentContext.currentTime;
+      const tempo = tempoFactorRef.current;
+      const elapsedOriginal = offset + Math.max(0, now - startTime) * tempo;
+      const scheduleThrough = elapsedOriginal + SCHEDULER_LOOKAHEAD_SECONDS * tempo;
 
-      const { noteId } = midiNoteToName(note.midi);
-      const frequency = midiNoteToFrequency(note.midi);
-      const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
+      while (nextIndex < pendingNotes.length) {
+        const { note, index } = pendingNotes[nextIndex];
+        if (note.time > scheduleThrough) break;
+        nextIndex += 1;
 
-      // Schedule note on
-      const startDelay = Math.max(0, (scheduledStart - now) * 1000);
-      const startId = setTimeout(() => {
-        const startedVoiceIds = triggerNoteOn(noteId, voiceId, frequency, note.velocity);
-        if (startedVoiceIds.length > 0) {
-          scheduledVoiceMapRef.current.set(voiceId, startedVoiceIds);
-        }
-      }, startDelay);
-      timeoutsRef.current.push(startId);
+        const noteEnd = note.time + note.duration;
+        const noteLead = Math.max(0, note.time - offset);
+        const remainingOriginalDuration = Math.max(0, noteEnd - Math.max(offset, note.time));
+        if (remainingOriginalDuration <= 0) continue;
 
-      // Schedule note off
-      const endDelay = Math.max(0, (scheduledEnd - now) * 1000);
-      const endId = setTimeout(() => {
-        const startedVoiceIds = scheduledVoiceMapRef.current.get(voiceId);
-        scheduledVoiceMapRef.current.delete(voiceId);
-        if (!startedVoiceIds?.length) return;
-        startedVoiceIds.forEach((activeVoiceId) => {
-          triggerNoteOff(noteId, activeVoiceId);
-        });
-      }, endDelay);
-      timeoutsRef.current.push(endId);
-    });
-  }, [triggerNoteOn, triggerNoteOff]);
+        const noteTime = noteLead / tempo;
+        const noteDuration = remainingOriginalDuration / tempo;
+        const scheduledStart = startTime + noteTime;
+        const scheduledEnd = scheduledStart + noteDuration;
+        const { noteId } = midiNoteToName(note.midi);
+        const frequency = midiNoteToFrequency(note.midi);
+        const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
+
+        const startDelay = Math.max(0, (scheduledStart - now) * 1000);
+        scheduleTrackedTimeout(() => {
+          const startedVoiceIds = triggerNoteOn(noteId, voiceId, frequency, note.velocity);
+          if (startedVoiceIds.length > 0) {
+            scheduledVoiceMapRef.current.set(voiceId, startedVoiceIds);
+          }
+        }, startDelay);
+
+        const endDelay = Math.max(0, (scheduledEnd - now) * 1000);
+        scheduleTrackedTimeout(() => {
+          const startedVoiceIds = scheduledVoiceMapRef.current.get(voiceId);
+          scheduledVoiceMapRef.current.delete(voiceId);
+          if (!startedVoiceIds?.length) return;
+          startedVoiceIds.forEach((activeVoiceId) => {
+            triggerNoteOff(noteId, activeVoiceId);
+          });
+        }, endDelay);
+      }
+
+      if (nextIndex < pendingNotes.length) {
+        scheduleTrackedTimeout(pump, SCHEDULER_TICK_MS);
+      }
+    };
+
+    pump();
+  }, [scheduleTrackedTimeout, triggerNoteOn, triggerNoteOff]);
 
   // Tempo factor setter with clamping. Re-schedules remaining notes if tempo changes mid-playback.
   const setTempo = useCallback((factor) => {
@@ -392,18 +466,22 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @private
    */
   const startProgressLoop = useCallback((duration) => {
-    const updateProgress = () => {
+    let lastProgressUpdate = Number.NEGATIVE_INFINITY;
+    const updateProgress = (frameTime) => {
       const ctx = audioEngine.context;
       if (!ctx) return;
 
       const elapsedOriginal = getElapsedOriginalTime(ctx.currentTime);
       const progressValue = Math.min(elapsedOriginal / duration, 1);
 
-      setProgress(progressValue);
-
       if (progressValue >= 1) {
         stopInternal();
         return;
+      }
+
+      if (frameTime - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL_MS) {
+        lastProgressUpdate = frameTime;
+        setProgress(progressValue);
       }
 
       rafRef.current = requestAnimationFrame(updateProgress);

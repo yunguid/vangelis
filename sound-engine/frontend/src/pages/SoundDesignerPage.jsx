@@ -336,6 +336,8 @@ const SoundDesignerPage = () => {
   const [mintedName, setMintedName] = React.useState(null);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState('sound');
+  const handleSidebarOpen = React.useCallback(() => setSidebarOpen(true), []);
+  const handleSidebarClose = React.useCallback(() => setSidebarOpen(false), []);
 
   React.useEffect(() => {
     audioEngine.setGlobalParams(audioParams);
@@ -496,11 +498,12 @@ const SoundDesignerPage = () => {
       </main>
       <Sidebar
         isOpen={sidebarOpen}
-        onOpen={() => setSidebarOpen(true)}
-        onClose={() => setSidebarOpen(false)}
+        onOpen={handleSidebarOpen}
+        onClose={handleSidebarClose}
         activeTab={sidebarTab}
         onTabChange={setSidebarTab}
         currentView="design"
+        soundLabel={activePresetName || waveformType}
       />
     </div>
   );

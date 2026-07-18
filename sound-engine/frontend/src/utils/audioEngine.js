@@ -239,6 +239,40 @@ class AudioEngine {
     }
   }
 
+  ensureDelayWorklet(ctx = this.context) {
+    if (!ctx) return Promise.resolve(null);
+    return this.ensureEffectWorklet({
+      ctx,
+      worklet: this.delayWorklet,
+      sourceNode: 'delaySend',
+      destinationNode: 'delayWet',
+      errorType: 'DELAY_WORKLET_FAILED',
+      errorMessage: 'Failed to initialize delay effect'
+    });
+  }
+
+  ensureReverbWorklet(ctx = this.context) {
+    if (!ctx) return Promise.resolve(null);
+    return this.ensureEffectWorklet({
+      ctx,
+      worklet: this.reverbWorklet,
+      sourceNode: 'reverbSend',
+      destinationNode: 'reverbWet',
+      errorType: 'REVERB_WORKLET_FAILED',
+      errorMessage: 'Failed to initialize reverb effect'
+    });
+  }
+
+  scheduleEnabledEffectWorklets(params, ctx = this.context) {
+    if (!ctx || !params) return;
+    if (params.delayEnabled && params.delayMix > 0.001) {
+      this.ensureDelayWorklet(ctx).catch(() => {});
+    }
+    if (params.reverbEnabled && params.reverbMix > 0.001) {
+      this.ensureReverbWorklet(ctx).catch(() => {});
+    }
+  }
+
   reportStatusError(type, message, err) {
     this.status.error = {
       type,
@@ -281,22 +315,7 @@ class AudioEngine {
 
         this.installUnlockHandlers();
         this.setupGraph(ctx);
-        this.ensureEffectWorklet({
-          ctx,
-          worklet: this.delayWorklet,
-          sourceNode: 'delaySend',
-          destinationNode: 'delayWet',
-          errorType: 'DELAY_WORKLET_FAILED',
-          errorMessage: 'Failed to initialize delay effect'
-        }).catch(() => {});
-        this.ensureEffectWorklet({
-          ctx,
-          worklet: this.reverbWorklet,
-          sourceNode: 'reverbSend',
-          destinationNode: 'reverbWet',
-          errorType: 'REVERB_WORKLET_FAILED',
-          errorMessage: 'Failed to initialize reverb effect'
-        }).catch(() => {});
+        this.scheduleEnabledEffectWorklets(this.currentParams, ctx);
         this.ensureSamplePool(ctx);
 
         if (ctx.state === 'running') {
@@ -398,6 +417,8 @@ class AudioEngine {
       this.lastParamSignature = '';
       return;
     }
+
+    this.scheduleEnabledEffectWorklets(effective, ctx);
 
     const signature = paramsSignature(effective);
     if (signature === this.lastParamSignature) {

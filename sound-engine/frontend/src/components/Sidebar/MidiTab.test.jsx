@@ -93,4 +93,15 @@ describe('MidiTab', () => {
     expect(document.querySelector('.midi-tab__badge')).not.toBeInTheDocument();
     expect(document.querySelector('.midi-tab__file-composer')).not.toBeInTheDocument();
   });
+
+  it('does not rebuild the MIDI library when only playback progress changes', () => {
+    const props = defaultProps({
+      currentMidi: { name: 'Test', duration: 10, bpm: 120 }
+    });
+    const view = render(<MidiTab {...props} />);
+    expect(getBuiltInMidiFiles).toHaveBeenCalledTimes(1);
+
+    view.rerender(<MidiTab {...props} progress={0.5} />);
+    expect(getBuiltInMidiFiles).toHaveBeenCalledTimes(1);
+  });
 });

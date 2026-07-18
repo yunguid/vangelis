@@ -5,6 +5,7 @@ import { fetchJson } from '../utils/fetchJson.js';
 import { encodeWav } from '../utils/audioEngine/wav.js';
 import { renderVoiceScore } from '../utils/voicePhrase.js';
 import { LOOPBOOK, STARTER_LOOP } from '../utils/voiceLoopbook.js';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import './VoiceLoopLabPage.css';
 
 const KEY_OPTIONS = ['F# minor', 'C# minor', 'A# minor', 'G# minor', 'D# minor', 'F minor', 'A dorian', 'E minor', 'D lydian'];
@@ -12,6 +13,7 @@ const DENSITY_OPTIONS = ['very high', 'high', 'syncopated', 'wide-open'];
 const CARRIER_OPTIONS = ['AA', 'AW', 'ER', 'IY', 'AE', 'OW', 'AY', 'UW'];
 const GLIDE_OPTIONS = ['low', 'medium', 'high'];
 const STARTER_SCORE = STARTER_LOOP.score;
+const PLAYHEAD_UPDATE_INTERVAL_MS = 40;
 const RANDOM_SEED_PARTS = {
   feelings: ['aching and luminous', 'euphoric and weightless', 'lonely chrome romance', 'hopeful sunrise drive', 'velvet midnight cruise', 'bittersweet arcade glow'],
   motions: ['low motif lifting to a bright high answer', 'falling staircase that resolves home', 'call and response between bass and ceiling', 'slow arpeggio spiralling upward', 'pulsing octave groove with a soaring lift'],
@@ -198,7 +200,6 @@ const VoiceLoopLabPage = () => {
   const audioContextRef = React.useRef(null);
   const runtimeRef = React.useRef(null);
   const startedAtRef = React.useRef(0);
-  const frameRef = React.useRef(null);
   const generationSerialRef = React.useRef(0);
 
   const events = React.useMemo(() => parseScoreEvents(score), [score]);
@@ -299,22 +300,19 @@ const VoiceLoopLabPage = () => {
 
   React.useEffect(() => {
     if (!isPlaying || !rendered) return undefined;
-    const tick = () => {
+    let lastUpdate = Number.NEGATIVE_INFINITY;
+    return startVisibilityAwareRafLoop((frameTime) => {
+      if (frameTime - lastUpdate < PLAYHEAD_UPDATE_INTERVAL_MS) return;
+      lastUpdate = frameTime;
       const ctx = audioContextRef.current;
       if (ctx) {
         setPlayhead((ctx.currentTime - startedAtRef.current) % Math.max(rendered.duration, 0.01));
       }
-      frameRef.current = window.requestAnimationFrame(tick);
-    };
-    frameRef.current = window.requestAnimationFrame(tick);
-    return () => {
-      if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
-    };
+    });
   }, [isPlaying, rendered]);
 
   React.useEffect(() => () => {
     stopSource(runtimeRef);
-    if (frameRef.current) window.cancelAnimationFrame(frameRef.current);
   }, []);
 
   const stopLoop = React.useCallback(() => {

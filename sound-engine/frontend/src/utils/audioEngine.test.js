@@ -17,6 +17,8 @@ describe('audioEngine effect gating', () => {
   const originalWorklet = audioEngine.worklet;
   const originalSignature = audioEngine.lastParamSignature;
   const originalParams = audioEngine.currentParams;
+  const originalEnsureDelayWorklet = audioEngine.ensureDelayWorklet;
+  const originalEnsureReverbWorklet = audioEngine.ensureReverbWorklet;
 
   afterEach(() => {
     audioEngine.context = originalContext;
@@ -26,6 +28,8 @@ describe('audioEngine effect gating', () => {
     audioEngine.worklet = originalWorklet;
     audioEngine.lastParamSignature = originalSignature;
     audioEngine.currentParams = originalParams;
+    audioEngine.ensureDelayWorklet = originalEnsureDelayWorklet;
+    audioEngine.ensureReverbWorklet = originalEnsureReverbWorklet;
   });
 
   it('keeps reverb-disabled sounds dry even when reverb mix is non-zero', () => {
@@ -152,5 +156,31 @@ describe('audioEngine effect gating', () => {
     expect(audioEngine.currentParams.delayMix).toBe(0);
     expect(audioEngine.currentParams.reverbMix).toBe(0);
     expect(audioEngine.lastParamSignature).toBe('');
+  });
+
+  it('loads effect worklets only for effects with an audible wet path', () => {
+    const ensureDelay = vi.fn().mockResolvedValue(undefined);
+    const ensureReverb = vi.fn().mockResolvedValue(undefined);
+    const context = { currentTime: 0 };
+    audioEngine.ensureDelayWorklet = ensureDelay;
+    audioEngine.ensureReverbWorklet = ensureReverb;
+
+    audioEngine.scheduleEnabledEffectWorklets({
+      delayEnabled: false,
+      delayMix: 0.7,
+      reverbEnabled: true,
+      reverbMix: 0
+    }, context);
+    expect(ensureDelay).not.toHaveBeenCalled();
+    expect(ensureReverb).not.toHaveBeenCalled();
+
+    audioEngine.scheduleEnabledEffectWorklets({
+      delayEnabled: true,
+      delayMix: 0.2,
+      reverbEnabled: true,
+      reverbMix: 0.3
+    }, context);
+    expect(ensureDelay).toHaveBeenCalledWith(context);
+    expect(ensureReverb).toHaveBeenCalledWith(context);
   });
 });

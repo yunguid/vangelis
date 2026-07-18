@@ -1,6 +1,36 @@
 import React from 'react';
 import ValueSlider from '../controls/ValueSlider.jsx';
 
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const formatTempo = (value) => `${value.toFixed(2)}x`;
+
+const TempoControl = React.memo(function TempoControl({ tempoFactor, onTempoChange }) {
+  return (
+    <div className="midi-player__tempo">
+      <label className="midi-player__tempo-label">
+        <span>Tempo</span>
+        <span className="midi-player__tempo-value">{tempoFactor.toFixed(2)}×</span>
+      </label>
+      <ValueSlider
+        className="midi-player__tempo-slider"
+        ariaLabel="Playback tempo"
+        min={0.25}
+        max={2}
+        step={0.05}
+        value={tempoFactor}
+        defaultValue={1}
+        formatValue={formatTempo}
+        onChange={onTempoChange}
+      />
+    </div>
+  );
+});
+
 /**
  * MIDI playback controls component
  */
@@ -16,12 +46,6 @@ const MidiPlayer = ({
   onStop,
   onTempoChange
 }) => {
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   const elapsed = currentMidi ? progress * currentMidi.duration : 0;
   const total = currentMidi?.duration || 0;
 
@@ -102,23 +126,7 @@ const MidiPlayer = ({
         </div>
       )}
 
-      <div className="midi-player__tempo">
-        <label className="midi-player__tempo-label">
-          <span>Tempo</span>
-          <span className="midi-player__tempo-value">{tempoFactor.toFixed(2)}×</span>
-        </label>
-        <ValueSlider
-          className="midi-player__tempo-slider"
-          ariaLabel="Playback tempo"
-          min={0.25}
-          max={2}
-          step={0.05}
-          value={tempoFactor}
-          defaultValue={1}
-          formatValue={(v) => `${v.toFixed(2)}x`}
-          onChange={(value) => onTempoChange?.(value)}
-        />
-      </div>
+      <TempoControl tempoFactor={tempoFactor} onTempoChange={onTempoChange} />
     </div>
   );
 };

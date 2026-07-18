@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getBuiltInMidiFiles } from './midiParser.js';
+import { getBuiltInMidiFiles, parseMidiFile } from './midiParser.js';
 import {
   ORIGINAL_CUE_IDS,
   ORIGINAL_CUE_NAMES,
@@ -43,6 +43,27 @@ describe('getBuiltInMidiFiles', () => {
     });
 
     expect(missing).toEqual([]);
+  });
+
+  it('parses the legacy Gnossienne SEM1 metadata container', async () => {
+    const files = getBuiltInMidiFiles('/');
+    const gnossienne = files.find((file) => file.id === 'satie-gnossienne');
+    const testDir = path.dirname(fileURLToPath(import.meta.url));
+    const diskPath = path.resolve(testDir, '../../public/midi/satie-gnossienne-1.mid');
+    const bytes = fs.readFileSync(diskPath);
+    const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => arrayBuffer
+    });
+
+    try {
+      const parsed = await parseMidiFile(gnossienne.path);
+      expect(parsed.notes.length).toBeGreaterThan(100);
+      expect(parsed.duration).toBeGreaterThan(60);
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
 

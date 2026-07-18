@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
+import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp } from '../utils/math.js';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { VerletChain, lagrangeEnvelope } from '../utils/vizPhysics.js';
 
 // Perceptual visualizer suite (Canvas 2D):
@@ -20,25 +22,6 @@ const FLOOR_DB = -70;
 
 const createFloatBuffer = (length) => new Float32Array(length);
 const createByteBuffer = (length) => new Uint8Array(length);
-
-const syncCanvas = (canvas, ctx, sizeRef) => {
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  const width = Math.max(1, Math.floor(rect.width));
-  const height = Math.max(1, Math.floor(rect.height));
-  if (sizeRef.width !== width || sizeRef.height !== height || sizeRef.dpr !== dpr) {
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    sizeRef.width = width;
-    sizeRef.height = height;
-    sizeRef.dpr = dpr;
-    sizeRef.resized = true;
-  } else {
-    sizeRef.resized = false;
-  }
-  return { width, height, resized: sizeRef.resized };
-};
 
 const readTimeDomain = (analyser, floatBuffer, byteBuffer) => {
   if (analyser.getFloatTimeDomainData) {
@@ -317,14 +300,6 @@ const WaveCandyCanvas = () => {
   const goniometerRef = useRef(null);
   const meterRef = useRef(null);
 
-  const sizesRef = useRef({
-    spectrogram: {},
-    scope: {},
-    spectrum: {},
-    goniometer: {},
-    meter: {}
-  });
-
   const buffersRef = useRef({
     freq: null,
     time: null,
@@ -361,11 +336,29 @@ const WaveCandyCanvas = () => {
     if (typeof window === 'undefined' || typeof requestAnimationFrame !== 'function') {
       return () => undefined;
     }
-    let rafId;
+    const canvases = {
+      spectrogram: spectrogramRef.current,
+      scope: scopeRef.current,
+      spectrum: spectrumRef.current,
+      goniometer: goniometerRef.current,
+      meter: meterRef.current
+    };
+    if (Object.values(canvases).some((canvas) => !canvas)) return () => undefined;
+
+    const contexts = Object.fromEntries(
+      Object.entries(canvases).map(([key, canvas]) => [key, canvas.getContext('2d')])
+    );
+    if (Object.values(contexts).some((context) => !context)) return () => undefined;
+
+    const sizeControllers = Object.fromEntries(
+      Object.entries(canvases).map(([key, canvas]) => [
+        key,
+        createCanvasSizeController(canvas, contexts[key])
+      ])
+    );
     let lastFrame = 0;
 
     const render = (time) => {
-      rafId = requestAnimationFrame(render);
       if (time - lastFrame < 33) return;
       const frameDt = Math.min(0.2, (time - lastFrame) / 1000) || 0.033;
       lastFrame = time;
@@ -438,37 +431,24 @@ const WaveCandyCanvas = () => {
         meter.peakHoldDb -= 12 * frameDt; // 12 dB/s decay after hold
       }
 
-      const spectrogramCanvas = spectrogramRef.current;
-      const scopeCanvas = scopeRef.current;
-      const spectrumCanvas = spectrumRef.current;
-      const goniometerCanvas = goniometerRef.current;
-      const meterCanvas = meterRef.current;
-      if (!spectrogramCanvas || !scopeCanvas || !spectrumCanvas || !goniometerCanvas || !meterCanvas) {
-        return;
-      }
+      const spectroSize = sizeControllers.spectrogram.size;
+      const scopeSize = sizeControllers.scope.size;
+      const spectrumSize = sizeControllers.spectrum.size;
+      const goniometerSize = sizeControllers.goniometer.size;
+      const meterSize = sizeControllers.meter.size;
 
-      const spectroCtx = spectrogramCanvas.getContext('2d');
-      const scopeCtx = scopeCanvas.getContext('2d');
-      const spectrumCtx = spectrumCanvas.getContext('2d');
-      const goniometerCtx = goniometerCanvas.getContext('2d');
-      const meterCtx = meterCanvas.getContext('2d');
-
-      const spectroSize = syncCanvas(spectrogramCanvas, spectroCtx, sizesRef.current.spectrogram);
-      const scopeSize = syncCanvas(scopeCanvas, scopeCtx, sizesRef.current.scope);
-      const spectrumSize = syncCanvas(spectrumCanvas, spectrumCtx, sizesRef.current.spectrum);
-      const goniometerSize = syncCanvas(goniometerCanvas, goniometerCtx, sizesRef.current.goniometer);
-      const meterSize = syncCanvas(meterCanvas, meterCtx, sizesRef.current.meter);
-
-      drawSpectrogram(spectroCtx, spectrogramCanvas, buffers.specSmoothed, spectroSize.width, spectroSize.height, spectroSize.resized, sizesRef.current.spectrogram.dpr || 1);
-      drawWaveform(scopeCtx, timeData, scopeSize.width, scopeSize.height);
-      drawSpectrum(spectrumCtx, buffers.specSmoothed, spectrumChainRef.current.positions, spectrumSize.width, spectrumSize.height);
-      drawGoniometer(goniometerCtx, leftData, rightData, goniometerSize.width, goniometerSize.height, goniometerSize.resized);
-      drawMeter(meterCtx, meterStateRef.current, meterSize.width, meterSize.height);
+      drawSpectrogram(contexts.spectrogram, canvases.spectrogram, buffers.specSmoothed, spectroSize.width, spectroSize.height, spectroSize.resized, spectroSize.dpr);
+      drawWaveform(contexts.scope, timeData, scopeSize.width, scopeSize.height);
+      drawSpectrum(contexts.spectrum, buffers.specSmoothed, spectrumChainRef.current.positions, spectrumSize.width, spectrumSize.height);
+      drawGoniometer(contexts.goniometer, leftData, rightData, goniometerSize.width, goniometerSize.height, goniometerSize.resized);
+      drawMeter(contexts.meter, meterStateRef.current, meterSize.width, meterSize.height);
+      Object.values(sizeControllers).forEach((controller) => controller.acknowledgeResize());
     };
 
-    rafId = requestAnimationFrame(render);
+    const stopFrameLoop = startVisibilityAwareRafLoop(render);
     return () => {
-      cancelAnimationFrame(rafId);
+      stopFrameLoop();
+      Object.values(sizeControllers).forEach((controller) => controller.disconnect());
     };
   }, []);
 

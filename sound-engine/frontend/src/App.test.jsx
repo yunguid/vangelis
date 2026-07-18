@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
 
 // Mock the audio engine
@@ -33,6 +33,10 @@ vi.mock('./components/Scene', () => ({
   default: () => <div data-testid="scene-mock">Scene</div>,
 }));
 
+vi.mock('./components/WaveCandy', () => ({
+  default: () => <div data-testid="wave-candy-mock">Wave Candy</div>,
+}));
+
 // Mock SynthKeyboard (complex component)
 vi.mock('./components/SynthKeyboard', () => ({
   default: () => <div data-testid="keyboard-mock">Synth</div>,
@@ -44,9 +48,11 @@ describe('App', () => {
     window.localStorage.clear();
   });
 
-  it('renders the app title', () => {
+  it('renders the app title', async () => {
     render(<App />);
     expect(screen.getByText('Vangelis')).toBeInTheDocument();
+    expect(await screen.findByTestId('scene-mock')).toBeInTheDocument();
+    expect(await screen.findByTestId('wave-candy-mock')).toBeInTheDocument();
   });
 
   it('renders keyboard section', () => {
@@ -104,5 +110,23 @@ describe('App', () => {
   it('does not show local save reassurance copy', () => {
     render(<App />);
     expect(screen.queryByText('State saves on this device.')).not.toBeInTheDocument();
+  });
+
+  it('coalesces rapid session changes into one deferred storage write', () => {
+    vi.useFakeTimers();
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem');
+    const { unmount } = render(<App />);
+
+    fireEvent.click(screen.getByLabelText('View keyboard shortcuts'));
+    fireEvent.click(screen.getByLabelText('Close shortcuts'));
+    expect(setItemSpy).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(199));
+    expect(setItemSpy).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
+
+    unmount();
+    vi.useRealTimers();
   });
 });

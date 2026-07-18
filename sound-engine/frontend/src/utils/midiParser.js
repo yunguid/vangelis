@@ -4,10 +4,48 @@
  * @module utils/midiParser
  */
 
-import { Midi } from '@tonejs/midi';
 import russianMidiLibrary from '../data/russianMidiLibrary.json';
 import { ORIGINAL_CUE_IDS, getOriginalCueName } from '../data/originalCueNames.js';
 import { withBase } from './baseUrl.js';
+
+let midiLibraryPromise;
+const loadMidiLibrary = () => {
+  midiLibraryPromise ||= import('@tonejs/midi');
+  return midiLibraryPromise;
+};
+
+const MIDI_HEADER_BYTES = 14;
+const matchesAscii = (bytes, offset, text) => (
+  offset + text.length <= bytes.length
+  && [...text].every((character, index) => bytes[offset + index] === character.charCodeAt(0))
+);
+
+/**
+ * Some legacy sequencers place a proprietary SEM1 metadata chunk between the
+ * standard MThd header and the first MTrk. The header's track count excludes
+ * that chunk, so remove it only when a valid MTrk follows at its declared end.
+ */
+export function normalizeMidiContainer(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  if (
+    bytes.length < MIDI_HEADER_BYTES + 8
+    || !matchesAscii(bytes, 0, 'MThd')
+    || !matchesAscii(bytes, MIDI_HEADER_BYTES, 'SEM1')
+  ) {
+    return arrayBuffer;
+  }
+
+  const metadataLength = new DataView(arrayBuffer).getUint32(MIDI_HEADER_BYTES + 4, false);
+  const firstTrackOffset = MIDI_HEADER_BYTES + 8 + metadataLength;
+  if (!matchesAscii(bytes, firstTrackOffset, 'MTrk')) {
+    return arrayBuffer;
+  }
+
+  const normalized = new Uint8Array(MIDI_HEADER_BYTES + bytes.length - firstTrackOffset);
+  normalized.set(bytes.subarray(0, MIDI_HEADER_BYTES));
+  normalized.set(bytes.subarray(firstTrackOffset), MIDI_HEADER_BYTES);
+  return normalized.buffer;
+}
 
 /**
  * @typedef {Object} MidiNote
@@ -53,16 +91,19 @@ import { withBase } from './baseUrl.js';
  * const midi = await parseMidiFile(file);
  */
 export async function parseMidiFile(source) {
-  const arrayBuffer = source instanceof File
-    ? await source.arrayBuffer()
-    : await fetch(source).then((response) => {
-      if (!response.ok) {
-        throw new Error(`Failed to fetch MIDI: ${response.status} ${response.statusText}`);
-      }
-      return response.arrayBuffer();
-    });
+  const [arrayBuffer, { Midi }] = await Promise.all([
+    source instanceof File
+      ? source.arrayBuffer()
+      : fetch(source).then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to fetch MIDI: ${response.status} ${response.statusText}`);
+        }
+        return response.arrayBuffer();
+      }),
+    loadMidiLibrary()
+  ]);
 
-  const midi = new Midi(arrayBuffer);
+  const midi = new Midi(normalizeMidiContainer(arrayBuffer));
 
   return {
     name: midi.name || 'Untitled',

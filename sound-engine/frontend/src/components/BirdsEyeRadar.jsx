@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
+import { createCanvasSizeController } from '../utils/canvasPerformance.js';
 import { clamp, midiNoteToName } from '../utils/math.js';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { buildNoteRenderWindow, getVisibleNoteRange } from './midiBirdsEyeMath.js';
 
 const DEFAULT_MIN_MIDI = 21;
@@ -44,14 +46,15 @@ const BirdsEyeRadar = ({
   currentMidi,
   progress,
   activeNotes = EMPTY_ACTIVE_NOTES,
-  isPlaying = false
+  isPlaying = false,
+  noteRenderWindow: suppliedNoteRenderWindow
 }) => {
   const canvasRef = useRef(null);
   const noteIdCacheRef = useRef(new Map());
   const particlesRef = useRef(createParticles(32));
   const noteRenderWindow = useMemo(
-    () => buildNoteRenderWindow(currentMidi?.notes || []),
-    [currentMidi]
+    () => suppliedNoteRenderWindow || buildNoteRenderWindow(currentMidi?.notes || []),
+    [currentMidi, suppliedNoteRenderWindow]
   );
   const propsRef = useRef({
     currentMidi,
@@ -104,21 +107,7 @@ const BirdsEyeRadar = ({
       return noteId;
     };
 
-    const syncCanvasSize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const width = Math.max(1, Math.floor(rect.width));
-      const height = Math.max(1, Math.floor(rect.height));
-      const displayWidth = Math.floor(width * dpr);
-      const displayHeight = Math.floor(height * dpr);
-
-      if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
-      }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return { width, height };
-    };
+    const sizeController = createCanvasSizeController(canvas, ctx);
 
     const drawBackdrop = ({ width, height, nowSeconds, playbackProgress }) => {
       const base = ctx.createLinearGradient(0, 0, 0, height);
@@ -320,7 +309,6 @@ const BirdsEyeRadar = ({
       ctx.shadowBlur = 0;
     };
 
-    let rafId;
     let lastFrame = 0;
     const loop = (time) => {
       const {
@@ -330,21 +318,15 @@ const BirdsEyeRadar = ({
         isPlaying: nowPlaying,
         noteRenderWindow: renderWindow
       } = propsRef.current;
-      if (document.visibilityState !== 'visible') {
-        rafId = requestAnimationFrame(loop);
-        return;
-      }
-
       const frameInterval = nowPlaying
         ? PLAYING_FRAME_INTERVAL_MS
         : (midi ? IDLE_FRAME_INTERVAL_MS : EMPTY_FRAME_INTERVAL_MS);
       if (time - lastFrame < frameInterval) {
-        rafId = requestAnimationFrame(loop);
         return;
       }
       lastFrame = time;
 
-      const { width, height } = syncCanvasSize();
+      const { width, height } = sizeController.size;
       const nowSeconds = time * 0.001;
 
       ctx.clearRect(0, 0, width, height);
@@ -369,11 +351,13 @@ const BirdsEyeRadar = ({
         playfieldWidth
       });
 
-      rafId = requestAnimationFrame(loop);
     };
 
-    rafId = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(rafId);
+    const stopFrameLoop = startVisibilityAwareRafLoop(loop);
+    return () => {
+      stopFrameLoop();
+      sizeController.disconnect();
+    };
   }, [midiRange.max, midiRange.min]);
 
   return (
