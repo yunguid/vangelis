@@ -12,7 +12,6 @@ import {
   DISTORTION_SLIDER,
   FILTER_SLIDERS,
   FM_SLIDERS,
-  InlineToggle,
   LFO1_RATE_SLIDER,
   LFO2_RATE_SLIDER,
   ModMatrixEditor,
@@ -21,7 +20,7 @@ import {
   REVERB_SIZE_SLIDER,
   SliderControl,
   UNISON_SLIDERS
-} from '../components/AudioControls.jsx';
+} from '../components/controls/audioControlPrimitives.jsx';
 import { audioEngine } from '../utils/audioEngine.js';
 import {
   AUDIO_PARAM_DEFAULTS,

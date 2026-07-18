@@ -535,3 +535,46 @@ Implemented boundaries and controls:
   thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
 - Isolated DSP benchmark: 405.1 us per 128-frame block with 6.6x realtime headroom.
 - `git diff --check`: pass.
+
+## Optimization batch 8 — Sound Designer control isolation
+
+Collected from production module attribution, manifest route-closure analysis, component
+regression tests, the full suite, and the audio/visual deterministic gates.
+
+| Metric | Batch 7 | Batch 8 | Change |
+|---|---:|---:|---:|
+| Sound Designer startup JS gzip | 88.45 KiB | 83.16 KiB | -6.0% |
+| Sound Designer startup JS raw | 320.55 KiB | 288.52 KiB | -10.0% |
+| Full sidebar sound panel in Sound Designer closure | 10.43 KiB gzip shared chunk | 0 | isolated |
+| Deferred sidebar sound panel | coupled to shared controls | 16.02 KiB / 5.40 KiB gzip | dedicated |
+| Shared primitive/preset asset | embedded in full panel | 23.33 KiB / 4.89 KiB gzip | dedicated |
+| Total production JS raw | 588.71 KiB | 570.92 KiB | -3.0% |
+| Total production JS gzip | 169.04 KiB | 168.33 KiB | -0.4% |
+| Production deployment bytes | 1,573.05 KiB | 1,555.27 KiB | -1.1% |
+| Automated production budgets | 24 | 26 | +2 guardrails |
+
+Implemented boundaries and controls:
+
+- Production attribution showed that Sound Designer's 2.82 KiB gzip page module imported the
+  entire 10.43 KiB gzip studio sidebar-control chunk solely for slider descriptions and a few
+  shared control components.
+- Extracted slider mappings, the reusable slider wrapper, and the modulation-matrix editor into
+  a shared primitive module. Both the studio panel and Sound Designer consume the same source,
+  so the reduction does not duplicate control logic.
+- Kept collapsible panel state, effect-dial rendering, delay/reverb advanced controls, and
+  sidebar-only presentation in the deferred Sound tab chunk.
+- Manifest guards require the dedicated Sound tab chunk and fail if it re-enters Sound
+  Designer's static route closure.
+
+### Batch 8 verification gates
+
+- Full suite: 40 files, 469/469 tests pass, including the Audio Controls and 20-test Sound
+  Designer interaction suites.
+- Production delivery/static/dependency/route guardrails: 26/26 pass.
+- Deterministic visual workload: 93.37% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark remains 405.1 us per 128-frame block with 6.6x realtime headroom;
+  Batch 8 does not touch the audio engine or worklets.
+- `git diff --check`: pass.
