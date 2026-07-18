@@ -299,6 +299,16 @@ const waveCandyDefersCanvasResourcesUntilGraph = (
   && waveCandyCanvasSource.indexOf('!audioEngine.getAnalysisNodes()?.analyser')
   < waveCandyCanvasSource.indexOf('createCanvasSizeController(canvas')
 );
+const waveCandyGradientCreationSites = (
+  waveCandyCanvasSource.match(/\.createLinearGradient\s*\(/g) || []
+).length;
+const waveCandyResizeScopedGradientCaches = (
+  waveCandyCanvasSource.match(/if\s*\(resized\s*\|\|\s*!gradientCache\.current\)/g) || []
+).length;
+const waveCandyCachesGradients = (
+  waveCandyGradientCreationSites === 2
+  && waveCandyResizeScopedGradientCaches === waveCandyGradientCreationSites
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -479,6 +489,9 @@ const report = {
     waveCandyColdCanvasContextCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
     waveCandyColdResizeObserverCount: waveCandyDefersCanvasResourcesUntilGraph ? 0 : 5,
     waveCandyDefersCanvasResourcesUntilGraph,
+    waveCandyGradientCreationSites,
+    waveCandySteadyStateGradientAllocationsPerFrame: waveCandyCachesGradients ? 0 : 2,
+    waveCandyCachesGradients,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -586,6 +599,14 @@ if (!waveCandyDefersCanvasResourcesUntilGraph) {
     name: 'Guard cold analyzer canvas-resource deferral',
     actual: 'canvas resources before graph readiness',
     expected: 'graph-gated contexts and resize observers'
+  });
+}
+if (!waveCandyCachesGradients) {
+  failures.push({
+    name: 'Guard resize-scoped analyzer gradients',
+    creationSites: waveCandyGradientCreationSites,
+    resizeScopedCaches: waveCandyResizeScopedGradientCaches,
+    expected: 'all analyzer gradients cached until canvas resize'
   });
 }
 if (
@@ -922,7 +943,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 57,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 58,
   failures
 };
 

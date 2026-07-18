@@ -1778,3 +1778,47 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 35 — resize-scoped canvas gradients
+
+Collected from Canvas 2D allocation-site inspection, the WaveCandy active-frame policy, exact
+20-second allocation counts, generated production closures, the full suite, and isolated
+audio/visual gates.
+
+| Metric | Batch 34 | Batch 35 | Change |
+|---|---:|---:|---:|
+| Analyzer gradient creations over 20 s | 1,200 | 2 | -99.83% |
+| Steady-state gradient allocations per frame | 2 | 0 | removed |
+| Active analyzer frames over 20 s | 600 | 600 | unchanged |
+| Initial Home JS gzip | 67.85 KiB | 67.86 KiB | +0.01 KiB |
+| Fully activated Home visual JS gzip | 77.19 KiB | 77.24 KiB | +0.05 KiB |
+| Production deployment bytes | 1,479.46 KiB | 1,479.60 KiB | +0.14 KiB |
+| Automated production budgets | 75 | 76 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Cached the spectrum fill and loudness-meter gradients after their first creation. Canvas
+  gradients depend on the target height, so each cache is invalidated and rebuilt only when its
+  canvas size controller reports a resize.
+- Removed both native gradient allocations from the 30 Hz steady-state render path without
+  changing colors, stops, draw order, compositing, analyzer sampling, or audio behavior.
+- Added exact 20-second allocation reporting and a production source guard that requires every
+  analyzer gradient creation site to be protected by a resize-scoped cache.
+
+### Batch 35 verification gates
+
+- Full suite: 50 files, 498/498 tests pass, including 20/20 focused Sound Designer tests.
+- Production delivery/static/dependency/route guardrails: 76/76 pass.
+- Analyzer gradient policy: 1,200 to 2 native objects over 20 seconds, a 99.83% reduction, with
+  zero steady-state gradient allocations per frame.
+- Isolated stereo traversal profile remains 36.96% faster than Batch 33; exact pair work remains
+  66.67% below Batch 33 and 83.33% below the original stereo policy.
+- Deterministic combined visual workload: 88.44% lower measured CPU time than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames and
+  scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 404.2 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

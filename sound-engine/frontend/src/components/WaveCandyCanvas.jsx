@@ -78,7 +78,7 @@ const sampleLogSpectrum = ({
 
 const dbToUnit = (db) => clamp((db - FLOOR_DB) / (0 - FLOOR_DB), 0, 1);
 
-const drawSpectrum = (ctx, rawDb, chainDb, width, height) => {
+const drawSpectrum = (ctx, rawDb, chainDb, width, height, resized, gradientCache) => {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
   ctx.fillRect(0, 0, width, height);
@@ -123,10 +123,13 @@ const drawSpectrum = (ctx, rawDb, chainDb, width, height) => {
   ctx.lineTo(width, height);
   ctx.lineTo(0, height);
   ctx.closePath();
-  const fill = ctx.createLinearGradient(0, 0, 0, height);
-  fill.addColorStop(0, 'rgba(140, 220, 255, 0.3)');
-  fill.addColorStop(1, 'rgba(140, 220, 255, 0.03)');
-  ctx.fillStyle = fill;
+  if (resized || !gradientCache.current) {
+    const fill = ctx.createLinearGradient(0, 0, 0, height);
+    fill.addColorStop(0, 'rgba(140, 220, 255, 0.3)');
+    fill.addColorStop(1, 'rgba(140, 220, 255, 0.03)');
+    gradientCache.current = fill;
+  }
+  ctx.fillStyle = gradientCache.current;
   ctx.fill();
 
   ctx.save();
@@ -263,7 +266,7 @@ const drawGoniometer = (ctx, left, right, width, height, resized, stats) => {
   stats.peak = peak;
 };
 
-const drawMeter = (ctx, state, width, height) => {
+const drawMeter = (ctx, state, width, height, resized, gradientCache) => {
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = 'rgba(6, 10, 16, 0.9)';
   ctx.fillRect(0, 0, width, height);
@@ -283,11 +286,14 @@ const drawMeter = (ctx, state, width, height) => {
   }
 
   const stHeight = clamp((state.shortTermDb + 60) / 60, 0, 1) * height;
-  const grad = ctx.createLinearGradient(0, height, 0, 0);
-  grad.addColorStop(0, 'rgba(142, 192, 124, 0.85)');
-  grad.addColorStop(0.7, 'rgba(250, 189, 47, 0.85)');
-  grad.addColorStop(1, 'rgba(251, 73, 52, 0.9)');
-  ctx.fillStyle = grad;
+  if (resized || !gradientCache.current) {
+    const gradient = ctx.createLinearGradient(0, height, 0, 0);
+    gradient.addColorStop(0, 'rgba(142, 192, 124, 0.85)');
+    gradient.addColorStop(0.7, 'rgba(250, 189, 47, 0.85)');
+    gradient.addColorStop(1, 'rgba(251, 73, 52, 0.9)');
+    gradientCache.current = gradient;
+  }
+  ctx.fillStyle = gradientCache.current;
   ctx.fillRect(width * 0.3, height - stHeight, width * 0.4, stHeight);
 
   // Peak hold line
@@ -312,6 +318,8 @@ const WaveCandyCanvas = () => {
   const spectrumRef = useRef(null);
   const goniometerRef = useRef(null);
   const meterRef = useRef(null);
+  const spectrumGradientRef = useRef(null);
+  const meterGradientRef = useRef(null);
 
   const buffersRef = useRef({
     freq: null,
@@ -447,8 +455,23 @@ const WaveCandyCanvas = () => {
 
       drawSpectrogram(contexts.spectrogram, canvases.spectrogram, buffers.specSmoothed, spectroSize.width, spectroSize.height, spectroSize.resized, spectroSize.dpr);
       drawWaveform(contexts.scope, timeData, scopeSize.width, scopeSize.height);
-      drawSpectrum(contexts.spectrum, buffers.specSmoothed, spectrumChainRef.current.positions, spectrumSize.width, spectrumSize.height);
-      drawMeter(contexts.meter, meterStateRef.current, meterSize.width, meterSize.height);
+      drawSpectrum(
+        contexts.spectrum,
+        buffers.specSmoothed,
+        spectrumChainRef.current.positions,
+        spectrumSize.width,
+        spectrumSize.height,
+        spectrumSize.resized,
+        spectrumGradientRef
+      );
+      drawMeter(
+        contexts.meter,
+        meterStateRef.current,
+        meterSize.width,
+        meterSize.height,
+        meterSize.resized,
+        meterGradientRef
+      );
       Object.values(sizeControllers).forEach((controller) => controller.acknowledgeResize());
     };
 

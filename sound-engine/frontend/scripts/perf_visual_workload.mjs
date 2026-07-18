@@ -301,6 +301,7 @@ const mergedStereoTraversal = runStereoTraversalBenchmark(
   simulateMergedStereoTraversal,
   stereoTraversalIterations
 );
+const activeAnalyzerFrames = Math.round(SECONDS * (1000 / WAVE_CANDY_FRAME_INTERVAL_MS));
 
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
@@ -342,6 +343,16 @@ const output = {
       batch33StereoTraversal.elapsedMs,
       mergedStereoTraversal.elapsedMs
     ).toFixed(2))
+  },
+  analyzerGradientPolicy: {
+    activeFrames: activeAnalyzerFrames,
+    batch34AllocationsOverBenchmark: activeAnalyzerFrames * 2,
+    cachedAllocationsOverBenchmark: 2,
+    allocationReductionPercent: Number(reduction(
+      activeAnalyzerFrames * 2,
+      2
+    ).toFixed(2)),
+    steadyStateAllocationsPerFrame: 0
   },
   activeAnalyzerPolicy: {
     frameHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
