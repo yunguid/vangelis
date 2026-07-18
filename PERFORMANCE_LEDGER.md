@@ -1551,3 +1551,48 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 30 — adaptive WebGL scene cadence
+
+Collected from production frame-loop inspection, a shared frame-policy benchmark, generated route
+closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 29 | Batch 30 | Change |
+|---|---:|---:|---:|
+| Active WebGL scene draws over 20 s | 1,200 | 600 | -50.0% |
+| Silent WebGL scene draws over 20 s | 1,200 | 400 | -66.7% |
+| Active scene band evaluations over 20 s | 13,200 | 6,600 | -50.0% |
+| Hidden-tab scene cadence | 0 Hz | 0 Hz | preserved |
+| Reduced-motion scene cadence | 0 Hz | 0 Hz | preserved |
+| Initial Home JS raw / gzip | 203.05 / 67.81 KiB | 203.05 / 67.81 KiB | unchanged |
+| Deferred Scene JS raw / gzip | 9.60 / 4.37 KiB | 9.69 / 4.42 KiB | +0.09 / +0.05 KiB |
+| Production deployment bytes | 1,478.69 KiB | 1,478.77 KiB | +0.08 KiB |
+| Automated production budgets | 70 | 71 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced the full-refresh-rate WebGL draw policy with a shared adaptive policy: 30 Hz while
+  audio, transient decay, or vortex particles are active, and 20 Hz for the slow silent ambient
+  motion. The shader remains visually continuous while full-screen GPU submissions drop sharply.
+- Frame timestamps now come from the RAF callback instead of an extra `performance.now()` call.
+  The existing visibility-aware loop still cancels hidden-tab work, and the pre-existing reduced-
+  motion check still avoids creating the WebGL context entirely.
+- The deterministic visual benchmark imports the same production constants and now measures scene
+  frames plus all 11 spectral-band evaluations alongside analyzer/radar work. This prevents the
+  benchmark cadence from drifting away from production behavior.
+- Added two unit tests for active/idle policy selection and a production budget requiring active
+  cadence at or below 30 Hz and idle cadence at or below 20 Hz.
+
+### Batch 30 verification gates
+
+- Full suite: 49 files, 495/495 tests pass.
+- Production delivery/static/dependency/route guardrails: 71/71 pass.
+- Deterministic combined visual workload: 88.57% lower CPU time than the legacy reference, with
+  78.18% fewer analyser samples, 65.71% fewer resample samples, and 50% fewer active scene frames
+  and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 414.6 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

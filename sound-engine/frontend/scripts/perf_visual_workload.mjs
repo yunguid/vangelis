@@ -1,4 +1,8 @@
 import { performance } from 'node:perf_hooks';
+import {
+  SCENE_ACTIVE_FRAME_INTERVAL_MS,
+  SCENE_IDLE_FRAME_INTERVAL_MS
+} from '../src/utils/visualFramePolicy.js';
 
 const SECONDS = 20;
 
@@ -145,22 +149,53 @@ const simulateRaylibFrame = ({ includeStereo }) => {
   }
 };
 
+const SCENE_BANDS = [
+  [30, 250],
+  [250, 2000],
+  [2000, 12000],
+  [30, 80],
+  [80, 160],
+  [160, 350],
+  [350, 700],
+  [700, 1400],
+  [1400, 3000],
+  [3000, 6500],
+  [6500, 13000]
+];
+
+const simulateSceneFrame = () => {
+  const hzPerBin = 48000 / 1024;
+  let energy = 0;
+  for (const [lowHz, highHz] of SCENE_BANDS) {
+    const lo = Math.max(0, Math.floor(lowHz / hzPerBin));
+    const hi = Math.min(srcFreq.length - 1, Math.ceil(highHz / hzPerBin));
+    let sum = 0;
+    for (let i = lo; i <= hi; i += 1) sum += srcFreq[i];
+    energy += sum / Math.max(1, hi - lo + 1);
+  }
+  return energy;
+};
+
 const runScenario = ({
   label,
   seconds,
   raylibHz,
   radarHz,
+  sceneHz,
   includeStereo,
   particleCount
 }) => {
   const raylibFrames = Math.round(seconds * raylibHz);
   const radarFrames = Math.round(seconds * radarHz);
+  const sceneFrames = Math.round(seconds * sceneHz);
 
   const start = performance.now();
 
   for (let i = 0; i < raylibFrames; i += 1) {
     simulateRaylibFrame({ includeStereo });
   }
+
+  for (let i = 0; i < sceneFrames; i += 1) simulateSceneFrame();
 
   for (let i = 0; i < radarFrames; i += 1) {
     simulateRadarFrame({
@@ -179,10 +214,12 @@ const runScenario = ({
     elapsedMs,
     raylibFrames,
     radarFrames,
+    sceneFrames,
     analyserSamples: raylibFrames * analyserSamplesPerRaylibFrame,
     resampleSamples: raylibFrames * resampleSamplesPerRaylibFrame,
     radarNoteEvaluations: radarFrames * VISIBLE_NOTE_COUNT,
-    activeNoteEvaluations: Math.round(radarFrames * VISIBLE_NOTE_COUNT * ACTIVE_NOTE_RATIO)
+    activeNoteEvaluations: Math.round(radarFrames * VISIBLE_NOTE_COUNT * ACTIVE_NOTE_RATIO),
+    sceneBandEvaluations: sceneFrames * SCENE_BANDS.length
   };
 };
 
@@ -191,6 +228,7 @@ const baseline = runScenario({
   seconds: SECONDS,
   raylibHz: 30,
   radarHz: 20,
+  sceneHz: 60,
   includeStereo: true,
   particleCount: 20
 });
@@ -200,6 +238,7 @@ const optimized = runScenario({
   seconds: SECONDS,
   raylibHz: 24,
   radarHz: 20,
+  sceneHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
   includeStereo: false,
   particleCount: 20
 });
@@ -210,6 +249,11 @@ const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
 const radarReduction = reduction(baseline.radarNoteEvaluations, optimized.radarNoteEvaluations);
+const sceneFrameReduction = reduction(baseline.sceneFrames, optimized.sceneFrames);
+const sceneBandReduction = reduction(
+  baseline.sceneBandEvaluations,
+  optimized.sceneBandEvaluations
+);
 
 const output = {
   benchmarkSeconds: SECONDS,
@@ -219,7 +263,14 @@ const output = {
     elapsedMsPercent: Number(elapsedReduction.toFixed(2)),
     analyserSamplesPercent: Number(analyserReduction.toFixed(2)),
     resampleSamplesPercent: Number(resampleReduction.toFixed(2)),
-    radarNoteEvaluationsPercent: Number(radarReduction.toFixed(2))
+    radarNoteEvaluationsPercent: Number(radarReduction.toFixed(2)),
+    sceneFramesPercent: Number(sceneFrameReduction.toFixed(2)),
+    sceneBandEvaluationsPercent: Number(sceneBandReduction.toFixed(2))
+  },
+  framePolicy: {
+    sceneActiveHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
+    sceneIdleHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
+    sceneReducedMotionHz: 0
   }
 };
 

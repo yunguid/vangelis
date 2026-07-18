@@ -3,6 +3,7 @@ import { audioEngine } from '../utils/audioEngine.js';
 import { getCappedDevicePixelRatio } from '../utils/canvasPerformance.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import { VortexField } from '../utils/vizPhysics.js';
+import { resolveSceneFrameInterval } from '../utils/visualFramePolicy.js';
 
 // Audio-reactive WebGL2 background.
 // Falls back to the static gradient (the underlay div) when WebGL2 is
@@ -289,6 +290,8 @@ const Scene = () => {
     let pulse = 0;
     let morphPhase = Math.random() * 100;
     let lastFrameTime = performance.now();
+    let lastRenderedAt = 0;
+    let hasSignal = false;
 
     // Lagrangian vortex particles: bass onsets inject circulation, highs
     // sprinkle fine turbulence; the strongest ten reach the shader. Long
@@ -313,9 +316,11 @@ const Scene = () => {
     canvas.addEventListener('webglcontextlost', onLost);
 
     const start = performance.now();
-    const frame = () => {
+    const frame = (frameTime) => {
       if (!running) return;
       if (contextLost) return;
+      if (frameTime - lastRenderedAt < resolveSceneFrameInterval(hasSignal)) return;
+      lastRenderedAt = frameTime;
 
       if (!analyser) {
         analyser = audioEngine.getAnalyser();
@@ -343,7 +348,7 @@ const Scene = () => {
         }
       }
 
-      const now = performance.now();
+      const now = frameTime;
       const dt = Math.min((now - lastFrameTime) / 1000, 0.1);
       lastFrameTime = now;
 
@@ -384,6 +389,7 @@ const Scene = () => {
           radius: 0.6 + Math.random() * 0.35
         });
       }
+      hasSignal = level > 0.015 || pulse > 0.01 || vortices.particles.length > 0;
       vortices.step(dt);
       vortices.fillUniforms(vortexPos, vortexStr, vortexRad);
       window.__sceneDebug = { vortexCount: vortices.particles.length, pulse, level };

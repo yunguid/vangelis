@@ -1,6 +1,10 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { gzipSync } from 'node:zlib';
+import {
+  SCENE_ACTIVE_FRAME_INTERVAL_MS,
+  SCENE_IDLE_FRAME_INTERVAL_MS
+} from '../src/utils/visualFramePolicy.js';
 
 const root = process.cwd();
 const distDir = path.join(root, 'dist');
@@ -446,6 +450,8 @@ const report = {
     sidebarIntentPrefetchImports,
     sidebarIntentPrefetchHandlers,
     sidebarEscapeListenerIsOpenOnly,
+    sceneActiveFrameRateHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
+    sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -522,6 +528,17 @@ if (
     intentHandlers: sidebarIntentPrefetchHandlers,
     escapeListener: sidebarEscapeListenerIsOpenOnly ? 'open-only' : 'always-on',
     expected: '2 imports, 4 intent handlers, open-only listener'
+  });
+}
+if (
+  (1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS) > 30
+  || (1000 / SCENE_IDLE_FRAME_INTERVAL_MS) > 20
+) {
+  failures.push({
+    name: 'Guard adaptive WebGL scene frame policy',
+    activeHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
+    idleHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
+    expected: 'active <= 30 Hz and idle <= 20 Hz'
   });
 }
 const countBudgetChecks = [
@@ -838,7 +855,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 52,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 53,
   failures
 };
 
