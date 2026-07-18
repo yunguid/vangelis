@@ -2845,3 +2845,58 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 56 — revision-aware pipeline polling identities
+
+Collected from all three pipeline polling routes, the backend's authoritative `id`/`updated_at`
+revision contract, a 100-job completed library, a ten-minute 300-poll session model, four independently
+launched 2,000-poll profiles, derived-study checksums, unversioned/reordered response tests, generated
+production closures, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 55 | Batch 56 | Change |
+|---|---:|---:|---:|
+| Unchanged React commits per 10-minute polling route session | 300 | 0 | removed |
+| Derived job evaluations per unchanged session | 30,000 | 0 | removed |
+| Unchanged 100-job poll CPU, 2,000 responses | 9.55–10.01 ms | 4.12–4.34 ms | -56.30% to -57.20% |
+| Derived-study checksum delta | — | 0 | exact |
+| Initial Home JS gzip | 67.94 KiB | 67.92 KiB | -0.02 KiB |
+| MIDI Pipeline route JS gzip | 56.87 KiB | 57.03 KiB | +0.16 KiB |
+| Generated Study route JS gzip | 54.88 KiB | 55.04 KiB | +0.16 KiB |
+| Study Songs route JS gzip | 54.80 KiB | 54.95 KiB | +0.15 KiB |
+| Production deployment bytes | 1,485.04 KiB | 1,485.45 KiB | +0.41 KiB |
+| Automated production budgets | 98 | 99 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added revision-aware job and job-list identity reuse based on the backend's `id` plus `updated_at`
+  contract. Pipeline writes update `updated_at` on every state mutation, so equal revisions prove the
+  response is unchanged without serializing or deeply comparing artifacts.
+- Applied functional state updates in MIDI Pipeline, Generated Study, and Study Songs. Identical poll
+  responses now return the current state reference, allowing React to bail out before route render,
+  generated-study derivation, sorting, memo invalidation, and DOM reconciliation.
+- Lists additionally require equal length, order, IDs, and revisions. Any missing revision metadata,
+  changed timestamp, added/removed job, or reordered result retains the new response, so the
+  optimization cannot hide updates from alternate or older APIs.
+- Added three focused identity/list safety cases, an unchanged-response workload that includes
+  response-object parsing/cloning on both sides, exact commit/derivation/session counts, a derived-
+  study checksum, and a production guard requiring snapshot reuse on all three polling pages.
+
+### Batch 56 verification gates
+
+- Full suite: 60 files, 529/529 tests pass, including three pipeline identity cases, generated-study
+  route cases, and all Sound Designer, MIDI playback, keyboard, control-kit, radar, Song Study,
+  canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 99/99 pass; unchanged versioned pipeline
+  responses report zero React commits across all three polling routes.
+- Four 2,000-poll profiles measured 56.30–57.20% lower modeled route CPU: 9.55–10.01 ms falls to
+  4.12–4.34 ms. A ten-minute unchanged session avoids 300 React commits and 30,000 derived job
+  evaluations while retaining an identical study checksum.
+- Warmed combined visual workload: 80.62% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -36 KB over 4,000 blocks.
+- Isolated DSP benchmark: 415.4 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

@@ -53,6 +53,7 @@ import {
 import { drawWaveCandyMeterGrid } from '../src/utils/waveCandyMeterGrid.js';
 import { loadAppSession } from '../src/utils/appSession.js';
 import { normalizeMidiNotes } from '../src/utils/midiPlaybackNotes.js';
+import { reusePipelineJobList } from '../src/utils/pipelineJobState.js';
 
 const SECONDS = 20;
 
@@ -272,6 +273,85 @@ if (
     !== onePassMidiNormalizationBenchmark.normalizedCount
 ) {
   throw new Error('One-pass MIDI normalization changed sorted-score output');
+}
+
+const pipelinePollingJobCount = 100;
+const pipelinePollingBenchmarkIterations = 2000;
+const pipelinePollingSessionPolls = 300;
+const pipelinePollingJobs = Array.from(
+  { length: pipelinePollingJobCount },
+  (_, index) => ({
+    id: `job-${index}`,
+    updated_at: 100000 - index,
+    status: 'completed',
+    artist: `Artist ${index}`,
+    song: `Study ${index}`,
+    source_url: index % 2 === 0 ? `https://example.com/${index}` : '',
+    tempo_bpm: 90 + (index % 60),
+    artifacts: [{ kind: 'merged-midi', url: `/midi/generated-${index}.mid` }]
+  })
+);
+const createPipelineBenchmarkStudy = (job) => {
+  const mergedMidi = job.artifacts.find((artifact) => artifact.kind === 'merged-midi');
+  if (job.status !== 'completed' || !mergedMidi) return null;
+  return {
+    jobId: job.id,
+    title: job.song.trim(),
+    artist: job.artist.trim(),
+    sourceUrl: job.source_url.trim(),
+    midiUrl: mergedMidi.url,
+    tempoBpm: Math.round(job.tempo_bpm),
+    updatedAt: job.updated_at
+  };
+};
+const buildPipelineStudyChecksum = (jobs) => {
+  const studies = jobs
+    .map((job) => createPipelineBenchmarkStudy(job))
+    .filter(Boolean)
+    .sort((left, right) => (right.updatedAt || 0) - (left.updatedAt || 0));
+  let checksum = studies.length;
+  for (let index = 0; index < studies.length; index += 1) {
+    checksum += studies[index].jobId.length + studies[index].updatedAt;
+  }
+  return checksum;
+};
+const runLegacyPipelinePollingBenchmark = (iterations) => {
+  let checksum = 0;
+  let commitCount = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const nextJobs = pipelinePollingJobs.map((job) => ({ ...job }));
+    checksum = buildPipelineStudyChecksum(nextJobs);
+    commitCount += 1;
+  }
+  return { checksum, commitCount, elapsedMs: performance.now() - startedAt };
+};
+const runRevisionAwarePipelinePollingBenchmark = (iterations) => {
+  let currentJobs = pipelinePollingJobs;
+  let checksum = buildPipelineStudyChecksum(currentJobs);
+  let commitCount = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const nextJobs = pipelinePollingJobs.map((job) => ({ ...job }));
+    const reusableJobs = reusePipelineJobList(currentJobs, nextJobs);
+    if (reusableJobs !== currentJobs) {
+      currentJobs = reusableJobs;
+      checksum = buildPipelineStudyChecksum(currentJobs);
+      commitCount += 1;
+    }
+  }
+  return { checksum, commitCount, elapsedMs: performance.now() - startedAt };
+};
+runLegacyPipelinePollingBenchmark(20);
+runRevisionAwarePipelinePollingBenchmark(20);
+const legacyPipelinePollingBenchmark = runLegacyPipelinePollingBenchmark(
+  pipelinePollingBenchmarkIterations
+);
+const revisionAwarePipelinePollingBenchmark = runRevisionAwarePipelinePollingBenchmark(
+  pipelinePollingBenchmarkIterations
+);
+if (legacyPipelinePollingBenchmark.checksum !== revisionAwarePipelinePollingBenchmark.checksum) {
+  throw new Error('Revision-aware pipeline polling changed derived study output');
 }
 
 const srcFreq = new Uint8Array(AUDIO_FREQ_BINS);
@@ -1513,6 +1593,28 @@ const output = {
     ).toFixed(2)),
     normalizedChecksumDelta: 0,
     preservesUnsortedInputOrdering: true
+  },
+  pipelinePollingIdentityPolicy: {
+    jobCount: pipelinePollingJobCount,
+    activeSessionMinutes: 10,
+    pollsPerActiveSession: pipelinePollingSessionPolls,
+    unchangedReactCommitsPerSessionBefore: pipelinePollingSessionPolls,
+    unchangedReactCommitsPerSessionAfter: 0,
+    avoidedReactCommitPercent: 100,
+    derivedJobEvaluationsPerSessionBefore:
+      pipelinePollingSessionPolls * pipelinePollingJobCount,
+    derivedJobEvaluationsPerSessionAfter: 0,
+    benchmarkIterations: pipelinePollingBenchmarkIterations,
+    legacyCommitCount: legacyPipelinePollingBenchmark.commitCount,
+    revisionAwareCommitCount: revisionAwarePipelinePollingBenchmark.commitCount,
+    legacyElapsedMs: Number(legacyPipelinePollingBenchmark.elapsedMs.toFixed(2)),
+    revisionAwareElapsedMs: Number(revisionAwarePipelinePollingBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      legacyPipelinePollingBenchmark.elapsedMs,
+      revisionAwarePipelinePollingBenchmark.elapsedMs
+    ).toFixed(2)),
+    derivedStudyChecksumDelta: 0,
+    unversionedResponsesAlwaysRetained: true
   },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,

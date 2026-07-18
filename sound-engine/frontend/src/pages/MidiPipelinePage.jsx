@@ -5,6 +5,7 @@ import SparkleSpinner from '../components/SparkleSpinner.jsx';
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
+import { reusePipelineJob } from '../utils/pipelineJobState.js';
 import './MidiPipelinePage.css';
 
 const INITIAL_FORM = {
@@ -116,7 +117,7 @@ const MidiPipelinePage = () => {
 
     try {
       const nextJob = await fetchJson(`/api/pipeline/jobs/${jobId}`);
-      setJob(nextJob);
+      setJob((currentJob) => reusePipelineJob(currentJob, nextJob));
       setJobError('');
     } catch (error) {
       setJobError(error.message);

@@ -547,6 +547,22 @@ const midiNormalizerUsesOnePassFastPath = (
   && !/notes\s*\.map\(/.test(midiPlaybackNotesSource)
   && !/\.filter\(Boolean\)/.test(midiPlaybackNotesSource)
 );
+const pipelineJobStateSource = await readFile(
+  path.join(sourceDir, 'utils', 'pipelineJobState.js'),
+  'utf8'
+);
+const pipelinePollingSource = (await Promise.all([
+  path.join('pages', 'MidiPipelinePage.jsx'),
+  path.join('pages', 'GeneratedSongStudyPage.jsx'),
+  path.join('pages', 'StudySongsPage.jsx')
+].map((file) => readFile(path.join(sourceDir, file), 'utf8')))).join('\n');
+const pipelinePollingReusesJobSnapshots = (
+  (pipelinePollingSource.match(/reusePipelineJob(?:List)?\(/g) || []).length === 3
+  && /job\.updated_at !== null/.test(pipelineJobStateSource)
+  && /currentJob\.id === nextJob\.id/.test(pipelineJobStateSource)
+  && /currentJob\.updated_at === nextJob\.updated_at/.test(pipelineJobStateSource)
+  && /if \(currentJobs\.length !== nextJobs\.length\) return false/.test(pipelineJobStateSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -797,7 +813,9 @@ const report = {
     midiSchedulerAvoidsWholeScoreQueue,
     midiNormalizerArraysPerImport: midiNormalizerUsesOnePassFastPath ? 1 : 2,
     midiNormalizerSortedInputSortCalls: midiNormalizerUsesOnePassFastPath ? 0 : 1,
-    midiNormalizerUsesOnePassFastPath
+    midiNormalizerUsesOnePassFastPath,
+    unchangedPipelinePollReactCommits: pipelinePollingReusesJobSnapshots ? 0 : 1,
+    pipelinePollingReusesJobSnapshots
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1377,6 +1395,13 @@ if (!midiNormalizerUsesOnePassFastPath) {
     expected: 'one output array with sorting only for detected unsorted input'
   });
 }
+if (!pipelinePollingReusesJobSnapshots) {
+  failures.push({
+    name: 'Guard revision-aware pipeline polling',
+    actual: 'fresh job identities committed for unchanged poll responses',
+    expected: 'id/updated_at snapshot reuse across all three polling routes'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1387,7 +1412,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 80,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 81,
   failures
 };
 

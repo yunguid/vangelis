@@ -3,6 +3,7 @@ import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNav
 import { BUILT_IN_STUDIES, createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
+import { reusePipelineJobList } from '../utils/pipelineJobState.js';
 import {
   MIDI_PIPELINE_HREF,
   getGeneratedStudyHref,
@@ -42,7 +43,10 @@ const StudySongsPage = () => {
   const loadJobs = React.useCallback(async () => {
     try {
       const nextJobs = await fetchJson('/api/pipeline/jobs');
-      setJobs(Array.isArray(nextJobs) ? nextJobs : []);
+      setJobs((currentJobs) => reusePipelineJobList(
+        currentJobs,
+        Array.isArray(nextJobs) ? nextJobs : []
+      ));
       setError('');
     } catch (nextError) {
       setError(nextError.message);

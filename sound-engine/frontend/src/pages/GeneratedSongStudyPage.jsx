@@ -3,6 +3,7 @@ import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNav
 import { createGeneratedStudyFromJob } from '../data/songStudies.js';
 import { fetchJson } from '../utils/fetchJson.js';
 import { useVisiblePolling } from '../hooks/useVisiblePolling.js';
+import { reusePipelineJob } from '../utils/pipelineJobState.js';
 import './SongStudyPage.css';
 
 const SongStudyPage = React.lazy(() => import('./SongStudyPage.jsx'));
@@ -35,7 +36,7 @@ const GeneratedSongStudyPage = ({ jobId }) => {
   const loadJob = React.useCallback(async () => {
     try {
       const nextJob = await fetchJson(`/api/pipeline/jobs/${jobId}`);
-      setJob(nextJob);
+      setJob((currentJob) => reusePipelineJob(currentJob, nextJob));
       setError('');
     } catch (nextError) {
       setError(nextError.message);
