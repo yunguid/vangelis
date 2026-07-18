@@ -716,3 +716,50 @@ Implemented boundaries and controls:
   thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
 - Isolated DSP benchmark: 409.8 us per 128-frame block with 6.5x realtime headroom.
 - `git diff --check`: pass.
+
+## Optimization batch 12 — state-gated Generated Study player
+
+Collected from production module attribution, manifest static/dynamic edges, running/completed
+job transition tests, the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 11 | Batch 12 | Change |
+|---|---:|---:|---:|
+| Generated Study startup JS gzip | 81.12 KiB | 55.12 KiB | -32.0% |
+| Generated Study startup JS raw | 245.59 KiB | 170.12 KiB | -30.7% |
+| Generated Study static JS assets | 17 | 10 | -7 assets |
+| Song Study player in status-shell closure | full player | 0 | deferred |
+| MIDI parser in status-shell closure | 3.63 KiB gzip | 0 | deferred |
+| Engine/keyboard chunk in status-shell closure | 12.32 KiB gzip | 0 | deferred |
+| Generated Study CSS gzip | 15.67 KiB | 15.67 KiB | unchanged status styling |
+| Total production JS raw | 543.12 KiB | 548.74 KiB | +1.0% transition/fallback overhead |
+| Total production JS gzip | 167.07 KiB | 167.64 KiB | +0.3% transition/fallback overhead |
+| Production deployment bytes | 1,528.77 KiB | 1,534.40 KiB | +0.4% |
+| Automated production budgets | 33 | 36 | +3 guardrails |
+
+Implemented boundaries and controls:
+
+- Generated Study previously imported the complete Song Study player before its first job API
+  response. Running, failed, and missing jobs therefore parsed the synth keyboard, radar, MIDI
+  scheduler, parser, and audio engine even though they could only render a status message.
+- The status shell now owns only polling, job-to-study conversion, brand/navigation chrome,
+  and its existing styled readouts. A completed job with a merged-MIDI artifact triggers a
+  React lazy transition into Song Study.
+- Added a branded, rail-preserving Suspense fallback for the short player-chunk transition;
+  the route never flashes a blank document.
+- Added tests proving running jobs remain in the lightweight shell and completed jobs load the
+  player. Manifest guards require the Generated-to-Song-Study dynamic edge and prohibit player,
+  parser, or engine chunks from its static closure.
+- Strengthened the pre-existing engine guard: it now identifies the engine/keyboard chunk by
+  its delay and reverb worklet assets rather than an optimizer-dependent filename. This restored
+  accurate engine presence reporting after Rollup regrouped shared modules.
+
+### Batch 12 verification gates
+
+- Full suite: 43 files, 476/476 tests pass.
+- Production delivery/static/dependency/route guardrails: 36/36 pass.
+- Deterministic visual workload: 89.22% lower CPU time, 78.18% fewer analyser samples, and
+  65.71% fewer resample samples than the legacy reference; exact workload counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.4 us per 128-frame block with 6.5x realtime headroom.
+- `git diff --check`: pass.

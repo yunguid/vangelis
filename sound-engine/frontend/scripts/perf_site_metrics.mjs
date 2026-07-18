@@ -74,6 +74,12 @@ const fullSidebarManifestRecord = Object.values(manifest).find((record) => (
   && record.dynamicImports?.includes('src/components/Sidebar/SoundTab.jsx')
 ));
 const fullSidebarFile = fullSidebarManifestRecord?.file || null;
+const audioEngineManifestRecord = Object.values(manifest).find((record) => (
+  record.assets?.some((file) => file.includes('delay-worklet'))
+  && record.assets?.some((file) => file.includes('reverb-worklet'))
+));
+const audioEngineFile = audioEngineManifestRecord?.file || null;
+const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
 
 function collectRouteClosure(entryKeys) {
   const visited = new Set();
@@ -104,8 +110,9 @@ function collectRouteClosure(entryKeys) {
     includesWebMidiController: [...jsFiles].some((file) => file.includes('webMidiController')),
     includesSoundControlPanel: [...jsFiles].some((file) => file.includes('SoundTab')),
     includesMidiParser: [...jsFiles].some((file) => file.includes('midiParser')),
-    includesAudioEngine: [...jsFiles].some((file) => file.includes('audioEngine')),
-    includesFullSidebar: fullSidebarFile ? jsFiles.has(fullSidebarFile) : false
+    includesAudioEngine: audioEngineFile ? jsFiles.has(audioEngineFile) : false,
+    includesFullSidebar: fullSidebarFile ? jsFiles.has(fullSidebarFile) : false,
+    includesSongStudyPlayer: songStudyFile ? jsFiles.has(songStudyFile) : false
   };
 }
 
@@ -118,8 +125,13 @@ const webMidiControllerChunk = jsAssets.find(({ file }) => file.includes('webMid
 const soundControlPanelChunk = jsAssets.find(({ file }) => file.includes('SoundTab')) || null;
 const midiParserChunk = jsAssets.find(({ file }) => file.includes('midiParser')) || null;
 const fullSidebarChunk = fullSidebarFile ? assetMetricByFile.get(fullSidebarFile) || null : null;
+const audioEngineChunk = audioEngineFile ? assetMetricByFile.get(audioEngineFile) || null : null;
 const appManifestEntry = manifest['src/App.jsx'];
 const appDefersMidiParser = appManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false;
+const generatedStudyManifestEntry = manifest['src/pages/GeneratedSongStudyPage.jsx'];
+const generatedDefersSongStudyPlayer = (
+  generatedStudyManifestEntry?.dynamicImports?.includes('src/pages/SongStudyPage.jsx') || false
+);
 
 const sourcePaths = (await walkFiles(sourceDir)).filter((file) => /\.(?:js|jsx)$/.test(file));
 const sourceText = (await Promise.all(sourcePaths.map((file) => readFile(file, 'utf8')))).join('\n');
@@ -193,7 +205,13 @@ const report = {
       kb: roundKb(fullSidebarChunk.bytes),
       gzipKb: roundKb(fullSidebarChunk.gzipBytes)
     } : null,
+    audioEngineChunk: audioEngineChunk ? {
+      file: audioEngineChunk.file,
+      kb: roundKb(audioEngineChunk.bytes),
+      gzipKb: roundKb(audioEngineChunk.gzipBytes)
+    } : null,
     appDefersMidiParser,
+    generatedDefersSongStudyPlayer,
     routeClosures
   },
   staticSignals: {
@@ -309,6 +327,9 @@ if (passiveRoutesWithAudioEngine.length > 0) {
     expected: 'no audioEngine chunk'
   });
 }
+if (!audioEngineChunk) {
+  failures.push({ name: 'Guard audio-engine chunk identity', actual: 0, minimum: 1 });
+}
 if (!fullSidebarChunk) {
   failures.push({ name: 'Guard isolated full sidebar chunk', actual: 0, minimum: 1 });
 }
@@ -330,6 +351,21 @@ if (navigationRoutesWithFullSidebar.length > 0) {
     expected: 'rail-only chrome'
   });
 }
+if (!generatedDefersSongStudyPlayer) {
+  failures.push({ name: 'Guard Generated Study player transition import', actual: 'static', expected: 'dynamic' });
+}
+const generatedStudyClosure = routeClosures.find(({ route }) => route === 'generated-study');
+if (
+  generatedStudyClosure?.includesSongStudyPlayer
+  || generatedStudyClosure?.includesMidiParser
+  || generatedStudyClosure?.includesAudioEngine
+) {
+  failures.push({
+    name: 'Guard Generated Study status-shell isolation',
+    actual: 'player dependencies in static closure',
+    expected: 'status shell only'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -340,7 +376,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 15,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 18,
   failures
 };
 
