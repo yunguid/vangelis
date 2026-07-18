@@ -131,6 +131,14 @@ describe('Sidebar', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it('does not attach close behavior while the panel is collapsed', () => {
+    const onClose = vi.fn();
+    render(<Sidebar {...buildProps({ isOpen: false, onClose })} />);
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('supports explicit close button in panel header', () => {
     const onClose = vi.fn();
     render(<Sidebar {...buildProps({ isOpen: true, onClose })} />);

@@ -1508,3 +1508,46 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 29 — intent-driven sidebar work
+
+Collected from sidebar event-lifecycle inspection, Vite route closures, focused interaction tests,
+the full suite, and isolated audio/visual gates.
+
+| Metric | Batch 28 | Batch 29 | Change |
+|---|---:|---:|---:|
+| Collapsed-sidebar Escape listeners | 1 | 0 | removed from idle state |
+| Intent-prefetched route destinations | 0 | 2 | Home + Sound Designer |
+| Pointer/keyboard intent bindings | 0 | 4 | pointer-enter + focus |
+| Initial JS raw / gzip | 144.96 / 47.13 KiB | 144.96 / 47.13 KiB | unchanged |
+| Shared rail JS raw / gzip | 2.57 / 0.99 KiB | 3.43 / 1.38 KiB | +0.86 / +0.39 KiB |
+| Max static-route JS gzip | 67.42 KiB | 67.81 KiB | +0.39 KiB |
+| Production deployment bytes | 1,477.73 KiB | 1,478.69 KiB | +0.96 KiB |
+| Automated production budgets | 69 | 70 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- The sidebar now attaches its global Escape listener only while an enabled panel is open. The
+  collapsed default state has no listener or keydown callback work; cleanup still occurs on close,
+  disable, or unmount.
+- Home and Sound Designer navigation links begin their existing lazy route imports on pointer
+  intent or keyboard focus. No route bytes move into the startup path and no speculative request
+  occurs without user intent; repeated intent reuses a module-scoped promise.
+- The tradeoff is explicit: the shared rail gains 0.39 KiB gzip, paid only on routes that render
+  the rail, to hide route-fetch latency between intent and click. Initial document/bootstrap bytes
+  remain unchanged.
+- Added a collapsed-Escape regression test plus a production guard requiring both dynamic route
+  imports, all four intent bindings, and the open-only Escape lifecycle.
+
+### Batch 29 verification gates
+
+- Full suite: 48 files, 493/493 tests pass.
+- Production delivery/static/dependency/route guardrails: 70/70 pass.
+- Deterministic visual workload after activation: 90.38% lower CPU time, 78.18% fewer analyser
+  samples, and 65.71% fewer resample samples than the legacy reference; exact counts are unchanged.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias
+  thresholds pass, and saturated heap drift is -18 KB over 4,000 blocks.
+- Isolated DSP benchmark: 415.2 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.

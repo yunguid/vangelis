@@ -2,6 +2,19 @@ import React from 'react';
 import { SOUND_DESIGNER_HREF } from '../../utils/routes.js';
 import './Sidebar.css';
 
+let homeRoutePromise;
+let soundDesignerRoutePromise;
+
+const preloadHomeRoute = () => {
+  homeRoutePromise ||= import('../../App.jsx');
+  homeRoutePromise.catch(() => undefined);
+};
+
+const preloadSoundDesignerRoute = () => {
+  soundDesignerRoutePromise ||= import('../../pages/SoundDesignerPage.jsx');
+  soundDesignerRoutePromise.catch(() => undefined);
+};
+
 const SidebarRail = ({
   isOpen = false,
   activeTab = 'sound',
@@ -41,7 +54,15 @@ const SidebarRail = ({
 
   return (
     <div className="sidebar-rail">
-      <a className="sidebar-rail__brand" href="#/" aria-label="Return to keyboard">V</a>
+      <a
+        className="sidebar-rail__brand"
+        href="#/"
+        aria-label="Return to keyboard"
+        onPointerEnter={preloadHomeRoute}
+        onFocus={preloadHomeRoute}
+      >
+        V
+      </a>
       <div className="sidebar-rail__nav">
         {tabs.map((tab) => (
           <button
@@ -66,6 +87,8 @@ const SidebarRail = ({
           href={SOUND_DESIGNER_HREF}
           aria-label="Open the sound design workspace"
           aria-current={currentView === 'design' ? 'page' : undefined}
+          onPointerEnter={preloadSoundDesignerRoute}
+          onFocus={preloadSoundDesignerRoute}
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 15 L9 15 L11 9 L14 19 L16 12 L20 12" />

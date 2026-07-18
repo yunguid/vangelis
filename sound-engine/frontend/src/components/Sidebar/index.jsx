@@ -104,15 +104,15 @@ const Sidebar = ({
   const [hasOpened, setHasOpened] = React.useState(isOpen);
   // Close on escape key
   useEffect(() => {
+    if (disabled || !isOpen) return undefined;
+
     const handleKeyDown = (e) => {
-      if (!disabled && e.key === 'Escape' && isOpen) {
-        onClose();
-      }
+      if (e.key === 'Escape') onClose();
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [disabled, isOpen, onClose]);
 
   useEffect(() => {
     if (!isOpen || typeof document === 'undefined') return undefined;

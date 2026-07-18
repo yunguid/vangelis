@@ -255,6 +255,24 @@ const productionServiceWorkerRegistrationCalls = (
 ).length;
 const appHeaderSource = await readFile(path.join(sourceDir, 'components', 'AppHeader.jsx'), 'utf8');
 const appHeaderImportsAudioEngine = /from\s+['"][^'"]*audioEngine(?:\.js)?['"]/.test(appHeaderSource);
+const sidebarRailSource = await readFile(
+  path.join(sourceDir, 'components', 'Sidebar', 'SidebarRail.jsx'),
+  'utf8'
+);
+const sidebarSource = await readFile(
+  path.join(sourceDir, 'components', 'Sidebar', 'index.jsx'),
+  'utf8'
+);
+const sidebarIntentPrefetchImports = (
+  sidebarRailSource.match(/import\s*\(\s*['"](?:\.\.\/\.\.\/App\.jsx|\.\.\/\.\.\/pages\/SoundDesignerPage\.jsx)['"]\s*\)/g)
+  || []
+).length;
+const sidebarIntentPrefetchHandlers = (
+  sidebarRailSource.match(/on(?:PointerEnter|Focus)=\{preload(?:Home|SoundDesigner)Route\}/g) || []
+).length;
+const sidebarEscapeListenerIsOpenOnly = /if\s*\(disabled\s*\|\|\s*!isOpen\)\s*return undefined;/.test(
+  sidebarSource
+);
 const audioEngineGatewaySource = await readFile(path.join(sourceDir, 'utils', 'audioEngine.js'), 'utf8');
 const webMidiControllerSource = await readFile(path.join(sourceDir, 'utils', 'webMidiController.js'), 'utf8');
 const audioGatewayDefersRuntime = /import\s*\(\s*['"]\.\/audioEngineRuntime\.js['"]\s*\)/
@@ -425,6 +443,9 @@ const report = {
     unreferencedOwnedCssClasses,
     retiredPublicArtifacts,
     productionServiceWorkerRegistrationCalls,
+    sidebarIntentPrefetchImports,
+    sidebarIntentPrefetchHandlers,
+    sidebarEscapeListenerIsOpenOnly,
     canvasElements: count(/<canvas\b/g),
     webglContextRequests: count(/getContext\s*\(\s*['"]webgl2?['"]/g),
     wasmModuleImports: count(/(?:from\s+['"][^'"]*\.wasm(?:\?[^'"]*)?['"]|import\s*\(\s*['"][^'"]*\.wasm)/g),
@@ -488,6 +509,19 @@ if (retiredPublicArtifacts.length > 0 || productionServiceWorkerRegistrationCall
     artifacts: retiredPublicArtifacts,
     serviceWorkerRegistrations: productionServiceWorkerRegistrationCalls,
     expected: 'none'
+  });
+}
+if (
+  sidebarIntentPrefetchImports !== 2
+  || sidebarIntentPrefetchHandlers !== 4
+  || !sidebarEscapeListenerIsOpenOnly
+) {
+  failures.push({
+    name: 'Guard intent-driven sidebar work',
+    routePrefetchImports: sidebarIntentPrefetchImports,
+    intentHandlers: sidebarIntentPrefetchHandlers,
+    escapeListener: sidebarEscapeListenerIsOpenOnly ? 'open-only' : 'always-on',
+    expected: '2 imports, 4 intent handlers, open-only listener'
   });
 }
 const countBudgetChecks = [
@@ -804,7 +838,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 51,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 52,
   failures
 };
 
