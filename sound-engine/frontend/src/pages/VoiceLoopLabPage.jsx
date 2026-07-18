@@ -204,6 +204,8 @@ const VoiceLoopLabPage = () => {
   const runtimeRef = React.useRef(null);
   const startedAtRef = React.useRef(0);
   const generationSerialRef = React.useRef(0);
+  const renderInputRevisionRef = React.useRef(0);
+  const renderedRevisionRef = React.useRef(-1);
 
   const events = React.useMemo(() => parseScoreEvents(score), [score]);
   const activeEventIndex = rendered && events.length > 0
@@ -224,6 +226,7 @@ const VoiceLoopLabPage = () => {
   }, []);
 
   const renderScore = React.useCallback(async () => {
+    const renderRevision = renderInputRevisionRef.current;
     const ctx = await ensureAudioContext();
     const nextRendered = renderVoiceScore(ctx, score, {
       effort: controls.effort,
@@ -234,6 +237,7 @@ const VoiceLoopLabPage = () => {
       tremoloDepth: controls.tremoloDepth,
       tremoloRate: controls.tremoloRate
     });
+    renderedRevisionRef.current = renderRevision;
     setRendered(nextRendered);
     setError(nextRendered.warnings?.length ? nextRendered.warnings.join(' ') : '');
     return nextRendered;
@@ -248,6 +252,12 @@ const VoiceLoopLabPage = () => {
     ensureAudioContext,
     score
   ]);
+
+  React.useEffect(() => {
+    renderInputRevisionRef.current += 1;
+    renderedRevisionRef.current = -1;
+    setRendered(null);
+  }, [renderScore]);
 
   const startRenderedLoop = React.useCallback((buffer) => {
     const ctx = audioContextRef.current;
@@ -277,29 +287,23 @@ const VoiceLoopLabPage = () => {
     }
   }, [controls.gain, controls.speed, controls.tone, controls.wet]);
 
-	  React.useEffect(() => {
-	    const timeoutId = window.setTimeout(async () => {
-	      try {
-	        const nextRendered = await renderScore();
-	        if (isPlaying) startRenderedLoop(nextRendered.buffer);
-	      } catch (renderError) {
-	        setError('Score render failed.');
-	      }
-	    }, 260);
-	    return () => window.clearTimeout(timeoutId);
-	  }, [
-	    controls.breath,
-	    controls.effort,
-	    controls.scale,
-	    controls.tremoloDepth,
-	    controls.tremoloRate,
-	    controls.vibratoDepth,
-	    controls.vibratoRate,
-	    isPlaying,
-	    renderScore,
-	    score,
-	    startRenderedLoop
-	  ]);
+  React.useEffect(() => {
+    if (
+      !isPlaying
+      || renderedRevisionRef.current === renderInputRevisionRef.current
+    ) {
+      return undefined;
+    }
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const nextRendered = await renderScore();
+        if (isPlaying) startRenderedLoop(nextRendered.buffer);
+      } catch (renderError) {
+        setError('Score render failed.');
+      }
+    }, 260);
+    return () => window.clearTimeout(timeoutId);
+  }, [isPlaying, renderScore, startRenderedLoop]);
 
   React.useEffect(() => {
     if (!isPlaying || !rendered) return undefined;

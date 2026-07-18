@@ -563,6 +563,19 @@ const pipelinePollingReusesJobSnapshots = (
   && /currentJob\.updated_at === nextJob\.updated_at/.test(pipelineJobStateSource)
   && /if \(currentJobs\.length !== nextJobs\.length\) return false/.test(pipelineJobStateSource)
 );
+const voiceLoopSource = await readFile(
+  path.join(sourceDir, 'pages', 'VoiceLoopLabPage.jsx'),
+  'utf8'
+);
+const voiceLoopDefersScoreRenderUntilInteraction = (
+  /const renderInputRevisionRef = React\.useRef\(0\)/.test(voiceLoopSource)
+  && /const renderedRevisionRef = React\.useRef\(-1\)/.test(voiceLoopSource)
+  && /renderedRevisionRef\.current = renderRevision/.test(voiceLoopSource)
+  && /!isPlaying\s*\|\|\s*renderedRevisionRef\.current === renderInputRevisionRef\.current/
+    .test(voiceLoopSource)
+  && /const timeoutId = window\.setTimeout\(async \(\) =>/.test(voiceLoopSource)
+  && /\}, 260\)/.test(voiceLoopSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -815,7 +828,11 @@ const report = {
     midiNormalizerSortedInputSortCalls: midiNormalizerUsesOnePassFastPath ? 0 : 1,
     midiNormalizerUsesOnePassFastPath,
     unchangedPipelinePollReactCommits: pipelinePollingReusesJobSnapshots ? 0 : 1,
-    pipelinePollingReusesJobSnapshots
+    pipelinePollingReusesJobSnapshots,
+    voiceLoopColdAudioContextConstructions:
+      voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
+    voiceLoopColdScoreRenders: voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
+    voiceLoopDefersScoreRenderUntilInteraction
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1402,6 +1419,13 @@ if (!pipelinePollingReusesJobSnapshots) {
     expected: 'id/updated_at snapshot reuse across all three polling routes'
   });
 }
+if (!voiceLoopDefersScoreRenderUntilInteraction) {
+  failures.push({
+    name: 'Guard interaction-first Voice Loop rendering',
+    actual: 'AudioContext and score rendering scheduled before playback interaction',
+    expected: 'revision-aware rendering on first play and debounced only while playing'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1412,7 +1436,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 81,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 82,
   failures
 };
 

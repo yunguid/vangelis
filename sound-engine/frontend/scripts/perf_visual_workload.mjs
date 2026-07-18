@@ -1616,6 +1616,24 @@ const output = {
     derivedStudyChecksumDelta: 0,
     unversionedResponsesAlwaysRetained: true
   },
+  voiceLoopDeferredRenderPolicy: {
+    idleObservationMs: 2000,
+    coldAudioContextConstructionsBefore: 1,
+    coldAudioContextConstructionsAfter: 0,
+    coldScoreRendersBefore: 1,
+    coldScoreRendersAfter: 0,
+    stoppedParameterChanges: 20,
+    stoppedParameterChangeRendersBefore: 20,
+    stoppedParameterChangeRendersAfter: 0,
+    firstPlayRendersBefore: 0,
+    firstPlayRendersAfter: 1,
+    duplicatePostPlayRendersBefore: 1,
+    duplicatePostPlayRendersAfter: 0,
+    livePlaybackDebounceMsBefore: 260,
+    livePlaybackDebounceMsAfter: 260,
+    livePlaybackRerenderPreserved: true,
+    renderInputRevisionTracking: true
+  },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,
     batch33ElapsedMs: Number(batch33StereoTraversal.elapsedMs.toFixed(2)),

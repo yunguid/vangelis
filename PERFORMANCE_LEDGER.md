@@ -2900,3 +2900,55 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 57 — interaction-first Voice Loop score rendering
+
+Collected from the Voice Loop route's production render lifecycle; a cold two-second idle-visit
+test; first-play activation and post-play debounce tests; a 20-edit stopped-session model; generated
+production closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 56 | Batch 57 | Change |
+|---|---:|---:|---:|
+| AudioContext constructions on a cold idle visit | 1 | 0 | removed |
+| Score renders on a cold idle visit | 1 | 0 | removed |
+| Score renders for 20 parameter edits while stopped | 20 | 0 | removed |
+| Score renders on first Play | 0 | 1 | deferred to intent |
+| Duplicate render after first Play's debounce window | 1 | 0 | removed |
+| Live-playing edit debounce | 260 ms | 260 ms | preserved |
+| Initial Home JS gzip | 67.92 KiB | 67.93 KiB | +0.01 KiB |
+| Voice Loop route JS gzip | 62.00 KiB | 62.05 KiB | +0.05 KiB |
+| Production deployment bytes | 1,485.45 KiB | 1,485.52 KiB | +0.07 KiB |
+| Automated production budgets | 99 | 100 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Removed the route-mount render timer. Merely visiting Voice Loop now leaves `AudioContext`, the
+  offline score renderer, and the rendered audio buffer uninitialized until the user presses Play.
+- Parameter changes invalidate the rendered revision immediately but schedule a replacement render
+  only while playback is active. Editing a stopped composition therefore remains allocation- and
+  audio-work-free, while live editing retains the existing 260 ms coalescing behavior.
+- Tracks render-input and completed-render revisions separately. First Play starts exactly one
+  render, and the following effect pass recognizes that completed revision rather than rendering the
+  same score again after the debounce interval.
+- Added focused cold-mount and first-play tests plus exact production workload counters. The static
+  production gate rejects reintroduction of cold score rendering or audio-context construction.
+
+### Batch 57 verification gates
+
+- Full suite: 61 files, 531/531 tests pass, including the two new Voice Loop lifecycle cases and all
+  Sound Designer, MIDI playback, keyboard, control-kit, radar, Song Study, canvas, numerical, scene,
+  and audio cases.
+- Production delivery/static/dependency/route guardrails: 100/100 pass; cold Voice Loop context and
+  score-render counts are both zero.
+- Exact lifecycle workload removes one cold `AudioContext`, one cold score render, all 20 stopped-
+  edit renders, and the former duplicate post-play render. First Play performs the one intended
+  render and live edits retain the 260 ms debounce.
+- Warmed combined visual workload: 80.25% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 426.2 us per 128-frame block with 6.3x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- `git diff --check`: pass.
