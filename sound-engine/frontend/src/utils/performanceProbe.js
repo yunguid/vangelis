@@ -27,6 +27,38 @@ export function getDomStats(root = document.documentElement) {
 
 const rounded = (value) => Number((value || 0).toFixed(2));
 export const PERFORMANCE_SETTLED_REPORT_DELAY_MS = 2600;
+export const PERFORMANCE_HISTORY_LIMIT = 100;
+export const ROUTE_LIFECYCLE_PROFILE_CYCLES = 20;
+
+const appendBounded = (target, values) => {
+  target.push(...values);
+  const excess = target.length - PERFORMANCE_HISTORY_LIMIT;
+  if (excess > 0) target.splice(0, excess);
+};
+
+export async function runRouteLifecycleProfile({
+  performanceProbe,
+  windowRef = window,
+  cycles = ROUTE_LIFECYCLE_PROFILE_CYCLES,
+  settleMs = PERFORMANCE_SETTLED_REPORT_DELAY_MS,
+  routes = ['#/sound-designer', '#/']
+} = {}) {
+  if (!performanceProbe?.snapshot) throw new Error('A performance probe is required');
+  const checkpointCycles = new Set([1, 5, 10, cycles]);
+  const checkpoints = [];
+
+  for (let cycle = 1; cycle <= cycles; cycle += 1) {
+    for (const route of routes) {
+      windowRef.location.hash = route;
+      await new Promise((resolve) => windowRef.setTimeout(resolve, settleMs));
+      if (checkpointCycles.has(cycle)) {
+        checkpoints.push({ cycle, route, snapshot: performanceProbe.snapshot() });
+      }
+    }
+  }
+
+  return { cycles, settleMs, routes, checkpoints };
+}
 
 export function startPerformanceProbe({
   performanceRef = performance,
@@ -48,6 +80,13 @@ export function startPerformanceProbe({
   const pendingRouteTransitions = new Map();
   let reportSnapshot = () => {};
   let settledReportId = null;
+  let routeSettledReportId = null;
+
+  const clearRouteSettledReport = () => {
+    if (routeSettledReportId === null) return;
+    windowRef.clearTimeout?.(routeSettledReportId);
+    routeSettledReportId = null;
+  };
 
   const observe = (type, onEntries, extra = {}) => {
     if (typeof PerformanceObserver === 'undefined' || !supported.has(type)) return;
@@ -80,10 +119,10 @@ export function startPerformanceProbe({
     }
   });
   observe('longtask', (entries) => {
-    state.longTasks.push(...entries.map((entry) => entry.duration));
+    appendBounded(state.longTasks, entries.map((entry) => entry.duration));
   });
   observe('event', (entries) => {
-    state.events.push(...entries.map((entry) => entry.duration));
+    appendBounded(state.events, entries.map((entry) => entry.duration));
   }, { durationThreshold: 16 });
 
   const nextFrame = windowRef.requestAnimationFrame.bind(windowRef);
@@ -98,6 +137,13 @@ export function startPerformanceProbe({
       nextPaintMs: null
     };
     pendingRouteTransitions.set(route, transition);
+    clearRouteSettledReport();
+    if (reportToConsole && typeof windowRef.setTimeout === 'function') {
+      routeSettledReportId = windowRef.setTimeout(() => {
+        routeSettledReportId = null;
+        reportSnapshot('route-settled');
+      }, PERFORMANCE_SETTLED_REPORT_DELAY_MS);
+    }
     nextFrame(() => nextFrame(() => {
       transition.nextPaintMs = performanceRef.now() - start;
     }));
@@ -161,35 +207,47 @@ export function startPerformanceProbe({
     try {
       return await operation();
     } finally {
-      state.manualInteractions.push({
+      appendBounded(state.manualInteractions, [{
         name,
         durationMs: performanceRef.now() - start,
         route: windowRef.location.hash || '#/',
         timestamp: Date.now()
-      });
+      }]);
     }
   };
 
   const markRouteReady = (route = windowRef.location.hash || '#/') => {
-    const transition = pendingRouteTransitions.get(route);
-    if (!transition) return;
-    nextFrame(() => nextFrame(() => {
+    const completeReadyTransition = () => {
+      const transition = pendingRouteTransitions.get(route);
+      if (!transition) return;
+      if (transition.nextPaintMs === null) {
+        nextFrame(completeReadyTransition);
+        return;
+      }
       const interactiveMs = performanceRef.now() - transition.start;
-      state.routeTransitions.push({
+      appendBounded(state.routeTransitions, [{
         route,
-        nextPaintMs: transition.nextPaintMs ?? interactiveMs,
+        nextPaintMs: transition.nextPaintMs,
         interactiveMs,
         timestamp: transition.timestamp
-      });
+      }]);
       pendingRouteTransitions.delete(route);
       reportSnapshot('route-ready');
-    }));
+    };
+    nextFrame(() => nextFrame(completeReadyTransition));
   };
 
   reportSnapshot = (phase = 'manual') => {
     if (!reportToConsole) return null;
     const report = snapshot();
-    windowRef.console?.info?.('[vangelis-perf]', phase, JSON.stringify(report));
+    const consoleReport = {
+      ...report,
+      routeTransitionCount: report.routeTransitions.length,
+      routeTransitions: report.routeTransitions.slice(-1),
+      manualInteractionCount: report.manualInteractions.length,
+      manualInteractions: report.manualInteractions.slice(-1)
+    };
+    windowRef.console?.info?.('[vangelis-perf]', phase, JSON.stringify(consoleReport));
     return report;
   };
 
@@ -205,6 +263,7 @@ export function startPerformanceProbe({
       state.routeTransitions.length = 0;
       state.manualInteractions.length = 0;
       state.cls = 0;
+      clearRouteSettledReport();
       pendingRouteTransitions.clear();
     },
     stop() {
@@ -215,6 +274,7 @@ export function startPerformanceProbe({
         windowRef.clearTimeout?.(settledReportId);
         settledReportId = null;
       }
+      clearRouteSettledReport();
       pendingRouteTransitions.clear();
       if (windowRef.__vangelisPerf === api) delete windowRef.__vangelisPerf;
     }

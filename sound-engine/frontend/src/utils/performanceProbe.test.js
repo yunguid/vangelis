@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   getDomStats,
   percentile,
+  PERFORMANCE_HISTORY_LIMIT,
   PERFORMANCE_SETTLED_REPORT_DELAY_MS,
+  runRouteLifecycleProfile,
   startPerformanceProbe
 } from './performanceProbe.js';
 
@@ -60,7 +62,11 @@ describe('performanceProbe helpers', () => {
     expect(JSON.parse(reports[0][2])).toMatchObject({
       route: '#/',
       navigation: { ttfbMs: 2, domContentLoadedMs: 12, loadMs: 20 },
-      dom: { nodes: 1, maxDepth: 1, canvases: 0 }
+      dom: { nodes: 1, maxDepth: 1, canvases: 0 },
+      routeTransitionCount: 0,
+      routeTransitions: [],
+      manualInteractionCount: 0,
+      manualInteractions: []
     });
     expect(timeouts).toHaveLength(1);
     expect(timeouts[0].delay).toBe(PERFORMANCE_SETTLED_REPORT_DELAY_MS);
@@ -103,6 +109,155 @@ describe('performanceProbe helpers', () => {
       interactiveMs: 16,
       timestamp: expect.any(Number)
     }]);
+    probe.stop();
+  });
+
+  it('resolves route readiness when the app listener runs before the probe listener', () => {
+    let hashchangeListener;
+    const frameCallbacks = [];
+    const times = [10, 18, 26];
+    const windowRef = {
+      location: { hash: '#/' },
+      requestAnimationFrame: (callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      },
+      addEventListener: (type, listener) => {
+        if (type === 'hashchange') hashchangeListener = listener;
+      },
+      removeEventListener: () => {}
+    };
+    const probe = startPerformanceProbe({
+      performanceRef: { now: () => times.shift(), getEntriesByType: () => [] },
+      documentRef: { documentElement: document.createElement('html') },
+      windowRef
+    });
+
+    windowRef.location.hash = '#/sound-designer';
+    probe.markRouteReady('#/sound-designer');
+    hashchangeListener();
+    while (frameCallbacks.length > 0) frameCallbacks.shift()();
+
+    expect(probe.snapshot().routeTransitions).toEqual([{
+      route: '#/sound-designer',
+      nextPaintMs: 8,
+      interactiveMs: 16,
+      timestamp: expect.any(Number)
+    }]);
+    probe.stop();
+  });
+
+  it('bounds retained profiling histories', async () => {
+    const frameCallbacks = [];
+    let hashchangeListener;
+    let now = 0;
+    const windowRef = {
+      location: { hash: '#/' },
+      requestAnimationFrame: (callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      },
+      addEventListener: (type, listener) => {
+        if (type === 'hashchange') hashchangeListener = listener;
+      },
+      removeEventListener: () => {}
+    };
+    const probe = startPerformanceProbe({
+      performanceRef: { now: () => ++now, getEntriesByType: () => [] },
+      documentRef: { documentElement: document.createElement('html') },
+      windowRef
+    });
+
+    for (let index = 0; index < PERFORMANCE_HISTORY_LIMIT + 5; index += 1) {
+      windowRef.location.hash = `#/route-${index}`;
+      hashchangeListener();
+      probe.markRouteReady(windowRef.location.hash);
+      while (frameCallbacks.length > 0) frameCallbacks.shift()();
+      await probe.measureInteraction(`interaction-${index}`, async () => undefined);
+    }
+
+    const snapshot = probe.snapshot();
+    expect(snapshot.routeTransitions).toHaveLength(PERFORMANCE_HISTORY_LIMIT);
+    expect(snapshot.routeTransitions[0].route).toBe('#/route-5');
+    expect(snapshot.manualInteractions).toHaveLength(PERFORMANCE_HISTORY_LIMIT);
+    expect(snapshot.manualInteractions[0].name).toBe('interaction-5');
+    probe.stop();
+  });
+
+  it('runs a quiet route lifecycle profile with bounded checkpoints', async () => {
+    let snapshotIndex = 0;
+    const windowRef = {
+      location: { hash: '#/' },
+      setTimeout: (callback) => {
+        callback();
+        return 1;
+      }
+    };
+    const report = await runRouteLifecycleProfile({
+      performanceProbe: {
+        snapshot: () => ({ sample: ++snapshotIndex, route: windowRef.location.hash })
+      },
+      windowRef,
+      cycles: 2,
+      settleMs: 0
+    });
+
+    expect(report).toMatchObject({
+      cycles: 2,
+      settleMs: 0,
+      routes: ['#/sound-designer', '#/'],
+      checkpoints: [
+        {
+          cycle: 1,
+          route: '#/sound-designer',
+          snapshot: { sample: 1, route: '#/sound-designer' }
+        },
+        { cycle: 1, route: '#/', snapshot: { sample: 2, route: '#/' } },
+        {
+          cycle: 2,
+          route: '#/sound-designer',
+          snapshot: { sample: 3, route: '#/sound-designer' }
+        },
+        { cycle: 2, route: '#/', snapshot: { sample: 4, route: '#/' } }
+      ]
+    });
+  });
+
+  it('reports a profiling-only settled snapshot after each route transition', () => {
+    let hashchangeListener;
+    const reports = [];
+    const timeouts = [];
+    const windowRef = {
+      location: { hash: '#/' },
+      requestAnimationFrame: (callback) => {
+        callback();
+        return 1;
+      },
+      addEventListener: (type, listener) => {
+        if (type === 'hashchange') hashchangeListener = listener;
+      },
+      removeEventListener: () => {},
+      setTimeout: (callback, delay) => {
+        timeouts.push({ callback, delay });
+        return timeouts.length;
+      },
+      clearTimeout: () => {},
+      console: { info: (...args) => reports.push(args) }
+    };
+    const probe = startPerformanceProbe({
+      performanceRef: { now: () => 10, getEntriesByType: () => [] },
+      documentRef: { documentElement: document.createElement('html') },
+      windowRef,
+      reportToConsole: true
+    });
+
+    windowRef.location.hash = '#/sound-designer';
+    hashchangeListener();
+    expect(timeouts).toHaveLength(2);
+    expect(timeouts[1].delay).toBe(PERFORMANCE_SETTLED_REPORT_DELAY_MS);
+    timeouts[1].callback();
+    expect(reports.at(-1).slice(0, 2)).toEqual(['[vangelis-perf]', 'route-settled']);
+    expect(JSON.parse(reports.at(-1)[2]).route).toBe('#/sound-designer');
     probe.stop();
   });
 });

@@ -4175,3 +4175,96 @@ Implemented boundaries and controls:
   claim; no audio or worklet source changed in this batch.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity. UI-tell census: 22, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 79 — bounded route-lifecycle profiling and leak audit
+
+Collected from a fresh production build and preview in Chrome 150 on Apple Silicon macOS; one quiet,
+automated 20-cycle Home/Sound Designer route profile; four checkpoints per route; corrected route-ready
+instrumentation; generated production closures; focused and full lifecycle tests; and the independent
+audio/visual/release gates. The browser environment remained 2,560 x 1,440 at DPR 1, dark color scheme,
+18 reported logical processors, 32 GiB reported device memory, no CPU throttling, and visible-document
+state.
+
+The investigation first found two profiler-induced false positives rather than an application leak. The
+app's hash listener can commit before the probe's hash listener creates its transition record, so the old
+probe could pair readiness with the following visit, skip alternating records, and report false ~15.6 s
+interactive times. Separately, every console snapshot serialized the complete transition history, retaining
+quadratically growing DevTools strings and making manual heap samples rise with the profiler itself. The
+final run used the corrected listener ordering and emitted only one lifecycle report after all 40 transitions.
+
+### Quiet 20-cycle lifecycle checkpoints
+
+| Route / cycle | Used heap | Total heap | DOM nodes / depth | Canvases | Long tasks |
+|---|---:|---:|---:|---:|---:|
+| Sound Designer / 1 | 8.09 MiB | 11.77 MiB | 216 / 14 | 5 | 0 |
+| Sound Designer / 5 | 6.34 MiB | 8.50 MiB | 217 / 14 | 5 | 0 |
+| Sound Designer / 10 | 6.59 MiB | 9.00 MiB | 217 / 14 | 5 | 0 |
+| Sound Designer / 20 | 6.79 MiB | 9.00 MiB | 217 / 14 | 5 | 0 |
+| Home / 1 | 6.09 MiB | 11.99 MiB | 183 / 12 | 6 | 0 |
+| Home / 5 | 5.88 MiB | 8.78 MiB | 183 / 12 | 6 | 0 |
+| Home / 10 | 6.26 MiB | 8.53 MiB | 183 / 12 | 6 | 0 |
+| Home / 20 | 6.42 MiB | 8.28 MiB | 183 / 12 | 6 | 0 |
+
+Sound Designer used heap fell 1.30 MiB (-16.07%) from cycle 1 to 20. Home rose only 0.33 MiB
+(+5.42%), stayed below the 10% investigation threshold, and did not carry any DOM or canvas growth.
+The one-node Sound Designer difference occurs between the first and fifth checkpoint and is then exact
+through cycles 5, 10, and 20. No route accumulated observable DOM, canvas, or long-task work, and the
+entire run emitted zero warnings or errors.
+
+| Metric | Before Batch 79 | Batch 79 | Change |
+|---|---:|---:|---:|
+| Route-ready records over 20 Home/Designer cycles | alternating records could be skipped | 40 / 40 | complete |
+| Quiet route next-paint p50 / p95 / maximum | not trustworthy | 13.8 / 16.2 / 17.6 ms | valid baseline |
+| Quiet route-ready p50 / p95 / maximum | false values up to ~15.6 s | 13.8 / 16.2 / 22.3 ms | race removed |
+| Home used-heap change, cycle 1 -> 20 | profiler-contaminated | +0.33 MiB / +5.42% | below threshold |
+| Designer used-heap change, cycle 1 -> 20 | profiler-contaminated | -1.30 MiB / -16.07% | no growth |
+| Home DOM nodes / canvases | not cycle-verified | 183 / 6 at every checkpoint | stable |
+| Designer DOM nodes / canvases after warm checkpoint | not cycle-verified | 217 / 5 | stable |
+| Long tasks over lifecycle run | not cycle-verified | 0 | none |
+| Console warnings / errors | not cycle-verified | 0 / 0 | none |
+| Retained entries per diagnostic history | unbounded | 100 maximum | bounded |
+| Transition histories serialized per console snapshot | complete history | latest entry plus count | bounded output |
+| Automated quiet route-cycle mode | none | 20 cycles | reproducible |
+| Settled profiling delay | initial/route-ready only | 2,600 ms | deferred visuals included |
+| Initial document FCP / LCP / CLS | n/a for this lifecycle document | 72 / 128 ms / 0 | recorded |
+| Initial TTFB / DCL / load | n/a for this lifecycle document | 1.2 / 34.3 / 49.9 ms | recorded |
+| Settled resources / transfer / decoded | n/a for this lifecycle document | 28 / 119.41 / 332.42 KiB | recorded |
+| Initial Home JS gzip | 68.11 KiB | 68.19 KiB | +0.08 KiB |
+| Sound Designer route JS gzip | 63.52 KiB | 63.60 KiB | +0.08 KiB |
+| Production deployment bytes | 1,492.14 KiB | 1,493.18 KiB | +1.04 KiB |
+| Automated production budgets | 121 | 125 | +4 guardrails |
+
+Implemented boundaries and controls:
+
+- Route readiness now resolves after both the transition record and its first painted frame exist. If React's
+  earlier hash listener reaches `markRouteReady` first, the probe waits one frame and rechecks instead of
+  dropping or mispairing the visit.
+- Long-task, event, route-transition, and manual-interaction histories use one shared 100-entry bound.
+  Console reports retain the exact counts but serialize only the latest transition and interaction.
+- A cancellable profiling-only route-settled snapshot runs at 2.6 seconds, after deferred visual startup,
+  while normal production startup remains free of the dynamically imported probe and its timers.
+- `?profile=lifecycle` runs 20 quiet Sound Designer/Home cycles and captures both routes at cycles 1, 5,
+  10, and 20. It emits one final JSON report, avoiding measurement distortion from repeated console output.
+- Four static production guards cover listener-order readiness, bounded retention, the automated 20-cycle
+  mode, and the 2.2-3.0 second settled-profile window.
+
+### Batch 79 verification gates
+
+- Focused probe suite: 8/8 tests pass, including app-first/probe-second hash listener ordering, both route
+  directions, bounded histories, compact console reports, 20-cycle automation, and settled-timer cleanup.
+- Live production verification: 40/40 transitions recorded; route-ready p95 16.2 ms and maximum 22.3 ms;
+  Home and Sound Designer remain within the heap threshold with stable route-specific DOM/canvas counts;
+  zero long tasks, warnings, and errors.
+- Full suite: 67 files, 559/559 tests pass across profiling, every route, audio runtime, worklets, controls,
+  visuals, keyboard, MIDI, polling, scheduling, storage, and sidebar lifecycle behavior.
+- Production delivery/static/dependency/route guardrails: 125/125 pass. The 2.36 KiB gzip profiling chunk
+  remains opt-in; the normal entry only adds the small mode switch needed to request it.
+- Warmed combined visual workload: 81.63% lower normalized median CPU than the legacy reference, with
+  78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass, and
+  saturated heap drift is -43 KiB over 4,000 blocks.
+- Isolated worklet sample: 909.8 us process CPU per 128-frame block and 2.9x realtime CPU headroom. No audio
+  or worklet source changed; the absolute sample includes competing desktop load and is not used as a
+  source-regression claim.
+- Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged.
+- `git diff --check`: pass.

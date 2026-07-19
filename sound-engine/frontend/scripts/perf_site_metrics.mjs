@@ -12,6 +12,11 @@ import {
   VISUAL_IDLE_TIMEOUT_MS
 } from '../src/hooks/useDeferredVisualMount.js';
 import {
+  PERFORMANCE_HISTORY_LIMIT,
+  PERFORMANCE_SETTLED_REPORT_DELAY_MS,
+  ROUTE_LIFECYCLE_PROFILE_CYCLES
+} from '../src/utils/performanceProbe.js';
+import {
   GONIOMETER_POINTS_PER_CSS_PIXEL,
   MONO_ANALYSER_FFT_SIZE,
   STEREO_ANALYSER_FFT_SIZE,
@@ -553,6 +558,32 @@ const deferredVisualMountUsesMinimumDelay = (
   && /windowRef\.requestIdleCallback\(mount, \{ timeout: VISUAL_IDLE_TIMEOUT_MS \}\)/
     .test(deferredVisualMountSource)
 );
+const performanceProbeSource = await readFile(
+  path.join(sourceDir, 'utils', 'performanceProbe.js'),
+  'utf8'
+);
+const performanceProbeReportsSettledRoutes = (
+  /reportToConsole && typeof windowRef\.setTimeout === 'function'/.test(performanceProbeSource)
+  && /reportSnapshot\('route-settled'\)/.test(performanceProbeSource)
+  && /clearRouteSettledReport\(\)/.test(performanceProbeSource)
+);
+const performanceProbeResolvesListenerOrder = (
+  /const completeReadyTransition = \(\) =>/.test(performanceProbeSource)
+  && /if \(transition\.nextPaintMs === null\)/.test(performanceProbeSource)
+  && /nextFrame\(completeReadyTransition\)/.test(performanceProbeSource)
+);
+const performanceProbeBoundsDiagnosticHistory = (
+  /appendBounded\(state\.routeTransitions/.test(performanceProbeSource)
+  && /appendBounded\(state\.manualInteractions/.test(performanceProbeSource)
+  && /routeTransitions: report\.routeTransitions\.slice\(-1\)/.test(performanceProbeSource)
+  && /manualInteractions: report\.manualInteractions\.slice\(-1\)/.test(performanceProbeSource)
+);
+const mainEntrySource = await readFile(path.join(sourceDir, 'main.jsx'), 'utf8');
+const performanceProbeAutomatesRouteLifecycle = (
+  /export async function runRouteLifecycleProfile/.test(performanceProbeSource)
+  && /profileMode === 'lifecycle'/.test(mainEntrySource)
+  && /await runRouteLifecycleProfile\(\{ performanceProbe \}\)/.test(mainEntrySource)
+);
 const eagerMutableHookInitializers = (
   productionSourceText.match(
     /(?:React\.)?use(?:Ref|State)\(\s*(?:new\s+(?:Map|Set|VerletChain)\s*\(|loadAppSession\s*\(\s*\)|\{|\[)/g
@@ -1080,6 +1111,13 @@ const report = {
     ambientVisualMinimumDelayMs: AMBIENT_VISUAL_DELAY_MS,
     visualIdleCallbackTimeoutMs: VISUAL_IDLE_TIMEOUT_MS,
     deferredVisualMountUsesMinimumDelay,
+    routeSettledProfileDelayMs: PERFORMANCE_SETTLED_REPORT_DELAY_MS,
+    performanceProbeReportsSettledRoutes,
+    performanceProbeResolvesListenerOrder,
+    performanceHistoryLimit: PERFORMANCE_HISTORY_LIMIT,
+    performanceProbeBoundsDiagnosticHistory,
+    routeLifecycleProfileCycles: ROUTE_LIFECYCLE_PROFILE_CYCLES,
+    performanceProbeAutomatesRouteLifecycle,
     productionEagerMutableHookInitializers: eagerMutableHookInitializers,
     hotPlaybackRedundantContainerAllocationsPerRender:
       eagerMutableHookInitializers === 0 ? 0 : 14,
@@ -1264,6 +1302,41 @@ if (
     stylesheets: report.networkHints.earlyExternalStylesheets,
     preconnects: report.networkHints.preconnectOrigins,
     expected: 'none'
+  });
+}
+if (!performanceProbeResolvesListenerOrder) {
+  failures.push({
+    name: 'Guard route readiness against listener-order races',
+    actual: performanceProbeResolvesListenerOrder,
+    expected: 'resolve after the transition record and first painted frame both exist'
+  });
+}
+if (!performanceProbeBoundsDiagnosticHistory || PERFORMANCE_HISTORY_LIMIT > 100) {
+  failures.push({
+    name: 'Guard bounded performance-probe retention',
+    historyLimit: PERFORMANCE_HISTORY_LIMIT,
+    boundedConsoleSnapshots: performanceProbeBoundsDiagnosticHistory,
+    expected: 'at most 100 retained entries and latest-only console histories'
+  });
+}
+if (!performanceProbeAutomatesRouteLifecycle || ROUTE_LIFECYCLE_PROFILE_CYCLES < 20) {
+  failures.push({
+    name: 'Guard automated route lifecycle profiling',
+    lifecycleCycles: ROUTE_LIFECYCLE_PROFILE_CYCLES,
+    automatedLifecycleMode: performanceProbeAutomatesRouteLifecycle,
+    expected: 'quiet opt-in Home/Designer profile with at least 20 cycles'
+  });
+}
+if (
+  !performanceProbeReportsSettledRoutes
+  || PERFORMANCE_SETTLED_REPORT_DELAY_MS < 2200
+  || PERFORMANCE_SETTLED_REPORT_DELAY_MS > 3000
+) {
+  failures.push({
+    name: 'Guard settled route lifecycle profiling',
+    settledDelayMs: PERFORMANCE_SETTLED_REPORT_DELAY_MS,
+    reportsSettledRoutes: performanceProbeReportsSettledRoutes,
+    expected: 'profiling-only route snapshot after 2200-3000 ms with cancellable scheduling'
   });
 }
 if (!sidebarHiddenPanelsFreezeContext) {
@@ -1977,7 +2050,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 103,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 107,
   failures
 };
 

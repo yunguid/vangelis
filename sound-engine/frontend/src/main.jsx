@@ -92,20 +92,30 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
-const profilingRequested = (
-  import.meta.env.DEV
-  || new URLSearchParams(window.location.search).has('profile')
-);
-const consoleProfilingRequested = new URLSearchParams(window.location.search).has('profile');
+const profileMode = new URLSearchParams(window.location.search).get('profile');
+const profilingRequested = import.meta.env.DEV || profileMode !== null;
+const consoleProfilingRequested = profileMode === '1';
+const lifecycleProfilingRequested = profileMode === 'lifecycle';
 if (profilingRequested) {
   const startProbe = () => {
     const schedule = window.requestIdleCallback
       || ((callback) => window.setTimeout(callback, 0));
     schedule(() => {
       import('./utils/performanceProbe.js')
-        .then(({ startPerformanceProbe }) => startPerformanceProbe({
-          reportToConsole: consoleProfilingRequested
-        }))
+        .then(async ({ runRouteLifecycleProfile, startPerformanceProbe }) => {
+          const performanceProbe = startPerformanceProbe({
+            reportToConsole: consoleProfilingRequested
+          });
+          if (lifecycleProfilingRequested) {
+            const lifecycleReport = await runRouteLifecycleProfile({ performanceProbe });
+            window.console.info(
+              '[vangelis-perf]',
+              'lifecycle',
+              JSON.stringify(lifecycleReport)
+            );
+          }
+          return performanceProbe;
+        })
         .catch(() => {});
     });
   };
