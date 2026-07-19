@@ -979,7 +979,10 @@ const voiceCachesStablePitchAndUnisonInvariants = (
   && /this\.cachedFmMaxIndexCycles = fmFreq > 0\.0/.test(voiceDspSource)
 );
 const voiceUsesRangeCheckedPhaseWrapping = (
-  /if \(phaseWithMod >= 1\.0 \|\| phaseWithMod < 0\.0\)/.test(voiceDspSource)
+  /if \(phaseWithMod >= 1\.0\)/.test(voiceDspSource)
+  && /phaseWithMod = phaseWithMod < 2\.0 \? phaseWithMod - 1\.0 : phaseWithMod % 1\.0/.test(voiceDspSource)
+  && /else if \(phaseWithMod < 0\.0\)/.test(voiceDspSource)
+  && /if \(phaseWithMod > -1\.0\) phaseWithMod \+= 1\.0/.test(voiceDspSource)
   && /phaseWithMod %= 1\.0/.test(voiceDspSource)
   && /if \(phaseWithMod < 0\.0\) phaseWithMod \+= 1\.0/.test(voiceDspSource)
   && /nextPhase < 1\.0 \? nextPhase : nextPhase % 1\.0/.test(voiceDspSource)
@@ -1438,6 +1441,8 @@ const report = {
       voiceCachesStablePitchAndUnisonInvariants ? 0 : 3,
     voiceCachesStablePitchAndUnisonInvariants,
     inRangeFmCarrierModuloCallsPerFourVoiceSample:
+      voiceUsesRangeCheckedPhaseWrapping ? 0 : 4,
+    singleCycleFmCarrierModuloCallsPerFourVoiceSample:
       voiceUsesRangeCheckedPhaseWrapping ? 0 : 4,
     ordinaryPhaseAdvanceModuloCallsPerFourVoiceSample:
       voiceUsesRangeCheckedPhaseWrapping ? 0 : 4,

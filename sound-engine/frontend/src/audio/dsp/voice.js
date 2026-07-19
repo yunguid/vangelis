@@ -341,9 +341,14 @@ export class Voice {
         : (detune === 0.0 ? 1.0 : Math.pow(2, detune / 1200.0));
       const phase = this.unisonPhases[i];
       let phaseWithMod = phase + fmOffset;
-      if (phaseWithMod >= 1.0 || phaseWithMod < 0.0) {
-        phaseWithMod %= 1.0;
-        if (phaseWithMod < 0.0) phaseWithMod += 1.0;
+      if (phaseWithMod >= 1.0) {
+        phaseWithMod = phaseWithMod < 2.0 ? phaseWithMod - 1.0 : phaseWithMod % 1.0;
+      } else if (phaseWithMod < 0.0) {
+        if (phaseWithMod > -1.0) phaseWithMod += 1.0;
+        else {
+          phaseWithMod %= 1.0;
+          if (phaseWithMod < 0.0) phaseWithMod += 1.0;
+        }
       }
       const dt = Math.min(0.45, baseDt * detuneRatio + fmRate);
       const s = waveformSample(this.waveform, phaseWithMod, dt);
