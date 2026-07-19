@@ -3417,3 +3417,66 @@ Implemented boundaries and controls:
 - React best-practices review: high-frequency preview state is isolated from engine mutation;
   scheduled work has route-change/unmount cleanup; native keyboard and accessibility semantics hold.
 - `git diff --check`: pass.
+
+## Optimization batch 66 — single-source, frame-cached Song Study title fitting
+
+Collected from the production Song Study single-line title layout effect; a ten-second 240 Hz window
+resize plus 60 Hz ResizeObserver delivery model; style invalidation, layout-read, unchanged-width,
+font-readiness, listener-source, frame, and unmount assertions; generated production closures; the
+full suite; and isolated audio/visual gates.
+
+| Metric | Batch 65 | Batch 66 | Change |
+|---|---:|---:|---:|
+| Title fit calls per 240 Hz resize display frame | 5 | at most 1 | -80.00% |
+| Title fit calls over ten-second resize | 3,000 | at most 600 | -80.00% |
+| Style invalidations over resize | 3,000 | at most 600 | -80.00% |
+| Container/computed-style/scroll-width reads each | 3,000 | at most 600 | -80.00% |
+| Unchanged-width observer fits | 600 | 0 | removed |
+| Resize sources when ResizeObserver exists | 2 | 1 | duplicate removed |
+| Possible post-unmount font-ready fits | 1 | 0 | removed |
+| Initial synchronous fit before paint | enabled | enabled | preserved |
+| Initial Home JS gzip | 67.83 KiB | 67.83 KiB | unchanged |
+| Song Study route JS gzip | 65.85 KiB | 65.95 KiB | +0.10 KiB |
+| Control Kit route JS gzip | 54.19 KiB | 54.18 KiB | -0.01 KiB |
+| Sound Designer route JS gzip | 63.35 KiB | 63.36 KiB | +0.01 KiB |
+| Production deployment bytes | 1,488.36 KiB | 1,488.59 KiB | +0.23 KiB |
+| Explicit animation-frame sites | 11 | 12 | +1 bounded coalescer |
+| Automated production budgets | 108 | 109 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Uses ResizeObserver as the sole resize source when available; the window listener is now only a
+  compatibility fallback. A normal viewport resize can no longer enter the same forced-layout path
+  from both sources.
+- Observer or fallback callbacks publish one pending fit through an animation frame. The fitter
+  caches the last container width and returns before removing inline size or reading computed and
+  scroll geometry when an observer delivery does not represent a width change.
+- The first title fit remains synchronous in the layout effect to prevent visible post-paint text
+  resizing. Font readiness requests one forced cached-frame fit so changed font metrics are still
+  measured even when container width is unchanged.
+- Cleanup marks the closure disposed, cancels its pending frame, removes only the installed fallback
+  listener, and disconnects the observer. A late font-ready promise can schedule no DOM mutation.
+- Added a regression case with a controlled observer proving three deliveries schedule one frame,
+  no duplicate window resize listener is installed, and teardown cancels the frame and disconnects
+  exactly once. A production guard pins the same cached, exclusive-source, teardown-safe structure.
+
+### Batch 66 verification gates
+
+- Full suite: 64 files, 543/543 tests pass, including the new Song Study title resize-source,
+  coalescing, and teardown case and all Sound Designer, Voice Loop, MIDI playback, keyboard,
+  control-kit, radar, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 109/109 pass; title fitting reports at most
+  one layout pass per 60 Hz frame and one resize source when ResizeObserver is supported.
+- The ten-second model removes at least 2,400 title fits and each corresponding style invalidation,
+  container-width read, computed-style read, and scroll-width read, plus all 600 unchanged-width fits.
+- Warmed combined visual workload: 80.38% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 408.2 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: synchronous layout is limited to the initial visual invariant;
+  scheduled work is cached and cleanup-safe; observer and promise lifetimes cannot escape the route.
+- `git diff --check`: pass.

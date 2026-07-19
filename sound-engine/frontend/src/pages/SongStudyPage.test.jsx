@@ -58,6 +58,7 @@ const study = {
   waveformType: 'triangle',
   audioParams: {}
 };
+const originalResizeObserver = globalThis.ResizeObserver;
 
 describe('SongStudyPage deferred MIDI loading', () => {
   beforeEach(() => {
@@ -71,6 +72,8 @@ describe('SongStudyPage deferred MIDI loading', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
+    globalThis.ResizeObserver = originalResizeObserver;
   });
 
   it('keeps transport disabled until the deferred parser resolves', async () => {
@@ -159,5 +162,41 @@ describe('SongStudyPage deferred MIDI loading', () => {
     fireEvent.change(scrubber, { target: { value: '1.7' } });
     unmount();
     expect(cancelFrameSpy).toHaveBeenCalled();
+  });
+
+  it('coalesces title resize observations without a duplicate window listener', () => {
+    vi.useFakeTimers();
+    let resizeCallback;
+    const disconnect = vi.fn();
+    globalThis.ResizeObserver = class TestResizeObserver {
+      constructor(callback) {
+        resizeCallback = callback;
+      }
+
+      observe() {}
+
+      disconnect() {
+        disconnect();
+      }
+    };
+    parseMidiFile.mockImplementation(() => new Promise(() => {}));
+    const requestFrameSpy = vi.spyOn(window, 'requestAnimationFrame');
+    const cancelFrameSpy = vi.spyOn(window, 'cancelAnimationFrame');
+    const addListenerSpy = vi.spyOn(window, 'addEventListener');
+
+    const { unmount } = render(<SongStudyPage study={study} />);
+    const framesAfterMount = requestFrameSpy.mock.calls.length;
+    expect(addListenerSpy).not.toHaveBeenCalledWith('resize', expect.any(Function));
+
+    act(() => {
+      resizeCallback();
+      resizeCallback();
+      resizeCallback();
+    });
+    expect(requestFrameSpy).toHaveBeenCalledTimes(framesAfterMount + 1);
+
+    unmount();
+    expect(cancelFrameSpy).toHaveBeenCalled();
+    expect(disconnect).toHaveBeenCalledTimes(1);
   });
 });

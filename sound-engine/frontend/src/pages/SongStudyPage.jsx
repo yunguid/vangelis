@@ -142,11 +142,19 @@ const useSingleLineTitle = (title) => {
   React.useLayoutEffect(() => {
     const element = titleRef.current;
     if (!element) return undefined;
+    const parent = element.parentElement;
+    let disposed = false;
+    let resizeFrame = null;
+    let forceNextFit = false;
+    let lastContainerWidth = -1;
 
-    const fitTitle = () => {
+    const fitTitle = (force = false) => {
+      if (disposed) return;
+      const containerWidth = parent?.clientWidth || 0;
+      if (!force && containerWidth === lastContainerWidth) return;
+      lastContainerWidth = containerWidth;
       element.style.removeProperty('font-size');
 
-      const containerWidth = element.parentElement?.clientWidth || 0;
       if (containerWidth === 0) {
         return;
       }
@@ -170,24 +178,45 @@ const useSingleLineTitle = (title) => {
       element.style.fontSize = `${fittedSize}px`;
     };
 
-    fitTitle();
+    const flushFit = () => {
+      resizeFrame = null;
+      const force = forceNextFit;
+      forceNextFit = false;
+      fitTitle(force);
+    };
 
-    const parent = element.parentElement;
+    const scheduleFit = (force = false) => {
+      forceNextFit = forceNextFit || force;
+      if (resizeFrame === null) {
+        resizeFrame = window.requestAnimationFrame(flushFit);
+      }
+    };
+    const handleWindowResize = () => scheduleFit(false);
+
+    fitTitle(true);
+
     const resizeObserver = (
       typeof ResizeObserver === 'function' && parent
-        ? new ResizeObserver(fitTitle)
+        ? new ResizeObserver(() => scheduleFit(false))
         : null
     );
 
     if (resizeObserver && parent) {
       resizeObserver.observe(parent);
+    } else {
+      window.addEventListener('resize', handleWindowResize);
     }
 
-    window.addEventListener('resize', fitTitle);
-    document.fonts?.ready?.then(fitTitle).catch(() => {});
+    document.fonts?.ready?.then(() => scheduleFit(true)).catch(() => {});
 
     return () => {
-      window.removeEventListener('resize', fitTitle);
+      disposed = true;
+      if (resizeFrame !== null) {
+        window.cancelAnimationFrame(resizeFrame);
+      }
+      if (!resizeObserver) {
+        window.removeEventListener('resize', handleWindowResize);
+      }
       resizeObserver?.disconnect();
     };
   }, [title]);

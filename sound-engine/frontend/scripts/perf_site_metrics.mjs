@@ -610,6 +610,16 @@ const songStudyPointerScrubDefersEngineSeek = (
   && /onPointerUp=\{handleScrubPointerEnd\}/.test(songStudySource)
   && /cancelAnimationFrame\(scrubFrameRef\.current\)/.test(songStudySource)
 );
+const songStudyTitleFitCoalescesByFrame = (
+  /let lastContainerWidth = -1/.test(songStudySource)
+  && /new ResizeObserver\(\(\) => scheduleFit\(false\)\)/.test(songStudySource)
+  && /resizeFrame = window\.requestAnimationFrame\(flushFit\)/.test(songStudySource)
+  && /if \(!force && containerWidth === lastContainerWidth\) return/.test(songStudySource)
+  && /else \{\s*window\.addEventListener\('resize', handleWindowResize\)/.test(songStudySource)
+  && /document\.fonts\?\.ready\?\.then\(\(\) => scheduleFit\(true\)\)/.test(songStudySource)
+  && /window\.cancelAnimationFrame\(resizeFrame\)/.test(songStudySource)
+  && /if \(disposed\) return/.test(songStudySource)
+);
 const keyboardNotePlaybackSource = await readFile(
   path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'useNotePlayback.js'),
   'utf8'
@@ -959,6 +969,11 @@ const report = {
     songStudySchedulerRebuildsPerPointerScrub:
       songStudyPointerScrubDefersEngineSeek ? 1 : 2400,
     songStudyPointerScrubDefersEngineSeek,
+    songStudyTitleFitCallsPer240HzResizeFrame:
+      songStudyTitleFitCoalescesByFrame ? 1 : 5,
+    songStudyTitleResizeSourcesWithObserver:
+      songStudyTitleFitCoalescesByFrame ? 1 : 2,
+    songStudyTitleFitCoalescesByFrame,
     keyboardVelocityStateUpdatesPerNote: keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
     keyboardVelocityOnlyReactCommitsPerFrame:
       keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
@@ -1239,7 +1254,7 @@ if (getStereoPairEvaluationsPerFrame() > 512) {
 }
 const countBudgetChecks = [
   ['Guard initial JS requests', initialJs.length, 2],
-  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 11],
+  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 12],
   ['Guard raw interval sites', report.staticSignals.setIntervalCalls, 0],
   ['Guard nested external CSS imports', report.staticSignals.externalCssImportCalls, 0],
   ['D11 direct runtime dependencies', directRuntimeDependencies.length, 5],
@@ -1604,6 +1619,13 @@ if (!songStudyPointerScrubDefersEngineSeek) {
     expected: 'frame-rate visual preview and one exact engine seek on release'
   });
 }
+if (!songStudyTitleFitCoalescesByFrame) {
+  failures.push({
+    name: 'Guard Song Study title fitting work',
+    actual: 'duplicate resize sources or repeated synchronous layout fitting remain',
+    expected: 'one cached fit per frame, observer/fallback exclusivity, and teardown-safe font work'
+  });
+}
 if (!keyboardAvoidsUnobservedInteractionWork) {
   failures.push({
     name: 'Guard allocation-free unprofiled keyboard interaction path',
@@ -1649,7 +1671,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 90,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 91,
   failures
 };
 
