@@ -62,13 +62,15 @@ class SynthProcessor extends AudioWorkletProcessor {
     this.pitchBendSmoothed = 0.0;
     this.modWheelTarget = 0.0; // 0..1
     this.modWheelSmoothed = 0.0;
-    this.filterCoefficientCache = {
+    this.dspValueCache = {
       cutoff: NaN,
       resonance: NaN,
       k: 0.0,
       a1: 0.0,
       a2: 0.0,
-      a3: 0.0
+      a3: 0.0,
+      lfoPhase: NaN,
+      lfoValue: 0.0
     };
     // ~5ms smoothing for performance controllers
     this.perfSmoothCoeff = Math.exp(-1.0 / (0.005 * sampleRate));
@@ -238,7 +240,7 @@ class SynthProcessor extends AudioWorkletProcessor {
       let sumR = 0.0;
       for (const voice of this.voices) {
         if (voice.active) {
-          voice.nextSample(bendMul, this.modWheelSmoothed, this.filterCoefficientCache);
+          voice.nextSample(bendMul, this.modWheelSmoothed, this.dspValueCache);
           sumL += voice.outL;
           sumR += voice.outR;
         }

@@ -23,7 +23,7 @@ and does not move another user-facing metric outside its budget.
 ## Metric catalog (100 core metrics)
 
 The executable report publishes additional derived and structural signals; this table is the stable,
-human-facing catalog. Delivery ceilings below reflect the current Batch 85 contract, not Baseline 0.
+human-facing catalog. Delivery ceilings below reflect the current Batch 86 contract, not Baseline 0.
 
 | ID | Metric | Budget / target | Method |
 |---|---|---|---|
@@ -4751,4 +4751,84 @@ closures unchanged. It buys a large synchronized-chord reduction with a neutral 
 - The Batch 83 production-browser route and interaction matrix remains applicable: Batches 84–85 touch
   only exact-output worklet/DSP internals and their test/report/benchmark coverage, not DOM, styles,
   routes, event handling, components, lazy boundaries, or accessibility semantics.
+- React best-practices review: no JSX or hook code changed, so no component rewrite was applicable.
+
+## Optimization batch 86 — exact cross-voice sine-LFO reuse
+
+Collected from the Batch 86 candidate and a detached `6ad28ad` Batch 85 worktree on the same Apple
+Silicon macOS host. The post-Batch-85 CPU profile confirmed that synchronized voices still called
+`Math.sin` independently for identical sine-LFO phases after the shared filter work had been removed.
+
+Eight alternating-order pairs used the synchronized 24-voice worst-case workload. The desktop remained
+strongly contended and changed regimes during collection, so the robust paired change is the primary
+comparison; no absolute sample is substituted for the isolated A01/A02 contract.
+
+| Synchronized worst-case worklet sample | Batch 85 baseline | Batch 86 candidate | Paired change |
+|---|---:|---:|---:|
+| Pair 1 CPU/block | 555.3 us | 642.9 us | +15.8% load-transition outlier |
+| Pair 2 CPU/block | 634.7 us | 580.6 us | -8.5% |
+| Pair 3 CPU/block | 635.0 us | 576.3 us | -9.2% |
+| Pair 4 CPU/block | 721.6 us | 714.4 us | -1.0% |
+| Pair 5 CPU/block | 905.9 us | 797.3 us | -12.0% |
+| Pair 6 CPU/block | 1,020.0 us | 822.2 us | -19.4% |
+| Pair 7 CPU/block | 896.0 us | 831.1 us | -7.2% |
+| Pair 8 CPU/block | 901.9 us | 889.8 us | -1.3% |
+| Robust median paired change | — | — | -7.9% |
+
+The candidate wins seven of eight pairs across both observed host-load regimes. The adverse first pair
+remains visible rather than being discarded. The final seven consecutive comparisons all improve, and
+their effect brackets the exact sine call removed by the profile.
+
+The `--staggered` control again advances each note by one render quantum so LFO phases diverge and the
+memo mostly misses:
+
+| Staggered miss-path sample | Batch 85 baseline | Batch 86 candidate | Change |
+|---|---:|---:|---:|
+| Pair 1 CPU/block | 871.6 us | 768.9 us | -11.8% |
+| Pair 2 CPU/block | 1,030.1 us | 967.2 us | -6.1% |
+| Pair 3 CPU/block | 1,046.5 us | 1,037.6 us | -0.9% |
+| Pair 4 CPU/block | 1,041.5 us | 1,053.9 us | +1.2% |
+| Pair 5 CPU/block | 1,007.5 us | 1,034.7 us | +2.7% |
+| Median CPU/block | 1,030.1 us | 1,034.7 us | +4.6 us / +0.45% noise floor |
+
+The staggered path is neutral at the absolute median and has a favorable 0.9% median paired change.
+
+Implemented boundaries and controls:
+
+- The processor's fixed DSP memo now carries one sine phase/value pair beside the Batch 85 filter
+  coefficients. No render-loop allocation or collection is introduced.
+- A sine LFO reuses the memo only when its newly advanced phase is exactly equal. A miss calls the same
+  `Math.sin(TWO_PI * phase)` expression and refreshes the pair.
+- Phase advancement, wrapping, per-voice rate/shape/hold state, non-sine shapes, and sample-and-hold RNG
+  remain fully independent. Identical phase is sufficient because sine output is phase-only.
+- A deterministic unit case advances two synchronized LFOs for 256 samples, requires bit-exact values,
+  and proves 256 sine calls instead of 512.
+- The production report adds synchronized and divergent LFO-evaluation counters plus a separate guard.
+
+| Delivery metric | Batch 85 | Batch 86 | Change |
+|---|---:|---:|---:|
+| Initial JS raw / gzip | 30.25 / 12.15 KiB | 30.25 / 12.15 KiB | unchanged |
+| Total production JS raw | 413.36 KiB | 413.47 KiB | +0.11 KiB |
+| Total production JS gzip | 141.34 KiB | 141.38 KiB | +0.04 KiB |
+| Production deployment bytes | 1,381.49 KiB | 1,381.60 KiB | +0.11 KiB |
+| Worklet aggregate raw | 38.38 KiB | 38.49 KiB | +0.11 KiB; within 38.7 KiB gate |
+| Worklet aggregate gzip | 11.01 KiB | 11.05 KiB | +0.04 KiB |
+| Automated production budgets | 137 | 138 | +1 guardrail |
+
+The byte cost remains confined to the lazy worklet and leaves all route closures and entry assets intact.
+
+### Batch 86 verification gates
+
+- Full suite: 67 files and 578/578 tests pass, including exact synchronized filter and LFO sharing plus
+  all worklet, modulation, LFO-shape, sample-and-hold, filter, route, and UI behavior.
+- Audio audit: 225/225 synth renders are bit-exact, 7/7 stereo FX cases pass, audible aliases remain
+  saw -41.11 dB / square -54.95 dB / triangle -71.85 dB / FM-sine -51.34 dB, and saturated heap drift
+  is -40 KiB over 4,000 blocks.
+- Production delivery/static/dependency/route guardrails: 138/138 pass. The report records one sine
+  evaluation per synchronized 24-voice sample and retains 24 as the divergent upper bound.
+- Warmed combined visual workload is 85.13% lower normalized CPU than the legacy reference, with 78.18%
+  fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged. `git diff --check`: pass.
+- The Batch 83 production-browser route and interaction matrix remains applicable: Batches 84–86 change
+  exact-output worklet/DSP internals and test/report/benchmark coverage only.
 - React best-practices review: no JSX or hook code changed, so no component rewrite was applicable.

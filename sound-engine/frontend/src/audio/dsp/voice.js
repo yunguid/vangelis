@@ -234,7 +234,7 @@ export class Voice {
 
   // Renders one stereo sample into this.outL/this.outR (fields, not returns,
   // so the hot loop never allocates).
-  nextSample(bendMul, modWheel, filterCoefficientCache) {
+  nextSample(bendMul, modWheel, dspValueCache) {
     if (!this.active) {
       this.outL = 0.0;
       this.outR = 0.0;
@@ -255,8 +255,8 @@ export class Voice {
     const routes = this.routes;
 
     // --- Evaluate modulation sources (only the ones routed) ---
-    const lfo1Value = routes.usesLfo1 ? this.lfo1.next() : 0.0;
-    const lfo2Value = routes.usesLfo2 ? this.lfo2.next() : 0.0;
+    const lfo1Value = routes.usesLfo1 ? this.lfo1.next(dspValueCache) : 0.0;
+    const lfo2Value = routes.usesLfo2 ? this.lfo2.next(dspValueCache) : 0.0;
     const modEnvValue = routes.usesModEnv ? this.modEnvelope.next(true) : 0.0;
 
     // --- Accumulate routed modulation per destination ---
@@ -373,7 +373,7 @@ export class Voice {
       const modCutoff = cutoffOct !== 0.0
         ? this.filterL.targetCutoff * Math.pow(2, cutoffOct)
         : undefined;
-      sampleL = this.filterL.process(sampleL, modCutoff, filterCoefficientCache);
+      sampleL = this.filterL.process(sampleL, modCutoff, dspValueCache);
       sampleR = stereo ? this.filterR.processStereoPartner(sampleR, this.filterL) : sampleL;
     }
 

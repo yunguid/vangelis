@@ -195,6 +195,23 @@ describe('lfo', () => {
     for (let i = 0; i < 481; i++) v = lfo.next();
     expect(v).toBeCloseTo(-0.5, 9); // redrawn at the wrap
   });
+
+  it('reuses exact sine values across synchronized LFOs', () => {
+    const first = new LFO(SR);
+    const second = new LFO(SR);
+    first.rate = 5;
+    second.rate = 5;
+    const valueCache = { lfoPhase: NaN, lfoValue: 0 };
+    const sinSpy = vi.spyOn(Math, 'sin');
+
+    for (let i = 0; i < 256; i++) {
+      const firstValue = first.next(valueCache);
+      const secondValue = second.next(valueCache);
+      expect(secondValue).toBe(firstValue);
+    }
+
+    expect(sinSpy).toHaveBeenCalledTimes(256);
+  });
 });
 
 describe('dc blocker', () => {

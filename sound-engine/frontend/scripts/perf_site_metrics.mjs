@@ -957,10 +957,11 @@ const macroDialsShareAudioActivitySubscription = (
   && !/useEffect\(\(\) => audioEngine\.subscribeActivity/.test(effectMacroDialSource)
   && /<EffectMacroActivityProvider enabled=\{activeSections\.delay \|\| activeSections\.reverb\}>/.test(audioControlsSource)
 );
-const [svfSource, voiceDspSource, synthWorkletDspSource] = await Promise.all([
+const [svfSource, voiceDspSource, synthWorkletDspSource, lfoDspSource] = await Promise.all([
   readFile(path.join(sourceDir, 'audio', 'dsp', 'svf.js'), 'utf8'),
   readFile(path.join(sourceDir, 'audio', 'dsp', 'voice.js'), 'utf8'),
-  readFile(path.join(sourceDir, 'audio', 'synth-worklet.js'), 'utf8')
+  readFile(path.join(sourceDir, 'audio', 'synth-worklet.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'audio', 'dsp', 'lfo.js'), 'utf8')
 ]);
 const svfCachesSettledAndStereoCoefficients = (
   /recalculateCoefficients\(\)/.test(svfSource)
@@ -984,14 +985,21 @@ const voiceUsesRangeCheckedPhaseWrapping = (
   && /nextPhase < 1\.0 \? nextPhase : nextPhase % 1\.0/.test(voiceDspSource)
 );
 const svfSharesExactCoefficientsAcrossVoices = (
-  /this\.filterCoefficientCache = \{/.test(synthWorkletDspSource)
-  && /voice\.nextSample\(bendMul, this\.modWheelSmoothed, this\.filterCoefficientCache\)/.test(synthWorkletDspSource)
+  /this\.dspValueCache = \{/.test(synthWorkletDspSource)
+  && /voice\.nextSample\(bendMul, this\.modWheelSmoothed, this\.dspValueCache\)/.test(synthWorkletDspSource)
   && /process\(input, cutoffOverride, coefficientCache\)/.test(svfSource)
   && /coefficientCache\.cutoff === this\.cutoff/.test(svfSource)
   && /coefficientCache\.resonance === this\.resonanceSmoothed/.test(svfSource)
   && /coefficientCache\.cutoff = this\.coefficientCutoff/.test(svfSource)
   && /coefficientCache\.a3 = this\.coefficientA3/.test(svfSource)
-  && /this\.filterL\.process\(sampleL, modCutoff, filterCoefficientCache\)/.test(voiceDspSource)
+  && /this\.filterL\.process\(sampleL, modCutoff, dspValueCache\)/.test(voiceDspSource)
+);
+const lfoSharesExactSineValuesAcrossVoices = (
+  /next\(valueCache\)/.test(lfoDspSource)
+  && /valueCache\.lfoPhase === phase/.test(lfoDspSource)
+  && /valueCache\.lfoValue = value/.test(lfoDspSource)
+  && /this\.lfo1\.next\(dspValueCache\)/.test(voiceDspSource)
+  && /this\.lfo2\.next\(dspValueCache\)/.test(voiceDspSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1437,7 +1445,11 @@ const report = {
     synchronizedTwentyFourVoiceSvfCoefficientEvaluationsPerSample:
       svfSharesExactCoefficientsAcrossVoices ? 1 : 24,
     divergentVoiceSvfCoefficientEvaluationsPerSample: 24,
-    svfSharesExactCoefficientsAcrossVoices
+    svfSharesExactCoefficientsAcrossVoices,
+    synchronizedTwentyFourVoiceSineLfoEvaluationsPerSample:
+      lfoSharesExactSineValuesAcrossVoices ? 1 : 24,
+    divergentVoiceSineLfoEvaluationsPerSample: 24,
+    lfoSharesExactSineValuesAcrossVoices
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -2331,6 +2343,13 @@ if (!svfSharesExactCoefficientsAcrossVoices) {
     expected: 'one processor-local exact-value coefficient memo with independent per-voice filter state'
   });
 }
+if (!lfoSharesExactSineValuesAcrossVoices) {
+  failures.push({
+    name: 'Guard exact cross-voice sine-LFO reuse',
+    actual: 'synchronized voices repeat identical sine evaluation',
+    expected: 'one processor-local exact-phase sine value with independent per-voice LFO state'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -2341,7 +2360,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 119,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 120,
   failures
 };
 

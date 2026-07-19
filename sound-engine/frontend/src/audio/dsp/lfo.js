@@ -17,7 +17,7 @@ export class LFO {
     this.holdValue = Math.random() * 2.0 - 1.0;
   }
 
-  next() {
+  next(valueCache) {
     if (this.rate <= 0.0) return 0.0;
     const prevPhase = this.phase;
     let phase = prevPhase + this.rate / this.sampleRate;
@@ -30,8 +30,15 @@ export class LFO {
     this.phase = phase;
 
     switch (this.shape) {
-      case LFO_SHAPES.SINE:
-        return Math.sin(TWO_PI * phase);
+      case LFO_SHAPES.SINE: {
+        if (valueCache && valueCache.lfoPhase === phase) return valueCache.lfoValue;
+        const value = Math.sin(TWO_PI * phase);
+        if (valueCache) {
+          valueCache.lfoPhase = phase;
+          valueCache.lfoValue = value;
+        }
+        return value;
+      }
       case LFO_SHAPES.TRIANGLE:
         return 1.0 - 4.0 * Math.abs(phase - 0.5);
       case LFO_SHAPES.SQUARE:
