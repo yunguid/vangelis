@@ -29,14 +29,14 @@ const STAGES = [
 
 const STAGE_INDEX = Object.fromEntries(STAGES.map((stage, index) => [stage.id, index]));
 
-const renderSlider = (slider, audioParams, onParamChange) => {
-  const paramValue = typeof audioParams?.[slider.param] === 'number'
-    ? audioParams[slider.param]
-    : AUDIO_PARAM_DEFAULTS[slider.param];
+const AudioParamSlider = React.memo(({ slider, paramValue, onParamChange }) => {
   const paramDefault = AUDIO_PARAM_DEFAULTS[slider.param];
+  const handleChange = React.useCallback((value) => {
+    onParamChange(slider.param, slider.fromSlider(value));
+  }, [onParamChange, slider]);
+
   return (
     <SliderControl
-      key={slider.id}
       id={slider.id}
       label={slider.label}
       value={slider.toSlider(paramValue)}
@@ -45,13 +45,27 @@ const renderSlider = (slider, audioParams, onParamChange) => {
       max={slider.max}
       step={slider.step}
       defaultValue={typeof paramDefault === 'number' ? slider.toSlider(paramDefault) : undefined}
-      onChange={(value) => onParamChange(slider.param, slider.fromSlider(value))}
+      onChange={handleChange}
       helpText={slider.helpText}
+    />
+  );
+});
+
+const renderSlider = (slider, audioParams, onParamChange) => {
+  const paramValue = typeof audioParams?.[slider.param] === 'number'
+    ? audioParams[slider.param]
+    : AUDIO_PARAM_DEFAULTS[slider.param];
+  return (
+    <AudioParamSlider
+      key={slider.id}
+      slider={slider}
+      paramValue={paramValue}
+      onParamChange={onParamChange}
     />
   );
 };
 
-const StageFooterNav = ({ stageId, onNavigate }) => {
+const StageFooterNav = React.memo(({ stageId, onNavigate }) => {
   const index = STAGE_INDEX[stageId];
   const prevStage = index > 0 ? STAGES[index - 1] : null;
   const nextStage = index < STAGES.length - 1 ? STAGES[index + 1] : null;
@@ -77,7 +91,28 @@ const StageFooterNav = ({ stageId, onNavigate }) => {
       )}
     </div>
   );
+});
+
+const areModRoutesEqual = (previousRoutes, nextRoutes) => {
+  if (previousRoutes === nextRoutes) return true;
+  if (previousRoutes.length !== nextRoutes.length) return false;
+  return previousRoutes.every((route, index) => {
+    const nextRoute = nextRoutes[index];
+    return route.src === nextRoute.src
+      && route.dst === nextRoute.dst
+      && route.depth === nextRoute.depth;
+  });
 };
+
+const ModRoutesEditor = React.memo(({ routes, onParamChange }) => {
+  const handleChange = React.useCallback((nextRoutes) => {
+    onParamChange('modRoutes', nextRoutes);
+  }, [onParamChange]);
+  return <ModMatrixEditor routes={routes} onChange={handleChange} />;
+}, (previousProps, nextProps) => (
+  previousProps.onParamChange === nextProps.onParamChange
+  && areModRoutesEqual(previousProps.routes, nextProps.routes)
+));
 
 const ToneStage = ({ audioParams, onParamChange, onAdvance }) => {
   const useFilter = !!audioParams.useFilter;
@@ -146,9 +181,9 @@ const MotionStage = ({ audioParams, onParamChange, onAdvance }) => {
         </div>
         <div className="stage-section">
           <h3 className="stage-section__title">Mod routes</h3>
-          <ModMatrixEditor
+          <ModRoutesEditor
             routes={Array.isArray(audioParams.modRoutes) ? audioParams.modRoutes : []}
-            onChange={(routes) => onParamChange('modRoutes', routes)}
+            onParamChange={onParamChange}
           />
         </div>
       </div>

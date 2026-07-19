@@ -710,8 +710,9 @@ const [controlKitPageSource, knobSource, faderSource, numFieldSource, toggleBtnS
   readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'ToggleBtn.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'SegmentSelect.jsx'), 'utf8')
 ]);
-const [soundDesignerSource, presetShelfSource] = await Promise.all([
+const [soundDesignerSource, soundDesignerAdvancedSource, presetShelfSource] = await Promise.all([
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerPage.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'pages', 'SoundDesignerAdvancedStages.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'PresetShelf.jsx'), 'utf8')
 ]);
 const controlKitPrimitivesIsolateRenders = (
@@ -732,6 +733,14 @@ const soundDesignerBaseStageIsolatesParamRenders = (
   && presetShelfPropsSource.length > 0
   && !/(waveformType|audioParams)/.test(presetShelfPropsSource)
   && /export default React\.memo\(PresetShelf\)/.test(presetShelfSource)
+);
+const soundDesignerAdvancedControlsIsolateRenders = (
+  /const AudioParamSlider = React\.memo\(/.test(soundDesignerAdvancedSource)
+  && /const handleChange = React\.useCallback\(\(value\) =>/.test(soundDesignerAdvancedSource)
+  && /const StageFooterNav = React\.memo\(/.test(soundDesignerAdvancedSource)
+  && /const areModRoutesEqual =/.test(soundDesignerAdvancedSource)
+  && /const ModRoutesEditor = React\.memo\(/.test(soundDesignerAdvancedSource)
+  && /areModRoutesEqual\(previousProps\.routes, nextProps\.routes\)/.test(soundDesignerAdvancedSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1064,7 +1073,16 @@ const report = {
       soundDesignerBaseStageIsolatesParamRenders ? 0 : 1,
     soundDesignerBasePropBundleObjectsPerAudioParamFrame:
       soundDesignerBaseStageIsolatesParamRenders ? 0 : 1,
-    soundDesignerBaseStageIsolatesParamRenders
+    soundDesignerBaseStageIsolatesParamRenders,
+    soundDesignerMotionSliderRendersPerAudioParamFrame:
+      soundDesignerAdvancedControlsIsolateRenders ? 1 : 8,
+    soundDesignerMotionUnrelatedSliderRendersPerAudioParamFrame:
+      soundDesignerAdvancedControlsIsolateRenders ? 0 : 7,
+    soundDesignerAdvancedFooterRendersPerAudioParamFrame:
+      soundDesignerAdvancedControlsIsolateRenders ? 0 : 1,
+    soundDesignerUnchangedModMatrixRendersPerAudioParamFrame:
+      soundDesignerAdvancedControlsIsolateRenders ? 0 : 1,
+    soundDesignerAdvancedControlsIsolateRenders
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1742,6 +1760,13 @@ if (!soundDesignerBaseStageIsolatesParamRenders) {
     expected: 'memoized base/footer/shelf with a save-free stable preset prop bundle'
   });
 }
+if (!soundDesignerAdvancedControlsIsolateRenders) {
+  failures.push({
+    name: 'Guard Sound Designer advanced-control render isolation',
+    actual: 'one parameter frame rebuilds unrelated sliders, routes, or footer navigation',
+    expected: 'parameter-keyed slider memoization plus route-aware matrix and static-footer boundaries'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1752,7 +1777,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 94,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 95,
   failures
 };
 

@@ -3660,3 +3660,56 @@ Implemented boundaries and controls:
 - React best-practices review: memo boundaries receive stable props; save-only dependencies are
   removed only from a save-disabled consumer; interactive handlers and accessibility remain live.
 - `git diff --check`: pass.
+
+## Optimization batch 70 — parameter-keyed advanced Sound Designer controls
+
+Collected from the Sound Designer Motion-stage update path; a ten-second 60 Hz active-slider model;
+source-level isolation guards; generated production closures; the full suite; and isolated
+audio/visual gates.
+
+| Metric | Batch 69 | Batch 70 | Change |
+|---|---:|---:|---:|
+| Slider component renders over a ten-second Motion drag | 4,800 | 600 | -87.5% |
+| Unrelated slider component renders | 4,200 | 0 | removed |
+| Unchanged modulation-matrix renders | 600 | 0 | removed |
+| Advanced footer-navigation renders | 600 | 0 | removed |
+| Measured advanced child renders | 6,000 | 600 | -90.0% |
+| Slider value conversions | 4,800 | 600 | -87.5% |
+| Sound Designer route JS gzip | 63.48 KiB | 63.50 KiB | +0.02 KiB |
+| Initial Home JS gzip | 67.93 KiB | 67.94 KiB | +0.01 KiB |
+| Production deployment bytes | 1,489.01 KiB | 1,489.46 KiB | +0.45 KiB |
+| Automated production budgets | 112 | 113 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added a memoized parameter-slider boundary that receives only its immutable slider descriptor,
+  current scalar value, and stable parameter dispatcher. A changed Motion parameter now re-enters
+  its own slider while the other seven visible slider assemblies remain untouched.
+- Moved slider conversion, formatting, and callback creation inside that keyed boundary so unrelated
+  parent updates do not repeat those calculations or rebuild ValueSlider descendants.
+- Memoized the advanced-stage footer, whose stage and navigation props do not change during a drag.
+- Added a route-aware modulation-matrix boundary. It compares the small normalized route records by
+  `src`, `dst`, and `depth`, avoiding matrix reconstruction when full audio sanitization returns an
+  equivalent route array with a new identity; actual route edits still render immediately.
+- Added production signals and a guard for slider, matrix, and footer isolation.
+
+### Batch 70 verification gates
+
+- Full suite: 65 files, 546/546 tests pass, including all twenty Sound Designer cases and all
+  ValueSlider, preset, keyboard, audio, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 113/113 pass; one Motion parameter frame
+  reports one active slider render, zero unrelated slider renders, zero unchanged-matrix renders,
+  and zero footer renders.
+- The ten-second model removes 5,400 measured child renders and 4,200 redundant slider conversions,
+  while preserving active-slider values, modulation-route editing, navigation, and accessibility.
+- Warmed combined visual workload: 80.43% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -40 KB over 4,000 blocks.
+- Isolated DSP benchmark: 407.9 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: memo props are scalar or stable; the route comparator covers every
+  rendered route field; live callbacks retain current stable dispatchers; control semantics are intact.
+- `git diff --check`: pass.
