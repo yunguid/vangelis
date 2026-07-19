@@ -3545,3 +3545,66 @@ Implemented boundaries and controls:
 - React best-practices review: memo inputs match actual visual dependencies; audio refs still update
   after committed props; radar loop state is reusable and scoped to the mounted component.
 - `git diff --check`: pass.
+
+## Optimization batch 68 — frozen hidden sidebar panel subtrees
+
+Collected from the production Sidebar's persistent Sound and MIDI panels; a ten-second 60 Hz closed
+Sound-context model; a one-minute 25 Hz closed MIDI-progress model; mocked panel render counters;
+close, hidden-update, state-preservation, reopen-resynchronization, and live-open assertions;
+generated production closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 67 | Batch 68 | Change |
+|---|---:|---:|---:|
+| Closed Sound expensive component renders | 3,000 | 0 | removed |
+| Expensive Sound renders per hidden context update | 5 | 0 | removed |
+| Closed MIDI expensive component renders per minute | 4,500 | 0 | removed |
+| Expensive MIDI renders per hidden progress update | 3 | 0 | removed |
+| Cheap context-bridge renders per hidden update | 0 | 1 | intentional boundary |
+| Panel remains mounted while closed | yes | yes | state preserved |
+| Latest context applied on reopen | yes | yes | preserved |
+| Open-panel live updates | enabled | enabled | preserved |
+| Initial Home JS gzip | 67.88 KiB | 67.94 KiB | +0.06 KiB |
+| Song Study route JS gzip | 65.99 KiB | 65.99 KiB | unchanged |
+| Control Kit route JS gzip | 54.18 KiB | 54.18 KiB | unchanged |
+| Sound Designer route JS gzip | 63.40 KiB | 63.46 KiB | +0.06 KiB |
+| Production deployment bytes | 1,488.77 KiB | 1,488.98 KiB | +0.21 KiB |
+| Automated production budgets | 110 | 111 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Moved Sound and MIDI context consumption into minimal bridge components. The bridges still observe
+  upstream context so reopening never sees stale transport or sound state, but they publish that
+  context to a separate memoized panel-content boundary.
+- The panel comparator accepts live value changes while open, performs the open-to-closed and closed-
+  to-open synchronization renders, and treats subsequent closed-to-closed value changes as equal.
+  SoundTab, AudioControls, PresetShelf, UIOverlay, MidiTab, and MidiPlayer no longer enter hidden work.
+- Retains the existing `hasOpened` mount policy. Preset browse/name state, MIDI library state, and
+  other local panel state survive close/reopen; this optimization does not substitute unmounting for
+  render isolation.
+- Added render-counter regressions for both contexts. The Sound case opens, closes, changes the full
+  context while hidden, proves the subtree stays mounted without rendering, then proves one reopen
+  render receives the latest value. The MIDI case proves a closed progress tick cannot re-enter its
+  panel. Existing coverage retains live-open updates and unrelated-context isolation.
+- Added a production guard requiring both bridges, the hidden-aware comparator, active-state wiring,
+  and the persistent mount boundary.
+
+### Batch 68 verification gates
+
+- Full suite: 65 files, 546/546 tests pass, including twelve Sidebar cases and all Sound Designer,
+  Voice Loop, Song Study, MIDI playback, keyboard, control-kit, radar, canvas, numerical, scene, and
+  audio cases.
+- Production delivery/static/dependency/route guardrails: 111/111 pass; hidden Sound and MIDI updates
+  report zero expensive subtree renders and exactly one cheap bridge render per context publication.
+- The modeled closed sessions remove 3,000 Sound subtree renders and 4,500 MIDI subtree renders while
+  preserving local component state, exact reopen synchronization, and all visible-panel updates.
+- Warmed combined visual workload: 80.15% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 406.9 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: memoization encloses measured expensive subtrees rather than context
+  itself; hidden local state remains colocated and mounted; visible values resynchronize explicitly.
+- `git diff --check`: pass.

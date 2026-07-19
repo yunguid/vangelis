@@ -24,7 +24,12 @@ const preloadPanel = (tab) => {
   promise.catch(() => undefined);
 };
 
-const MidiPanelContent = () => {
+const hiddenPanelPropsEqual = (previous, next) => (
+  (!previous.active && !next.active)
+  || (previous.active === next.active && previous.value === next.value)
+);
+
+const MidiPanelContent = React.memo(({ value }) => {
   const {
     isPlaying,
     isPaused,
@@ -36,7 +41,7 @@ const MidiPanelContent = () => {
     onResume,
     onStop,
     onTempoChange
-  } = useMidiTransport();
+  } = value;
 
   return (
     <MidiTab
@@ -52,9 +57,13 @@ const MidiPanelContent = () => {
       onTempoChange={onTempoChange}
     />
   );
-};
+}, hiddenPanelPropsEqual);
 
-const SoundPanelContent = () => {
+const MidiPanelBridge = ({ active }) => (
+  <MidiPanelContent active={active} value={useMidiTransport()} />
+);
+
+const SoundPanelContent = React.memo(({ value }) => {
   const {
     waveformType,
     onWaveformChange,
@@ -66,7 +75,7 @@ const SoundPanelContent = () => {
     onControlSectionToggle,
     activePresetName,
     onPresetApplied
-  } = useSoundControls();
+  } = value;
 
   return (
     <SoundTab
@@ -82,7 +91,11 @@ const SoundPanelContent = () => {
       activePresetName={activePresetName}
     />
   );
-};
+}, hiddenPanelPropsEqual);
+
+const SoundPanelBridge = ({ active }) => (
+  <SoundPanelContent active={active} value={useSoundControls()} />
+);
 
 /**
  * Collapsed sidebar rail with expandable panel
@@ -192,10 +205,10 @@ const Sidebar = ({
           {(hasOpened || isOpen) && (
             <React.Suspense fallback={<div className="sidebar-panel__loading" role="status">Loading controls…</div>}>
               {activeTab === 'midi' && (
-                <MidiPanelContent />
+                <MidiPanelBridge active={isOpen && !disabled} />
               )}
               {activeTab === 'sound' && (
-                <SoundPanelContent />
+                <SoundPanelBridge active={isOpen && !disabled} />
               )}
             </React.Suspense>
           )}

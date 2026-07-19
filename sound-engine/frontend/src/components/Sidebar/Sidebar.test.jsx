@@ -3,12 +3,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import Sidebar from './index.jsx';
 import { MidiTransportContext, SoundControlsContext } from '../../context/SynthContexts.jsx';
 
-const { soundTabRenderSpy } = vi.hoisted(() => ({
+const { midiTabRenderSpy, soundTabRenderSpy } = vi.hoisted(() => ({
+  midiTabRenderSpy: vi.fn(),
   soundTabRenderSpy: vi.fn()
 }));
 
 vi.mock('./MidiTab.jsx', () => ({
-  default: () => <div data-testid="midi-tab">MIDI content</div>
+  default: () => {
+    midiTabRenderSpy();
+    return <div data-testid="midi-tab">MIDI content</div>;
+  }
 }));
 
 vi.mock('./SoundTab.jsx', () => ({
@@ -121,6 +125,83 @@ describe('Sidebar', () => {
     );
 
     expect(soundTabRenderSpy).toHaveBeenCalledTimes(renderCount);
+  });
+
+  it('freezes an opened Sound panel while closed and resyncs it on reopen', async () => {
+    const openProps = buildProps({ isOpen: true, activeTab: 'sound' });
+    const closedProps = { ...openProps, isOpen: false };
+    const midiValue = { isPlaying: false, progress: 0 };
+    const firstSoundValue = { waveformType: 'Sine', audioParams: { attack: 0.1 } };
+    const view = render(
+      <SoundControlsContext.Provider value={firstSoundValue}>
+        <MidiTransportContext.Provider value={midiValue}>
+          <Sidebar {...openProps} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    expect(await screen.findByTestId('sound-tab')).toBeInTheDocument();
+
+    view.rerender(
+      <SoundControlsContext.Provider value={firstSoundValue}>
+        <MidiTransportContext.Provider value={midiValue}>
+          <Sidebar {...closedProps} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    const rendersAfterClose = soundTabRenderSpy.mock.calls.length;
+
+    const latestSoundValue = { waveformType: 'Square', audioParams: { attack: 0.9 } };
+    view.rerender(
+      <SoundControlsContext.Provider value={latestSoundValue}>
+        <MidiTransportContext.Provider value={midiValue}>
+          <Sidebar {...closedProps} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    expect(soundTabRenderSpy).toHaveBeenCalledTimes(rendersAfterClose);
+    expect(screen.getByTestId('sound-tab')).toBeInTheDocument();
+
+    view.rerender(
+      <SoundControlsContext.Provider value={latestSoundValue}>
+        <MidiTransportContext.Provider value={midiValue}>
+          <Sidebar {...openProps} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    expect(soundTabRenderSpy).toHaveBeenCalledTimes(rendersAfterClose + 1);
+  });
+
+  it('freezes an opened MIDI panel during closed progress updates', async () => {
+    const openProps = buildProps({ isOpen: true, activeTab: 'midi' });
+    const closedProps = { ...openProps, isOpen: false };
+    const soundValue = { waveformType: 'Sine', audioParams: {} };
+    const firstMidiValue = { isPlaying: true, progress: 0.1 };
+    const view = render(
+      <SoundControlsContext.Provider value={soundValue}>
+        <MidiTransportContext.Provider value={firstMidiValue}>
+          <Sidebar {...openProps} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    expect(await screen.findByTestId('midi-tab')).toBeInTheDocument();
+
+    view.rerender(
+      <SoundControlsContext.Provider value={soundValue}>
+        <MidiTransportContext.Provider value={firstMidiValue}>
+          <Sidebar {...closedProps} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    const rendersAfterClose = midiTabRenderSpy.mock.calls.length;
+
+    view.rerender(
+      <SoundControlsContext.Provider value={soundValue}>
+        <MidiTransportContext.Provider value={{ ...firstMidiValue, progress: 0.2 }}>
+          <Sidebar {...closedProps} />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
+    );
+    expect(midiTabRenderSpy).toHaveBeenCalledTimes(rendersAfterClose);
   });
 
   it('closes when escape is pressed', () => {

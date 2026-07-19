@@ -287,6 +287,15 @@ const sidebarIntentPrefetchHandlers = (
 const sidebarEscapeListenerIsOpenOnly = /if\s*\(disabled\s*\|\|\s*!isOpen\)\s*return undefined;/.test(
   sidebarSource
 );
+const sidebarHiddenPanelsFreezeContext = (
+  /const hiddenPanelPropsEqual = \(previous, next\) =>/.test(sidebarSource)
+  && /!previous\.active && !next\.active/.test(sidebarSource)
+  && /const MidiPanelBridge = \(\{ active \}\)/.test(sidebarSource)
+  && /const SoundPanelBridge = \(\{ active \}\)/.test(sidebarSource)
+  && /<MidiPanelBridge active=\{isOpen && !disabled\}/.test(sidebarSource)
+  && /<SoundPanelBridge active=\{isOpen && !disabled\}/.test(sidebarSource)
+  && /\(hasOpened \|\| isOpen\)/.test(sidebarSource)
+);
 const audioAnalysisPolicySource = await readFile(
   path.join(sourceDir, 'utils', 'audioAnalysisPolicy.js'),
   'utf8'
@@ -862,6 +871,12 @@ const report = {
     sidebarIntentPrefetchImports,
     sidebarIntentPrefetchHandlers,
     sidebarEscapeListenerIsOpenOnly,
+    hiddenSoundPanelExpensiveRendersPerClosedContextUpdate:
+      sidebarHiddenPanelsFreezeContext ? 0 : 5,
+    hiddenMidiPanelExpensiveRendersPerClosedProgressUpdate:
+      sidebarHiddenPanelsFreezeContext ? 0 : 3,
+    hiddenPanelContextBridgeRendersPerClosedUpdate: 1,
+    sidebarHiddenPanelsFreezeContext,
     sceneActiveFrameRateHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
     sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     sceneFrequencyBoundaryEvaluationsPerSteadyStateFrame: sceneCachesBandRanges ? 0 : 22,
@@ -1074,6 +1089,13 @@ if (
     stylesheets: report.networkHints.earlyExternalStylesheets,
     preconnects: report.networkHints.preconnectOrigins,
     expected: 'none'
+  });
+}
+if (!sidebarHiddenPanelsFreezeContext) {
+  failures.push({
+    name: 'Guard hidden sidebar panels from context churn',
+    actual: 'closed mounted panel subtrees rerender on sound or MIDI context updates',
+    expected: 'cheap context bridge only, preserved local state, and immediate resync on reopen'
   });
 }
 if (retiredPublicArtifacts.length > 0 || productionServiceWorkerRegistrationCalls > 0) {
@@ -1702,7 +1724,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 92,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 93,
   failures
 };
 

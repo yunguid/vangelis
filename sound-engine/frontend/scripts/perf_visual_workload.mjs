@@ -1767,6 +1767,26 @@ const output = {
     radarUpdatesWhenVisualPropsChange: true,
     keyboardAudioRefSynchronizationPreserved: true
   },
+  hiddenSidebarContextPolicy: {
+    closedSoundPanelSeconds: 10,
+    soundContextUpdateRateHz: 60,
+    closedSoundContextUpdates: 600,
+    expensiveSoundComponentsPerUpdateBefore: 5,
+    expensiveSoundComponentRendersBefore: 3000,
+    expensiveSoundComponentRendersAfter: 0,
+    closedMidiPanelSeconds: 60,
+    midiProgressUpdateRateHz: 25,
+    closedMidiProgressUpdates: 1500,
+    expensiveMidiComponentsPerUpdateBefore: 3,
+    expensiveMidiComponentRendersBefore: 4500,
+    expensiveMidiComponentRendersAfter: 0,
+    cheapContextBridgeRendersPerClosedUpdateBefore: 0,
+    cheapContextBridgeRendersPerClosedUpdateAfter: 1,
+    panelRemainsMountedWhileClosed: true,
+    localPanelStatePreserved: true,
+    latestContextAppliedOnReopen: true,
+    openPanelLiveUpdatesPreserved: true
+  },
   pointerGlissandoFramePolicy: {
     activeGlissandoSeconds: 10,
     rawPointerSampleRateHz: 240,
