@@ -1634,6 +1634,25 @@ const output = {
     livePlaybackRerenderPreserved: true,
     renderInputRevisionTracking: true
   },
+  voiceLoopPlayheadRenderPolicy: {
+    activePlaybackSeconds: 60,
+    playheadUpdateRateHz: 25,
+    playheadTicks: 1500,
+    starterScoreEvents: 29,
+    maximumDisplayedScoreEvents: 192,
+    pageReactCommitsBefore: 1500,
+    pageReactCommitsAfter: 0,
+    starterEventRowReconciliationsBefore: 43500,
+    starterEventRowReconciliationsAfter: 0,
+    maximumEventRowReconciliationsBefore: 288000,
+    maximumEventRowReconciliationsAfter: 0,
+    scoreSliceArraysBefore: 1500,
+    scoreSliceArraysAfter: 0,
+    activeCellClassMutationsPerChangedTickBeforeMaximum: 2,
+    activeCellClassMutationsPerChangedTickAfterMaximum: 2,
+    visibilityAware25HzCadencePreserved: true,
+    ariaCurrentTracksActiveCell: true
+  },
   keyboardInteractionHotPathPolicy: {
     successfulNotesPerSession: 300,
     velocityStateUpdatesPerNoteBefore: 1,

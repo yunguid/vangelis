@@ -576,6 +576,16 @@ const voiceLoopDefersScoreRenderUntilInteraction = (
   && /const timeoutId = window\.setTimeout\(async \(\) =>/.test(voiceLoopSource)
   && /\}, 260\)/.test(voiceLoopSource)
 );
+const voiceLoopUsesTargetedPlayheadFeedback = (
+  !/setPlayhead/.test(voiceLoopSource)
+  && /const scoreGridRef = React\.useRef\(null\)/.test(voiceLoopSource)
+  && /const activeEventIndexRef = React\.useRef\(-1\)/.test(voiceLoopSource)
+  && /classList\.remove\('is-active'\)/.test(voiceLoopSource)
+  && /classList\.add\('is-active'\)/.test(voiceLoopSource)
+  && /setAttribute\('aria-current', 'true'\)/.test(voiceLoopSource)
+  && /ref=\{scoreGridRef\}/.test(voiceLoopSource)
+  && /startVisibilityAwareRafLoop/.test(voiceLoopSource)
+);
 const keyboardNotePlaybackSource = await readFile(
   path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'useNotePlayback.js'),
   'utf8'
@@ -863,6 +873,11 @@ const report = {
       voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
     voiceLoopColdScoreRenders: voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
     voiceLoopDefersScoreRenderUntilInteraction,
+    voiceLoopPlayheadReactCommitsPerTick:
+      voiceLoopUsesTargetedPlayheadFeedback ? 0 : 1,
+    voiceLoopPlayheadMaximumEventRowReconciliationsPerTick:
+      voiceLoopUsesTargetedPlayheadFeedback ? 0 : 192,
+    voiceLoopUsesTargetedPlayheadFeedback,
     keyboardVelocityStateUpdatesPerNote: keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
     keyboardVelocityOnlyReactCommitsPerFrame:
       keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
@@ -1468,6 +1483,13 @@ if (!voiceLoopDefersScoreRenderUntilInteraction) {
     expected: 'revision-aware rendering on first play and debounced only while playing'
   });
 }
+if (!voiceLoopUsesTargetedPlayheadFeedback) {
+  failures.push({
+    name: 'Guard targeted Voice Loop playhead feedback',
+    actual: 'playhead animation commits React state and reconciles the full composer',
+    expected: 'visibility-aware direct previous/current score-cell feedback'
+  });
+}
 if (!keyboardAvoidsUnobservedInteractionWork) {
   failures.push({
     name: 'Guard allocation-free unprofiled keyboard interaction path',
@@ -1492,7 +1514,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 84,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 85,
   failures
 };
 

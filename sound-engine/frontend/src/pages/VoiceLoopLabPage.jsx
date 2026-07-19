@@ -198,7 +198,6 @@ const VoiceLoopLabPage = () => {
   }));
   const [error, setError] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
-  const [playhead, setPlayhead] = React.useState(0);
 
   const audioContextRef = React.useRef(null);
   const runtimeRef = React.useRef(null);
@@ -206,11 +205,31 @@ const VoiceLoopLabPage = () => {
   const generationSerialRef = React.useRef(0);
   const renderInputRevisionRef = React.useRef(0);
   const renderedRevisionRef = React.useRef(-1);
+  const scoreGridRef = React.useRef(null);
+  const activeEventIndexRef = React.useRef(-1);
 
   const events = React.useMemo(() => parseScoreEvents(score), [score]);
-  const activeEventIndex = rendered && events.length > 0
-    ? Math.floor((playhead / Math.max(rendered.duration, 0.01)) * events.length) % events.length
-    : -1;
+
+  const updateActiveEvent = React.useCallback((nextIndex) => {
+    const previousIndex = activeEventIndexRef.current;
+    if (previousIndex === nextIndex) return;
+    const cells = scoreGridRef.current?.children;
+    const previousCell = cells?.[previousIndex];
+    if (previousCell) {
+      previousCell.classList.remove('is-active');
+      previousCell.removeAttribute('aria-current');
+    }
+    const nextCell = cells?.[nextIndex];
+    if (nextCell) {
+      nextCell.classList.add('is-active');
+      nextCell.setAttribute('aria-current', 'true');
+    }
+    activeEventIndexRef.current = nextIndex;
+  }, []);
+
+  React.useEffect(() => {
+    updateActiveEvent(-1);
+  }, [events, updateActiveEvent]);
 
   const ensureAudioContext = React.useCallback(async () => {
     if (!audioContextRef.current) {
@@ -273,8 +292,9 @@ const VoiceLoopLabPage = () => {
     source.start();
     runtime.source = source;
     startedAtRef.current = ctx.currentTime;
+    updateActiveEvent(-1);
     setIsPlaying(true);
-  }, [controls.speed]);
+  }, [controls.speed, updateActiveEvent]);
 
   React.useEffect(() => {
     const runtime = runtimeRef.current;
@@ -306,17 +326,31 @@ const VoiceLoopLabPage = () => {
   }, [isPlaying, renderScore, startRenderedLoop]);
 
   React.useEffect(() => {
-    if (!isPlaying || !rendered) return undefined;
+    if (!isPlaying || !rendered) {
+      updateActiveEvent(-1);
+      return undefined;
+    }
     let lastUpdate = Number.NEGATIVE_INFINITY;
-    return startVisibilityAwareRafLoop((frameTime) => {
+    const stopFrameLoop = startVisibilityAwareRafLoop((frameTime) => {
       if (frameTime - lastUpdate < PLAYHEAD_UPDATE_INTERVAL_MS) return;
       lastUpdate = frameTime;
       const ctx = audioContextRef.current;
       if (ctx) {
-        setPlayhead((ctx.currentTime - startedAtRef.current) % Math.max(rendered.duration, 0.01));
+        const playhead = (
+          ctx.currentTime - startedAtRef.current
+        ) % Math.max(rendered.duration, 0.01);
+        const nextIndex = events.length > 0
+          ? Math.floor((playhead / Math.max(rendered.duration, 0.01)) * events.length)
+            % events.length
+          : -1;
+        updateActiveEvent(nextIndex);
       }
     });
-  }, [isPlaying, rendered]);
+    return () => {
+      stopFrameLoop();
+      updateActiveEvent(-1);
+    };
+  }, [events.length, isPlaying, rendered, updateActiveEvent]);
 
   React.useEffect(() => () => {
     stopSource(runtimeRef);
@@ -324,9 +358,9 @@ const VoiceLoopLabPage = () => {
 
   const stopLoop = React.useCallback(() => {
     stopSource(runtimeRef);
+    updateActiveEvent(-1);
     setIsPlaying(false);
-    setPlayhead(0);
-  }, []);
+  }, [updateActiveEvent]);
 
   const startLoop = React.useCallback(async () => {
     const nextRendered = rendered || await renderScore();
@@ -688,12 +722,12 @@ const VoiceLoopLabPage = () => {
               spellCheck={false}
             />
 
-            <div className="voice-loop-grid" aria-label="Score events">
+            <div ref={scoreGridRef} className="voice-loop-grid" aria-label="Score events">
               {events.slice(0, 192).map((event, index) => (
                 <button
                   key={`${event.note}-${event.phonemes}-${index}`}
                   type="button"
-                  className={`voice-loop-cell has-hit ${index === activeEventIndex ? 'is-active' : ''}`}
+                  className="voice-loop-cell has-hit"
                   aria-label={`${event.note} ${event.phonemes}`}
                 >
                   <span className="voice-loop-cell__note">{event.note}</span>

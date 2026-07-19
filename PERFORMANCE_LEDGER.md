@@ -3062,3 +3062,59 @@ Implemented boundaries and controls:
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity.
 - UI-tell census: 22 total, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 60 — zero-commit Voice Loop playhead
+
+Collected from the production Voice Loop animation path; React Profiler commit counts; the shipped
+29-event starter and 192-event display ceiling; a one-minute 25 Hz playback model; targeted DOM and
+accessibility assertions; generated production closures; the full suite; and isolated audio/visual
+gates.
+
+| Metric | Batch 59 | Batch 60 | Change |
+|---|---:|---:|---:|
+| Page React commits per playhead tick | 1 | 0 | removed |
+| Page commits per playback minute | 1,500 | 0 | removed |
+| Starter event-row reconciliations per minute | 43,500 | 0 | removed |
+| Maximum 192-event row reconciliations per minute | 288,000 | 0 | removed |
+| Score slice arrays per playback minute | 1,500 | 0 | removed |
+| Active-cell class mutations per changed tick | at most 2 | at most 2 | preserved |
+| Voice Loop route JS gzip | 62.02 KiB | 62.18 KiB | +0.16 KiB |
+| Production deployment bytes | 1,485.22 KiB | 1,485.57 KiB | +0.35 KiB |
+| Automated production budgets | 102 | 103 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Removed playhead React state from the Voice Loop page. Audio-clock sampling remains visibility-
+  aware and capped at 25 Hz, but it now computes the score index in the frame callback without
+  scheduling a component update.
+- Tracks only the previous active index and score-grid element. A changed index removes the class
+  from the previous cell and adds it to the current cell; identical-index frames return immediately.
+  The rest of the composer, controls, loopbook, textarea, and score rows remain untouched.
+- Direct feedback also maintains `aria-current="true"` on the active score cell. Stop, source
+  restart, score replacement, effect cleanup, and unmount all clear the prior visual and accessible
+  state, preventing a stale active marker.
+- Added a React Profiler regression case that starts playback, advances 400 ms of clock-driven
+  frames, observes the expected active cell, and proves the page commit count does not change.
+  Production guards reject reintroduced playhead state or full score-row reconciliation.
+
+### Batch 60 verification gates
+
+- Full suite: 63 files, 535/535 tests pass, including cold/first-play Voice Loop cases, the new
+  zero-commit Profiler case, and all Sound Designer, MIDI playback, keyboard, control-kit, radar,
+  Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 103/103 pass; playhead ticks report zero
+  React commits and zero event-row reconciliations.
+- The one-minute model removes 1,500 page commits and score-slice arrays, plus 43,500 starter-row
+  reconciliations or as many as 288,000 at the 192-event display ceiling. The existing maximum of
+  two class mutations per changed tick is retained.
+- Warmed combined visual workload: 80.32% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -19 KB over 4,000 blocks.
+- Isolated DSP benchmark: 429.3 us per 128-frame block with 6.2x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: effect dependencies and cleanup are complete; state remains
+  colocated to actual consumers; the targeted feedback path preserves accessible current state.
+- `git diff --check`: pass.
