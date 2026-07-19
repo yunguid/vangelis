@@ -1246,8 +1246,8 @@ if (retiredPublicArtifacts.length > 0 || productionServiceWorkerRegistrationCall
   });
 }
 if (
-  sidebarIntentPrefetchImports !== 2
-  || sidebarIntentPrefetchHandlers !== 4
+  sidebarIntentPrefetchImports !== 1
+  || sidebarIntentPrefetchHandlers !== 2
   || !sidebarEscapeListenerIsOpenOnly
 ) {
   failures.push({
@@ -1255,7 +1255,7 @@ if (
     routePrefetchImports: sidebarIntentPrefetchImports,
     intentHandlers: sidebarIntentPrefetchHandlers,
     escapeListener: sidebarEscapeListenerIsOpenOnly ? 'open-only' : 'always-on',
-    expected: '2 imports, 4 intent handlers, open-only listener'
+    expected: '1 remaining design-route import, 2 intent handlers, open-only listener'
   });
 }
 if (

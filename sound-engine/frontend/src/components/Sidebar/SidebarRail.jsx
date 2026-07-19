@@ -2,13 +2,7 @@ import React from 'react';
 import { SOUND_DESIGNER_HREF } from '../../utils/routes.js';
 import './Sidebar.css';
 
-let homeRoutePromise;
 let soundDesignerRoutePromise;
-
-const preloadHomeRoute = () => {
-  homeRoutePromise ||= import('../../App.jsx');
-  homeRoutePromise.catch(() => undefined);
-};
 
 const preloadSoundDesignerRoute = () => {
   soundDesignerRoutePromise ||= import('../../pages/SoundDesignerPage.jsx');
@@ -54,15 +48,6 @@ const SidebarRail = ({
 
   return (
     <div className="sidebar-rail">
-      <a
-        className="sidebar-rail__brand"
-        href="#/"
-        aria-label="Return to keyboard"
-        onPointerEnter={preloadHomeRoute}
-        onFocus={preloadHomeRoute}
-      >
-        V
-      </a>
       <div className="sidebar-rail__nav">
         {tabs.map((tab) => (
           <button

@@ -14,12 +14,13 @@
 
 /* Icon Rail — a vertical dock, buttons clustered mid-height */
 .sidebar-rail {
+  position: relative;
   width: var(--sidebar-rail-width);
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 16px 9px 14px;
   gap: 12px;
   background: rgba(20, 22, 23, 0.98);
@@ -27,20 +28,6 @@
   backdrop-filter: blur(22px);
   pointer-events: auto;
   z-index: 2;
-}
-
-.sidebar-rail__brand {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(214, 93, 14, 0.42);
-  color: var(--color-core-paper);
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  background: rgba(214, 93, 14, 0.08);
 }
 
 .sidebar-rail__nav {
@@ -51,6 +38,8 @@
 }
 
 .sidebar-rail__status {
+  position: absolute;
+  bottom: 14px;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -774,7 +763,6 @@
     backdrop-filter: blur(18px);
   }
 
-  .sidebar-rail__brand,
   .sidebar-rail__status {
     display: none;
   }

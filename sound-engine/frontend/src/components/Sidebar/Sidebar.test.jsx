@@ -66,6 +66,7 @@ describe('Sidebar', () => {
     render(<Sidebar {...buildProps()} />);
     expect(screen.getByRole('button', { name: /open midi browser/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open sound controls/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /return to keyboard/i })).not.toBeInTheDocument();
   });
 
   it('renders a rail-level Design nav link to the sound-designer page', () => {
