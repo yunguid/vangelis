@@ -67,14 +67,12 @@ const BirdsEyeRadar = ({
     [currentMidi, suppliedNoteRenderWindow]
   );
   const propsRef = useRef(null);
-
-  propsRef.current = {
-    currentMidi,
-    progress,
-    activeNotes,
-    isPlaying,
-    noteRenderWindow
-  };
+  if (!propsRef.current) propsRef.current = {};
+  propsRef.current.currentMidi = currentMidi;
+  propsRef.current.progress = progress;
+  propsRef.current.activeNotes = activeNotes;
+  propsRef.current.isPlaying = isPlaying;
+  propsRef.current.noteRenderWindow = noteRenderWindow;
 
   const midiRange = useMemo(() => {
     const notes = currentMidi?.notes || [];
@@ -416,4 +414,4 @@ const BirdsEyeRadar = ({
   );
 };
 
-export default BirdsEyeRadar;
+export default React.memo(BirdsEyeRadar);

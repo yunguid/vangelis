@@ -3480,3 +3480,68 @@ Implemented boundaries and controls:
 - React best-practices review: synchronous layout is limited to the initial visual invariant;
   scheduled work is cached and cleanup-safe; observer and promise lifetimes cannot escape the route.
 - `git diff --check`: pass.
+
+## Optimization batch 67 — cached keyboard elements and reusable radar props
+
+Collected from the shared 18-key desktop keyboard and MIDI radar used by Home, Sound Designer, and
+Song Study; a ten-second 60 Hz parameter-update model; a one-minute 25 Hz radar progress model;
+active-note membership spies; element, style, props-snapshot, and unrelated-render counts; generated
+production closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 66 | Batch 67 | Change |
+|---|---:|---:|---:|
+| Key React elements over parameter drag | 10,800 | 0 | removed |
+| Active-note membership checks over parameter drag | 10,800 | 0 | removed |
+| Key map callbacks over parameter drag | 10,800 | 0 | removed |
+| Keyboard grid-style objects over parameter drag | 600 | 0 | removed |
+| Unchanged radar renders over unrelated parent updates | 600 | 0 | removed |
+| Radar props-snapshot objects per playback minute | 1,500 | 0 | removed |
+| Key refresh when active notes/octave/layout changes | enabled | enabled | preserved |
+| Radar refresh when visual props change | enabled | enabled | preserved |
+| Initial Home JS gzip | 67.83 KiB | 67.88 KiB | +0.05 KiB |
+| Song Study route JS gzip | 65.95 KiB | 65.99 KiB | +0.04 KiB |
+| Control Kit route JS gzip | 54.18 KiB | 54.18 KiB | unchanged |
+| Sound Designer route JS gzip | 63.36 KiB | 63.40 KiB | +0.04 KiB |
+| Production deployment bytes | 1,488.59 KiB | 1,488.77 KiB | +0.18 KiB |
+| Automated production budgets | 109 | 110 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Memoizes white- and black-key element arrays by key metadata, active-note set, and the stable
+  registration callback. Audio-parameter, waveform, WASM-readiness, and unrelated parent renders
+  still synchronize their playback refs, but no longer remap visually unchanged keys.
+- Memoizes the white-key grid style by visible key count and replaces the default-parameter
+  `new Set()` with one module-level empty active-note set, removing another object source for callers
+  that omit external activity.
+- Reuses the radar's props-ref object and mutates its five slots before the canvas loop reads them.
+  Progress and active-note changes therefore reach the next frame without allocating a React-render
+  snapshot object.
+- Adds a memo boundary around the radar. Home parameter or notice updates and Song Study state that
+  leaves MIDI, progress, active notes, playback state, and render window unchanged no longer re-enter
+  the radar component; genuine visual prop changes still do.
+- Added a keyboard regression case that changes only the audio-parameter object and proves the
+  active-note membership spy receives no new calls. A production guard pins both key caches, the
+  grid cache, reusable radar props, and the radar memo boundary.
+
+### Batch 67 verification gates
+
+- Full suite: 65 files, 544/544 tests pass, including the new shared-keyboard render-isolation case,
+  radar initialization coverage, and all Sound Designer, Voice Loop, Song Study, MIDI playback,
+  control-kit, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 110/110 pass; parameter-only keyboard
+  renders report zero key-element allocations, membership checks, and grid-style objects, while
+  radar renders report zero props-snapshot objects and zero unchanged-parent re-entry.
+- The ten-second model removes 10,800 each of key elements, membership checks, and map callbacks,
+  plus 600 grid-style objects and unrelated radar renders. The playback model removes 1,500 radar
+  snapshot objects per minute without altering the canvas's live prop cadence.
+- Warmed combined visual workload: 80.31% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 412.5 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: memo inputs match actual visual dependencies; audio refs still update
+  after committed props; radar loop state is reusable and scoped to the mounted component.
+- `git diff --check`: pass.

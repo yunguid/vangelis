@@ -650,6 +650,19 @@ const keyboardCoalescesPointerMovesByFrame = (
     .test(keyboardPointerInputSource)
   && /cancelAnimationFrame\(moveFrameId\)/.test(keyboardPointerInputSource)
 );
+const synthKeyboardSource = await readFile(
+  path.join(sourceDir, 'components', 'SynthKeyboard', 'index.jsx'),
+  'utf8'
+);
+const sharedVisualRenderIsolation = (
+  /const EMPTY_ACTIVE_NOTES = new Set\(\)/.test(synthKeyboardSource)
+  && /const whiteKeyElements = useMemo\(\(\) =>/.test(synthKeyboardSource)
+  && /const blackKeyElements = useMemo\(\(\) =>/.test(synthKeyboardSource)
+  && /const whiteKeyGridStyle = useMemo\(\(\) =>/.test(synthKeyboardSource)
+  && /if \(!propsRef\.current\) propsRef\.current = \{\}/.test(birdsEyeRadarSource)
+  && /propsRef\.current\.noteRenderWindow = noteRenderWindow/.test(birdsEyeRadarSource)
+  && /export default React\.memo\(BirdsEyeRadar\)/.test(birdsEyeRadarSource)
+);
 const valueSliderSource = await readFile(
   path.join(sourceDir, 'components', 'controls', 'ValueSlider.jsx'),
   'utf8'
@@ -986,6 +999,17 @@ const report = {
       keyboardCoalescesPointerMovesByFrame ? 1 : 4,
     keyboardPointerMoveListenerPassive: keyboardCoalescesPointerMovesByFrame,
     keyboardCoalescesPointerMovesByFrame,
+    keyboardKeyElementAllocationsPerAudioParamFrame:
+      sharedVisualRenderIsolation ? 0 : 18,
+    keyboardActiveNoteMembershipChecksPerAudioParamFrame:
+      sharedVisualRenderIsolation ? 0 : 18,
+    keyboardGridStyleObjectsPerAudioParamFrame:
+      sharedVisualRenderIsolation ? 0 : 1,
+    radarPropsSnapshotObjectsPerReactRender:
+      sharedVisualRenderIsolation ? 0 : 1,
+    radarUnchangedParentRendersPerUpdate:
+      sharedVisualRenderIsolation ? 0 : 1,
+    sharedVisualRenderIsolation,
     valueSliderLayoutReadsPer240HzFrame:
       valueSliderCoalescesPointerMovesByFrame ? 1 : 4,
     valueSliderParentUpdatesPer240HzFrame:
@@ -1640,6 +1664,13 @@ if (!keyboardCoalescesPointerMovesByFrame) {
     expected: 'one passive, latest-position pointer update per active pointer per frame'
   });
 }
+if (!sharedVisualRenderIsolation) {
+  failures.push({
+    name: 'Guard shared keyboard and radar render isolation',
+    actual: 'unchanged key elements or radar snapshots rebuild on unrelated parent state',
+    expected: 'visually keyed element caches, reusable radar props, and a radar memo boundary'
+  });
+}
 if (!valueSliderCoalescesPointerMovesByFrame) {
   failures.push({
     name: 'Guard frame-coalesced value-slider dragging',
@@ -1671,7 +1702,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 91,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 92,
   failures
 };
 

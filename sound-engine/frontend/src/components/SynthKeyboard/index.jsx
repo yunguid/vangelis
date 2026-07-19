@@ -18,6 +18,7 @@ import { getNoteMeta } from './utils/noteMeta';
 import '../../styles/keyboard.css';
 
 const COMPACT_QUERY = '(max-width: 900px)';
+const EMPTY_ACTIVE_NOTES = new Set();
 
 const matchesCompact = () => (
   typeof window !== 'undefined'
@@ -31,7 +32,7 @@ const TOUCH_VELOCITIES = [
   { label: 'Hard', value: 1 }
 ];
 
-const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = new Set() }) => {
+const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = EMPTY_ACTIVE_NOTES }) => {
   const keyboardRef = useRef(null);
   const keyElementsRef = useRef(null);
   if (!keyElementsRef.current) keyElementsRef.current = new Map();
@@ -170,6 +171,34 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
     });
   }, [octaveOffset, activeBlackKeys, activeWhiteKeys]);
 
+  const whiteKeyElements = useMemo(() => (
+    whiteKeyMetas.map((meta) => (
+      <Key
+        key={meta.noteId}
+        meta={meta}
+        registerKey={registerKey}
+        variant="white"
+        isExternalActive={externalActiveNotes.has(meta.noteId)}
+      />
+    ))
+  ), [externalActiveNotes, registerKey, whiteKeyMetas]);
+
+  const blackKeyElements = useMemo(() => (
+    blackKeyMetas.map((meta) => (
+      <Key
+        key={meta.noteId}
+        meta={meta}
+        registerKey={registerKey}
+        variant="black"
+        isExternalActive={externalActiveNotes.has(meta.noteId)}
+      />
+    ))
+  ), [blackKeyMetas, externalActiveNotes, registerKey]);
+
+  const whiteKeyGridStyle = useMemo(() => ({
+    gridTemplateColumns: `repeat(${whiteKeyMetas.length}, minmax(0, 1fr))`
+  }), [whiteKeyMetas.length]);
+
   const shiftOctave = useCallback((delta) => {
     setOctaveOffset((prev) => clamp(prev + delta, MIN_OFFSET, MAX_OFFSET));
   }, []);
@@ -179,29 +208,13 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
     <div className="keyboard-wrapper" ref={keyboardRef}>
       <div
         className="white-keys"
-        style={{ gridTemplateColumns: `repeat(${whiteKeyMetas.length}, minmax(0, 1fr))` }}
+        style={whiteKeyGridStyle}
       >
-        {whiteKeyMetas.map((meta) => (
-          <Key
-            key={meta.noteId}
-            meta={meta}
-            registerKey={registerKey}
-            variant="white"
-            isExternalActive={externalActiveNotes.has(meta.noteId)}
-          />
-        ))}
+        {whiteKeyElements}
       </div>
 
       <div className="black-keys-layer">
-        {blackKeyMetas.map((meta) => (
-          <Key
-            key={meta.noteId}
-            meta={meta}
-            registerKey={registerKey}
-            variant="black"
-            isExternalActive={externalActiveNotes.has(meta.noteId)}
-          />
-        ))}
+        {blackKeyElements}
       </div>
     </div>
 
