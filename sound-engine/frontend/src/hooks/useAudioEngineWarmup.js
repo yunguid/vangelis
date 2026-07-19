@@ -6,7 +6,8 @@ export const AUDIO_WARMUP_IDLE_TIMEOUT_MS = 1200;
 export function scheduleAudioEngineWarmup({
   engine = audioEngine,
   windowRef = window,
-  timeoutMs = AUDIO_WARMUP_IDLE_TIMEOUT_MS
+  timeoutMs = AUDIO_WARMUP_IDLE_TIMEOUT_MS,
+  scheduleIdle = true
 } = {}) {
   let cancelled = false;
   let started = false;
@@ -54,10 +55,12 @@ export function scheduleAudioEngineWarmup({
     });
   });
 
-  if (typeof windowRef.requestIdleCallback === 'function') {
-    idleId = windowRef.requestIdleCallback(warm, { timeout: timeoutMs });
-  } else {
-    fallbackId = windowRef.setTimeout(warm, 0);
+  if (scheduleIdle) {
+    if (typeof windowRef.requestIdleCallback === 'function') {
+      idleId = windowRef.requestIdleCallback(warm, { timeout: timeoutMs });
+    } else {
+      fallbackId = windowRef.setTimeout(warm, 0);
+    }
   }
 
   return () => {
@@ -68,5 +71,7 @@ export function scheduleAudioEngineWarmup({
 }
 
 export function useAudioEngineWarmup() {
-  useEffect(() => scheduleAudioEngineWarmup(), []);
+  const profileMode = new URLSearchParams(window.location.search).get('profile');
+  const scheduleIdle = profileMode !== 'interactions-cold';
+  useEffect(() => scheduleAudioEngineWarmup({ scheduleIdle }), [scheduleIdle]);
 }

@@ -103,26 +103,72 @@ const PresetShelf = ({
     [orderedPresets, activeId]
   );
 
-  const handleApply = useCallback((preset) => {
+  const applyPreset = useCallback((preset) => {
     setActiveId(preset.id);
     onApply?.(preset);
   }, [onApply]);
 
+  const handleApply = useCallback((preset) => {
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const handlerStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    performanceProbe?.markInteractionPaint?.('preset.apply.paint', {
+      factory: !!preset.factory
+    });
+    try {
+      applyPreset(preset);
+    } finally {
+      if (handlerStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          'preset.apply.handler',
+          performance.now() - handlerStart,
+          { factory: !!preset.factory }
+        );
+      }
+    }
+  }, [applyPreset]);
+
   const handleStep = useCallback(async (direction) => {
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const stepStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    const startedCold = !factoryCatalog;
+    const paintInteraction = performanceProbe?.beginInteractionPaint?.(
+      'preset.step.paint',
+      { cold: startedCold, direction }
+    );
     let catalog;
     try {
       catalog = factoryCatalog || await ensureFactoryCatalog();
     } catch {
+      paintInteraction?.cancel();
       return;
     }
     const availablePresets = [...catalog.FACTORY_PRESETS, ...userPresets];
-    if (availablePresets.length === 0) return;
+    if (availablePresets.length === 0) {
+      paintInteraction?.cancel();
+      return;
+    }
     const index = availablePresets.findIndex((preset) => preset.id === activeId);
     const nextIndex = index === -1
       ? (direction > 0 ? 0 : availablePresets.length - 1)
       : (index + direction + availablePresets.length) % availablePresets.length;
-    handleApply(availablePresets[nextIndex]);
-  }, [activeId, ensureFactoryCatalog, factoryCatalog, handleApply, userPresets]);
+    applyPreset(availablePresets[nextIndex]);
+    paintInteraction?.complete();
+    if (stepStart !== null) {
+      performanceProbe?.recordInteraction?.(
+        `preset.step.${startedCold ? 'cold' : 'warm'}`,
+        performance.now() - stepStart,
+        { direction }
+      );
+    }
+  }, [activeId, applyPreset, ensureFactoryCatalog, factoryCatalog, userPresets]);
 
   const handleBrowseToggle = useCallback(() => {
     const nextOpen = !browseOpen;

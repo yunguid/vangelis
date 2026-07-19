@@ -293,6 +293,13 @@ class AudioEngine {
       return this.contextPromise;
     }
 
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const contextStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    let usedFallbackConstructor = false;
     this.contextPromise = Promise.resolve()
       .then(() => {
         let ctx;
@@ -303,6 +310,7 @@ class AudioEngine {
           });
         } catch (err) {
           try {
+            usedFallbackConstructor = true;
             ctx = new (window.AudioContext || window.webkitAudioContext)();
           } catch (fallbackErr) {
             throw new Error('Web Audio API not supported');
@@ -322,6 +330,20 @@ class AudioEngine {
           this.markGraphReady();
         }
 
+        return ctx;
+      })
+      .then((ctx) => {
+        if (contextStart !== null) {
+          performanceProbe?.recordInteraction?.(
+            'audio.context.ready',
+            performance.now() - contextStart,
+            {
+              fallbackConstructor: usedFallbackConstructor,
+              state: ctx.state,
+              sampleRate: ctx.sampleRate
+            }
+          );
+        }
         return ctx;
       })
       .catch((err) => {

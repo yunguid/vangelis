@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getBuiltInMidiFiles, parseMidiFile } from './midiParser.js';
+import { getBuiltInMidiFiles, parseMidiFile, preloadMidiFile } from './midiParser.js';
 import {
   ORIGINAL_CUE_IDS,
   ORIGINAL_CUE_NAMES,
@@ -61,6 +61,56 @@ describe('getBuiltInMidiFiles', () => {
       const parsed = await parseMidiFile(gnossienne.path);
       expect(parsed.notes.length).toBeGreaterThan(100);
       expect(parsed.duration).toBeGreaterThan(60);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('reports opt-in file, module, decode, and flatten stages', async () => {
+    const files = getBuiltInMidiFiles('/');
+    const gnossienne = files.find((file) => file.id === 'satie-gnossienne');
+    const testDir = path.dirname(fileURLToPath(import.meta.url));
+    const diskPath = path.resolve(testDir, '../../public/midi/satie-gnossienne-1.mid');
+    const bytes = fs.readFileSync(diskPath);
+    const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => arrayBuffer
+    });
+    const recordInteraction = vi.fn();
+    window.__vangelisPerf = { recordInteraction };
+
+    try {
+      await parseMidiFile(gnossienne.path);
+      const names = recordInteraction.mock.calls.map(([name]) => name);
+      expect(names).toEqual(expect.arrayContaining([
+        'midi.file.read',
+        'midi.parser.module-ready',
+        'midi.parser.decode',
+        'midi.parser.flatten'
+      ]));
+    } finally {
+      delete window.__vangelisPerf;
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it('reuses intent-prefetched MIDI bytes for parsing', async () => {
+    const testDir = path.dirname(fileURLToPath(import.meta.url));
+    const diskPath = path.resolve(testDir, '../../public/midi/satie-gnossienne-1.mid');
+    const bytes = fs.readFileSync(diskPath);
+    const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const source = '/midi/satie-gnossienne-1.mid?intent-cache-test=1';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => arrayBuffer
+    });
+
+    try {
+      await preloadMidiFile(source);
+      const parsed = await parseMidiFile(source);
+      expect(parsed.notes.length).toBeGreaterThan(100);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
     } finally {
       fetchSpy.mockRestore();
     }

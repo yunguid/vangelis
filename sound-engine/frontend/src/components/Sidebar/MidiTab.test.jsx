@@ -1,11 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import MidiTab from './MidiTab.jsx';
-import { parseMidiFile, getBuiltInMidiFiles } from '../../utils/midiParser.js';
+import {
+  parseMidiFile,
+  getBuiltInMidiFiles,
+  preloadMidiFile,
+  preloadMidiParser
+} from '../../utils/midiParser.js';
 
 vi.mock('../../utils/midiParser.js', () => ({
   parseMidiFile: vi.fn(),
-  getBuiltInMidiFiles: vi.fn()
+  getBuiltInMidiFiles: vi.fn(),
+  preloadMidiFile: vi.fn(() => Promise.resolve()),
+  preloadMidiParser: vi.fn(() => Promise.resolve())
 }));
 
 const defaultProps = (overrides = {}) => ({
@@ -41,6 +48,13 @@ describe('MidiTab', () => {
     });
   });
 
+  afterEach(() => {
+    delete window.__vangelisPerf;
+    delete window.requestIdleCallback;
+    delete window.cancelIdleCallback;
+    vi.restoreAllMocks();
+  });
+
   it('forwards built-in metadata into playback payload', async () => {
     const onPlay = vi.fn();
     render(<MidiTab {...defaultProps({ onPlay })} />);
@@ -57,6 +71,23 @@ describe('MidiTab', () => {
       sourceFileId: 'rachmaninoff-concerto2-mov1',
       composer: 'Sergei Rachmaninoff'
     }));
+  });
+
+  it('prewarms the parser while active and prefetches a file on intent', () => {
+    const requestIdleCallback = vi.fn((callback) => {
+      callback();
+      return 17;
+    });
+    window.requestIdleCallback = requestIdleCallback;
+    window.cancelIdleCallback = vi.fn();
+
+    render(<MidiTab {...defaultProps()} active />);
+    const fileButton = screen.getByRole('button', { name: /^\d{6} sergei rachmaninoff$/i });
+    fireEvent.pointerEnter(fileButton);
+
+    expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 1500 });
+    expect(preloadMidiParser).toHaveBeenCalled();
+    expect(preloadMidiFile).toHaveBeenCalledWith('/midi/rachmaninoff-concerto2-mov1.mid');
   });
 
   it('plays uploaded MIDI files without forcing library metadata', async () => {
@@ -118,5 +149,26 @@ describe('MidiTab', () => {
     view.rerender(<MidiTab {...props} active />);
     expect(screen.getByRole('searchbox', { name: /filter midi files/i })).toHaveValue('rachmaninoff');
     expect(getBuiltInMidiFiles).toHaveBeenCalledTimes(1);
+  });
+
+  it('records opt-in MIDI search handler and painted-response scenarios', () => {
+    const recordInteraction = vi.fn();
+    const markInteractionPaint = vi.fn();
+    window.__vangelisPerf = { recordInteraction, markInteractionPaint };
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(30)
+      .mockReturnValueOnce(31);
+    render(<MidiTab {...defaultProps()} active />);
+
+    fireEvent.change(screen.getByRole('searchbox', { name: /filter midi files/i }), {
+      target: { value: 'rachmaninoff' }
+    });
+
+    expect(markInteractionPaint).toHaveBeenCalledWith('midi.search.paint', { queryLength: 12 });
+    expect(recordInteraction).toHaveBeenCalledWith(
+      'midi.search.handler',
+      expect.any(Number),
+      { queryLength: 12 }
+    );
   });
 });

@@ -60,7 +60,19 @@ export class SynthWorklet {
         throw new Error('AudioWorklet not supported');
       }
 
+      const performanceProbe = typeof window !== 'undefined'
+        ? window.__vangelisPerf
+        : null;
+      const moduleStart = performanceProbe && typeof performance !== 'undefined'
+        ? performance.now()
+        : null;
       await ctx.audioWorklet.addModule(WORKLET_URL);
+      if (moduleStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          'audio.worklet.module-load',
+          performance.now() - moduleStart
+        );
+      }
 
       this.node = new AudioWorkletNode(ctx, WORKLET_PROCESSOR, {
         numberOfInputs: 0,

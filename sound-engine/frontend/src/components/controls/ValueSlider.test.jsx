@@ -15,6 +15,7 @@ import ValueSlider from './ValueSlider.jsx';
 // the CSS depends on, plus the fill element's presence.
 describe('ValueSlider', () => {
   afterEach(() => {
+    delete window.__vangelisPerf;
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -111,5 +112,30 @@ describe('ValueSlider', () => {
     expect(onChange).toHaveBeenLastCalledWith(0.9);
     act(() => vi.advanceTimersByTime(16));
     expect(onChange).toHaveBeenCalledTimes(2);
+  });
+
+  it('records opt-in pointer handler and painted-response scenarios', () => {
+    const recordInteraction = vi.fn();
+    const markInteractionPaint = vi.fn();
+    window.__vangelisPerf = { recordInteraction, markInteractionPaint };
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce(11);
+    const { container } = renderSlider({ id: 'profile-slider' });
+    const slider = container.querySelector('.value-slider');
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100 });
+    const event = new Event('pointerdown', { bubbles: true, cancelable: true });
+    Object.assign(event, { button: 0, pointerId: 7, clientX: 40 });
+
+    fireEvent(slider, event);
+
+    expect(markInteractionPaint).toHaveBeenCalledWith('input.slider.paint', {
+      id: 'profile-slider',
+      phase: 'down'
+    });
+    expect(recordInteraction).toHaveBeenCalledWith('input.slider.handler', expect.any(Number), {
+      id: 'profile-slider',
+      phase: 'down'
+    });
   });
 });

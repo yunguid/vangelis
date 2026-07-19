@@ -59,14 +59,35 @@ const ValueSlider = ({
     return quantize(min + ratio * span, step);
   }, [min, span, step, quantize, safeValue]);
 
+  const commitProfiledPointer = useCallback((clientX, phase) => {
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const handlerStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    performanceProbe?.markInteractionPaint?.('input.slider.paint', { id, phase });
+    try {
+      commit(valueFromPointer(clientX));
+    } finally {
+      if (handlerStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          'input.slider.handler',
+          performance.now() - handlerStart,
+          { id, phase }
+        );
+      }
+    }
+  }, [commit, id, valueFromPointer]);
+
   const flushPointerMove = useCallback(() => {
     pointerMoveFrameRef.current = null;
     const clientX = pendingPointerXRef.current;
     pendingPointerXRef.current = null;
     if (clientX !== null && draggingRef.current) {
-      commit(valueFromPointer(clientX));
+      commitProfiledPointer(clientX, 'move');
     }
-  }, [commit, valueFromPointer]);
+  }, [commitProfiledPointer]);
 
   const cancelPendingPointerMove = useCallback(() => {
     if (pointerMoveFrameRef.current !== null) {
@@ -85,8 +106,8 @@ const ValueSlider = ({
     draggingRef.current = true;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     event.currentTarget.focus();
-    commit(valueFromPointer(event.clientX));
-  }, [disabled, cancelPendingPointerMove, commit, valueFromPointer]);
+    commitProfiledPointer(event.clientX, 'down');
+  }, [disabled, cancelPendingPointerMove, commitProfiledPointer]);
 
   const handlePointerMove = useCallback((event) => {
     if (!draggingRef.current) return;
@@ -101,11 +122,11 @@ const ValueSlider = ({
     const pendingClientX = pendingPointerXRef.current;
     cancelPendingPointerMove();
     if (pendingClientX !== null) {
-      commit(valueFromPointer(pendingClientX));
+      commitProfiledPointer(pendingClientX, 'release');
     }
     draggingRef.current = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
-  }, [cancelPendingPointerMove, commit, valueFromPointer]);
+  }, [cancelPendingPointerMove, commitProfiledPointer]);
 
   const nudge = useCallback((direction, fine, coarse) => {
     const effStep = fine ? step / 10 : coarse ? step * 10 : step;

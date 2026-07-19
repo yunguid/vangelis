@@ -59,9 +59,21 @@ export class LazyAudioEngineGateway {
   async ensureRuntime() {
     if (this.runtime) return this.runtime;
     if (!this.runtimePromise) {
+      const performanceProbe = typeof window !== 'undefined'
+        ? window.__vangelisPerf
+        : null;
+      const importStart = performanceProbe && typeof performance !== 'undefined'
+        ? performance.now()
+        : null;
       this.runtimePromise = Promise.resolve()
         .then(() => this.loadRuntime())
         .then((runtime) => {
+          if (importStart !== null) {
+            performanceProbe?.recordInteraction?.(
+              'audio.runtime.import',
+              performance.now() - importStart
+            );
+          }
           this.runtime = runtime;
           this.attachRuntime(runtime);
           if (this.pendingParams) {

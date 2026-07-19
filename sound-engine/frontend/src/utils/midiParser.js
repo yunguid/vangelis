@@ -14,6 +14,36 @@ const loadMidiLibrary = () => {
   return midiLibraryPromise;
 };
 
+export const MIDI_SOURCE_CACHE_LIMIT = 4;
+const midiSourceCache = new Map();
+
+const fetchMidiSource = (source) => {
+  const cached = midiSourceCache.get(source);
+  if (cached) return cached;
+
+  const request = fetch(source).then((response) => {
+    if (!response.ok) {
+      throw new Error(`Failed to fetch MIDI: ${response.status} ${response.statusText}`);
+    }
+    return response.arrayBuffer();
+  });
+  midiSourceCache.set(source, request);
+  if (midiSourceCache.size > MIDI_SOURCE_CACHE_LIMIT) {
+    midiSourceCache.delete(midiSourceCache.keys().next().value);
+  }
+  request.catch(() => {
+    if (midiSourceCache.get(source) === request) midiSourceCache.delete(source);
+  });
+  return request;
+};
+
+export const preloadMidiParser = () => loadMidiLibrary();
+
+export const preloadMidiFile = (source) => {
+  if (typeof source !== 'string') return Promise.resolve();
+  return fetchMidiSource(source).catch(() => undefined);
+};
+
 const MIDI_HEADER_BYTES = 14;
 const matchesAscii = (bytes, offset, text) => (
   offset + text.length <= bytes.length
@@ -91,26 +121,61 @@ export function normalizeMidiContainer(arrayBuffer) {
  * const midi = await parseMidiFile(file);
  */
 export async function parseMidiFile(source) {
-  const [arrayBuffer, { Midi }] = await Promise.all([
-    source instanceof File
-      ? source.arrayBuffer()
-      : fetch(source).then((response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to fetch MIDI: ${response.status} ${response.statusText}`);
-        }
-        return response.arrayBuffer();
-      }),
-    loadMidiLibrary()
-  ]);
+  const performanceProbe = typeof window !== 'undefined'
+    ? window.__vangelisPerf
+    : null;
+  const bufferStart = performanceProbe && typeof performance !== 'undefined'
+    ? performance.now()
+    : null;
+  const libraryStart = bufferStart === null ? null : performance.now();
+  const bufferPromise = source instanceof File
+    ? source.arrayBuffer()
+    : fetchMidiSource(source);
+  const libraryPromise = loadMidiLibrary();
 
+  if (bufferStart !== null) {
+    bufferPromise.then(() => {
+      performanceProbe?.recordInteraction?.(
+        'midi.file.read',
+        performance.now() - bufferStart,
+        { source: source instanceof File ? 'upload' : 'built-in' }
+      );
+    }).catch(() => {});
+    libraryPromise.then(() => {
+      performanceProbe?.recordInteraction?.(
+        'midi.parser.module-ready',
+        performance.now() - libraryStart
+      );
+    }).catch(() => {});
+  }
+
+  const [arrayBuffer, { Midi }] = await Promise.all([bufferPromise, libraryPromise]);
+  const decodeStart = bufferStart === null ? null : performance.now();
   const midi = new Midi(normalizeMidiContainer(arrayBuffer));
+  if (decodeStart !== null) {
+    performanceProbe?.recordInteraction?.(
+      'midi.parser.decode',
+      performance.now() - decodeStart,
+      { tracks: midi.tracks.length }
+    );
+  }
+
+  const flattenStart = bufferStart === null ? null : performance.now();
+  const notes = flattenTracks(midi.tracks);
+  if (flattenStart !== null) {
+    performanceProbe?.recordInteraction?.(
+      'midi.parser.flatten',
+      performance.now() - flattenStart,
+      { tracks: midi.tracks.length, notes: notes.length }
+    );
+  }
 
   return {
     name: midi.name || 'Untitled',
     duration: midi.duration,
     bpm: midi.header.tempos[0]?.bpm || 120,
     timeSignature: normalizeTimeSignature(midi.header.timeSignatures[0]),
-    notes: flattenTracks(midi.tracks)
+    notes
   };
 }
 

@@ -84,6 +84,17 @@ const Root = () => {
   return <App />;
 };
 
+const profileMode = new URLSearchParams(window.location.search).get('profile');
+const profilingRequested = import.meta.env.DEV || profileMode !== null;
+const interactionProfilingRequested = (
+  profileMode === 'interactions' || profileMode === 'interactions-cold'
+);
+const consoleProfilingRequested = profileMode === '1' || interactionProfilingRequested;
+const lifecycleProfilingRequested = profileMode === 'lifecycle';
+const eagerProbeModulePromise = interactionProfilingRequested
+  ? import('./utils/performanceProbe.js')
+  : null;
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <React.Suspense fallback={<RouteLoading />}>
@@ -92,16 +103,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
-const profileMode = new URLSearchParams(window.location.search).get('profile');
-const profilingRequested = import.meta.env.DEV || profileMode !== null;
-const consoleProfilingRequested = profileMode === '1';
-const lifecycleProfilingRequested = profileMode === 'lifecycle';
 if (profilingRequested) {
   const startProbe = () => {
-    const schedule = window.requestIdleCallback
-      || ((callback) => window.setTimeout(callback, 0));
+    const schedule = interactionProfilingRequested
+      ? ((callback) => callback())
+      : (window.requestIdleCallback || ((callback) => window.setTimeout(callback, 0)));
     schedule(() => {
-      import('./utils/performanceProbe.js')
+      (eagerProbeModulePromise || import('./utils/performanceProbe.js'))
         .then(async ({ runRouteLifecycleProfile, startPerformanceProbe }) => {
           const performanceProbe = startPerformanceProbe({
             reportToConsole: consoleProfilingRequested
@@ -119,6 +127,6 @@ if (profilingRequested) {
         .catch(() => {});
     });
   };
-  if (document.readyState === 'complete') startProbe();
+  if (interactionProfilingRequested || document.readyState === 'complete') startProbe();
   else window.addEventListener('load', startProbe, { once: true });
 }

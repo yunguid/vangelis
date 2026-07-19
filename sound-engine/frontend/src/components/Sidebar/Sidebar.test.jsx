@@ -56,6 +56,7 @@ const buildProps = (overrides = {}) => ({
 });
 
 afterEach(() => {
+  delete window.__vangelisPerf;
   document.body.style.overflow = '';
   document.body.style.touchAction = '';
   vi.restoreAllMocks();
@@ -85,6 +86,25 @@ describe('Sidebar', () => {
 
     expect(onTabChange).toHaveBeenCalledWith('midi');
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('records opt-in sidebar handler and painted-response scenarios', () => {
+    const recordInteraction = vi.fn();
+    const markInteractionPaint = vi.fn();
+    window.__vangelisPerf = { recordInteraction, markInteractionPaint };
+    vi.spyOn(performance, 'now')
+      .mockReturnValueOnce(20)
+      .mockReturnValueOnce(22);
+    render(<Sidebar {...buildProps()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open midi browser/i }));
+
+    expect(markInteractionPaint).toHaveBeenCalledWith('ui.sidebar.open.paint', { tab: 'midi' });
+    expect(recordInteraction).toHaveBeenCalledWith(
+      'ui.sidebar.open.handler',
+      expect.any(Number),
+      { tab: 'midi' }
+    );
   });
 
   it('closes panel when active tab button is clicked while open', async () => {

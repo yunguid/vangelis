@@ -5,7 +5,8 @@ import {
   PERFORMANCE_HISTORY_LIMIT,
   PERFORMANCE_SETTLED_REPORT_DELAY_MS,
   runRouteLifecycleProfile,
-  startPerformanceProbe
+  startPerformanceProbe,
+  summarizeInteractions
 } from './performanceProbe.js';
 
 describe('performanceProbe helpers', () => {
@@ -13,6 +14,20 @@ describe('performanceProbe helpers', () => {
     expect(percentile([], 0.95)).toBe(0);
     expect(percentile([8, 2, 4, 6], 0.5)).toBe(4);
     expect(percentile([8, 2, 4, 6], 0.95)).toBe(8);
+  });
+
+  it('summarizes named interaction distributions without mixing scenarios', () => {
+    expect(summarizeInteractions([
+      { name: 'input.keydown', durationMs: 1 },
+      { name: 'input.keydown', durationMs: 4 },
+      { name: 'input.keydown', durationMs: 2 },
+      { name: 'ui.sidebar.paint', durationMs: 12 },
+      { name: '', durationMs: 99 },
+      { name: 'invalid', durationMs: Number.NaN }
+    ])).toEqual({
+      'input.keydown': { count: 3, p50Ms: 2, p95Ms: 4, maxMs: 4 },
+      'ui.sidebar.paint': { count: 1, p50Ms: 12, p95Ms: 12, maxMs: 12 }
+    });
   });
 
   it('counts DOM nodes, depth, and canvases', () => {
@@ -181,6 +196,72 @@ describe('performanceProbe helpers', () => {
     expect(snapshot.routeTransitions[0].route).toBe('#/route-5');
     expect(snapshot.manualInteractions).toHaveLength(PERFORMANCE_HISTORY_LIMIT);
     expect(snapshot.manualInteractions[0].name).toBe('interaction-5');
+    probe.stop();
+  });
+
+  it('records sync and painted interactions with bounded details and summaries', () => {
+    const frameCallbacks = [];
+    const times = [10, 26];
+    const windowRef = {
+      location: { hash: '#/' },
+      requestAnimationFrame: (callback) => {
+        frameCallbacks.push(callback);
+        return frameCallbacks.length;
+      },
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    };
+    const probe = startPerformanceProbe({
+      performanceRef: { now: () => times.shift(), getEntriesByType: () => [] },
+      documentRef: { documentElement: document.createElement('html') },
+      windowRef
+    });
+
+    while (frameCallbacks.length > 0) frameCallbacks.shift()();
+    expect(probe.recordInteraction('input.keydown', 3, { input: 'keyboard' })).toMatchObject({
+      name: 'input.keydown',
+      durationMs: 3,
+      details: { input: 'keyboard' }
+    });
+    expect(probe.recordInteraction('invalid', -1)).toBeNull();
+    probe.markInteractionPaint('ui.sidebar.paint', { tab: 'sound' });
+    while (frameCallbacks.length > 0) frameCallbacks.shift()();
+
+    expect(probe.snapshot()).toMatchObject({
+      manualInteractions: [
+        { name: 'input.keydown', durationMs: 3, details: { input: 'keyboard' } },
+        { name: 'ui.sidebar.paint', durationMs: 16, details: { tab: 'sound' } }
+      ],
+      interactionSummary: {
+        'input.keydown': { count: 1, p50Ms: 3, p95Ms: 3, maxMs: 3 },
+        'ui.sidebar.paint': { count: 1, p50Ms: 16, p95Ms: 16, maxMs: 16 }
+      }
+    });
+    probe.stop();
+  });
+
+  it('cancels pending painted interactions on reset', () => {
+    const frameCallbacks = [];
+    let now = 0;
+    const probe = startPerformanceProbe({
+      performanceRef: { now: () => ++now, getEntriesByType: () => [] },
+      documentRef: { documentElement: document.createElement('html') },
+      windowRef: {
+        location: { hash: '#/' },
+        requestAnimationFrame: (callback) => {
+          frameCallbacks.push(callback);
+          return frameCallbacks.length;
+        },
+        addEventListener: () => {},
+        removeEventListener: () => {}
+      }
+    });
+
+    while (frameCallbacks.length > 0) frameCallbacks.shift()();
+    probe.markInteractionPaint('ui.cancelled.paint');
+    probe.reset();
+    while (frameCallbacks.length > 0) frameCallbacks.shift()();
+    expect(probe.snapshot().manualInteractions).toEqual([]);
     probe.stop();
   });
 

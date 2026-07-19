@@ -83,6 +83,12 @@ describe('useNotePlayback first-note preparation', () => {
   it('does not start a pending note that was released during preparation', async () => {
     const deferred = createDeferred();
     audioEngine.ensureWasm.mockReturnValue(deferred.promise);
+    const recordInteraction = vi.fn();
+    const cancelPaint = vi.fn();
+    window.__vangelisPerf = {
+      recordInteraction,
+      beginInteractionPaint: vi.fn(() => ({ complete: vi.fn(), cancel: cancelPaint }))
+    };
     const { result } = renderPlayback();
 
     act(() => {
@@ -94,6 +100,38 @@ describe('useNotePlayback first-note preparation', () => {
       await deferred.promise;
     });
 
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    expect(recordInteraction).toHaveBeenCalledWith(
+      'audio.note-ready.cold.pointer',
+      expect.any(Number),
+      expect.objectContaining({
+        frequency: note.frequency,
+        cancelledBeforeReady: true
+      })
+    );
+    expect(cancelPaint).toHaveBeenCalled();
+  });
+
+  it('cancels pending paint tracking when the page loses focus', async () => {
+    const deferred = createDeferred();
+    audioEngine.ensureWasm.mockReturnValue(deferred.promise);
+    const cancelPaint = vi.fn();
+    window.__vangelisPerf = {
+      recordInteraction: vi.fn(),
+      beginInteractionPaint: vi.fn(() => ({ complete: vi.fn(), cancel: cancelPaint }))
+    };
+    const { result } = renderPlayback();
+
+    act(() => {
+      result.current.startNote(note, { pointerId: 7 });
+      window.dispatchEvent(new Event('blur'));
+    });
+    await act(async () => {
+      deferred.resolve();
+      await deferred.promise;
+    });
+
+    expect(cancelPaint).toHaveBeenCalled();
     expect(audioEngine.playFrequency).not.toHaveBeenCalled();
   });
 
@@ -125,10 +163,17 @@ describe('useNotePlayback first-note preparation', () => {
     expect(window.__vangelisMetrics).toBeUndefined();
 
     act(() => result.current.stopNote(note.noteId));
-    window.__vangelisPerf = {};
+    const recordInteraction = vi.fn();
+    const completePaint = vi.fn();
+    window.__vangelisPerf = {
+      recordInteraction,
+      beginInteractionPaint: vi.fn(() => ({ complete: completePaint, cancel: vi.fn() }))
+    };
     vi.spyOn(performance, 'now')
       .mockReturnValueOnce(10)
-      .mockReturnValueOnce(13);
+      .mockReturnValueOnce(13)
+      .mockReturnValueOnce(20)
+      .mockReturnValueOnce(21);
     act(() => result.current.startNote({ noteId: 'D4', frequency: 293.66 }));
 
     expect(window.__vangelisMetrics).toMatchObject({
@@ -136,5 +181,18 @@ describe('useNotePlayback first-note preparation', () => {
       lastNoteFrequency: 293.66,
       audioContextTime: 2
     });
+    expect(recordInteraction).toHaveBeenCalledWith(
+      'audio.note-on.warm.keyboard',
+      3,
+      expect.objectContaining({
+        frequency: 293.66,
+        contextWasReady: true,
+        workletWasReady: true
+      })
+    );
+    expect(completePaint).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.stopNote('D4'));
+    expect(recordInteraction).toHaveBeenLastCalledWith('audio.note-off.keyboard', 1);
   });
 });

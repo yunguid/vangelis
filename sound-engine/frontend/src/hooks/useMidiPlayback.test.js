@@ -6,6 +6,7 @@ import { audioEngine } from '../utils/audioEngine.js';
 vi.mock('../utils/audioEngine.js', () => ({
   audioEngine: {
     context: { currentTime: 0 },
+    getStatus: vi.fn(),
     ensureWasm: vi.fn(),
     ensureAudioContext: vi.fn(),
     playBufferedSample: vi.fn(),
@@ -24,6 +25,7 @@ describe('useMidiPlayback', () => {
     vi.clearAllMocks();
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     audioEngine.context = { currentTime: 0 };
+    audioEngine.getStatus.mockReturnValue({ wasmReady: true });
     audioEngine.ensureWasm.mockResolvedValue(undefined);
     audioEngine.ensureAudioContext.mockResolvedValue(audioEngine.context);
     audioEngine.playBufferedSample.mockImplementation(({ noteId }) => ({ voiceId: noteId }));
@@ -33,6 +35,7 @@ describe('useMidiPlayback', () => {
   });
 
   afterEach(() => {
+    delete window.__vangelisPerf;
     vi.useRealTimers();
     consoleWarnSpy.mockRestore();
     global.requestAnimationFrame = originalRequestAnimationFrame;
@@ -73,6 +76,44 @@ describe('useMidiPlayback', () => {
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
     expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('sine');
     expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
+  });
+
+  it('records opt-in MIDI startup and scheduler lateness samples', async () => {
+    const recordInteraction = vi.fn();
+    const completePaint = vi.fn();
+    window.__vangelisPerf = {
+      recordInteraction,
+      beginInteractionPaint: vi.fn(() => ({ complete: completePaint, cancel: vi.fn() }))
+    };
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.1, velocity: 1 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(recordInteraction).toHaveBeenCalledWith(
+      'midi.play.startup.warm',
+      expect.any(Number),
+      { noteCount: 1 }
+    );
+    expect(recordInteraction.mock.calls.some(([name, duration, details]) => (
+      name === 'midi.scheduler.timeout-lateness'
+      && duration >= 0
+      && Number.isFinite(details.requestedDelayMs)
+    ))).toBe(true);
+    expect(completePaint).toHaveBeenCalledTimes(1);
   });
 
   it('limits React progress updates to the 25 Hz visual budget', async () => {

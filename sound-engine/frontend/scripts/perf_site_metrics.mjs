@@ -545,6 +545,17 @@ const eagerPlayableRouteAudioWarmupCalls = (
 const deferredAudioWarmupConsumers = (
   playableRouteSource.match(/useAudioEngineWarmup\s*\(\s*\)/g) || []
 ).length;
+const mainEntrySource = await readFile(path.join(sourceDir, 'main.jsx'), 'utf8');
+const audioWarmupSource = await readFile(
+  path.join(sourceDir, 'hooks', 'useAudioEngineWarmup.js'),
+  'utf8'
+);
+const audioWarmupSupportsColdInteractionProfiles = (
+  /scheduleIdle = true/.test(audioWarmupSource)
+  && /if \(scheduleIdle\)/.test(audioWarmupSource)
+  && /profileMode !== 'interactions-cold'/.test(audioWarmupSource)
+  && /profileMode === 'interactions-cold'/.test(mainEntrySource)
+);
 const deferredVisualMountConsumers = (
   playableRouteSource.match(/useDeferredVisualMount\s*\(/g) || []
 ).length;
@@ -578,11 +589,19 @@ const performanceProbeBoundsDiagnosticHistory = (
   && /routeTransitions: report\.routeTransitions\.slice\(-1\)/.test(performanceProbeSource)
   && /manualInteractions: report\.manualInteractions\.slice\(-1\)/.test(performanceProbeSource)
 );
-const mainEntrySource = await readFile(path.join(sourceDir, 'main.jsx'), 'utf8');
 const performanceProbeAutomatesRouteLifecycle = (
   /export async function runRouteLifecycleProfile/.test(performanceProbeSource)
   && /profileMode === 'lifecycle'/.test(mainEntrySource)
   && /await runRouteLifecycleProfile\(\{ performanceProbe \}\)/.test(mainEntrySource)
+);
+const performanceProbeProfilesInteractions = (
+  /export function summarizeInteractions/.test(performanceProbeSource)
+  && /const recordInteraction = \(name, durationMs, details = \{\}\)/.test(performanceProbeSource)
+  && /const beginInteractionPaint = \(name, details = \{\}\)/.test(performanceProbeSource)
+  && /pendingPaintInteractions\.size >= PERFORMANCE_HISTORY_LIMIT/.test(performanceProbeSource)
+  && /interactionSummary: summarizeInteractions\(state\.manualInteractions\)/.test(performanceProbeSource)
+  && /profileMode === 'interactions'/.test(mainEntrySource)
+  && /const eagerProbeModulePromise = interactionProfilingRequested/.test(mainEntrySource)
 );
 const eagerMutableHookInitializers = (
   productionSourceText.match(
@@ -597,12 +616,37 @@ const midiPlaybackSource = await readFile(
   path.join(sourceDir, 'hooks', 'useMidiPlayback.js'),
   'utf8'
 );
+const midiParserSource = await readFile(
+  path.join(sourceDir, 'utils', 'midiParser.js'),
+  'utf8'
+);
 const midiSchedulerAvoidsWholeScoreQueue = (
   !/const pendingNotes = notes\s*\.map\(/.test(midiPlaybackSource)
   && /notes\[nextIndex\]\.time \+ notes\[nextIndex\]\.duration <= offset/
     .test(midiPlaybackSource)
   && /const note = notes\[nextIndex\]/.test(midiPlaybackSource)
   && /const index = nextIndex/.test(midiPlaybackSource)
+);
+const midiProfilesStartupAndTimerLateness = (
+  /midi\.scheduler\.timeout-lateness/.test(midiPlaybackSource)
+  && /midi\.play\.startup\.\$\{startedCold \? 'cold' : 'warm'\}/.test(midiPlaybackSource)
+  && /input\.midi\.play\.paint/.test(midiPlaybackSource)
+  && /const expectedAt = performanceProbe/.test(midiPlaybackSource)
+);
+const midiParserProfilesLoadStages = (
+  /midi\.file\.read/.test(midiParserSource)
+  && /midi\.parser\.module-ready/.test(midiParserSource)
+  && /midi\.parser\.decode/.test(midiParserSource)
+  && /midi\.parser\.flatten/.test(midiParserSource)
+);
+const midiIntentPrefetchesParserAndBytes = (
+  /export const MIDI_SOURCE_CACHE_LIMIT = 4/.test(midiParserSource)
+  && /midiSourceCache\.size > MIDI_SOURCE_CACHE_LIMIT/.test(midiParserSource)
+  && /export const preloadMidiParser/.test(midiParserSource)
+  && /export const preloadMidiFile/.test(midiParserSource)
+  && /window\.requestIdleCallback\(warmParser, \{ timeout: 1500 \}\)/.test(midiLibrarySource)
+  && /onPointerEnter=\{handleFileIntent\}/.test(midiLibrarySource)
+  && /onFocus=\{handleFileIntent\}/.test(midiLibrarySource)
 );
 const midiPlaybackNotesSource = await readFile(
   path.join(sourceDir, 'utils', 'midiPlaybackNotes.js'),
@@ -710,6 +754,10 @@ const keyboardPointerInputSource = await readFile(
   path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'usePointerInput.js'),
   'utf8'
 );
+const keyboardInputSource = await readFile(
+  path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'useKeyboardInput.js'),
+  'utf8'
+);
 const keyboardCoalescesPointerMovesByFrame = (
   /const pendingMoves = new Map\(\)/.test(keyboardPointerInputSource)
   && /moveFrameId = requestAnimationFrame\(flushPointerMoves\)/.test(keyboardPointerInputSource)
@@ -719,6 +767,17 @@ const keyboardCoalescesPointerMovesByFrame = (
   && /addEventListener\('pointermove', pointerMove, \{ passive: true \}\)/
     .test(keyboardPointerInputSource)
   && /cancelAnimationFrame\(moveFrameId\)/.test(keyboardPointerInputSource)
+);
+const keyboardProfilesHandlerAndAudioLatency = (
+  /input\.keyboard\.keydown\.handler/.test(keyboardInputSource)
+  && /input\.pointer\.note-on\.handler/.test(keyboardPointerInputSource)
+  && /audio\.note-on\.\$\{startedCold \? 'cold' : 'warm'\}\.\$\{inputSource\}/
+    .test(keyboardNotePlaybackSource)
+  && /audio\.note-ready\.\$\{startedCold \? 'cold' : 'warm'\}\.\$\{inputSource\}/
+    .test(keyboardNotePlaybackSource)
+  && /cancelledBeforeReady: !requestIsPending/.test(keyboardNotePlaybackSource)
+  && /audio\.note-off\.\$\{inputSource\}/.test(keyboardNotePlaybackSource)
+  && /input\.\$\{inputSource\}\.note-on\.paint/.test(keyboardNotePlaybackSource)
 );
 const synthKeyboardSource = await readFile(
   path.join(sourceDir, 'components', 'SynthKeyboard', 'index.jsx'),
@@ -741,9 +800,14 @@ const valueSliderCoalescesPointerMovesByFrame = (
   /const pendingPointerXRef = useRef\(null\)/.test(valueSliderSource)
   && /const pointerMoveFrameRef = useRef\(null\)/.test(valueSliderSource)
   && /requestAnimationFrame\(flushPointerMove\)/.test(valueSliderSource)
-  && /commit\(valueFromPointer\(pendingClientX\)\)/.test(valueSliderSource)
+  && /commitProfiledPointer\(pendingClientX, 'release'\)/.test(valueSliderSource)
   && /useEffect\(\(\) => cancelPendingPointerMove/.test(valueSliderSource)
   && /cancelAnimationFrame\(pointerMoveFrameRef\.current\)/.test(valueSliderSource)
+);
+const valueSliderProfilesHandlerAndPaint = (
+  /input\.slider\.handler/.test(valueSliderSource)
+  && /input\.slider\.paint/.test(valueSliderSource)
+  && /commitProfiledPointer\(clientX, 'move'\)/.test(valueSliderSource)
 );
 const effectMacroDialSource = await readFile(
   path.join(sourceDir, 'components', 'EffectMacroDial.jsx'),
@@ -776,13 +840,29 @@ const [soundDesignerSource, soundDesignerAdvancedSource, presetShelfSource] = aw
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerAdvancedStages.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'PresetShelf.jsx'), 'utf8')
 ]);
-const [appSource, audioEngineRuntimeSource, audioEngineEffectsSource, trailingDeadlineSchedulerSource, audioControlsSource] = await Promise.all([
+const [appSource, audioEngineRuntimeSource, audioEngineWorkletsSource, audioEngineEffectsSource, trailingDeadlineSchedulerSource, audioControlsSource] = await Promise.all([
   readFile(path.join(sourceDir, 'App.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'utils', 'audioEngineRuntime.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'utils', 'audioEngine', 'worklets.js'), 'utf8'),
   readFile(path.join(sourceDir, 'utils', 'audioEngine', 'effects.js'), 'utf8'),
   readFile(path.join(sourceDir, 'utils', 'trailingDeadlineScheduler.js'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'AudioControls.jsx'), 'utf8')
 ]);
+const audioProfilesColdReadinessStages = (
+  /audio\.runtime\.import/.test(audioEngineGatewaySource)
+  && /audio\.context\.ready/.test(audioEngineRuntimeSource)
+  && /audio\.worklet\.module-load/.test(audioEngineWorkletsSource)
+  && /const contextStart = performanceProbe/.test(audioEngineRuntimeSource)
+  && /const moduleStart = performanceProbe/.test(audioEngineWorkletsSource)
+);
+const uiProfilesPaintedInteractions = (
+  /ui\.sidebar\.\$\{action\}\.paint/.test(sidebarSource)
+  && valueSliderProfilesHandlerAndPaint
+  && /midi\.search\.paint/.test(midiLibrarySource)
+  && /midi\.file\.parse-and-dispatch/.test(midiLibrarySource)
+  && /preset\.apply\.paint/.test(presetShelfSource)
+  && /preset\.step\.\$\{startedCold \? 'cold' : 'warm'\}/.test(presetShelfSource)
+);
 const controlKitPrimitivesIsolateRenders = (
   [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
     .every((componentSource) => /export default React\.memo\(/.test(componentSource))
@@ -1118,6 +1198,14 @@ const report = {
     performanceProbeBoundsDiagnosticHistory,
     routeLifecycleProfileCycles: ROUTE_LIFECYCLE_PROFILE_CYCLES,
     performanceProbeAutomatesRouteLifecycle,
+    performanceProbeProfilesInteractions,
+    audioWarmupSupportsColdInteractionProfiles,
+    audioProfilesColdReadinessStages,
+    keyboardProfilesHandlerAndAudioLatency,
+    midiProfilesStartupAndTimerLateness,
+    midiParserProfilesLoadStages,
+    midiIntentPrefetchesParserAndBytes,
+    uiProfilesPaintedInteractions,
     productionEagerMutableHookInitializers: eagerMutableHookInitializers,
     hotPlaybackRedundantContainerAllocationsPerRender:
       eagerMutableHookInitializers === 0 ? 0 : 14,
@@ -1337,6 +1425,62 @@ if (
     settledDelayMs: PERFORMANCE_SETTLED_REPORT_DELAY_MS,
     reportsSettledRoutes: performanceProbeReportsSettledRoutes,
     expected: 'profiling-only route snapshot after 2200-3000 ms with cancellable scheduling'
+  });
+}
+if (!performanceProbeProfilesInteractions) {
+  failures.push({
+    name: 'Guard bounded opt-in interaction profiling',
+    actual: performanceProbeProfilesInteractions,
+    expected: 'eager interaction-mode probe with named p50/p95/max summaries and bounded paint work'
+  });
+}
+if (!audioWarmupSupportsColdInteractionProfiles) {
+  failures.push({
+    name: 'Guard reproducible cold-interaction audio profiling',
+    actual: audioWarmupSupportsColdInteractionProfiles,
+    expected: 'profiling-only interactions-cold mode suppresses idle warmup while preserving gesture warmup'
+  });
+}
+if (!audioProfilesColdReadinessStages) {
+  failures.push({
+    name: 'Guard cold audio readiness decomposition',
+    actual: audioProfilesColdReadinessStages,
+    expected: 'opt-in runtime import, AudioContext readiness, and worklet module-load timings'
+  });
+}
+if (!keyboardProfilesHandlerAndAudioLatency) {
+  failures.push({
+    name: 'Guard keyboard and pointer latency profiling',
+    actual: keyboardProfilesHandlerAndAudioLatency,
+    expected: 'handler, request-to-schedule, note-off, and painted-response timings'
+  });
+}
+if (!midiProfilesStartupAndTimerLateness) {
+  failures.push({
+    name: 'Guard MIDI startup and scheduler latency profiling',
+    actual: midiProfilesStartupAndTimerLateness,
+    expected: 'cold/warm startup, painted response, and timeout-lateness timings'
+  });
+}
+if (!midiParserProfilesLoadStages) {
+  failures.push({
+    name: 'Guard granular MIDI load-stage profiling',
+    actual: midiParserProfilesLoadStages,
+    expected: 'opt-in read, parser-module, decode, and flatten timing stages'
+  });
+}
+if (!midiIntentPrefetchesParserAndBytes) {
+  failures.push({
+    name: 'Guard bounded MIDI intent prefetching',
+    actual: midiIntentPrefetchesParserAndBytes,
+    expected: 'active-panel parser idle warmup plus bounded pointer/focus byte prefetch cache'
+  });
+}
+if (!uiProfilesPaintedInteractions) {
+  failures.push({
+    name: 'Guard painted UI interaction profiling',
+    actual: uiProfilesPaintedInteractions,
+    expected: 'sidebar, slider, preset, MIDI search, and MIDI parse/dispatch scenarios'
   });
 }
 if (!sidebarHiddenPanelsFreezeContext) {
@@ -2050,7 +2194,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 107,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 112,
   failures
 };
 

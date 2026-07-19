@@ -29,13 +29,27 @@ export function useNotePlayback({
     }
 
     const velocityNormalized = clamp(velocity, 0.05, 1);
+    const requiresWorklet = !status.hasCustomSample && !status.hasVoicePhrase;
+    const workletReady = wasmReadyRef.current || status.wasmReady;
+    const inputSource = pointerId === null ? 'keyboard' : 'pointer';
+    const contextWasReady = !!audioEngine.context;
+    const startedCold = !contextWasReady || (requiresWorklet && !workletReady);
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
     const perfStart = (
-      typeof window !== 'undefined'
-      && window.__vangelisPerf
+      performanceProbe
       && typeof performance !== 'undefined'
     ) ? performance.now() : null;
+    const paintInteraction = performanceProbe?.beginInteractionPaint?.(
+      `input.${inputSource}.note-on.paint`,
+      { cold: startedCold }
+    );
     const playPreparedNote = () => {
-      if (activeNotesRef.current.has(noteMeta.noteId)) return;
+      if (activeNotesRef.current.has(noteMeta.noteId)) {
+        paintInteraction?.cancel();
+        return;
+      }
       const result = audioEngine.playFrequency({
         noteId: noteMeta.noteId,
         frequency: noteMeta.frequency,
@@ -44,7 +58,10 @@ export function useNotePlayback({
         velocity: velocityNormalized
       });
 
-      if (!result) return;
+      if (!result) {
+        paintInteraction?.cancel();
+        return;
+      }
       activeNotesRef.current.set(noteMeta.noteId, {
         voiceId: result.voiceId,
         pointerId
@@ -53,9 +70,20 @@ export function useNotePlayback({
         pointerToNoteRef.current.set(pointerId, noteMeta.noteId);
       }
       scheduleVisualUpdate(noteMeta.noteId, true);
+      paintInteraction?.complete();
       if (perfStart === null || typeof window === 'undefined') return;
       const latency = performance.now() - perfStart;
       const ctxTime = audioEngine.context ? audioEngine.context.currentTime : null;
+      performanceProbe?.recordInteraction?.(
+        `audio.note-on.${startedCold ? 'cold' : 'warm'}.${inputSource}`,
+        latency,
+        {
+          frequency: noteMeta.frequency,
+          contextWasReady,
+          workletWasReady: workletReady,
+          audioContextTime: ctxTime
+        }
+      );
       window.__vangelisMetrics = {
         ...(window.__vangelisMetrics || {}),
         lastNoteLatencyMs: latency,
@@ -65,19 +93,18 @@ export function useNotePlayback({
       };
     };
 
-    const requiresWorklet = !status.hasCustomSample && !status.hasVoicePhrase;
-    const workletReady = wasmReadyRef.current || status.wasmReady;
     if (audioEngine.context && (!requiresWorklet || workletReady)) {
       playPreparedNote();
       return;
     }
 
-    const token = {};
+    const token = { paintInteraction };
     pendingNotesRef.current.set(noteMeta.noteId, token);
     if (pointerId !== null) {
       pointerToNoteRef.current.set(pointerId, noteMeta.noteId);
     }
     const clearFailedPendingNote = () => {
+      paintInteraction?.cancel();
       pendingNotesRef.current.delete(noteMeta.noteId);
       if (pointerId !== null && pointerToNoteRef.current.get(pointerId) === noteMeta.noteId) {
         pointerToNoteRef.current.delete(pointerId);
@@ -95,7 +122,21 @@ export function useNotePlayback({
     }
 
     Promise.resolve(preparation).then(() => {
-      if (pendingNotesRef.current.get(noteMeta.noteId) !== token) return;
+      const requestIsPending = pendingNotesRef.current.get(noteMeta.noteId) === token;
+      if (perfStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          `audio.note-ready.${startedCold ? 'cold' : 'warm'}.${inputSource}`,
+          performance.now() - perfStart,
+          {
+            frequency: noteMeta.frequency,
+            cancelledBeforeReady: !requestIsPending
+          }
+        );
+      }
+      if (!requestIsPending) {
+        paintInteraction?.cancel();
+        return;
+      }
       pendingNotesRef.current.delete(noteMeta.noteId);
       playPreparedNote();
     }).catch(() => {
@@ -107,6 +148,8 @@ export function useNotePlayback({
 
   const stopNote = useCallback((noteId, pointerId = null) => {
     if (!noteId) return;
+    const pendingEntry = pendingNotesRef.current.get(noteId);
+    pendingEntry?.paintInteraction?.cancel();
     pendingNotesRef.current.delete(noteId);
     const entry = activeNotesRef.current.get(noteId);
     if (pointerId !== null) {
@@ -120,9 +163,26 @@ export function useNotePlayback({
     }
     if (!entry) return;
 
+    const inputSource = pointerId === null ? 'keyboard' : 'pointer';
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const perfStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    const paintInteraction = performanceProbe?.beginInteractionPaint?.(
+      `input.${inputSource}.note-off.paint`
+    );
     audioEngine.stopNote(noteId);
     activeNotesRef.current.delete(noteId);
     scheduleVisualUpdate(noteId, false);
+    paintInteraction?.complete();
+    if (perfStart !== null) {
+      performanceProbe?.recordInteraction?.(
+        `audio.note-off.${inputSource}`,
+        performance.now() - perfStart
+      );
+    }
   }, [scheduleVisualUpdate]);
 
   useEffect(() => {
@@ -132,6 +192,9 @@ export function useNotePlayback({
         scheduleVisualUpdate(noteId, false);
       }
       activeNotesRef.current.clear();
+      for (const pendingEntry of pendingNotesRef.current.values()) {
+        pendingEntry.paintInteraction?.cancel();
+      }
       pendingNotesRef.current.clear();
       pointerToNoteRef.current.clear();
     };

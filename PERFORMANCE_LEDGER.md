@@ -203,12 +203,6 @@ Implemented boundaries and controls:
   samples, and 65.71% fewer resample samples than its legacy reference.
 - `git diff --check`: pass.
 
-### Remaining measurement blocker
-
-The in-app Browser rejected automated localhost navigation under its URL policy. N01-N15,
-M01-M10, M12-M14, R01-R10, browser-derived A03-A07, L01-L08, and I01-I10 therefore
-remain explicitly unmeasured. Do not infer those values from build or static evidence; resume
-with cold/warm DevTools traces when the Browser policy permits localhost profiling.
 
 ## Optimization batch 2 — startup work, MIDI scale, UI cadence, and polling
 
@@ -4266,5 +4260,108 @@ Implemented boundaries and controls:
 - Isolated worklet sample: 909.8 us process CPU per 128-frame block and 2.9x realtime CPU headroom. No audio
   or worklet source changed; the absolute sample includes competing desktop load and is not used as a
   source-regression claim.
+- Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged.
+- `git diff --check`: pass.
+
+## Optimization batch 80 — trusted interaction profiling and MIDI intent prefetch
+
+Collected from a fresh production build and preview in Chrome 150 on Apple Silicon macOS; trusted
+Browser keyboard, pointer, slider, sidebar, preset, search, file-selection, and MIDI playback actions;
+five isolated cold-audio documents; three contention-free post-optimization MIDI documents; generated
+production closures; and the full audio/visual/release gates. The browser environment remained 2,560 x
+1,440 at DPR 1, 18 reported logical processors, 32 GiB reported device memory, no CPU throttling, and
+visible-document state.
+
+Two explicit production-preview scenarios make the measurements reproducible. `?profile=interactions`
+keeps the real production policy, where the audio graph warms in the first idle opportunity.
+`?profile=interactions-cold` is profiling-only: it disables idle warmup but preserves the capture-phase
+pointer/touch/keyboard warmup, so the first trusted gesture exercises the actual cold runtime without
+changing normal production behavior. Five cold documents stayed audio-empty after three seconds idle.
+
+### Idle-warmed trusted interaction baseline
+
+| Interaction metric | Samples | p50 | p95 / maximum |
+|---|---:|---:|---:|
+| Keyboard request -> audio schedule | 8 | 0.1 ms | 0.4 ms |
+| Keyboard painted note-on response | 8 | 12.4 ms | 15.9 ms |
+| Pointer request -> audio schedule | 6 | 0.1 ms | 0.2 ms |
+| Pointer painted note-on response | 6 | 13.6 ms | 14.1 ms |
+| Sidebar open painted response | 1 | 17.0 ms | 17.0 ms |
+| Sidebar tab switch painted response | 1 | 25.4 ms | 25.4 ms |
+| Slider painted response | 2 | 10.1 ms | 12.6 ms |
+| Preset step painted response | 5 | 10.2 ms | 15.9 ms |
+| MIDI search painted response | 1 | 8.7 ms | 8.7 ms |
+| MIDI play painted response | 1 | 18.2 ms | 18.2 ms |
+| MIDI scheduler timeout lateness | 61 | 0.9 ms | 2.5 / 3.48 ms |
+
+The corresponding idle audio stages were 8.4 ms runtime import, 5.5 ms AudioContext readiness, and
+9.0 ms worklet-module load. No interaction produced a long task.
+
+### Cold audio and MIDI bottleneck isolation
+
+Across five independent cold documents, runtime import was 5.7-8.2 ms, context readiness was 7.3-9.4
+ms, worklet load was 8.5-12.0 ms, and the following Designer route reached painted readiness in
+21.0-35.6 ms. The final quick-key verification records 22.7 ms from trusted keydown to synth readiness,
+a 0.1 ms handler, 7.1/5.4/8.1 ms runtime/context/worklet stages, and zero long tasks. Readiness is recorded
+even when the synthetic quick tap releases before the worklet resolves, while the app correctly keeps the
+cancelled note silent.
+
+Granular MIDI timing found the first file click's dominant parallel stages: 30.7 ms reading the selected
+file and 31.5 ms lazily loading `@tonejs/midi`; decode was only 6.7 ms and flattening 1.3 ms. The measured
+parse-and-dispatch total was 41.1 ms. The resulting optimization prewarms the parser during an active MIDI
+panel's idle time, prefetches a row on pointer/focus intent, and reuses at most four in-flight/resolved MIDI
+byte buffers. Failed requests leave the cache, and uploads remain uncached.
+
+| MIDI metric | Before | Clean Batch 80 runs | Change |
+|---|---:|---:|---:|
+| File read | 30.7 ms | 2.4-3.3 ms | up to -92.2% |
+| Parser module readiness | 31.5 ms | 1.8-2.4 ms | up to -94.3% |
+| Decode | 6.7 ms | 4.1-4.9 ms | -26.9% to -38.8% |
+| Flatten | 1.3 ms | 1.5-1.8 ms | sub-2 ms; not a bottleneck |
+| Parse and dispatch | 41.1 ms | 9.2-11.1 ms | -73.0% to -77.6% |
+| Cold MIDI startup after parsed state | not stage-valid | 38.3-41.6 ms | established |
+| Cold MIDI painted play response | not stage-valid | 48.8-55.5 ms | established |
+| Long tasks | 0 | 0 | unchanged |
+
+Implemented profiling boundaries and controls:
+
+- The opt-in probe now exposes named manual interaction records and p50/p95/maximum summaries. Paint
+  timing uses two animation frames, pending paint work and histories are capped at 100 entries, and
+  console snapshots remain compact.
+- Keyboard/pointer paths distinguish cold and warm audio scheduling, handler time, note readiness,
+  note-on/off, and painted feedback. Audio readiness is decomposed into runtime import, context, and
+  worklet stages.
+- Sidebar open/close/switch, sliders, MIDI search, preset application/stepping, MIDI parse/dispatch,
+  playback startup, painted playback, and scheduler timeout lateness all have profiling-only timings.
+- MIDI parsing separately reports file read, parser-module readiness, decode, and flatten stages. Parser
+  idle warmup and the four-entry byte cache are guarded and unit-tested, including exact fetch reuse.
+- Normal unprofiled interaction paths still avoid timing objects and central-probe work. The production
+  entry remains 47.29 KiB gzip; route closures include the instrumentation branches only when those
+  modules are requested.
+
+| Delivery metric | Batch 79 | Batch 80 | Change |
+|---|---:|---:|---:|
+| Home route JS gzip | 68.19 KiB | 69.06 KiB | +0.87 KiB |
+| Sound Designer route JS gzip | 63.60 KiB | 64.46 KiB | +0.86 KiB |
+| MIDI parser chunk gzip | 3.23 KiB | 3.61 KiB | +0.38 KiB |
+| Opt-in performance probe gzip | 2.36 KiB | 2.73 KiB | +0.37 KiB |
+| Production deployment bytes | 1,493.18 KiB | 1,500.18 KiB | +7.00 KiB |
+| Automated production budgets | 125 | 130 | +5 guardrails |
+
+### Batch 80 verification gates
+
+- Trusted production-preview verification covers keyboard, pointer, slider, sidebar, preset, search,
+  file parsing, playback startup, painted response, and scheduler lateness. The final isolated cold key
+  reaches audio readiness in 22.7 ms with zero long tasks; clean MIDI parse-and-dispatch is 9.2-11.1 ms.
+- Full suite: 67 files and 571/571 tests pass, including the probe, true-cold warmup mode,
+  cancelled-note readiness, parser stage timing, bounded byte reuse, active-panel parser warmup, and
+  pointer/focus intent prefetch.
+- Production delivery/static/dependency/route guardrails: 130/130 pass. The new guards require
+  profiling-only cold mode, audio readiness stages, bounded interaction histories, granular MIDI stages,
+  and bounded intent prefetching.
+- Warmed combined visual workload: 80.87% lower normalized median CPU than the legacy reference, with
+  78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass, and
+  saturated heap drift is -39 KiB over 4,000 blocks.
 - Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged.
 - `git diff --check`: pass.

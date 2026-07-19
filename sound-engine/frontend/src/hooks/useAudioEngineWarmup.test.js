@@ -49,6 +49,22 @@ describe('scheduleAudioEngineWarmup', () => {
     expect(harness.engine.ensureWasm).toHaveBeenCalledTimes(1);
   });
 
+  it('can preserve a true cold path until the first captured interaction', async () => {
+    const harness = createHarness();
+    scheduleAudioEngineWarmup({ ...harness, scheduleIdle: false });
+
+    expect(harness.windowRef.requestIdleCallback).not.toHaveBeenCalled();
+    expect(harness.windowRef.setTimeout).not.toHaveBeenCalled();
+    expect(harness.engine.ensureWasm).not.toHaveBeenCalled();
+
+    harness.listeners.get('keydown')();
+
+    expect(harness.engine.ensureWasm).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(harness.engine.warmGraph).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('cancels idle and interaction work when its route unmounts', () => {
     const harness = createHarness();
     const cancel = scheduleAudioEngineWarmup(harness);

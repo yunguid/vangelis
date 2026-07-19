@@ -1,5 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { getBuiltInMidiFiles, parseMidiFile } from '../../utils/midiParser.js';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  getBuiltInMidiFiles,
+  parseMidiFile,
+  preloadMidiFile,
+  preloadMidiParser
+} from '../../utils/midiParser.js';
 
 const numericPatchName = (id) => {
   let hash = 2166136261;
@@ -40,6 +45,24 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     }
   ].filter((group) => group.files.length > 0), [filteredFiles]);
 
+  useEffect(() => {
+    if (!active) return undefined;
+    const warmParser = () => {
+      preloadMidiParser().catch(() => {});
+    };
+    if (typeof window.requestIdleCallback === 'function') {
+      const idleId = window.requestIdleCallback(warmParser, { timeout: 1500 });
+      return () => window.cancelIdleCallback?.(idleId);
+    }
+    const timeoutId = window.setTimeout(warmParser, 150);
+    return () => window.clearTimeout(timeoutId);
+  }, [active]);
+
+  const handleFileIntent = useCallback((event) => {
+    preloadMidiParser().catch(() => {});
+    preloadMidiFile(event.currentTarget.dataset.midiPath);
+  }, []);
+
   const loadMidiWithFallback = useCallback(async (file) => {
     try {
       return await parseMidiFile(file.path);
@@ -50,6 +73,12 @@ const MidiLibrary = ({ active = true, onPlay }) => {
   }, []);
 
   const handleLoadBuiltIn = useCallback(async (file) => {
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const loadStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
     setIsLoading(true);
     setError(null);
     setSelectedFile(file);
@@ -64,6 +93,13 @@ const MidiLibrary = ({ active = true, onPlay }) => {
         sourceUrl: file.sourceUrl || null,
         composer: file.composer
       });
+      if (loadStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          'midi.file.parse-and-dispatch',
+          performance.now() - loadStart,
+          { fileId: file.id }
+        );
+      }
     } catch (loadError) {
       console.error('Failed to load MIDI file:', loadError);
       setError(file.sourceUrl
@@ -73,6 +109,30 @@ const MidiLibrary = ({ active = true, onPlay }) => {
       setIsLoading(false);
     }
   }, [loadMidiWithFallback, onPlay]);
+
+  const handleSearchChange = useCallback((event) => {
+    const nextQuery = event.target.value;
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const handlerStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    performanceProbe?.markInteractionPaint?.('midi.search.paint', {
+      queryLength: nextQuery.length
+    });
+    try {
+      setSearchQuery(nextQuery);
+    } finally {
+      if (handlerStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          'midi.search.handler',
+          performance.now() - handlerStart,
+          { queryLength: nextQuery.length }
+        );
+      }
+    }
+  }, []);
 
   const handleFileUpload = useCallback(async (event) => {
     const file = event.target.files?.[0];
@@ -102,7 +162,7 @@ const MidiLibrary = ({ active = true, onPlay }) => {
           className="midi-tab__search"
           placeholder="Find title or composer"
           value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
+          onChange={handleSearchChange}
           aria-label="Filter MIDI files"
         />
         {isLoading ? (
@@ -126,6 +186,9 @@ const MidiLibrary = ({ active = true, onPlay }) => {
                     type="button"
                     className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
                     onClick={() => handleLoadBuiltIn(file)}
+                    onPointerEnter={handleFileIntent}
+                    onFocus={handleFileIntent}
+                    data-midi-path={file.path}
                     disabled={isLoading}
                   >
                     <span className="midi-tab__file-title-row">

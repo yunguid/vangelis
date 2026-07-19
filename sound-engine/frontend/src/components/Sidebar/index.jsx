@@ -153,11 +153,31 @@ const Sidebar = ({
   const handleRailClick = useCallback((tab) => {
     if (disabled) return;
 
-    if (isOpen && activeTab === tab) {
-      onClose();
-    } else {
-      onTabChange(tab);
-      if (!isOpen) onOpen();
+    const action = isOpen && activeTab === tab
+      ? 'close'
+      : (isOpen ? 'switch' : 'open');
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const handlerStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    performanceProbe?.markInteractionPaint?.(`ui.sidebar.${action}.paint`, { tab });
+    try {
+      if (action === 'close') {
+        onClose();
+      } else {
+        onTabChange(tab);
+        if (!isOpen) onOpen();
+      }
+    } finally {
+      if (handlerStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          `ui.sidebar.${action}.handler`,
+          performance.now() - handlerStart,
+          { tab }
+        );
+      }
     }
   }, [disabled, isOpen, activeTab, onClose, onOpen, onTabChange]);
 

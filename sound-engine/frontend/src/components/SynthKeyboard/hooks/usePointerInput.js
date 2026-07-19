@@ -48,7 +48,22 @@ export function usePointerInput({
       }
       const meta = getMetaFromElement(keyElement);
       const velocity = event.pressure > 0 ? clamp(event.pressure, 0.05, 1) : fallbackVelocity();
-      startNote(meta, { pointerId: event.pointerId, velocity });
+      const performanceProbe = typeof window !== 'undefined'
+        ? window.__vangelisPerf
+        : null;
+      const handlerStart = performanceProbe && typeof performance !== 'undefined'
+        ? performance.now()
+        : null;
+      try {
+        startNote(meta, { pointerId: event.pointerId, velocity });
+      } finally {
+        if (handlerStart !== null) {
+          performanceProbe?.recordInteraction?.(
+            'input.pointer.note-on.handler',
+            performance.now() - handlerStart
+          );
+        }
+      }
     };
 
     const flushPointerMoves = () => {

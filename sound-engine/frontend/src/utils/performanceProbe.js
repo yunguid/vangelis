@@ -36,6 +36,23 @@ const appendBounded = (target, values) => {
   if (excess > 0) target.splice(0, excess);
 };
 
+export function summarizeInteractions(interactions = []) {
+  const durationsByName = new Map();
+  for (const interaction of interactions) {
+    if (!interaction?.name || !Number.isFinite(interaction.durationMs)) continue;
+    const durations = durationsByName.get(interaction.name) || [];
+    durations.push(interaction.durationMs);
+    durationsByName.set(interaction.name, durations);
+  }
+
+  return Object.fromEntries([...durationsByName.entries()].map(([name, durations]) => [name, {
+    count: durations.length,
+    p50Ms: rounded(percentile(durations, 0.5)),
+    p95Ms: rounded(percentile(durations, 0.95)),
+    maxMs: rounded(Math.max(0, ...durations))
+  }]));
+}
+
 export async function runRouteLifecycleProfile({
   performanceProbe,
   windowRef = window,
@@ -78,6 +95,7 @@ export function startPerformanceProbe({
   const observers = [];
   const supported = new Set(globalThis.PerformanceObserver?.supportedEntryTypes || []);
   const pendingRouteTransitions = new Map();
+  const pendingPaintInteractions = new Set();
   let reportSnapshot = () => {};
   let settledReportId = null;
   let routeSettledReportId = null;
@@ -198,8 +216,22 @@ export function startPerformanceProbe({
         totalJsHeapMb: rounded(memory.totalJSHeapSize / 1024 / 1024)
       } : null,
       routeTransitions: [...state.routeTransitions],
-      manualInteractions: [...state.manualInteractions]
+      manualInteractions: [...state.manualInteractions],
+      interactionSummary: summarizeInteractions(state.manualInteractions)
     };
+  };
+
+  const recordInteraction = (name, durationMs, details = {}) => {
+    if (!name || !Number.isFinite(durationMs) || durationMs < 0) return null;
+    const interaction = {
+      name,
+      durationMs,
+      route: windowRef.location.hash || '#/',
+      timestamp: Date.now(),
+      details: { ...details }
+    };
+    appendBounded(state.manualInteractions, [interaction]);
+    return interaction;
   };
 
   const measureInteraction = async (name, operation) => {
@@ -207,13 +239,55 @@ export function startPerformanceProbe({
     try {
       return await operation();
     } finally {
-      appendBounded(state.manualInteractions, [{
-        name,
-        durationMs: performanceRef.now() - start,
-        route: windowRef.location.hash || '#/',
-        timestamp: Date.now()
-      }]);
+      recordInteraction(name, performanceRef.now() - start);
     }
+  };
+
+  const beginInteractionPaint = (name, details = {}) => {
+    if (pendingPaintInteractions.size >= PERFORMANCE_HISTORY_LIMIT) {
+      const oldest = pendingPaintInteractions.values().next().value;
+      if (oldest) {
+        oldest.cancelled = true;
+        pendingPaintInteractions.delete(oldest);
+      }
+    }
+    const pending = {
+      cancelled: false,
+      completed: false,
+      start: performanceRef.now()
+    };
+    pendingPaintInteractions.add(pending);
+    return {
+      complete(extraDetails = {}) {
+        if (pending.cancelled || pending.completed) return;
+        pending.completed = true;
+        nextFrame(() => nextFrame(() => {
+          pendingPaintInteractions.delete(pending);
+          if (pending.cancelled) return;
+          recordInteraction(name, performanceRef.now() - pending.start, {
+            ...details,
+            ...extraDetails
+          });
+        }));
+      },
+      cancel() {
+        pending.cancelled = true;
+        pendingPaintInteractions.delete(pending);
+      }
+    };
+  };
+
+  const markInteractionPaint = (name, details = {}) => {
+    const interaction = beginInteractionPaint(name, details);
+    interaction.complete();
+    return interaction.cancel;
+  };
+
+  const clearPendingPaintInteractions = () => {
+    pendingPaintInteractions.forEach((pending) => {
+      pending.cancelled = true;
+    });
+    pendingPaintInteractions.clear();
   };
 
   const markRouteReady = (route = windowRef.location.hash || '#/') => {
@@ -255,6 +329,9 @@ export function startPerformanceProbe({
     snapshot,
     markRouteReady,
     reportSnapshot,
+    recordInteraction,
+    beginInteractionPaint,
+    markInteractionPaint,
     measureInteraction,
     exportJson: () => JSON.stringify(snapshot(), null, 2),
     reset() {
@@ -263,6 +340,7 @@ export function startPerformanceProbe({
       state.routeTransitions.length = 0;
       state.manualInteractions.length = 0;
       state.cls = 0;
+      clearPendingPaintInteractions();
       clearRouteSettledReport();
       pendingRouteTransitions.clear();
     },
@@ -275,6 +353,7 @@ export function startPerformanceProbe({
         settledReportId = null;
       }
       clearRouteSettledReport();
+      clearPendingPaintInteractions();
       pendingRouteTransitions.clear();
       if (windowRef.__vangelisPerf === api) delete windowRef.__vangelisPerf;
     }

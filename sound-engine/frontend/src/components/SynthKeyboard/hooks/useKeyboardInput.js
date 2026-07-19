@@ -65,9 +65,25 @@ export function useKeyboardInput({
       return;
     }
 
-    const velocity = velocityFromKeyboard(key);
-    keyToNoteRef.current.set(key, meta.noteId);
-    startNote(meta, { velocity });
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const handlerStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    try {
+      const velocity = velocityFromKeyboard(key);
+      keyToNoteRef.current.set(key, meta.noteId);
+      startNote(meta, { velocity });
+    } finally {
+      if (handlerStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          'input.keyboard.keydown.handler',
+          performance.now() - handlerStart,
+          { key }
+        );
+      }
+    }
   }, [getNote, setOctaveOffset, startNote, velocityFromKeyboard]);
 
   const handleKeyboardUp = useCallback((event) => {

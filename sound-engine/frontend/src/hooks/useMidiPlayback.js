@@ -172,8 +172,21 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @private
    */
   const scheduleTrackedTimeout = useCallback((callback, delay) => {
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const expectedAt = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now() + Math.max(0, delay)
+      : null;
     const id = setTimeout(() => {
       timeoutsRef.current.delete(id);
+      if (expectedAt !== null) {
+        performanceProbe?.recordInteraction?.(
+          'midi.scheduler.timeout-lateness',
+          Math.max(0, performance.now() - expectedAt),
+          { requestedDelayMs: Math.max(0, delay) }
+        );
+      }
       callback();
     }, delay);
     timeoutsRef.current.add(id);
@@ -446,8 +459,22 @@ export function useMidiPlayback({ waveformType, audioParams }) {
    * @param {Object} midiData - Parsed MIDI data from parseMidiFile()
    */
   const play = useCallback((midiData, options = {}) => {
+    const performanceProbe = typeof window !== 'undefined'
+      ? window.__vangelisPerf
+      : null;
+    const playStart = performanceProbe && typeof performance !== 'undefined'
+      ? performance.now()
+      : null;
+    const startedCold = performanceProbe
+      ? (!audioEngine.context || !audioEngine.getStatus().wasmReady)
+      : false;
+    const paintInteraction = performanceProbe?.beginInteractionPaint?.(
+      'input.midi.play.paint',
+      { cold: startedCold }
+    );
     const normalizedNotes = normalizeMidiNotes(midiData?.notes);
     if (!midiData || normalizedNotes.length === 0) {
+      paintInteraction?.cancel();
       console.warn('No MIDI data to play');
       return;
     }
@@ -473,7 +500,10 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
     // Ensure audio context is ready
     resumeAudioContextIfNeeded().then(() => {
-      if (playRequestSeq !== playRequestSeqRef.current) return;
+      if (playRequestSeq !== playRequestSeqRef.current) {
+        paintInteraction?.cancel();
+        return;
+      }
 
       // Stop any existing playback
       stopInternal();
@@ -496,7 +526,16 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
       // Start progress update loop
       startProgressLoop(midiDuration);
+      paintInteraction?.complete();
+      if (playStart !== null) {
+        performanceProbe?.recordInteraction?.(
+          `midi.play.startup.${startedCold ? 'cold' : 'warm'}`,
+          performance.now() - playStart,
+          { noteCount: normalizedNotes.length }
+        );
+      }
     }).catch((error) => {
+      paintInteraction?.cancel();
       if (playRequestSeq !== playRequestSeqRef.current) return;
       setIsPlaying(false);
       setIsPaused(false);

@@ -45,7 +45,10 @@ vi.mock('./components/SynthKeyboard', () => ({
 }));
 
 vi.mock('./utils/midiParser.js', () => ({
-  parseMidiFile: vi.fn()
+  getBuiltInMidiFiles: vi.fn(() => []),
+  parseMidiFile: vi.fn(),
+  preloadMidiFile: vi.fn(),
+  preloadMidiParser: vi.fn(() => Promise.resolve())
 }));
 
 describe('App', () => {
