@@ -710,6 +710,10 @@ const [controlKitPageSource, knobSource, faderSource, numFieldSource, toggleBtnS
   readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'ToggleBtn.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'SegmentSelect.jsx'), 'utf8')
 ]);
+const [soundDesignerSource, presetShelfSource] = await Promise.all([
+  readFile(path.join(sourceDir, 'pages', 'SoundDesignerPage.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'components', 'PresetShelf.jsx'), 'utf8')
+]);
 const controlKitPrimitivesIsolateRenders = (
   [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
     .every((componentSource) => /export default React\.memo\(/.test(componentSource))
@@ -718,6 +722,16 @@ const controlKitPrimitivesIsolateRenders = (
   && /const faderTrioSetters = useMemo\(\(\) =>/.test(controlKitPageSource)
   && !/format=\{\(/.test(controlKitPageSource)
   && !/onChange=\{\(next\)/.test(controlKitPageSource)
+);
+const presetShelfPropsSource = soundDesignerSource.match(
+  /const presetShelfProps = React\.useMemo\([\s\S]*?\}\), \[activePresetName, handlePresetApplied\]\);/
+)?.[0] || '';
+const soundDesignerBaseStageIsolatesParamRenders = (
+  /const StageFooterNav = React\.memo\(/.test(soundDesignerSource)
+  && /const BaseStage = React\.memo\(/.test(soundDesignerSource)
+  && presetShelfPropsSource.length > 0
+  && !/(waveformType|audioParams)/.test(presetShelfPropsSource)
+  && /export default React\.memo\(PresetShelf\)/.test(presetShelfSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1043,7 +1057,14 @@ const report = {
       controlKitPrimitivesIsolateRenders ? 0 : 11,
     controlKitFaderStaticTickAllocationsPerSteadyStateRender:
       controlKitPrimitivesIsolateRenders ? 0 : 5,
-    controlKitPrimitivesIsolateRenders
+    controlKitPrimitivesIsolateRenders,
+    soundDesignerBaseStageRendersPerAudioParamFrame:
+      soundDesignerBaseStageIsolatesParamRenders ? 0 : 1,
+    soundDesignerFoldedPresetRendersPerAudioParamFrame:
+      soundDesignerBaseStageIsolatesParamRenders ? 0 : 1,
+    soundDesignerBasePropBundleObjectsPerAudioParamFrame:
+      soundDesignerBaseStageIsolatesParamRenders ? 0 : 1,
+    soundDesignerBaseStageIsolatesParamRenders
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1714,6 +1735,13 @@ if (!controlKitPrimitivesIsolateRenders) {
     expected: 'memoized primitives, stable page props, and hoisted knob/fader tick geometry'
   });
 }
+if (!soundDesignerBaseStageIsolatesParamRenders) {
+  failures.push({
+    name: 'Guard Sound Designer base-stage render isolation',
+    actual: 'audio parameter frames rebuild waveform and folded-preset subtrees',
+    expected: 'memoized base/footer/shelf with a save-free stable preset prop bundle'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1724,7 +1752,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 93,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 94,
   failures
 };
 

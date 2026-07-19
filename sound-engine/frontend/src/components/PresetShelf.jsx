@@ -268,4 +268,4 @@ const PresetShelf = ({
   );
 };
 
-export default PresetShelf;
+export default React.memo(PresetShelf);

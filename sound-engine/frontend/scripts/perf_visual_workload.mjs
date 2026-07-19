@@ -1787,6 +1787,28 @@ const output = {
     latestContextAppliedOnReopen: true,
     openPanelLiveUpdatesPreserved: true
   },
+  soundDesignerBaseStageRenderPolicy: {
+    activeParameterDragSeconds: 10,
+    parentUpdateRateHz: 60,
+    parentUpdates: 600,
+    baseStageRendersBefore: 600,
+    baseStageRendersAfter: 0,
+    stageFooterRendersBefore: 600,
+    stageFooterRendersAfter: 0,
+    foldedPresetShelfRendersBefore: 600,
+    foldedPresetShelfRendersAfter: 0,
+    subtreeComponentRendersBefore: 1800,
+    subtreeComponentRendersAfter: 0,
+    waveformOptionEvaluationsBefore: 2400,
+    waveformOptionEvaluationsAfter: 0,
+    presetPropBundleObjectsBefore: 600,
+    presetPropBundleObjectsAfter: 0,
+    hiddenSaveAudioParamDependenciesBefore: 1,
+    hiddenSaveAudioParamDependenciesAfter: 0,
+    directWaveformUpdatesPreserved: true,
+    presetApplyUpdatesPreserved: true,
+    soundTabSaveInputsPreserved: true
+  },
   pointerGlissandoFramePolicy: {
     activeGlissandoSeconds: 10,
     rawPointerSampleRateHz: 240,

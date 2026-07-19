@@ -46,7 +46,7 @@ const NO_EXTERNAL_ACTIVE_NOTES = new Set();
 // keeps its "next →". Both just call the same onNavigate (goToStage) — the
 // stage rail tabs remain freely clickable regardless, this is only the
 // wizard's forward/backward thread.
-const StageFooterNav = ({ stageId, onNavigate }) => {
+const StageFooterNav = React.memo(({ stageId, onNavigate }) => {
   const index = STAGE_INDEX[stageId];
   const prevStage = index > 0 ? STAGES[index - 1] : null;
   const nextStage = index < STAGES.length - 1 ? STAGES[index + 1] : null;
@@ -73,9 +73,9 @@ const StageFooterNav = ({ stageId, onNavigate }) => {
       )}
     </div>
   );
-};
+});
 
-const BaseStage = ({ waveformType, onWaveformChange, presetShelfProps, onAdvance }) => (
+const BaseStage = React.memo(({ waveformType, onWaveformChange, presetShelfProps, onAdvance }) => (
   <div className="stage-card stage-card--base">
     <div className="stage-card__body">
       <div className="stage-section">
@@ -106,7 +106,7 @@ const BaseStage = ({ waveformType, onWaveformChange, presetShelfProps, onAdvance
     </div>
     <StageFooterNav stageId="base" onNavigate={onAdvance} />
   </div>
-);
+));
 
 const SoundDesignerPage = () => {
   useAudioEngineWarmup();
@@ -174,14 +174,12 @@ const SoundDesignerPage = () => {
     setMintedName(preset.name);
   }, [waveformType, audioParams]);
 
-  const presetShelfProps = {
-    waveformType,
-    audioParams,
+  const presetShelfProps = React.useMemo(() => ({
     activePresetName,
     onApply: handlePresetApplied,
     foldBrowse: true,
     hideSave: true
-  };
+  }), [activePresetName, handlePresetApplied]);
 
   return (
     <div className="sound-designer-page">

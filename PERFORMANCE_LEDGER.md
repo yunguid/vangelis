@@ -3608,3 +3608,55 @@ Implemented boundaries and controls:
 - React best-practices review: memoization encloses measured expensive subtrees rather than context
   itself; hidden local state remains colocated and mounted; visible values resynchronize explicitly.
 - `git diff --check`: pass.
+
+## Optimization batch 69 — isolated Sound Designer base-stage renders
+
+Collected from the Sound Designer parameter-update path; source-level render guards; a ten-second
+60 Hz active-parameter model; generated production closures; the full suite; and isolated
+audio/visual gates.
+
+| Metric | Batch 68 | Batch 69 | Change |
+|---|---:|---:|---:|
+| Base-stage renders over a ten-second parameter drag | 600 | 0 | removed |
+| Footer-navigation renders over the drag | 600 | 0 | removed |
+| Folded preset-shelf renders over the drag | 600 | 0 | removed |
+| Total isolated subtree component renders | 1,800 | 0 | removed |
+| Waveform-option evaluations | 2,400 | 0 | removed |
+| Preset prop-bundle objects | 600 | 0 | removed |
+| Hidden save-only audio dependencies | 1 | 0 | removed |
+| Sound Designer route JS gzip | 63.46 KiB | 63.48 KiB | +0.02 KiB |
+| Initial Home JS gzip | 67.94 KiB | 67.93 KiB | -0.01 KiB |
+| Production deployment bytes | 1,488.98 KiB | 1,489.01 KiB | +0.03 KiB |
+| Automated production budgets | 111 | 112 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Memoized the Base stage and its static footer navigation so continuous parent audio-parameter
+  updates no longer rebuild waveform choices, preset navigation, or stage-navigation markup.
+- Memoized PresetShelf and stabilized its Sound Designer prop bundle. Because this route deliberately
+  hides preset saving, it no longer subscribes that folded shelf to `waveformType` or `audioParams`;
+  SoundTab retains the complete save inputs.
+- Preserved direct waveform selection and preset application through their existing stable handlers.
+- Added production signals for Base-stage, folded-shelf, and prop-bundle work per audio frame, plus a
+  source guard that rejects reintroduction of save-only audio dependencies into the folded shelf.
+
+### Batch 69 verification gates
+
+- Full suite: 65 files, 546/546 tests pass, including all twenty Sound Designer cases, four
+  PresetShelf cases, twelve Sidebar cases, and all audio, keyboard, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 112/112 pass; parameter-only frames report
+  zero Base-stage renders, zero folded-shelf renders, and zero Base prop-bundle allocations.
+- The ten-second model removes 1,800 isolated component renders, 2,400 waveform-option evaluations,
+  and 600 temporary prop objects while preserving waveform changes, preset application, and SoundTab
+  saving behavior.
+- Warmed combined visual workload: 79.96% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -26 KB over 4,000 blocks.
+- Isolated DSP benchmark: 406.9 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: memo boundaries receive stable props; save-only dependencies are
+  removed only from a save-disabled consumer; interactive handlers and accessibility remain live.
+- `git diff --check`: pass.
