@@ -6,6 +6,7 @@ import { Envelope } from './envelope.js';
 import { LFO } from './lfo.js';
 import { StateVariableFilter } from './svf.js';
 import { compileModRoutes } from './mod-routes.js';
+import { Voice } from './voice.js';
 
 const SR = 48000;
 
@@ -79,6 +80,43 @@ describe('oscillator', () => {
         expect(Number.isFinite(s)).toBe(true);
         expect(Math.abs(s)).toBeLessThanOrEqual(1.35); // BLEP overshoot allowance
       }
+    }
+  });
+
+  it('preserves modulo phase advancement on common and multi-wrap inputs', () => {
+    const params = {
+      ...DEFAULT_PARAMS,
+      useADSR: false,
+      useFM: false,
+      useFilter: false,
+      lfoRate: 0,
+      lfoDepth: 0,
+      modRoutes: [],
+      unisonVoices: 4,
+      unisonDetune: 12
+    };
+
+    for (const frequency of [1000, 96000]) {
+      const routesBox = { compiled: compileModRoutes(params.modRoutes, params) };
+      const voice = new Voice(SR, routesBox);
+      voice.start({
+        noteId: `phase-${frequency}`,
+        frequency,
+        waveform: 'saw',
+        velocity: 1,
+        params,
+        frame: 0,
+        glideFrom: 0
+      });
+      const initialPhases = Float32Array.from([0.999, 0.2, 0.7, 0.95]);
+      voice.unisonPhases.set(initialPhases);
+      const expected = Array.from(initialPhases, (phase, index) => (
+        Math.fround((phase + (frequency / SR) * voice.unisonDetuneRatios[index]) % 1.0)
+      ));
+
+      voice.nextSample(1.0, 0.0);
+
+      expect(Array.from(voice.unisonPhases)).toEqual(expected);
     }
   });
 });

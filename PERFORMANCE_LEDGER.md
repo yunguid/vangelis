@@ -23,7 +23,7 @@ and does not move another user-facing metric outside its budget.
 ## Metric catalog (100 core metrics)
 
 The executable report publishes additional derived and structural signals; this table is the stable,
-human-facing catalog. Delivery ceilings below reflect the current Batch 83 contract, not Baseline 0.
+human-facing catalog. Delivery ceilings below reflect the current Batch 84 contract, not Baseline 0.
 
 | ID | Metric | Budget / target | Method |
 |---|---|---|---|
@@ -4600,3 +4600,72 @@ worst-case DSP workload.
 - Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged. `git diff --check`: pass.
 - React best-practices review: no JSX or hook code changed; route lazy boundaries, memoization, native
   semantics, keyboard accessibility, and effect cleanup remain covered by the unchanged component suite.
+
+## Optimization batch 84 — range-checked oscillator phase wrapping
+
+Collected from the Batch 84 candidate and a detached `8e1ac68` Batch 83 worktree on the same Apple
+Silicon macOS host. A Node CPU profile of the actual worklet workload placed ordinary `% 1` phase
+normalization among the hottest source positions: FM carrier normalization and unison phase advancement
+were paying modulo on every sample even though their common inputs were already in the unit interval.
+
+Five candidate/baseline pairs ran in alternating order with `taskpolicy -t 0` and the identical 24-voice,
+four-way-unison, FM, filter, and cutoff-LFO workload. Arc, Ableton Live, and other desktop processes were
+active, so these absolute samples remain contention evidence rather than an isolated A01/A02 gate pass.
+The matched source comparison remains useful because both revisions used the same process, host,
+workload, scheduling policy, and nearby contention.
+
+| Worst-case worklet sample | Batch 83 baseline | Batch 84 candidate | Change |
+|---|---:|---:|---:|
+| Pair 1 CPU/block | 758.1 us | 681.0 us | -10.2% |
+| Pair 2 CPU/block | 719.5 us | 677.5 us | -5.8% |
+| Pair 3 CPU/block | 730.3 us | 677.3 us | -7.3% |
+| Pair 4 CPU/block | 721.9 us | 675.5 us | -6.4% |
+| Pair 5 CPU/block | 737.0 us | 695.4 us | -5.6% |
+| Median CPU/block | 730.3 us | 677.5 us | -52.8 us / -7.2% |
+| Median realtime headroom | 3.7x | 3.9x | +7.8% |
+
+Every candidate measurement beat its paired baseline. This follows Batch 83's five-of-five improvement
+without weakening the 467 us / 5.7x isolated catalog contract. The current contended median does not
+meet that absolute contract and is not represented as doing so.
+
+Implemented boundaries and controls:
+
+- FM carrier phase now takes the allocation-free, modulo-free path whenever the modulated phase is
+  already in `[0, 1)`. Positive and negative out-of-range modulation retain the original `% 1` fallback
+  and negative normalization.
+- Each unison oscillator advances with a comparison on the ordinary single-wrap path and retains modulo
+  when an extreme frequency requires multiple wraps. The generated waveform sample, phase order,
+  Float32 phase storage, and detune ratios are unchanged.
+- A deterministic unit case checks exact stored phase values at both 1 kHz and a 96 kHz multi-wrap
+  frequency across four detuned oscillators.
+- The production report publishes two new modulo-call counters and adds a guard that rejects removal of
+  either the range-checked common path or its correctness fallback.
+
+| Delivery metric | Batch 83 | Batch 84 | Change |
+|---|---:|---:|---:|
+| Initial JS raw / gzip | 30.25 / 12.15 KiB | 30.25 / 12.15 KiB | unchanged |
+| Total production JS raw | 412.80 KiB | 412.85 KiB | +0.05 KiB |
+| Total production JS gzip | 141.16 KiB | 141.22 KiB | +0.06 KiB |
+| Production deployment bytes | 1,380.93 KiB | 1,380.98 KiB | +0.05 KiB |
+| Worklet aggregate raw | 37.82 KiB | 37.87 KiB | +0.05 KiB; within 38.7 KiB gate |
+| Automated production budgets | 135 | 136 | +1 guardrail |
+
+The small byte increase is confined to the lazy audio worklet and leaves the entry graph and every static
+route closure unchanged. It buys a repeatable 7.2% median reduction in the measured worst-case DSP path.
+
+### Batch 84 verification gates
+
+- Full suite: 67 files and 576/576 tests pass, including the new common-path and multi-wrap exact-phase
+  case plus all worklet protocol, waveform, preset, modulation, pitch, glide, stealing, and release cases.
+- Audio audit: 225/225 synth renders are bit-exact, 7/7 stereo FX cases pass, audible aliases remain
+  saw -41.11 dB / square -54.95 dB / triangle -71.85 dB / FM-sine -51.34 dB, and saturated heap drift
+  is -40 KiB over 4,000 blocks.
+- Production delivery/static/dependency/route guardrails: 136/136 pass. The report records zero in-range
+  FM carrier modulo calls and zero ordinary phase-advance modulo calls per four-voice sample.
+- Warmed combined visual workload is 84.63% lower normalized CPU than the legacy reference, with 78.18%
+  fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged. `git diff --check`: pass.
+- The immediately preceding Batch 83 production-browser route and interaction matrix remains applicable:
+  Batch 84 changes only exact-output DSP phase advancement and its unit/report coverage; no DOM, route,
+  styling, event, lazy-loading, or component code changed.
+- React best-practices review: no JSX or hook code changed, so no component rewrite was applicable.

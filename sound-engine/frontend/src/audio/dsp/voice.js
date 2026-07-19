@@ -340,16 +340,21 @@ export class Voice {
         ? this.unisonDetuneRatios[i]
         : (detune === 0.0 ? 1.0 : Math.pow(2, detune / 1200.0));
       const phase = this.unisonPhases[i];
-      const phaseWithMod = (phase + fmOffset) % 1.0;
+      let phaseWithMod = phase + fmOffset;
+      if (phaseWithMod >= 1.0 || phaseWithMod < 0.0) {
+        phaseWithMod %= 1.0;
+        if (phaseWithMod < 0.0) phaseWithMod += 1.0;
+      }
       const dt = Math.min(0.45, baseDt * detuneRatio + fmRate);
-      const s = waveformSample(this.waveform, phaseWithMod < 0 ? phaseWithMod + 1.0 : phaseWithMod, dt);
+      const s = waveformSample(this.waveform, phaseWithMod, dt);
       if (stereo) {
         oscL += s * this.unisonGainL[i];
         oscR += s * this.unisonGainR[i];
       } else {
         oscL += s;
       }
-      this.unisonPhases[i] = (phase + baseDt * detuneRatio) % 1.0;
+      const nextPhase = phase + baseDt * detuneRatio;
+      this.unisonPhases[i] = nextPhase < 1.0 ? nextPhase : nextPhase % 1.0;
     }
 
     let sampleL = oscL / unison;

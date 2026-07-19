@@ -976,6 +976,12 @@ const voiceCachesStablePitchAndUnisonInvariants = (
   && /this\.cachedFmPhaseIncrement = this\.fmRatio \* baseDt/.test(voiceDspSource)
   && /this\.cachedFmMaxIndexCycles = fmFreq > 0\.0/.test(voiceDspSource)
 );
+const voiceUsesRangeCheckedPhaseWrapping = (
+  /if \(phaseWithMod >= 1\.0 \|\| phaseWithMod < 0\.0\)/.test(voiceDspSource)
+  && /phaseWithMod %= 1\.0/.test(voiceDspSource)
+  && /if \(phaseWithMod < 0\.0\) phaseWithMod \+= 1\.0/.test(voiceDspSource)
+  && /nextPhase < 1\.0 \? nextPhase : nextPhase % 1\.0/.test(voiceDspSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -1411,7 +1417,12 @@ const report = {
       voiceCachesStablePitchAndUnisonInvariants ? 0 : 4,
     stablePitchFmInvariantRecomputationsPerVoiceSample:
       voiceCachesStablePitchAndUnisonInvariants ? 0 : 3,
-    voiceCachesStablePitchAndUnisonInvariants
+    voiceCachesStablePitchAndUnisonInvariants,
+    inRangeFmCarrierModuloCallsPerFourVoiceSample:
+      voiceUsesRangeCheckedPhaseWrapping ? 0 : 4,
+    ordinaryPhaseAdvanceModuloCallsPerFourVoiceSample:
+      voiceUsesRangeCheckedPhaseWrapping ? 0 : 4,
+    voiceUsesRangeCheckedPhaseWrapping
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -2291,6 +2302,13 @@ if (!voiceCachesStablePitchAndUnisonInvariants) {
     expected: 'parameter-time detune ratios and frequency-change-scoped FM invariants'
   });
 }
+if (!voiceUsesRangeCheckedPhaseWrapping) {
+  failures.push({
+    name: 'Guard range-checked oscillator phase wrapping',
+    actual: 'carrier and phase advancement apply modulo on every unison sample',
+    expected: 'skip modulo for already-normalized carrier phases and ordinary sub-cycle advances'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -2301,7 +2319,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 117,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 118,
   failures
 };
 
