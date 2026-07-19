@@ -234,7 +234,7 @@ export class Voice {
 
   // Renders one stereo sample into this.outL/this.outR (fields, not returns,
   // so the hot loop never allocates).
-  nextSample(bendMul, modWheel) {
+  nextSample(bendMul, modWheel, filterCoefficientCache) {
     if (!this.active) {
       this.outL = 0.0;
       this.outR = 0.0;
@@ -373,7 +373,7 @@ export class Voice {
       const modCutoff = cutoffOct !== 0.0
         ? this.filterL.targetCutoff * Math.pow(2, cutoffOct)
         : undefined;
-      sampleL = this.filterL.process(sampleL, modCutoff);
+      sampleL = this.filterL.process(sampleL, modCutoff, filterCoefficientCache);
       sampleR = stereo ? this.filterR.processStereoPartner(sampleR, this.filterL) : sampleL;
     }
 

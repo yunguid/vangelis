@@ -65,7 +65,7 @@ export class StateVariableFilter {
     this.coefficientA3 = g * a2;
   }
 
-  process(input, cutoffOverride) {
+  process(input, cutoffOverride, coefficientCache) {
     // Apply one-pole smoothing to cutoff/resonance to prevent zipper noise
     const targetCutoff = typeof cutoffOverride === 'number' && Number.isFinite(cutoffOverride)
       ? clamp(cutoffOverride, 20, this.getMaxCutoff())
@@ -79,7 +79,28 @@ export class StateVariableFilter {
       this.cutoff !== this.coefficientCutoff
       || this.resonanceSmoothed !== this.coefficientResonance
     ) {
-      this.recalculateCoefficients();
+      if (
+        coefficientCache
+        && coefficientCache.cutoff === this.cutoff
+        && coefficientCache.resonance === this.resonanceSmoothed
+      ) {
+        this.coefficientCutoff = this.cutoff;
+        this.coefficientResonance = this.resonanceSmoothed;
+        this.coefficientK = coefficientCache.k;
+        this.coefficientA1 = coefficientCache.a1;
+        this.coefficientA2 = coefficientCache.a2;
+        this.coefficientA3 = coefficientCache.a3;
+      } else {
+        this.recalculateCoefficients();
+        if (coefficientCache) {
+          coefficientCache.cutoff = this.coefficientCutoff;
+          coefficientCache.resonance = this.coefficientResonance;
+          coefficientCache.k = this.coefficientK;
+          coefficientCache.a1 = this.coefficientA1;
+          coefficientCache.a2 = this.coefficientA2;
+          coefficientCache.a3 = this.coefficientA3;
+        }
+      }
     }
 
     const k = this.coefficientK;

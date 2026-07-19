@@ -957,9 +957,10 @@ const macroDialsShareAudioActivitySubscription = (
   && !/useEffect\(\(\) => audioEngine\.subscribeActivity/.test(effectMacroDialSource)
   && /<EffectMacroActivityProvider enabled=\{activeSections\.delay \|\| activeSections\.reverb\}>/.test(audioControlsSource)
 );
-const [svfSource, voiceDspSource] = await Promise.all([
+const [svfSource, voiceDspSource, synthWorkletDspSource] = await Promise.all([
   readFile(path.join(sourceDir, 'audio', 'dsp', 'svf.js'), 'utf8'),
-  readFile(path.join(sourceDir, 'audio', 'dsp', 'voice.js'), 'utf8')
+  readFile(path.join(sourceDir, 'audio', 'dsp', 'voice.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'audio', 'synth-worklet.js'), 'utf8')
 ]);
 const svfCachesSettledAndStereoCoefficients = (
   /recalculateCoefficients\(\)/.test(svfSource)
@@ -981,6 +982,16 @@ const voiceUsesRangeCheckedPhaseWrapping = (
   && /phaseWithMod %= 1\.0/.test(voiceDspSource)
   && /if \(phaseWithMod < 0\.0\) phaseWithMod \+= 1\.0/.test(voiceDspSource)
   && /nextPhase < 1\.0 \? nextPhase : nextPhase % 1\.0/.test(voiceDspSource)
+);
+const svfSharesExactCoefficientsAcrossVoices = (
+  /this\.filterCoefficientCache = \{/.test(synthWorkletDspSource)
+  && /voice\.nextSample\(bendMul, this\.modWheelSmoothed, this\.filterCoefficientCache\)/.test(synthWorkletDspSource)
+  && /process\(input, cutoffOverride, coefficientCache\)/.test(svfSource)
+  && /coefficientCache\.cutoff === this\.cutoff/.test(svfSource)
+  && /coefficientCache\.resonance === this\.resonanceSmoothed/.test(svfSource)
+  && /coefficientCache\.cutoff = this\.coefficientCutoff/.test(svfSource)
+  && /coefficientCache\.a3 = this\.coefficientA3/.test(svfSource)
+  && /this\.filterL\.process\(sampleL, modCutoff, filterCoefficientCache\)/.test(voiceDspSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1422,7 +1433,11 @@ const report = {
       voiceUsesRangeCheckedPhaseWrapping ? 0 : 4,
     ordinaryPhaseAdvanceModuloCallsPerFourVoiceSample:
       voiceUsesRangeCheckedPhaseWrapping ? 0 : 4,
-    voiceUsesRangeCheckedPhaseWrapping
+    voiceUsesRangeCheckedPhaseWrapping,
+    synchronizedTwentyFourVoiceSvfCoefficientEvaluationsPerSample:
+      svfSharesExactCoefficientsAcrossVoices ? 1 : 24,
+    divergentVoiceSvfCoefficientEvaluationsPerSample: 24,
+    svfSharesExactCoefficientsAcrossVoices
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -2309,6 +2324,13 @@ if (!voiceUsesRangeCheckedPhaseWrapping) {
     expected: 'skip modulo for already-normalized carrier phases and ordinary sub-cycle advances'
   });
 }
+if (!svfSharesExactCoefficientsAcrossVoices) {
+  failures.push({
+    name: 'Guard exact cross-voice SVF coefficient reuse',
+    actual: 'synchronized voices repeat identical transcendental coefficient evaluation',
+    expected: 'one processor-local exact-value coefficient memo with independent per-voice filter state'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -2319,7 +2341,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 118,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 119,
   failures
 };
 

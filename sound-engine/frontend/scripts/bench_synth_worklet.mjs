@@ -13,6 +13,7 @@
 const SAMPLE_RATE = 48000;
 const BLOCK = 128;
 const BLOCKS = 8000; // ~21s of audio
+const STAGGERED = process.argv.includes('--staggered');
 
 globalThis.sampleRate = SAMPLE_RATE;
 globalThis.AudioWorkletProcessor = class {
@@ -52,6 +53,10 @@ const proc = new ProcessorClass({
   }
 });
 
+const left = new Float32Array(BLOCK);
+const right = new Float32Array(BLOCK);
+const outputs = [[left, right]];
+
 // Saturate the pool: 24 voices, saw (PolyBLEP path), full velocity.
 for (let i = 0; i < 24; i++) {
   proc.port.onmessage({
@@ -63,11 +68,8 @@ for (let i = 0; i < 24; i++) {
       velocity: 1
     }
   });
+  if (STAGGERED) proc.process([], outputs);
 }
-
-const left = new Float32Array(BLOCK);
-const right = new Float32Array(BLOCK);
-const outputs = [[left, right]];
 
 // Warm up JIT
 for (let i = 0; i < 500; i++) proc.process([], outputs);
@@ -87,7 +89,7 @@ const cpuHeadroom = audioMs / cpuElapsedMs;
 let active = 0;
 for (const v of proc.voices) if (v.active) active++;
 
-console.log(`active voices:      ${active} (x4 unison, FM+filter+LFO on)`);
+console.log(`active voices:      ${active} (x4 unison, FM+filter+LFO on${STAGGERED ? ', staggered' : ''})`);
 console.log(`rendered:           ${(audioMs / 1000).toFixed(1)}s of audio in ${(elapsedMs / 1000).toFixed(2)}s`);
 console.log(`CPU render time:    ${(cpuElapsedMs / 1000).toFixed(2)}s`);
 console.log(`CPU per block:      ${(cpuElapsedMs / BLOCKS * 1000).toFixed(1)}us`);

@@ -23,7 +23,7 @@ and does not move another user-facing metric outside its budget.
 ## Metric catalog (100 core metrics)
 
 The executable report publishes additional derived and structural signals; this table is the stable,
-human-facing catalog. Delivery ceilings below reflect the current Batch 84 contract, not Baseline 0.
+human-facing catalog. Delivery ceilings below reflect the current Batch 85 contract, not Baseline 0.
 
 | ID | Metric | Budget / target | Method |
 |---|---|---|---|
@@ -4668,4 +4668,87 @@ route closure unchanged. It buys a repeatable 7.2% median reduction in the measu
 - The immediately preceding Batch 83 production-browser route and interaction matrix remains applicable:
   Batch 84 changes only exact-output DSP phase advancement and its unit/report coverage; no DOM, route,
   styling, event, lazy-loading, or component code changed.
+- React best-practices review: no JSX or hook code changed, so no component rewrite was applicable.
+
+## Optimization batch 85 — exact cross-voice SVF coefficient reuse
+
+Collected from the Batch 85 candidate and a detached `51c98b7` Batch 84 worktree on the same Apple
+Silicon macOS host. The post-Batch-84 CPU profile showed `Math.tan` coefficient reconstruction remaining
+inside every modulated left-channel filter. Voices in a chord commonly share sample-exact cutoff and
+resonance trajectories, yet each independently repeated the same transcendental calculation.
+
+Five alternating-order pairs used the identical 24-voice, four-way-unison, FM, filter, and cutoff-LFO
+workload. The desktop remained contended, so these are matched source comparisons rather than an isolated
+A01/A02 absolute-gate pass.
+
+| Synchronized worst-case worklet sample | Batch 84 baseline | Batch 85 candidate | Change |
+|---|---:|---:|---:|
+| Pair 1 CPU/block | 1,009.3 us | 800.7 us | -20.7% |
+| Pair 2 CPU/block | 975.4 us | 598.2 us | -38.7% |
+| Pair 3 CPU/block | 767.1 us | 541.5 us | -29.4% |
+| Pair 4 CPU/block | 704.1 us | 615.0 us | -12.7% |
+| Pair 5 CPU/block | 670.5 us | 603.5 us | -10.0% |
+| Median CPU/block | 767.1 us | 603.5 us | -163.6 us / -21.3% |
+| Median realtime headroom | 3.5x | 4.4x | +25.7% |
+
+Every candidate measurement beats its paired baseline despite the changing host load. The lowest
+contended sample reaches 541.5 us/block / 4.9x; it still does not satisfy the current isolated
+467 us / 5.7x catalog contract, which remains unchanged and is not claimed here.
+
+The benchmark now also accepts `--staggered`, starting each voice one render quantum apart so LFO and
+filter trajectories diverge and the memo mostly misses. Five alternating control pairs bound that path:
+
+| Staggered miss-path sample | Batch 84 baseline | Batch 85 candidate | Change |
+|---|---:|---:|---:|
+| Pair 1 CPU/block | 719.8 us | 707.5 us | -1.7% |
+| Pair 2 CPU/block | 703.3 us | 693.0 us | -1.5% |
+| Pair 3 CPU/block | 689.0 us | 678.9 us | -1.5% |
+| Pair 4 CPU/block | 668.3 us | 690.0 us | +3.2% |
+| Pair 5 CPU/block | 671.4 us | 685.4 us | +2.1% |
+| Median CPU/block | 689.0 us | 690.0 us | +1.0 us / +0.15% noise floor |
+
+The miss workload is neutral at the absolute median, wins three pairs, and shows no consistent penalty.
+
+Implemented boundaries and controls:
+
+- Each processor owns one fixed six-number coefficient memo. It is allocated once with the worklet,
+  never inside the render loop.
+- After applying its normal per-voice cutoff and resonance smoothing, a left filter reuses the memo only
+  on exact numeric equality. A miss runs the original coefficient calculation and refreshes the memo.
+- Only coefficient scalars are shared. Every voice and stereo channel retains independent cutoff targets,
+  smoothing state, integrators, mode, bounds, reset behavior, and non-finite recovery.
+- A deterministic test advances two synchronized filters through 256 changing cutoffs, requires bit-exact
+  outputs, and proves exactly 256 `Math.tan` calls instead of 512.
+- The production report records one coefficient evaluation per synchronized 24-voice sample, retains 24
+  as the divergent upper bound, and rejects removal of the exact-value processor memo.
+- The durable `--staggered` benchmark mode preserves miss-path coverage for later DSP changes.
+
+| Delivery metric | Batch 84 | Batch 85 | Change |
+|---|---:|---:|---:|
+| Initial JS raw / gzip | 30.25 / 12.15 KiB | 30.25 / 12.15 KiB | unchanged |
+| Total production JS raw | 412.85 KiB | 413.36 KiB | +0.51 KiB |
+| Total production JS gzip | 141.22 KiB | 141.34 KiB | +0.12 KiB |
+| Production deployment bytes | 1,380.98 KiB | 1,381.49 KiB | +0.51 KiB |
+| Worklet aggregate raw | 37.87 KiB | 38.38 KiB | +0.51 KiB; within 38.7 KiB gate |
+| Worklet aggregate gzip | 10.88 KiB | 11.01 KiB | +0.13 KiB |
+| Automated production budgets | 136 | 137 | +1 guardrail |
+
+The bounded byte increase is isolated to the lazy worklet and leaves the initial graph and static route
+closures unchanged. It buys a large synchronized-chord reduction with a neutral divergent control.
+
+### Batch 85 verification gates
+
+- Full suite: 67 files and 577/577 tests pass, including the new exact coefficient-memo case plus all
+  worklet, filter, modulation, parameter-update, voice-stealing, route, and UI cases.
+- Audio audit: 225/225 synth renders are bit-exact, 7/7 stereo FX cases pass, audible aliases remain
+  saw -41.11 dB / square -54.95 dB / triangle -71.85 dB / FM-sine -51.34 dB, and saturated heap drift
+  is -38 KiB over 4,000 blocks.
+- Production delivery/static/dependency/route guardrails: 137/137 pass. The new report records one
+  synchronized coefficient evaluation versus the 24-evaluation divergent upper bound.
+- Warmed combined visual workload is 84.71% lower normalized CPU than the legacy reference, with 78.18%
+  fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged. `git diff --check`: pass.
+- The Batch 83 production-browser route and interaction matrix remains applicable: Batches 84–85 touch
+  only exact-output worklet/DSP internals and their test/report/benchmark coverage, not DOM, styles,
+  routes, event handling, components, lazy boundaries, or accessibility semantics.
 - React best-practices review: no JSX or hook code changed, so no component rewrite was applicable.

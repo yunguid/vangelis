@@ -294,6 +294,34 @@ describe('state-variable filter', () => {
       expect(actual).toBe(expected);
     }
   });
+
+  it('reuses exact modulated coefficients across synchronized voices', () => {
+    const first = new StateVariableFilter(SR);
+    const second = new StateVariableFilter(SR);
+    for (const filter of [first, second]) {
+      filter.setParams({ cutoff: 4000, resonance: 2, mode: 0 });
+      filter.reset();
+    }
+    const coefficientCache = {
+      cutoff: NaN,
+      resonance: NaN,
+      k: 0,
+      a1: 0,
+      a2: 0,
+      a3: 0
+    };
+    const tanSpy = vi.spyOn(Math, 'tan');
+
+    for (let i = 0; i < 256; i++) {
+      const input = Math.sin(i * 0.071) * 0.25;
+      const cutoff = 3000 + Math.sin(i * 0.1) * 500;
+      const firstOutput = first.process(input, cutoff, coefficientCache);
+      const secondOutput = second.process(input, cutoff, coefficientCache);
+      expect(secondOutput).toBe(firstOutput);
+    }
+
+    expect(tanSpy).toHaveBeenCalledTimes(256);
+  });
 });
 
 describe('mod-route compiler', () => {
