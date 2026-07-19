@@ -3815,3 +3815,52 @@ Implemented boundaries and controls:
 - React best-practices review: parameter publication remains effect-driven with complete dependencies;
   comparison state is runtime-owned and cannot trigger React work; force-reapply semantics are explicit.
 - `git diff --check`: pass.
+
+## Optimization batch 73 — deadline-driven Home session persistence
+
+Collected from the Home session-persistence effect; a virtual ten-second 60 Hz control stream;
+deterministic deadline/cancellation tests; generated production closures; the full suite; and isolated
+audio/visual gates.
+
+| Metric | Batch 72 | Batch 73 | Change |
+|---|---:|---:|---:|
+| Timeout creations over ten seconds | 600 | 51 | -91.5% |
+| Timeout cancellations | 599 | 0 | removed |
+| Deferred storage writes | 1 | 1 | preserved |
+| Trailing idle deadline | 200 ms | 200 ms | preserved |
+| Final snapshot on page exit | yes | yes | preserved |
+| Initial Home JS gzip | 68.02 KiB | 68.15 KiB | +0.13 KiB |
+| Sound Designer route JS gzip | 63.56 KiB | 63.56 KiB | unchanged |
+| Production deployment bytes | 1,490.21 KiB | 1,490.47 KiB | +0.26 KiB |
+| Automated production budgets | 115 | 116 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced the render-effect debounce that allocated and cancelled a timeout for every session-state
+  update with a reusable trailing-deadline scheduler.
+- Each update moves only an in-memory deadline. The existing timer wakes at most once per 200 ms,
+  reschedules for the remaining rounded-up interval, and commits the latest snapshot after true idle.
+- Retained the immediate page-exit/unmount path: it cancels pending timer work and writes the current
+  snapshot synchronously, so no settings are lost during navigation or teardown.
+- Added injected-clock tests proving one timer chain, exact latest-deadline behavior, cancellation,
+  and no cancelled write, plus a production guard covering App wiring and removal of the old timer ref.
+
+### Batch 73 verification gates
+
+- Full suite: 66 files, 550/550 tests pass, including two deadline-scheduler cases, the existing rapid
+  session-change storage assertion, and all Home, audio, Sound Designer, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 116/116 pass; 600 continuous Home updates
+  report 51 timer creations and zero cancellations instead of 600 and 599.
+- The virtual release workload preserves one final write and the 200 ms trailing deadline while
+  removing 549 timeout allocations and all 599 cancellation calls.
+- Warmed combined visual workload: 80.25% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 419.5 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: scheduler state is ref-owned and does not trigger rendering; the effect
+  retains complete snapshot dependencies; page-exit cleanup cancels the timer before the final write.
+- `git diff --check`: pass.

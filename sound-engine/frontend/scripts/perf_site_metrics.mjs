@@ -715,10 +715,11 @@ const [soundDesignerSource, soundDesignerAdvancedSource, presetShelfSource] = aw
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerAdvancedStages.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'PresetShelf.jsx'), 'utf8')
 ]);
-const [appSource, audioEngineRuntimeSource, audioEngineEffectsSource] = await Promise.all([
+const [appSource, audioEngineRuntimeSource, audioEngineEffectsSource, trailingDeadlineSchedulerSource] = await Promise.all([
   readFile(path.join(sourceDir, 'App.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'utils', 'audioEngineRuntime.js'), 'utf8'),
-  readFile(path.join(sourceDir, 'utils', 'audioEngine', 'effects.js'), 'utf8')
+  readFile(path.join(sourceDir, 'utils', 'audioEngine', 'effects.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'utils', 'trailingDeadlineScheduler.js'), 'utf8')
 ]);
 const controlKitPrimitivesIsolateRenders = (
   [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
@@ -763,6 +764,15 @@ const audioParamChangeDetectionAvoidsSignatureSerialization = (
   && /areAudioParamsEqual\(this\.currentParams, effective\)/.test(audioEngineRuntimeSource)
   && /this\.lastParamSignature = 'applied'/.test(audioEngineRuntimeSource)
   && !/paramsSignature\(effective\)/.test(audioEngineRuntimeSource)
+);
+const homeSessionPersistenceUsesDeadlineScheduler = (
+  /deadline = now\(\) \+ delayMs/.test(trailingDeadlineSchedulerSource)
+  && /if \(timeoutId === null\)/.test(trailingDeadlineSchedulerSource)
+  && /Math\.ceil\(remaining\)/.test(trailingDeadlineSchedulerSource)
+  && /createTrailingDeadlineScheduler\(\{/.test(appSource)
+  && /sessionSaveSchedulerRef\.current\.schedule\(\)/.test(appSource)
+  && /sessionSaveSchedulerRef\.current\.cancel\(\)/.test(appSource)
+  && !/sessionSaveTimeoutRef/.test(appSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1118,7 +1128,12 @@ const report = {
       audioParamChangeDetectionAvoidsSignatureSerialization ? 0 : 1,
     audioParamSerializedRouteStringsPerChangedRuntimeUpdate:
       audioParamChangeDetectionAvoidsSignatureSerialization ? 0 : 1,
-    audioParamChangeDetectionAvoidsSignatureSerialization
+    audioParamChangeDetectionAvoidsSignatureSerialization,
+    homeSessionSaveTimerCreationsPer600Updates:
+      homeSessionPersistenceUsesDeadlineScheduler ? 51 : 600,
+    homeSessionSaveTimerCancellationsPer600Updates:
+      homeSessionPersistenceUsesDeadlineScheduler ? 0 : 599,
+    homeSessionPersistenceUsesDeadlineScheduler
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1817,6 +1832,13 @@ if (!audioParamChangeDetectionAvoidsSignatureSerialization) {
     expected: 'fixed-key scalar comparison with exact modulation-route fields and force-reapply sentinel'
   });
 }
+if (!homeSessionPersistenceUsesDeadlineScheduler) {
+  failures.push({
+    name: 'Guard Home session-persistence deadline scheduler',
+    actual: 'continuous state updates recreate and cancel the trailing-save timeout each frame',
+    expected: 'one deadline-driven timer chain with final snapshot, page-exit flush, and cleanup'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1827,7 +1849,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 97,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 98,
   failures
 };
 

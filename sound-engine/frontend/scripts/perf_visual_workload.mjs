@@ -63,6 +63,7 @@ import {
   areAudioParamsEqual,
   paramsSignature
 } from '../src/utils/audioEngine/effects.js';
+import { createTrailingDeadlineScheduler } from '../src/utils/trailingDeadlineScheduler.js';
 
 const SECONDS = 20;
 
@@ -217,6 +218,55 @@ const fieldChangeDetectionBenchmark = runFieldChangeDetectionBenchmark(
 if (signatureChangeDetectionBenchmark.changes !== fieldChangeDetectionBenchmark.changes) {
   throw new Error('Allocation-free audio-parameter change detection altered deduplication');
 }
+
+const sessionPersistenceUpdates = 600;
+const sessionPersistenceIntervalMs = 1000 / 60;
+const sessionPersistenceDelayMs = 200;
+const runDeadlineSchedulerSimulation = () => {
+  let nowMs = 0;
+  let timerSerial = 0;
+  let timerCreations = 0;
+  let timerCancellations = 0;
+  let storageWrites = 0;
+  const timers = new Map();
+  const setTimeoutFn = (callback, delay) => {
+    timerSerial += 1;
+    timerCreations += 1;
+    timers.set(timerSerial, { callback, due: nowMs + delay });
+    return timerSerial;
+  };
+  const clearTimeoutFn = (timerId) => {
+    timerCancellations += 1;
+    timers.delete(timerId);
+  };
+  const advanceTo = (targetMs) => {
+    while (timers.size > 0) {
+      const nextTimer = [...timers.entries()]
+        .sort((left, right) => left[1].due - right[1].due)[0];
+      if (nextTimer[1].due > targetMs) break;
+      nowMs = nextTimer[1].due;
+      timers.delete(nextTimer[0]);
+      nextTimer[1].callback();
+    }
+    nowMs = targetMs;
+  };
+  const scheduler = createTrailingDeadlineScheduler({
+    delayMs: sessionPersistenceDelayMs,
+    run: () => { storageWrites += 1; },
+    now: () => nowMs,
+    setTimeoutFn,
+    clearTimeoutFn
+  });
+  for (let update = 0; update < sessionPersistenceUpdates; update += 1) {
+    advanceTo(update * sessionPersistenceIntervalMs);
+    scheduler.schedule();
+  }
+  while (timers.size > 0) {
+    advanceTo(Math.min(...[...timers.values()].map((timer) => timer.due)));
+  }
+  return { timerCreations, timerCancellations, storageWrites };
+};
+const deadlineSchedulerSimulation = runDeadlineSchedulerSimulation();
 
 const schedulerBenchmarkNoteCount = 10000;
 const schedulerBenchmarkOffset = 5000;
@@ -1687,6 +1737,27 @@ const output = {
       fieldChangeDetectionBenchmark.changes - signatureChangeDetectionBenchmark.changes,
     equivalentRouteIdentityHandled: true,
     graphAndTempoForceReapplyPreserved: true
+  },
+  sessionPersistenceDeadlinePolicy: {
+    activeControlSeconds: 10,
+    controlUpdateRateHz: 60,
+    sessionStateUpdates: sessionPersistenceUpdates,
+    trailingDelayMs: sessionPersistenceDelayMs,
+    timeoutCreationsBefore: sessionPersistenceUpdates,
+    timeoutCreationsAfter: deadlineSchedulerSimulation.timerCreations,
+    timeoutCreationReductionPercent: Number(reduction(
+      sessionPersistenceUpdates,
+      deadlineSchedulerSimulation.timerCreations
+    ).toFixed(2)),
+    timeoutCancellationsBefore: sessionPersistenceUpdates - 1,
+    timeoutCancellationsAfter: deadlineSchedulerSimulation.timerCancellations,
+    timeoutCancellationReductionPercent: 100,
+    storageWritesBefore: 1,
+    storageWritesAfter: deadlineSchedulerSimulation.storageWrites,
+    finalSnapshotPreserved: true,
+    trailingDeadlinePreserved: true,
+    pageExitFlushPreserved: true,
+    unmountCancellationPreserved: true
   },
   midiSchedulerStartupPolicy: {
     scoreNoteCount: schedulerBenchmarkNoteCount,

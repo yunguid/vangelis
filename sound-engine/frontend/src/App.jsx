@@ -23,6 +23,7 @@ import {
   SoundControlsContext
 } from './context/SynthContexts.jsx';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
+import { createTrailingDeadlineScheduler } from './utils/trailingDeadlineScheduler.js';
 import './styles/overlays.css';
 
 const Scene = React.lazy(() => import('./components/Scene'));
@@ -78,8 +79,16 @@ const App = () => {
   ));
   const scrollRaf = useRef(null);
   const noticeTimeoutRef = useRef(null);
-  const sessionSaveTimeoutRef = useRef(null);
   const sessionSnapshotRef = useRef(null);
+  const sessionSaveSchedulerRef = useRef(null);
+  if (sessionSaveSchedulerRef.current === null) {
+    sessionSaveSchedulerRef.current = createTrailingDeadlineScheduler({
+      delayMs: SESSION_SAVE_DELAY_MS,
+      run: () => {
+        if (sessionSnapshotRef.current) saveAppSession(sessionSnapshotRef.current);
+      }
+    });
+  }
   const wasmLoaded = engineStatus.wasmReady;
   const isGraphWarm = engineStatus.graphWarmed;
 
@@ -336,21 +345,7 @@ const App = () => {
       tempoFactor: midiPlayback.tempoFactor
     };
     sessionSnapshotRef.current = snapshot;
-
-    const timeoutId = window.setTimeout(() => {
-      saveAppSession(snapshot);
-      if (sessionSaveTimeoutRef.current === timeoutId) {
-        sessionSaveTimeoutRef.current = null;
-      }
-    }, SESSION_SAVE_DELAY_MS);
-    sessionSaveTimeoutRef.current = timeoutId;
-
-    return () => {
-      window.clearTimeout(timeoutId);
-      if (sessionSaveTimeoutRef.current === timeoutId) {
-        sessionSaveTimeoutRef.current = null;
-      }
-    };
+    sessionSaveSchedulerRef.current.schedule();
   }, [
     activeSampleId,
     audioParams,
@@ -366,10 +361,7 @@ const App = () => {
 
   useEffect(() => {
     const flushSession = () => {
-      if (sessionSaveTimeoutRef.current !== null) {
-        window.clearTimeout(sessionSaveTimeoutRef.current);
-        sessionSaveTimeoutRef.current = null;
-      }
+      sessionSaveSchedulerRef.current.cancel();
       if (sessionSnapshotRef.current) {
         saveAppSession(sessionSnapshotRef.current);
       }
