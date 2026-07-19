@@ -1,6 +1,6 @@
 .pipeline-page {
   min-height: 100vh;
-  background: #1d2021;
+  background: var(--color-bg-deep);
   color: var(--color-text-primary);
 }
 

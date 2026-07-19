@@ -8,7 +8,7 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: #1d2021;
+  background: var(--color-bg-deep);
 }
 
 .song-study__backdrop::after {

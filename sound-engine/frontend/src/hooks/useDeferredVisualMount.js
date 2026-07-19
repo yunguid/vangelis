@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 
-export const PRIMARY_VISUAL_DELAY_MS = 700;
-export const AMBIENT_VISUAL_DELAY_MS = 1800;
+// Mount the visual layer on the first post-paint idle slot. The old 700/1800 ms
+// minimums made hard refreshes show a flat gray shell while the app was already
+// interactive; the scene now starts immediately without moving its RAF work
+// ahead of the first paint.
+export const PRIMARY_VISUAL_DELAY_MS = 0;
+export const AMBIENT_VISUAL_DELAY_MS = 0;
 export const VISUAL_IDLE_TIMEOUT_MS = 250;
 
 const isVisible = (documentRef) => (

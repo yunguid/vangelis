@@ -11,8 +11,8 @@
   --color-core-paper: #f4f1e8;
   --color-core-accent: #d65d0e;
 
-  --color-bg-sky: var(--color-core-ink);
-  --color-bg-deep: var(--color-core-ink);
+  --color-bg-sky: #0b0d10;
+  --color-bg-deep: #0b0d10;
   --color-primary-soft: rgba(29, 32, 33, 0.92);
   --color-primary-dim: rgba(29, 32, 33, 0.98);
 

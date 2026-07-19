@@ -24,7 +24,7 @@
   min-height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
-  background: #1d2021;
+  background: var(--color-bg-deep);
   color: var(--color-text-primary);
   display: flex;
   flex-direction: column;

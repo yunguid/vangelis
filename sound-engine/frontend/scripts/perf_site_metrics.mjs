@@ -2146,17 +2146,17 @@ if (deferredVisualMountConsumers !== 3) {
 }
 if (
   !deferredVisualMountUsesMinimumDelay
-  || PRIMARY_VISUAL_DELAY_MS < 700
-  || AMBIENT_VISUAL_DELAY_MS < 1800
+  || PRIMARY_VISUAL_DELAY_MS !== 0
+  || AMBIENT_VISUAL_DELAY_MS !== 0
   || VISUAL_IDLE_TIMEOUT_MS > 250
 ) {
   failures.push({
-    name: 'Guard staggered deferred-visual mounting',
+    name: 'Guard first-idle visual mounting',
     primaryDelayMs: PRIMARY_VISUAL_DELAY_MS,
     ambientDelayMs: AMBIENT_VISUAL_DELAY_MS,
     idleTimeoutMs: VISUAL_IDLE_TIMEOUT_MS,
     minimumDelayStage: deferredVisualMountUsesMinimumDelay,
-    expected: '700/1800 ms minimum delays before a <=250 ms idle deadline'
+    expected: '0/0 ms minimum delays before a <=250 ms idle deadline'
   });
 }
 if (eagerMutableHookInitializers !== 0) {

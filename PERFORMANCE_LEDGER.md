@@ -4832,3 +4832,51 @@ The byte cost remains confined to the lazy worklet and leaves all route closures
 - The Batch 83 production-browser route and interaction matrix remains applicable: Batches 84–86 change
   exact-output worklet/DSP internals and test/report/benchmark coverage only.
 - React best-practices review: no JSX or hook code changed, so no component rewrite was applicable.
+
+## Live browser baseline — 2026-07-19
+
+Collected from the local Vite server at `127.0.0.1:5173` with the built-in performance probe and
+Chrome 150 on Apple Silicon macOS (18 logical cores, 32 GB reported device memory, 2560×1440 viewport,
+DPR 1). These are warm local-development measurements, not production p75 claims; they close the
+browser-only evidence gap from Baseline 0 without pretending that a single local run is a field sample.
+
+| Route / phase | TTFB | DOMContentLoaded | Load | FCP | LCP | CLS | Long tasks | DOM nodes / depth | Heap | Resources |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `#/` initial | 1.2 ms | 20.0 ms | 20.5 ms | 52 ms | 52 ms | 0 | 0 | 147 / 12 | 14.1 MB | 44 |
+| `#/` settled | — | — | — | 52 ms | 52 ms | 0 | 0 | 531 / 15 | 11.48 MB | 76 |
+| `#/sound-designer` initial | 1.3 ms | 15.6 ms | 15.9 ms | 48 ms | 48 ms | 0 | 0 | 180 / 14 | 17.0 MB | 39 |
+| `#/sound-designer` settled | — | — | — | 48 ms | 48 ms | 0 | 0 | 197 / 14 | 18.79 MB | 60 |
+
+Interaction and route evidence from the same session:
+
+- Home → Sound Designer route transition: 8.7 ms to next paint, 26.5 ms to interactive.
+- Audio runtime import: 4.2–4.4 ms; context ready: 1.8–2.2 ms; worklet module load: 5.1–9.7 ms.
+- Sidebar `Open Sound controls` and `Open MIDI browser` each resolved to one accessible button and opened
+  successfully; the Volume slider resolved uniquely and accepted keyboard input.
+- Browser console: no warnings or errors during the route and sidebar checks.
+
+The initial sound-designer profile remained below the ledger ceilings for N01–N08, M01–M02, M07–M08,
+and the measured interaction/route targets. Repeating this matrix on a cold production preview and at a
+mobile viewport remains future work; no cold/p75 claim is inferred from this warm local sample.
+
+## Optimization batch 87 — black first paint and immediate visual mount
+
+The live screenshot exposed a gap that static delivery budgets could not catch: the HTML shell painted the
+Gruvbox gray `#1d2021` before the deferred WebGL scene mounted, and the old 700 ms / 1,800 ms visual gates
+made that fallback persist long enough to look like a broken reset. The first-paint surface now uses the same
+near-black `#0b0d10` family as the loaded scene, and both visual layers are scheduled for the first
+post-paint idle slot (`0 ms` minimum delay) while retaining visibility cancellation and the 250 ms idle
+deadline. Dynamic imports remain deferred, so this removes the visible gap without eagerly shipping canvas
+code in the initial route graph.
+
+### Batch 87 verification gates
+
+- First-paint browser screenshot after a hard reload shows the dark scene surface and visualizer strip within
+  the first 120 ms capture; the gray flash is gone.
+- Live browser profile reports home FCP 36 ms / LCP 52 ms and sound-designer FCP/LCP 80 ms on the same
+  Chrome 150 local session, with CLS 0 and zero long tasks.
+- Full visual scheduler tests: 4/4 pass; app smoke tests: 13/13 pass.
+- Production delivery/static/dependency/route guardrails: 138/138 pass; initial JS and CSS budgets remain
+  unchanged at 12.15 KiB gzip and 5.50 KiB gzip.
+- The prior audio effect ring-buffer batch remains verified separately: 225/225 synth renders bit-exact,
+  7/7 FX cases pass, and the worklet aggregate remains within the 38.7 KiB gate.
