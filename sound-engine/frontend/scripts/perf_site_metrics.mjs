@@ -33,6 +33,7 @@ const publicDir = path.join(root, 'public');
 const assetsDir = path.join(distDir, 'assets');
 const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const packageLock = JSON.parse(await readFile(path.join(root, 'package-lock.json'), 'utf8'));
+const viteConfigSource = await readFile(path.join(root, 'vite.config.js'), 'utf8');
 
 const roundKb = (bytes) => Number((bytes / 1024).toFixed(2));
 
@@ -69,6 +70,9 @@ const assetPaths = (await walkFiles(assetsDir)).sort();
 const assetMetrics = await Promise.all(assetPaths.map(measureFile));
 const jsAssets = assetMetrics.filter(({ file }) => file.endsWith('.js'));
 const cssAssets = assetMetrics.filter(({ file }) => file.endsWith('.css'));
+const jsTextByFile = new Map(await Promise.all(jsAssets.map(async ({ file }) => (
+  [file, await readFile(path.join(distDir, file), 'utf8')]
+))));
 const cssTextByFile = new Map(await Promise.all(cssAssets.map(async ({ file }) => (
   [file, await readFile(path.join(distDir, file), 'utf8')]
 ))));
@@ -85,6 +89,7 @@ const initialRefs = [...html.matchAll(/(?:src|href)="\.\/([^"?#]+)|(?:src|href)=
   .filter(Boolean);
 const initialJs = jsAssets.filter(({ file }) => initialRefs.includes(file));
 const initialCss = cssAssets.filter(({ file }) => initialRefs.includes(file));
+const initialJsText = initialJs.map(({ file }) => jsTextByFile.get(file) || '').join('\n');
 const initialCssText = initialCss.map(({ file }) => cssTextByFile.get(file) || '').join('\n');
 const routeChunks = jsAssets.filter(({ file }) => (
   /(?:ControlKit|GeneratedSongStudy|MidiPipeline|SongStudy|SoundDesigner|StudySongs|VoiceLoopLab)/.test(file)
@@ -958,6 +963,24 @@ const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || nu
 const directRuntimeDependencies = Object.keys(packageJson.dependencies || {});
 const productionLockPackages = Object.entries(packageLock.packages || {})
   .filter(([packagePath, metadata]) => packagePath && !metadata.dev);
+const requiredPreactCompatAliases = [
+  ["'react/jsx-runtime'", "'preact/jsx-runtime'"],
+  ["'react/jsx-dev-runtime'", "'preact/jsx-dev-runtime'"],
+  ["'react-dom/test-utils'", "'preact/test-utils'"],
+  ["'react-dom/client'", "'preact/compat/client'"],
+  ["'react-dom'", "'preact/compat'"],
+  ["'react'", "'preact/compat'"]
+];
+const preactCompatAliasCount = requiredPreactCompatAliases
+  .filter(([find, replacement]) => (
+    viteConfigSource.includes(`{ find: ${find}, replacement: ${replacement} }`)
+  )).length;
+const productionUsesPreactCompat = (
+  packageJson.dependencies?.preact === '10.29.7'
+  && preactCompatAliasCount === requiredPreactCompatAliases.length
+  && /dedupe:\s*\[\s*['"]preact['"]\s*\]/.test(viteConfigSource)
+);
+const initialIncludesReactErrorTable = initialJsText.includes('Minified React error #');
 const obsoleteWasmBuildPlugins = [
   'vite-plugin-top-level-await',
   'vite-plugin-wasm'
@@ -1370,6 +1393,10 @@ const report = {
   dependencySignals: {
     directRuntimeCount: directRuntimeDependencies.length,
     directRuntimeDependencies,
+    productionUiRuntime: productionUsesPreactCompat ? 'preact/compat' : 'react-or-unverified',
+    preactVersion: packageJson.dependencies?.preact || null,
+    preactCompatAliasCount,
+    initialIncludesReactErrorTable,
     obsoleteWasmBuildPlugins,
     tailwindBuildDependencies,
     productionPackageCount: productionLockPackages.length,
@@ -1382,11 +1409,11 @@ const budgetChecks = [
   ['D00 public static raw', publicStaticBytes, 0.95 * 1024 * 1024],
   ['D01 HTML raw', htmlMetric.bytes, 5 * 1024],
   ['D02 HTML gzip', htmlMetric.gzipBytes, 2 * 1024],
-  ['D03 initial JS raw', sum(initialJs, 'bytes'), 350 * 1024],
-  ['D04 initial JS gzip', sum(initialJs, 'gzipBytes'), 110 * 1024],
+  ['D03 initial JS raw', sum(initialJs, 'bytes'), 35 * 1024],
+  ['D04 initial JS gzip', sum(initialJs, 'gzipBytes'), 14 * 1024],
   ['D05 initial CSS raw', sum(initialCss, 'bytes'), 130 * 1024],
   ['D06 initial CSS gzip', sum(initialCss, 'gzipBytes'), 25 * 1024],
-  ['D07 largest eager JS gzip', largestInitial?.gzipBytes || 0, 55 * 1024],
+  ['D07 largest eager JS gzip', largestInitial?.gzipBytes || 0, 12 * 1024],
   ['D14 worklet raw', sum(worklets, 'bytes'), 38.7 * 1024]
 ];
 const failures = budgetChecks
@@ -1396,6 +1423,21 @@ const failures = budgetChecks
     actualKb: roundKb(actual),
     maximumKb: roundKb(maximum)
   }));
+if (!productionUsesPreactCompat) {
+  failures.push({
+    name: 'Guard compact production UI runtime',
+    runtime: packageJson.dependencies?.preact || 'missing',
+    compatAliases: preactCompatAliasCount,
+    expected: 'preact 10.29.7 with all six React compatibility aliases and Preact deduplication'
+  });
+}
+if (initialIncludesReactErrorTable) {
+  failures.push({
+    name: 'Guard React runtime exclusion from initial delivery',
+    actual: 'React production error table present in initial JavaScript',
+    expected: 'Preact compatibility runtime only'
+  });
+}
 if (
   report.networkHints.earlyExternalStylesheets.length > 0
   || report.networkHints.preconnectOrigins.length > 0
@@ -1717,14 +1759,14 @@ const countBudgetChecks = [
   ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 12],
   ['Guard raw interval sites', report.staticSignals.setIntervalCalls, 0],
   ['Guard nested external CSS imports', report.staticSignals.externalCssImportCalls, 0],
-  ['D11 direct runtime dependencies', directRuntimeDependencies.length, 5],
-  ['D11 production lock packages', productionLockPackages.length, 10]
+  ['D11 direct runtime dependencies', directRuntimeDependencies.length, 6],
+  ['D11 production lock packages', productionLockPackages.length, 11]
 ];
 failures.push(...countBudgetChecks
   .filter(([, actual, maximum]) => actual > maximum)
   .map(([name, actual, maximum]) => ({ name, actual, maximum })));
 const routeBudgetChecks = [
-  ['D12 max route JS gzip', Math.max(...routeClosures.map(({ jsGzipKb }) => jsGzipKb)), 100],
+  ['D12 max route JS gzip', Math.max(...routeClosures.map(({ jsGzipKb }) => jsGzipKb)), 40],
   ['D13 max route CSS gzip', Math.max(...routeClosures.map(({ cssGzipKb }) => cssGzipKb)), 18]
 ];
 failures.push(...routeBudgetChecks
@@ -2216,7 +2258,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 113,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 115,
   failures
 };
 

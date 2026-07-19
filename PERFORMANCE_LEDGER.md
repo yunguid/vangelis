@@ -4442,3 +4442,81 @@ removes 96 styled SVG descendants; the bounded route-only byte trade is therefor
   saturated heap drift is -40 KiB over 4,000 blocks.
 - Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 82 — compact production UI runtime
+
+Collected from clean Vite 5.4.14 production builds, the generated manifest and compressed artifacts, an
+isolated production preview, the in-app Chromium browser, trusted pointer/keyboard interactions, and the
+full unit/audio/visual/release gates. The browser pass covered all eight route shapes at the same preview
+origin: Home, Sound Designer, Control Kit, Voice Loop, MIDI Pipeline, Studies, the built-in song study,
+and the generated-study error shell.
+
+The shared React runtime was the dominant remaining eager asset: about 96% of Batch 81's 47.29 KiB
+initial JavaScript gzip. The application uses the compatibility surface already supported by Preact
+(hooks, context, lazy/Suspense, `useId`, memoization, and the React 18 client root), while it has no portal
+or concurrent-transition dependency. Production resolution now maps React and both JSX runtimes to exact
+Preact 10.29.7 compatibility entry points. React remains installed for development/test ecosystem peer
+compatibility; it is not emitted in the production initial closure.
+
+The first prototype exposed a concrete compatibility mistake rather than hiding it: mapping
+`react-dom/client` to `preact/compat` produced a blank route matrix with `createRoot is not a function`.
+That candidate was rejected. The corrected mapping uses `preact/compat/client`; the entire route and
+interaction matrix then passed before the optimization was accepted.
+
+| Delivery metric | Batch 81 | Batch 82 | Change |
+|---|---:|---:|---:|
+| Initial JS raw | 145.31 KiB | 30.25 KiB | -115.06 KiB / -79.2% |
+| Initial JS gzip | 47.29 KiB | 12.15 KiB | -35.14 KiB / -74.3% |
+| Largest eager JS gzip | 44.51 KiB | 9.38 KiB | -35.13 KiB / -78.9% |
+| Total production JS raw | 532.45 KiB | 410.96 KiB | -121.49 KiB / -22.8% |
+| Total production JS gzip | 176.49 KiB | 140.76 KiB | -35.73 KiB / -20.2% |
+| Production deployment bytes | 1,500.64 KiB | 1,379.08 KiB | -121.56 KiB / -8.1% |
+| Direct runtime dependencies | 5 | 6 | +1 pinned compatibility runtime |
+| Production lock packages | 10 | 11 | +1 pinned compatibility runtime |
+| Automated production budgets | 131 | 133 | +2 guardrails |
+
+Every static route closure removes essentially the same shared-runtime payload:
+
+| Route JS gzip | Batch 81 | Batch 82 | Change |
+|---|---:|---:|---:|
+| Home | 69.06 KiB | 33.73 KiB | -35.33 KiB / -51.2% |
+| Control Kit | 54.48 KiB | 19.25 KiB | -35.23 KiB / -64.7% |
+| Generated study shell | 55.09 KiB | 19.88 KiB | -35.21 KiB / -63.9% |
+| MIDI Pipeline | 57.07 KiB | 21.85 KiB | -35.22 KiB / -61.7% |
+| Song Study | 66.79 KiB | 31.51 KiB | -35.28 KiB / -52.8% |
+| Sound Designer | 64.46 KiB | 29.16 KiB | -35.30 KiB / -54.8% |
+| Studies | 54.99 KiB | 19.79 KiB | -35.20 KiB / -64.0% |
+| Voice Loop | 62.40 KiB | 27.19 KiB | -35.21 KiB / -56.4% |
+
+Implemented boundaries and controls:
+
+- Six ordered aliases cover `react`, `react-dom`, `react-dom/client`, `react-dom/test-utils`, and both JSX
+  runtimes; Preact is deduplicated and pinned exactly so a transitive upgrade cannot silently change the
+  rendering contract.
+- Delivery budgets now cap initial JavaScript at 35 KiB raw / 14 KiB gzip, the largest eager chunk at
+  12 KiB gzip, and every route closure at 40 KiB gzip. These replace the former 350/110/55/100 KiB
+  ceilings, so reverting to the React payload fails the build immediately.
+- Static guards require all six aliases, the exact Preact version, Preact-only deduplication, and absence
+  of React's production error table from initial JavaScript. Dependency budgets explicitly account for
+  the one deliberate direct and lockfile package.
+- The React best-practices review found no component or hook rewrite to justify: no JSX files changed,
+  route-level lazy/Suspense boundaries remain intact, hooks remain unconditional, memoization boundaries
+  are preserved, and native accessible controls continue to receive trusted events.
+
+### Batch 82 verification gates
+
+- Production browser matrix: all eight routes render without a loading shell or error boundary. The
+  expected generated-study 500 is presented as an accessible status rather than a render failure.
+- Deferred visual parity: Home settles at six canvases and Sound Designer at five after 3.2 seconds.
+  Home and Designer sidebar panels both open; Home Volume advances 50 to 51; Control Kit Level advances
+  0.50 to 0.51 and its Square radio checks; the built-in study starts playback, advances its transport,
+  enables Stop, and then stops cleanly.
+- Full suite: 67 files and 573/573 tests pass under the Vite compatibility aliases, covering all routes,
+  hooks, context bridges, lazy boundaries, controls, MIDI, visuals, audio runtime, and worklets.
+- Production delivery/static/dependency/route guardrails: 133/133 pass. Initial JavaScript is 12.15 KiB
+  gzip, the largest eager chunk is 9.38 KiB, and the largest route closure is Home at 33.73 KiB.
+- Warmed combined visual workload remains 78.67% lower normalized median CPU than the legacy reference,
+  with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Audio audit passes unchanged, including deterministic preset rendering and the established synth/FX,
+  alias, and saturated-heap gates. Production dependency audit reports 0 vulnerabilities.
+- UI-tell census remains 22. `git diff --check` passes.

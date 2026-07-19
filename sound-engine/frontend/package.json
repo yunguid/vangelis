@@ -19,6 +19,7 @@
     "dependencies": {
         "@tonejs/midi": "^2.0.28",
         "klattsch": "0.3.0",
+        "preact": "10.29.7",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
         "sql.js": "^1.14.1"
