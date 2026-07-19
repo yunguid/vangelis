@@ -152,6 +152,37 @@ export function paramsSignature(params) {
   }).join('|');
 }
 
+const AUDIO_PARAM_COMPARISON_KEYS = Object.keys(AUDIO_PARAM_DEFAULTS);
+
+export function areAudioParamsEqual(previousParams, nextParams) {
+  if (previousParams === nextParams) return true;
+  if (!previousParams || !nextParams) return false;
+
+  for (const key of AUDIO_PARAM_COMPARISON_KEYS) {
+    if (key !== 'modRoutes') {
+      if (!Object.is(previousParams[key], nextParams[key])) return false;
+      continue;
+    }
+
+    const previousRoutes = previousParams.modRoutes;
+    const nextRoutes = nextParams.modRoutes;
+    if (previousRoutes === nextRoutes) continue;
+    if (!Array.isArray(previousRoutes) || !Array.isArray(nextRoutes)) return false;
+    if (previousRoutes.length !== nextRoutes.length) return false;
+    for (let index = 0; index < previousRoutes.length; index += 1) {
+      const previousRoute = previousRoutes[index];
+      const nextRoute = nextRoutes[index];
+      if (
+        previousRoute.src !== nextRoute.src
+        || previousRoute.dst !== nextRoute.dst
+        || previousRoute.depth !== nextRoute.depth
+      ) return false;
+    }
+  }
+
+  return true;
+}
+
 export function applyGlobalParams({
   params,
   transportTempoBpm,

@@ -715,9 +715,10 @@ const [soundDesignerSource, soundDesignerAdvancedSource, presetShelfSource] = aw
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerAdvancedStages.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'PresetShelf.jsx'), 'utf8')
 ]);
-const [appSource, audioEngineRuntimeSource] = await Promise.all([
+const [appSource, audioEngineRuntimeSource, audioEngineEffectsSource] = await Promise.all([
   readFile(path.join(sourceDir, 'App.jsx'), 'utf8'),
-  readFile(path.join(sourceDir, 'utils', 'audioEngineRuntime.js'), 'utf8')
+  readFile(path.join(sourceDir, 'utils', 'audioEngineRuntime.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'utils', 'audioEngine', 'effects.js'), 'utf8')
 ]);
 const controlKitPrimitivesIsolateRenders = (
   [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
@@ -754,6 +755,14 @@ const normalizedGlobalParamsAvoidDuplicateSanitize = (
   && /audioEngine\.setSanitizedGlobalParams\(audioParams\)/.test(appSource)
   && /audioEngine\.setSanitizedGlobalParams\(audioParams\)/.test(soundDesignerSource)
   && /setGlobalParams\(params\) \{\s*this\.applyGlobalParams\(sanitizeAudioParams\(params\)\);/s.test(audioEngineRuntimeSource)
+);
+const audioParamChangeDetectionAvoidsSignatureSerialization = (
+  /const AUDIO_PARAM_COMPARISON_KEYS = Object\.keys\(AUDIO_PARAM_DEFAULTS\)/.test(audioEngineEffectsSource)
+  && /export function areAudioParamsEqual\(/.test(audioEngineEffectsSource)
+  && /previousRoute\.src !== nextRoute\.src/.test(audioEngineEffectsSource)
+  && /areAudioParamsEqual\(this\.currentParams, effective\)/.test(audioEngineRuntimeSource)
+  && /this\.lastParamSignature = 'applied'/.test(audioEngineRuntimeSource)
+  && !/paramsSignature\(effective\)/.test(audioEngineRuntimeSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1102,7 +1111,14 @@ const report = {
       normalizedGlobalParamsAvoidDuplicateSanitize ? 0 : 1,
     arbitraryGlobalParamCallerSanitizationPasses:
       normalizedGlobalParamsAvoidDuplicateSanitize ? 1 : 0,
-    normalizedGlobalParamsAvoidDuplicateSanitize
+    normalizedGlobalParamsAvoidDuplicateSanitize,
+    audioParamSignatureArraysPerChangedRuntimeUpdate:
+      audioParamChangeDetectionAvoidsSignatureSerialization ? 0 : 2,
+    audioParamJoinedSignatureStringsPerChangedRuntimeUpdate:
+      audioParamChangeDetectionAvoidsSignatureSerialization ? 0 : 1,
+    audioParamSerializedRouteStringsPerChangedRuntimeUpdate:
+      audioParamChangeDetectionAvoidsSignatureSerialization ? 0 : 1,
+    audioParamChangeDetectionAvoidsSignatureSerialization
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1794,6 +1810,13 @@ if (!normalizedGlobalParamsAvoidDuplicateSanitize) {
     expected: 'explicit normalized handoff with lazy-load preservation and defensive arbitrary-input path'
   });
 }
+if (!audioParamChangeDetectionAvoidsSignatureSerialization) {
+  failures.push({
+    name: 'Guard allocation-free audio-parameter change detection',
+    actual: 'runtime updates format and serialize the full parameter object into a signature',
+    expected: 'fixed-key scalar comparison with exact modulation-route fields and force-reapply sentinel'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1804,7 +1827,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 96,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 97,
   failures
 };
 

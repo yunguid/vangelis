@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AUDIO_PARAM_DEFAULTS } from './audioParams.js';
 import { audioEngine } from './audioEngineRuntime.js';
+import { areAudioParamsEqual } from './audioEngine/effects.js';
 
 function createTargetSpy() {
   return {
@@ -182,5 +183,27 @@ describe('audioEngine effect gating', () => {
     }, context);
     expect(ensureDelay).toHaveBeenCalledWith(context);
     expect(ensureReverb).toHaveBeenCalledWith(context);
+  });
+});
+
+describe('audio parameter equality', () => {
+  it('compares normalized scalars and modulation routes without serialization', () => {
+    const baseline = {
+      ...AUDIO_PARAM_DEFAULTS,
+      modRoutes: [{ src: 0, dst: 1, depth: 0.25 }]
+    };
+
+    expect(areAudioParamsEqual(baseline, {
+      ...baseline,
+      modRoutes: [{ src: 0, dst: 1, depth: 0.25 }]
+    })).toBe(true);
+    expect(areAudioParamsEqual(baseline, {
+      ...baseline,
+      filterCutoff: baseline.filterCutoff + 1
+    })).toBe(false);
+    expect(areAudioParamsEqual(baseline, {
+      ...baseline,
+      modRoutes: [{ src: 0, dst: 1, depth: 0.5 }]
+    })).toBe(false);
   });
 });

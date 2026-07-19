@@ -3764,3 +3764,54 @@ Implemented boundaries and controls:
 - React best-practices review: normalized state ownership remains at each page boundary; effects keep
   complete dependencies; the lazy gateway preserves the latest publication without eager loading.
 - `git diff --check`: pass.
+
+## Optimization batch 72 — allocation-free runtime parameter change detection
+
+Collected from the loaded audio-runtime parameter path; a 100,000-update signature-versus-field
+benchmark; a ten-second 60 Hz control model; exact route-comparison tests; generated production
+closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 71 | Batch 72 | Change |
+|---|---:|---:|---:|
+| 100,000 change detections | 264.25 ms | 73.85 ms | -72.05% |
+| Detected-change count delta | — | 0 | exact |
+| `Object.values` arrays over ten seconds | 600 | 0 | removed |
+| Signature map-result arrays | 600 | 0 | removed |
+| Joined full-parameter strings | 600 | 0 | removed |
+| Serialized modulation-route strings | 600 | 0 | removed |
+| Compared normalized fields | 54 | 54 | complete |
+| Initial Home JS gzip | 68.01 KiB | 68.02 KiB | +0.01 KiB |
+| Sound Designer route JS gzip | 63.56 KiB | 63.56 KiB | unchanged |
+| Production deployment bytes | 1,489.94 KiB | 1,490.21 KiB | +0.27 KiB |
+| Automated production budgets | 114 | 115 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Replaced runtime construction of a full formatted parameter signature with a fixed list derived
+  once from the normalized default schema and an early-exit scalar comparison.
+- Compared modulation routes explicitly by length and their rendered/runtime fields (`src`, `dst`,
+  and `depth`), retaining deep equality when sanitization returns an equivalent new route array.
+- Retained the runtime's empty/applied sentinel. Graph creation and transport-tempo changes still
+  clear it and force a complete Web Audio parameter application even when parameter fields match.
+- Added exact tests for equivalent cloned routes, scalar changes, and route-depth changes, plus a
+  production guard that rejects signature serialization returning to the runtime update path.
+
+### Batch 72 verification gates
+
+- Full suite: 65 files, 548/548 tests pass, including the new allocation-free equality case and all
+  synth runtime, gateway, Home, Sound Designer, keyboard, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 115/115 pass; changed runtime updates report
+  zero signature arrays, zero joined signatures, and zero serialized route strings.
+- The release benchmark lowers 100,000 change detections by 72.05% with identical change counts;
+  the ten-second model removes 2,400 explicit transient arrays/strings.
+- Warmed combined visual workload: 80.30% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -40 KB over 4,000 blocks.
+- Isolated DSP benchmark: 426.8 us per 128-frame block with 6.2x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: parameter publication remains effect-driven with complete dependencies;
+  comparison state is runtime-owned and cannot trigger React work; force-reapply semantics are explicit.
+- `git diff --check`: pass.

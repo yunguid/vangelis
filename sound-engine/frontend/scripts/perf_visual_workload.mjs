@@ -59,6 +59,10 @@ import {
   AUDIO_PARAM_RANGES,
   sanitizeAudioParams
 } from '../src/utils/audioParams.js';
+import {
+  areAudioParamsEqual,
+  paramsSignature
+} from '../src/utils/audioEngine/effects.js';
 
 const SECONDS = 20;
 
@@ -172,6 +176,46 @@ const singleParamSanitizeBenchmark = runNormalizedParamHandoffBenchmark(
 );
 if (duplicateParamSanitizeBenchmark.checksum !== singleParamSanitizeBenchmark.checksum) {
   throw new Error('Normalized audio-parameter handoff changed the runtime parameter values');
+}
+
+const paramChangeDetectionIterations = 100000;
+const paramComparisonSamples = Array.from({ length: 256 }, (_, index) => sanitizeAudioParams({
+  ...normalizedParamSeed,
+  filterCutoff: 1200 + index,
+  modRoutes: [{ src: 0, dst: 1, depth: (index % 21) / 20 }]
+}));
+const runSignatureChangeDetectionBenchmark = (iterations) => {
+  let changes = 0;
+  let previousSignature = paramsSignature(paramComparisonSamples[0]);
+  const startedAt = performance.now();
+  for (let iteration = 1; iteration <= iterations; iteration += 1) {
+    const nextSignature = paramsSignature(paramComparisonSamples[iteration % paramComparisonSamples.length]);
+    if (nextSignature !== previousSignature) changes += 1;
+    previousSignature = nextSignature;
+  }
+  return { changes, elapsedMs: performance.now() - startedAt };
+};
+const runFieldChangeDetectionBenchmark = (iterations) => {
+  let changes = 0;
+  let previousParams = paramComparisonSamples[0];
+  const startedAt = performance.now();
+  for (let iteration = 1; iteration <= iterations; iteration += 1) {
+    const nextParams = paramComparisonSamples[iteration % paramComparisonSamples.length];
+    if (!areAudioParamsEqual(previousParams, nextParams)) changes += 1;
+    previousParams = nextParams;
+  }
+  return { changes, elapsedMs: performance.now() - startedAt };
+};
+runSignatureChangeDetectionBenchmark(500);
+runFieldChangeDetectionBenchmark(500);
+const signatureChangeDetectionBenchmark = runSignatureChangeDetectionBenchmark(
+  paramChangeDetectionIterations
+);
+const fieldChangeDetectionBenchmark = runFieldChangeDetectionBenchmark(
+  paramChangeDetectionIterations
+);
+if (signatureChangeDetectionBenchmark.changes !== fieldChangeDetectionBenchmark.changes) {
+  throw new Error('Allocation-free audio-parameter change detection altered deduplication');
 }
 
 const schedulerBenchmarkNoteCount = 10000;
@@ -1616,6 +1660,33 @@ const output = {
     checksumDelta: singleParamSanitizeBenchmark.checksum - duplicateParamSanitizeBenchmark.checksum,
     arbitraryCallerSanitizationPreserved: true,
     lazyRuntimeHandoffPreserved: true
+  },
+  audioParamChangeDetectionPolicy: {
+    activeControlSeconds: 10,
+    controlUpdateRateHz: 60,
+    controlUpdates: 600,
+    comparedParameterFields: Object.keys(AUDIO_PARAM_DEFAULTS).length,
+    numericFieldsPerSignature: Object.values(normalizedParamSeed)
+      .filter((value) => typeof value === 'number').length,
+    objectValuesArraysBefore: 600,
+    objectValuesArraysAfter: 0,
+    mapResultArraysBefore: 600,
+    mapResultArraysAfter: 0,
+    joinedSignatureStringsBefore: 600,
+    joinedSignatureStringsAfter: 0,
+    serializedRouteStringsBefore: 600,
+    serializedRouteStringsAfter: 0,
+    benchmarkIterations: paramChangeDetectionIterations,
+    signatureElapsedMs: Number(signatureChangeDetectionBenchmark.elapsedMs.toFixed(2)),
+    fieldComparisonElapsedMs: Number(fieldChangeDetectionBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      signatureChangeDetectionBenchmark.elapsedMs,
+      fieldChangeDetectionBenchmark.elapsedMs
+    ).toFixed(2)),
+    detectedChangeCountDelta:
+      fieldChangeDetectionBenchmark.changes - signatureChangeDetectionBenchmark.changes,
+    equivalentRouteIdentityHandled: true,
+    graphAndTempoForceReapplyPreserved: true
   },
   midiSchedulerStartupPolicy: {
     scoreNoteCount: schedulerBenchmarkNoteCount,

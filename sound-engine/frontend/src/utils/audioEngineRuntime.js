@@ -17,7 +17,7 @@ import {
 import { createAudioGraph } from './audioEngine/graph.js';
 import { createSampleVoicePool } from './audioEngine/samplePool.js';
 import { RecorderController } from './audioEngine/recorder.js';
-import { applyGlobalParams, DistortionCurveCache, paramsSignature } from './audioEngine/effects.js';
+import { applyGlobalParams, areAudioParamsEqual, DistortionCurveCache } from './audioEngine/effects.js';
 import { buildFrequencyTable, getFrequencyFromTable } from './audioEngine/frequency.js';
 import {
   DelayWorklet,
@@ -409,6 +409,8 @@ class AudioEngine {
 
   applyGlobalParams(sanitized) {
     const effective = applyEffectToggleState(sanitized);
+    const paramsChanged = this.lastParamSignature === ''
+      || !areAudioParamsEqual(this.currentParams, effective);
     this.currentParams = effective;
 
     const ctx = this.context;
@@ -420,8 +422,7 @@ class AudioEngine {
 
     this.scheduleEnabledEffectWorklets(effective, ctx);
 
-    const signature = paramsSignature(effective);
-    if (signature === this.lastParamSignature) {
+    if (!paramsChanged) {
       return;
     }
 
@@ -435,7 +436,7 @@ class AudioEngine {
       reverbWorklet: this.reverbWorklet,
       synthWorklet: this.worklet
     });
-    this.lastParamSignature = signature;
+    this.lastParamSignature = 'applied';
   }
 
   setGlobalParams(params) {
