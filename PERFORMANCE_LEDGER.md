@@ -3713,3 +3713,54 @@ Implemented boundaries and controls:
 - React best-practices review: memo props are scalar or stable; the route comparator covers every
   rendered route field; live callbacks retain current stable dispatchers; control semantics are intact.
 - `git diff --check`: pass.
+
+## Optimization batch 71 — single-pass normalized audio-parameter handoff
+
+Collected from the Home and Sound Designer parameter-publication paths; a 20,000-update isolated
+normalization benchmark; a ten-second 60 Hz control model; lazy-runtime forwarding tests; generated
+production closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 70 | Batch 71 | Change |
+|---|---:|---:|---:|
+| Sanitization passes over ten seconds | 1,200 | 600 | -50.0% |
+| Duplicate runtime sanitization passes | 600 | 0 | removed |
+| Ranged fields revisited by duplicate passes | 26,400 | 0 | removed |
+| 20,000-update isolated workload | 198.73 ms | 143.18 ms | -27.95% |
+| Parameter checksum delta | — | 0 | exact |
+| Initial Home JS gzip | 67.94 KiB | 68.01 KiB | +0.07 KiB |
+| Song Study route JS gzip | 65.99 KiB | 66.05 KiB | +0.06 KiB |
+| Sound Designer route JS gzip | 63.50 KiB | 63.56 KiB | +0.06 KiB |
+| Production deployment bytes | 1,489.46 KiB | 1,489.94 KiB | +0.48 KiB |
+| Automated production budgets | 113 | 114 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added an explicit `setSanitizedGlobalParams` route through the lazy gateway and loaded runtime.
+  Home and Sound Designer use it only for React state that has already passed `sanitizeAudioParams`.
+- Preserved `setGlobalParams` as the defensive arbitrary-input API; it still performs a complete
+  normalization before touching runtime state.
+- Recorded whether the latest pending cold-runtime parameters are normalized. When the runtime loads,
+  the gateway forwards them through the matching safe path rather than losing that property.
+- Added gateway coverage for the cold pending handoff and subsequent warm updates, plus production
+  signals requiring both UI consumers, the lazy gateway, the direct runtime path, and the defensive
+  sanitizer to remain wired together.
+
+### Batch 71 verification gates
+
+- Full suite: 65 files, 547/547 tests pass, including the new normalized lazy-handoff case and all
+  audio-runtime, Home, Sound Designer, keyboard, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 114/114 pass; normalized UI updates report
+  one sanitizer pass and zero duplicate runtime passes, while arbitrary input still reports one pass.
+- The release benchmark removes one complete 44-range/object/mod-route normalization per control
+  frame and lowers the 20,000-update workload by 27.95% with a zero checksum delta.
+- Warmed combined visual workload: 80.43% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 411.4 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: normalized state ownership remains at each page boundary; effects keep
+  complete dependencies; the lazy gateway preserves the latest publication without eager loading.
+- `git diff --check`: pass.

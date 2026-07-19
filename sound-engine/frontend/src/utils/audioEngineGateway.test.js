@@ -32,6 +32,7 @@ function createRuntime() {
       return vi.fn();
     }),
     setGlobalParams: vi.fn(),
+    setSanitizedGlobalParams: vi.fn(),
     setTransportTempo: vi.fn(),
     ensureWasm: vi.fn(() => Promise.resolve('worklet')),
     ensureAudioContext: vi.fn(() => Promise.resolve('context')),
@@ -85,6 +86,22 @@ describe('LazyAudioEngineGateway', () => {
     expect(loadRuntime).toHaveBeenCalledTimes(1);
     expect(gateway.playFrequency({ noteId: 'C4' })).toEqual({ voiceId: 'C4' });
     expect(runtime.playFrequency).toHaveBeenCalledWith({ noteId: 'C4' });
+  });
+
+  it('preserves the sanitized-parameter handoff across lazy runtime loading', async () => {
+    const { runtime } = createRuntime();
+    const gateway = new LazyAudioEngineGateway({ loadRuntime: () => Promise.resolve(runtime) });
+    const normalizedParams = { attack: 0.2, sustain: 0.7 };
+
+    gateway.setSanitizedGlobalParams(normalizedParams);
+    await gateway.ensureWasm();
+
+    expect(runtime.setSanitizedGlobalParams).toHaveBeenCalledWith(normalizedParams);
+    expect(runtime.setGlobalParams).not.toHaveBeenCalled();
+
+    const nextNormalizedParams = { attack: 0.3, sustain: 0.7 };
+    gateway.setSanitizedGlobalParams(nextNormalizedParams);
+    expect(runtime.setSanitizedGlobalParams).toHaveBeenLastCalledWith(nextNormalizedParams);
   });
 
   it('forwards runtime status and activity subscriptions after the split loads', async () => {

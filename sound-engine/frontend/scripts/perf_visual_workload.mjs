@@ -54,6 +54,11 @@ import { drawWaveCandyMeterGrid } from '../src/utils/waveCandyMeterGrid.js';
 import { loadAppSession } from '../src/utils/appSession.js';
 import { normalizeMidiNotes } from '../src/utils/midiPlaybackNotes.js';
 import { reusePipelineJobList } from '../src/utils/pipelineJobState.js';
+import {
+  AUDIO_PARAM_DEFAULTS,
+  AUDIO_PARAM_RANGES,
+  sanitizeAudioParams
+} from '../src/utils/audioParams.js';
 
 const SECONDS = 20;
 
@@ -129,6 +134,44 @@ if (previousWindow === undefined) delete globalThis.window;
 else globalThis.window = previousWindow;
 if (eagerSessionReadBenchmark.checksum !== cachedSessionReadBenchmark.checksum) {
   throw new Error('Cached app-session initialization changed the restored session');
+}
+
+const normalizedParamHandoffIterations = 20000;
+const normalizedParamSeed = sanitizeAudioParams({
+  ...AUDIO_PARAM_DEFAULTS,
+  useFilter: true,
+  useFM: true,
+  modRoutes: [{ src: 0, dst: 1, depth: 0.25 }]
+});
+const runNormalizedParamHandoffBenchmark = (iterations, duplicateRuntimeSanitize) => {
+  let checksum = 0;
+  const startedAt = performance.now();
+  for (let iteration = 0; iteration < iterations; iteration += 1) {
+    const normalizedState = sanitizeAudioParams({
+      ...normalizedParamSeed,
+      filterCutoff: 1200 + (iteration % 8000)
+    });
+    const runtimeParams = duplicateRuntimeSanitize
+      ? sanitizeAudioParams(normalizedState)
+      : normalizedState;
+    checksum += runtimeParams.filterCutoff
+      + runtimeParams.modRoutes[0].depth
+      + runtimeParams.attack;
+  }
+  return { checksum, elapsedMs: performance.now() - startedAt };
+};
+runNormalizedParamHandoffBenchmark(200, true);
+runNormalizedParamHandoffBenchmark(200, false);
+const duplicateParamSanitizeBenchmark = runNormalizedParamHandoffBenchmark(
+  normalizedParamHandoffIterations,
+  true
+);
+const singleParamSanitizeBenchmark = runNormalizedParamHandoffBenchmark(
+  normalizedParamHandoffIterations,
+  false
+);
+if (duplicateParamSanitizeBenchmark.checksum !== singleParamSanitizeBenchmark.checksum) {
+  throw new Error('Normalized audio-parameter handoff changed the runtime parameter values');
 }
 
 const schedulerBenchmarkNoteCount = 10000;
@@ -1550,6 +1593,29 @@ const output = {
       cachedSessionReadBenchmark.elapsedMs
     ).toFixed(2)),
     restoredSessionChecksumDelta: 0
+  },
+  normalizedAudioParamHandoffPolicy: {
+    activeControlSeconds: 10,
+    controlUpdateRateHz: 60,
+    controlUpdates: 600,
+    rangedParameterCount: Object.keys(AUDIO_PARAM_RANGES).length,
+    stateSanitizationPassesBefore: 600,
+    stateSanitizationPassesAfter: 600,
+    duplicateRuntimeSanitizationPassesBefore: 600,
+    duplicateRuntimeSanitizationPassesAfter: 0,
+    totalSanitizationPassesBefore: 1200,
+    totalSanitizationPassesAfter: 600,
+    sanitizationPassReductionPercent: 50,
+    benchmarkIterations: normalizedParamHandoffIterations,
+    duplicateSanitizeElapsedMs: Number(duplicateParamSanitizeBenchmark.elapsedMs.toFixed(2)),
+    normalizedHandoffElapsedMs: Number(singleParamSanitizeBenchmark.elapsedMs.toFixed(2)),
+    elapsedReductionPercent: Number(reduction(
+      duplicateParamSanitizeBenchmark.elapsedMs,
+      singleParamSanitizeBenchmark.elapsedMs
+    ).toFixed(2)),
+    checksumDelta: singleParamSanitizeBenchmark.checksum - duplicateParamSanitizeBenchmark.checksum,
+    arbitraryCallerSanitizationPreserved: true,
+    lazyRuntimeHandoffPreserved: true
   },
   midiSchedulerStartupPolicy: {
     scoreNoteCount: schedulerBenchmarkNoteCount,

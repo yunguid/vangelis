@@ -442,6 +442,10 @@ class AudioEngine {
     this.applyGlobalParams(sanitizeAudioParams(params));
   }
 
+  setSanitizedGlobalParams(params) {
+    this.applyGlobalParams(params);
+  }
+
   setTransportTempo(bpm) {
     const nextTempo = clamp(
       Number.isFinite(bpm) ? bpm : DEFAULT_TRANSPORT_TEMPO,

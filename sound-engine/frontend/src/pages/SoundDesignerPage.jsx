@@ -126,7 +126,7 @@ const SoundDesignerPage = () => {
   const handleSidebarClose = React.useCallback(() => setSidebarOpen(false), []);
 
   React.useEffect(() => {
-    audioEngine.setGlobalParams(audioParams);
+    audioEngine.setSanitizedGlobalParams(audioParams);
   }, [audioParams]);
 
   React.useEffect(() => {

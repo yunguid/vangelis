@@ -39,6 +39,7 @@ export class LazyAudioEngineGateway {
     this.runtime = null;
     this.runtimePromise = null;
     this.pendingParams = null;
+    this.pendingParamsAreSanitized = false;
     this.pendingTempo = null;
     this.statusListeners = new Set();
     this.recordingListeners = new Set();
@@ -63,7 +64,13 @@ export class LazyAudioEngineGateway {
         .then((runtime) => {
           this.runtime = runtime;
           this.attachRuntime(runtime);
-          if (this.pendingParams) runtime.setGlobalParams(this.pendingParams);
+          if (this.pendingParams) {
+            if (this.pendingParamsAreSanitized && typeof runtime.setSanitizedGlobalParams === 'function') {
+              runtime.setSanitizedGlobalParams(this.pendingParams);
+            } else {
+              runtime.setGlobalParams(this.pendingParams);
+            }
+          }
           if (this.pendingTempo !== null) runtime.setTransportTempo(this.pendingTempo);
           this.emitStatus(runtime.getStatus());
           return runtime;
@@ -137,7 +144,19 @@ export class LazyAudioEngineGateway {
 
   setGlobalParams(params) {
     this.pendingParams = params;
+    this.pendingParamsAreSanitized = false;
     this.runtime?.setGlobalParams(params);
+  }
+
+  setSanitizedGlobalParams(params) {
+    this.pendingParams = params;
+    this.pendingParamsAreSanitized = true;
+    if (!this.runtime) return;
+    if (typeof this.runtime.setSanitizedGlobalParams === 'function') {
+      this.runtime.setSanitizedGlobalParams(params);
+    } else {
+      this.runtime.setGlobalParams(params);
+    }
   }
 
   setTransportTempo(bpm) {

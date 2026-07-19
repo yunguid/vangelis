@@ -715,6 +715,10 @@ const [soundDesignerSource, soundDesignerAdvancedSource, presetShelfSource] = aw
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerAdvancedStages.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'PresetShelf.jsx'), 'utf8')
 ]);
+const [appSource, audioEngineRuntimeSource] = await Promise.all([
+  readFile(path.join(sourceDir, 'App.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'utils', 'audioEngineRuntime.js'), 'utf8')
+]);
 const controlKitPrimitivesIsolateRenders = (
   [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
     .every((componentSource) => /export default React\.memo\(/.test(componentSource))
@@ -741,6 +745,15 @@ const soundDesignerAdvancedControlsIsolateRenders = (
   && /const areModRoutesEqual =/.test(soundDesignerAdvancedSource)
   && /const ModRoutesEditor = React\.memo\(/.test(soundDesignerAdvancedSource)
   && /areModRoutesEqual\(previousProps\.routes, nextProps\.routes\)/.test(soundDesignerAdvancedSource)
+);
+const normalizedGlobalParamsAvoidDuplicateSanitize = (
+  /this\.pendingParamsAreSanitized = false/.test(audioEngineGatewaySource)
+  && /setSanitizedGlobalParams\(params\)/.test(audioEngineGatewaySource)
+  && /runtime\.setSanitizedGlobalParams\(this\.pendingParams\)/.test(audioEngineGatewaySource)
+  && /setSanitizedGlobalParams\(params\) \{\s*this\.applyGlobalParams\(params\);/s.test(audioEngineRuntimeSource)
+  && /audioEngine\.setSanitizedGlobalParams\(audioParams\)/.test(appSource)
+  && /audioEngine\.setSanitizedGlobalParams\(audioParams\)/.test(soundDesignerSource)
+  && /setGlobalParams\(params\) \{\s*this\.applyGlobalParams\(sanitizeAudioParams\(params\)\);/s.test(audioEngineRuntimeSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1082,7 +1095,14 @@ const report = {
       soundDesignerAdvancedControlsIsolateRenders ? 0 : 1,
     soundDesignerUnchangedModMatrixRendersPerAudioParamFrame:
       soundDesignerAdvancedControlsIsolateRenders ? 0 : 1,
-    soundDesignerAdvancedControlsIsolateRenders
+    soundDesignerAdvancedControlsIsolateRenders,
+    normalizedUiSanitizationPassesPerAudioParamFrame:
+      normalizedGlobalParamsAvoidDuplicateSanitize ? 1 : 2,
+    duplicateRuntimeSanitizationPassesPerNormalizedUiFrame:
+      normalizedGlobalParamsAvoidDuplicateSanitize ? 0 : 1,
+    arbitraryGlobalParamCallerSanitizationPasses:
+      normalizedGlobalParamsAvoidDuplicateSanitize ? 1 : 0,
+    normalizedGlobalParamsAvoidDuplicateSanitize
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1767,6 +1787,13 @@ if (!soundDesignerAdvancedControlsIsolateRenders) {
     expected: 'parameter-keyed slider memoization plus route-aware matrix and static-footer boundaries'
   });
 }
+if (!normalizedGlobalParamsAvoidDuplicateSanitize) {
+  failures.push({
+    name: 'Guard normalized audio-parameter runtime handoff',
+    actual: 'already-normalized UI state is sanitized again by the loaded runtime',
+    expected: 'explicit normalized handoff with lazy-load preservation and defensive arbitrary-input path'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1777,7 +1804,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 95,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 96,
   failures
 };
 

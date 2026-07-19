@@ -10,6 +10,7 @@ vi.mock('./utils/audioEngine.js', () => ({
     subscribe: vi.fn(() => () => {}),
     subscribeRecording: vi.fn(() => () => {}),
     setGlobalParams: vi.fn(),
+    setSanitizedGlobalParams: vi.fn(),
     ensureWasm: vi.fn(() => Promise.resolve()),
     ensureAudioContext: vi.fn(() => Promise.resolve()),
     warmGraph: vi.fn(),

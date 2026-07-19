@@ -114,7 +114,7 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    audioEngine.setGlobalParams(audioParams);
+    audioEngine.setSanitizedGlobalParams(audioParams);
   }, [audioParams]);
 
   useEffect(() => {
