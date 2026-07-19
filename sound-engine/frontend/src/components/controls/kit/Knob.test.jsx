@@ -181,6 +181,15 @@ describe('Knob', () => {
     expect(readout.textContent).toContain('Cutoff');
   });
 
+  it('batches all eleven visual ticks into two constant-size paths', () => {
+    const { container } = renderKnob();
+    const tickPaths = container.querySelectorAll('.kit-knob__tick');
+
+    expect(tickPaths).toHaveLength(2);
+    expect(tickPaths[0].getAttribute('d').match(/M /g)).toHaveLength(8);
+    expect(tickPaths[1].getAttribute('d').match(/M /g)).toHaveLength(3);
+  });
+
   it('skips unchanged parent rerenders while updating when its value changes', () => {
     const format = vi.fn((value) => `${value}`);
     const onChange = vi.fn();

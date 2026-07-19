@@ -43,26 +43,37 @@ const describeArc = (cx, cy, r, startAngle, endAngle) => {
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 };
 
-const STATIC_TICKS_BY_SIZE = Object.fromEntries(
+const STATIC_TICK_PATHS_BY_SIZE = Object.fromEntries(
   Object.entries(SIZE_CONFIG).map(([size, cfg]) => {
     const cx = cfg.svg / 2;
     const cy = cfg.svg / 2;
-    const ticks = Array.from({ length: TICK_COUNT }, (_, index) => {
+    const paths = { major: [], minor: [] };
+    for (let index = 0; index < TICK_COUNT; index += 1) {
       const angle = START_ANGLE + (index * SWEEP) / (TICK_COUNT - 1);
       const isMajor = index === 0 || index === 5 || index === TICK_COUNT - 1;
       const tickLen = isMajor ? cfg.tickMajor : cfg.tickMinor;
       const outer = polarToCartesian(cx, cy, cfg.ringR, angle);
       const inner = polarToCartesian(cx, cy, cfg.ringR - tickLen, angle);
-      return (
-        <line
-          key={index}
-          x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
-          className="kit-knob__tick"
-          strokeWidth={isMajor ? 1.25 : 1}
-        />
+      paths[isMajor ? 'major' : 'minor'].push(
+        `M ${inner.x} ${inner.y} L ${outer.x} ${outer.y}`
       );
-    });
-    return [size, ticks];
+    }
+    return [size, [
+      <path
+        key="minor"
+        d={paths.minor.join(' ')}
+        className="kit-knob__tick kit-knob__tick--minor"
+        fill="none"
+        strokeWidth={1}
+      />,
+      <path
+        key="major"
+        d={paths.major.join(' ')}
+        className="kit-knob__tick kit-knob__tick--major"
+        fill="none"
+        strokeWidth={1.25}
+      />
+    ]];
   })
 );
 
@@ -167,7 +178,7 @@ const Knob = ({
     };
   }, []);
 
-  const ticks = STATIC_TICKS_BY_SIZE[size] || STATIC_TICKS_BY_SIZE.md;
+  const tickPaths = STATIC_TICK_PATHS_BY_SIZE[size] || STATIC_TICK_PATHS_BY_SIZE.md;
 
   const arcPath = bipolar
     ? (valueAngle >= centerAngle
@@ -205,7 +216,7 @@ const Knob = ({
         onDoubleClick={handleDoubleClick}
       >
         <svg viewBox={`0 0 ${cfg.svg} ${cfg.svg}`} shapeRendering="geometricPrecision" aria-hidden="true">
-          <g className="kit-knob__ticks">{ticks}</g>
+          <g className="kit-knob__ticks">{tickPaths}</g>
           {arcPath && <path d={arcPath} className="kit-knob__arc" fill="none" strokeWidth={2.5} strokeLinecap="round" />}
           <circle cx={cx} cy={cy} r={cfg.bodyR} className="kit-knob__face" strokeWidth={1} />
           <line

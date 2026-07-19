@@ -137,40 +137,51 @@ const Fader = ({
   const svgHeight = isVertical ? trackLength : CROSS_SIZE;
   const grooveCross = CROSS_SIZE / 2;
 
-  const tickElements = useMemo(() => {
+  const tickPaths = useMemo(() => {
     const lastIndex = tickRatios.length - 1;
     const middleIndex = Math.floor(lastIndex / 2);
-    return tickRatios.map((tickRatio, index) => {
+    const paths = { major: [], minor: [] };
+    tickRatios.forEach((tickRatio, index) => {
       const isMajor = index === 0 || index === middleIndex || index === lastIndex;
       const tickLen = isMajor ? 7 : 4;
       if (isVertical) {
         const y = getVerticalCapCenter(tickRatio, trackLength);
-        return (
-          <line
-            key={index}
-            x1={grooveCross + CAP_CROSS / 2 + 2}
-            x2={grooveCross + CAP_CROSS / 2 + 2 + tickLen}
-            y1={y}
-            y2={y}
-            className="kit-fader__tick"
-            strokeWidth={isMajor ? 1.25 : 1}
-          />
+        paths[isMajor ? 'major' : 'minor'].push(
+          `M ${grooveCross + CAP_CROSS / 2 + 2} ${y} h ${tickLen}`
         );
+        return;
       }
       const x = getHorizontalCapCenter(tickRatio, trackLength);
-      return (
-        <line
-          key={index}
-          y1={grooveCross + CAP_CROSS / 2 + 2}
-          y2={grooveCross + CAP_CROSS / 2 + 2 + tickLen}
-          x1={x}
-          x2={x}
-          className="kit-fader__tick"
-          strokeWidth={isMajor ? 1.25 : 1}
-        />
+      paths[isMajor ? 'major' : 'minor'].push(
+        `M ${x} ${grooveCross + CAP_CROSS / 2 + 2} v ${tickLen}`
       );
     });
+    return {
+      major: paths.major.join(' '),
+      minor: paths.minor.join(' ')
+    };
   }, [isVertical, tickRatios, trackLength]);
+
+  const tickElements = useMemo(() => (
+    <>
+      {tickPaths.minor && (
+        <path
+          d={tickPaths.minor}
+          className="kit-fader__tick kit-fader__tick--minor"
+          fill="none"
+          strokeWidth={1}
+        />
+      )}
+      {tickPaths.major && (
+        <path
+          d={tickPaths.major}
+          className="kit-fader__tick kit-fader__tick--major"
+          fill="none"
+          strokeWidth={1.25}
+        />
+      )}
+    </>
+  ), [tickPaths]);
 
   return (
     <div className={`kit-fader kit-fader--${orientation}${disabled ? ' kit-fader--disabled' : ''}`}>

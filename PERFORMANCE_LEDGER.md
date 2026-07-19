@@ -4365,3 +4365,80 @@ Implemented profiling boundaries and controls:
   saturated heap drift is -39 KiB over 4,000 blocks.
 - Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 81 — constant-size Control Kit tick geometry
+
+Collected from two simultaneous production previews in Chrome 150 on Apple Silicon macOS: detached
+Batch 80 commit `5d1f266` and the Batch 81 candidate, each warmed once, then sampled in ten alternating
+reload pairs. Both previews used the same Vite production server policy and fixed 2,560 x 1,440 viewport
+at DPR 1, 18 reported logical processors, 32 GiB reported device memory, visible-document state, and no
+CPU throttling. Browser DOM inspection, an exact rendered screenshot, keyboard interaction, generated
+production closures, unit coverage, and the full audio/visual/release gates supplement the A/B timing.
+
+The route audit selected Control Kit because its 526-node tree was the site's remaining structural outlier.
+Individual tick marks alone occupied 130 DOM nodes (24.7% of the route), while 214 SVG descendants made
+up 40.7%. Knob and fader ticks are fixed geometry with only two stroke classes, so retaining one SVG
+element per mark added style/layout/display-list work without adding semantics or interaction behavior.
+
+| Live Control Kit metric | Batch 80 | Batch 81 | Change |
+|---|---:|---:|---:|
+| Total DOM nodes | 526 | 430 | -96 / -18.3% |
+| SVG descendants | 214 | 118 | -96 / -44.9% |
+| Tick SVG elements | 130 | 34 | -96 / -73.8% |
+| Knob tick elements | 77 | 14 | -63 / -81.8% |
+| Fader tick elements | 53 | 20 | -33 / -62.3% |
+| Maximum DOM depth | 16 | 16 | unchanged |
+| Median DCL, 10 interleaved runs | 16.6 ms | 16.5 ms | -0.1 ms / noise floor |
+| Median load, 10 interleaved runs | 21.1 ms | 21.0 ms | -0.1 ms / noise floor |
+| Median FCP | 48 ms | 48 ms | unchanged |
+| Median LCP | 48 ms | 48 ms | unchanged |
+| CLS | 0 | 0 | unchanged |
+| Long tasks | 0 | 0 | unchanged |
+| Warm/revalidated transfer | 2.34 KiB | 2.34 KiB | unchanged |
+| Warm/revalidated decoded bytes | 1.45 KiB | 1.45 KiB | unchanged |
+
+Implemented boundaries and controls:
+
+- Each knob's eleven tick segments are now encoded into one reusable minor path and one reusable major
+  path. Both path elements remain module-scoped by size, preserving the existing zero steady-state tick
+  allocation contract while reducing eleven descendants to two.
+- Each fader derives the same major/minor segment coordinates from its existing cap-center geometry and
+  memoizes both path data and React elements. Default, eight-step, vertical, horizontal, narrow, and custom
+  tick layouts retain their original endpoints and 1.0/1.25 stroke widths.
+- Unit tests require eight minor plus three major knob segments and five minor plus three major segments
+  for the eight-step fader, while requiring exactly two tick elements in either control.
+- The production guard now rejects per-tick SVG elements and publishes two tick-node metrics. Browser
+  verification confirmed all segment counts, exact rendered placement, and a keyboard Level update from
+  0.50 to 0.51 without rebuilding the 14-knob/20-fader tick-node totals.
+- The React best-practices pass specifically preserved module reuse, unconditional hooks, complete memo
+  dependencies, native slider semantics, and keyboard accessibility; no unrelated component refactor was
+  needed.
+
+| Delivery metric | Batch 80 | Batch 81 | Change |
+|---|---:|---:|---:|
+| Initial JS gzip | 47.29 KiB | 47.29 KiB | unchanged |
+| Control Kit route JS gzip | 54.34 KiB | 54.48 KiB | +0.14 KiB |
+| Total production JS gzip | 176.37 KiB | 176.49 KiB | +0.12 KiB |
+| Production deployment bytes | 1,500.18 KiB | 1,500.64 KiB | +0.46 KiB |
+| Automated production budgets | 130 | 131 | +1 guardrail |
+
+The isolated route pays 0.14 KiB gzip for the batched path representation. Matched A/B startup is exact
+at the median and the entry bundle is unchanged, while every mounted Control Kit document permanently
+removes 96 styled SVG descendants; the bounded route-only byte trade is therefore accepted.
+
+### Batch 81 verification gates
+
+- Matched production A/B: ten alternating warm/revalidated reload pairs per build; 48 ms median FCP/LCP,
+  zero CLS, and zero long tasks on both; 430 versus 526 nodes in every candidate/baseline sample.
+- Visual verification: all knob and fader guides render at the original positions and weights; exact segment
+  counts survive interaction, and the Level slider keyboard path advances 0.50 to 0.51.
+- Full suite: 67 files and 573/573 tests pass, including two new constant-node tick geometry cases and all
+  control semantics, drag, keyboard, memoization, route, sidebar, MIDI, audio, and visual behavior.
+- Production delivery/static/dependency/route guardrails: 131/131 pass. Knob and fader tick nodes are both
+  capped at two per rendered control, with zero steady-state static-tick allocations preserved.
+- Warmed combined visual workload: 80.44% lower normalized median CPU than the legacy reference, with
+  78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass, and
+  saturated heap drift is -40 KiB over 4,000 blocks.
+- Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged.
+- `git diff --check`: pass.

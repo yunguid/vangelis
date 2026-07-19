@@ -152,6 +152,15 @@ describe('Fader component', () => {
     expect(Number.isInteger(onChange.mock.calls.at(-1)[0])).toBe(true);
   });
 
+  it('batches stepped tick geometry into two constant-size paths', () => {
+    const { container } = renderFader({ min: 0, max: 7, ticks: 8 });
+    const tickPaths = container.querySelectorAll('.kit-fader__tick');
+
+    expect(tickPaths).toHaveLength(2);
+    expect(tickPaths[0].getAttribute('d').match(/M /g)).toHaveLength(5);
+    expect(tickPaths[1].getAttribute('d').match(/M /g)).toHaveLength(3);
+  });
+
   it('skips unchanged parent rerenders while updating when its value changes', () => {
     const format = vi.fn((value) => `${value}`);
     const onChange = vi.fn();

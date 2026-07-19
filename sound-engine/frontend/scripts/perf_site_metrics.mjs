@@ -863,10 +863,20 @@ const uiProfilesPaintedInteractions = (
   && /preset\.apply\.paint/.test(presetShelfSource)
   && /preset\.step\.\$\{startedCold \? 'cold' : 'warm'\}/.test(presetShelfSource)
 );
+const controlKitBatchesTickPaths = (
+  /const STATIC_TICK_PATHS_BY_SIZE =/.test(knobSource)
+  && /kit-knob__tick--minor/.test(knobSource)
+  && /kit-knob__tick--major/.test(knobSource)
+  && !/<line[\s\S]{0,240}className="kit-knob__tick"/.test(knobSource)
+  && /const tickPaths = useMemo\(\(\) =>/.test(faderSource)
+  && /kit-fader__tick--minor/.test(faderSource)
+  && /kit-fader__tick--major/.test(faderSource)
+  && !/<line[\s\S]{0,240}className="kit-fader__tick"/.test(faderSource)
+);
 const controlKitPrimitivesIsolateRenders = (
   [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
     .every((componentSource) => /export default React\.memo\(/.test(componentSource))
-  && /const STATIC_TICKS_BY_SIZE =/.test(knobSource)
+  && /const STATIC_TICK_PATHS_BY_SIZE =/.test(knobSource)
   && /const tickElements = useMemo\(\(\) =>/.test(faderSource)
   && /const faderTrioSetters = useMemo\(\(\) =>/.test(controlKitPageSource)
   && !/format=\{\(/.test(controlKitPageSource)
@@ -1287,6 +1297,11 @@ const report = {
       controlKitPrimitivesIsolateRenders ? 0 : 11,
     controlKitFaderStaticTickAllocationsPerSteadyStateRender:
       controlKitPrimitivesIsolateRenders ? 0 : 5,
+    controlKitKnobTickSvgNodeMaximumPerControl:
+      controlKitBatchesTickPaths ? 2 : 11,
+    controlKitFaderTickSvgNodeMaximumPerControl:
+      controlKitBatchesTickPaths ? 2 : 5,
+    controlKitBatchesTickPaths,
     controlKitPrimitivesIsolateRenders,
     soundDesignerBaseStageRendersPerAudioParamFrame:
       soundDesignerBaseStageIsolatesParamRenders ? 0 : 1,
@@ -2128,6 +2143,13 @@ if (!controlKitPrimitivesIsolateRenders) {
     expected: 'memoized primitives, stable page props, and hoisted knob/fader tick geometry'
   });
 }
+if (!controlKitBatchesTickPaths) {
+  failures.push({
+    name: 'Guard constant-size Control Kit tick geometry',
+    actual: 'one SVG element retained per visual tick',
+    expected: 'at most two reusable major/minor SVG paths per knob or fader'
+  });
+}
 if (!soundDesignerBaseStageIsolatesParamRenders) {
   failures.push({
     name: 'Guard Sound Designer base-stage render isolation',
@@ -2194,7 +2216,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 112,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 113,
   failures
 };
 
