@@ -20,24 +20,26 @@ and does not move another user-facing metric outside its budget.
 - Cold runs use an empty HTTP cache and fresh document. Warm runs reuse immutable assets.
 - CPU-sensitive metrics record machine, browser, viewport, DPR, power mode, and throttling.
 
-## Metric catalog (88 metrics)
+## Metric catalog (100 core metrics)
+
+The executable report publishes additional derived and structural signals; this table is the stable,
+human-facing catalog. Delivery ceilings below reflect the current Batch 82 contract, not Baseline 0.
 
 | ID | Metric | Budget / target | Method |
 |---|---|---|---|
 | D01 | Initial HTML raw bytes | <= 5 KB | BUILD |
 | D02 | Initial HTML gzip bytes | <= 2 KB | BUILD |
-| D03 | Initial-route JS raw bytes | <= 350 KB | BUILD |
-| D04 | Initial-route JS gzip bytes | <= 110 KB | BUILD |
+| D03 | Initial-route JS raw bytes | <= 35 KiB | BUILD |
+| D04 | Initial-route JS gzip bytes | <= 14 KiB | BUILD |
 | D05 | Initial-route CSS raw bytes | <= 130 KB | BUILD |
 | D06 | Initial-route CSS gzip bytes | <= 25 KB | BUILD |
-| D07 | Largest eager JS chunk gzip | <= 55 KB | BUILD |
+| D07 | Largest eager JS chunk gzip | <= 12 KiB | BUILD |
 | D08 | Secondary-route code in initial graph | 0 route modules | BUILD/STATIC |
 | D09 | Route chunk count | >= 1 per secondary route | BUILD |
-| D10 | Duplicate module bytes | 0 material duplicates | BUILD |
-| D11 | Unused dependency bytes | decreasing; remove dead packages | BUILD/STATIC |
-| D12 | Production build duration | <= baseline + 10% | BUILD |
-| D13 | Transformed module count | explain increases > 5% | BUILD |
-| D14 | Worklet aggregate raw bytes | <= baseline + 5% | BUILD |
+| D11 | Production dependency surface | <= 6 direct / <= 11 production lock packages; no dead packages | BUILD/STATIC |
+| D12 | Largest static route JS closure gzip | <= 40 KiB | BUILD |
+| D13 | Largest static route CSS closure gzip | <= 18 KiB | BUILD |
+| D14 | Worklet aggregate raw bytes | <= 38.7 KiB | BUILD |
 | D15 | Public eager asset bytes | only requested assets transfer | BROWSER |
 | N01 | Document TTFB | <= 200 ms local / <= 800 ms p75 prod | BROWSER |
 | N02 | DOMContentLoaded | <= 1,000 ms local cold | BROWSER |
@@ -47,7 +49,6 @@ and does not move another user-facing metric outside its budget.
 | N06 | Cumulative Layout Shift | <= 0.05 | BROWSER |
 | N07 | Interaction to Next Paint | <= 200 ms p75 | BROWSER |
 | N08 | Total Blocking Time | <= 150 ms local profile | BROWSER |
-| N09 | Speed Index | <= 2,000 ms local cold | BROWSER |
 | N10 | Time to interactive controls | <= 1,500 ms local cold | BROWSER |
 | N11 | Route transition to first paint | <= 250 ms warm | BROWSER |
 | N12 | Route transition to interactive | <= 500 ms warm | BROWSER |
