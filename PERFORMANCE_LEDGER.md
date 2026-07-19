@@ -3355,3 +3355,65 @@ Implemented boundaries and controls:
 - React best-practices review: memoization is applied to measured expensive subtrees with stable
   props; active value and accessibility state remain explicit; hook dependencies and cleanup hold.
 - `git diff --check`: pass.
+
+## Optimization batch 65 — preview-only Song Study pointer scrubbing
+
+Collected from the production Song Study transport and MIDI seek implementation; a 240 Hz ten-
+second pointer scrub model on a 60 Hz display; engine-seek, scheduler-reset, active-voice, audio-
+readiness, lookahead, note-window, release, keyboard, and unmount assertions; generated production
+closures; the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 64 | Batch 65 | Change |
+|---|---:|---:|---:|
+| Visual preview updates over ten-second scrub | 2,400 | at most 600 | -75.00% |
+| Total route state updates over scrub | 2,400 | at most 601 | -74.96% |
+| MIDI scheduler resets over pointer scrub | 2,400 | 1 | -99.96% |
+| Active-voice stop passes over pointer scrub | 2,400 | 1 | -99.96% |
+| Audio-readiness requests over pointer scrub | 2,400 | 1 | -99.96% |
+| Lookahead reschedules over pointer scrub | 2,400 | 1 | -99.96% |
+| Current-note window derivations | 2,400 | at most 601 | -74.96% |
+| Keyboard and assistive-value changes | immediate | immediate | preserved |
+| Initial Home JS gzip | 67.83 KiB | 67.83 KiB | unchanged |
+| Song Study route JS gzip | 65.59 KiB | 65.85 KiB | +0.26 KiB |
+| Control Kit route JS gzip | 54.18 KiB | 54.19 KiB | +0.01 KiB |
+| Sound Designer route JS gzip | 63.35 KiB | 63.35 KiB | unchanged |
+| Production deployment bytes | 1,487.57 KiB | 1,488.36 KiB | +0.79 KiB |
+| Explicit animation-frame sites | 10 | 11 | +1 bounded coalescer |
+| Automated production budgets | 107 | 108 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Pointer scrubbing now stores only the latest transport time and publishes a visual preview at
+  most once per display frame. Harmony, bass/lead, folded keyboard notes, progress text, and the
+  scrubber remain responsive without touching the MIDI engine during the gesture.
+- Pointer up/cancel or blur resolves the latest pending or displayed preview and performs one exact
+  engine seek. That single boundary owns timeout clearing, active-voice release, progress-loop stop,
+  audio-context readiness, sustaining-note recovery, lookahead rescheduling, and progress restart.
+- Keyboard and assistive-technology changes do not enter pointer-preview mode and continue to seek
+  immediately. Route/study changes and unmount cancel pending preview frames and clear their refs,
+  preventing a stale seek or state publication after navigation.
+- Added a regression case proving four raw pointer values cause zero engine seeks, one frame shows
+  the latest preview, release seeks exactly once to an unflushed final value, no trailing frame seeks
+  again, non-pointer changes remain immediate, and teardown cancels scheduled preview work. A
+  production guard requires the same separation between preview and engine commit.
+
+### Batch 65 verification gates
+
+- Full suite: 64 files, 542/542 tests pass, including the new Song Study pointer-preview, exact-
+  release, keyboard-immediacy, and teardown case and all Sound Designer, Voice Loop, MIDI playback,
+  keyboard, control-kit, radar, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 108/108 pass; a 240 Hz pointer scrub
+  reports at most one preview update per 60 Hz frame and exactly one scheduler rebuild per gesture.
+- The ten-second model removes 2,399 scheduler resets, voice-stop passes, audio-readiness requests,
+  and lookahead reschedules, plus at least 1,799 route updates and current-note window derivations.
+- Warmed combined visual workload: 80.25% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 407.6 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: high-frequency preview state is isolated from engine mutation;
+  scheduled work has route-change/unmount cleanup; native keyboard and accessibility semantics hold.
+- `git diff --check`: pass.

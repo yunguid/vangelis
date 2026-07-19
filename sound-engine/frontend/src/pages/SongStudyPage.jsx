@@ -252,7 +252,35 @@ const SongStudyPageContent = ({ study }) => {
   const [loadState, setLoadState] = React.useState('loading');
   const [loadError, setLoadError] = React.useState('');
   const [queuedStartTime, setQueuedStartTime] = React.useState(0);
+  const [scrubPreviewTime, setScrubPreviewTime] = React.useState(null);
+  const pointerScrubbingRef = React.useRef(false);
+  const pendingScrubTimeRef = React.useRef(null);
+  const scrubPreviewTimeRef = React.useRef(null);
+  const scrubFrameRef = React.useRef(null);
   const playback = useMidiPlayback({ waveformType, audioParams });
+
+  const cancelPendingScrubPreview = React.useCallback(() => {
+    if (scrubFrameRef.current !== null) {
+      cancelAnimationFrame(scrubFrameRef.current);
+      scrubFrameRef.current = null;
+    }
+    pendingScrubTimeRef.current = null;
+  }, []);
+
+  const flushScrubPreview = React.useCallback(() => {
+    scrubFrameRef.current = null;
+    const nextTime = pendingScrubTimeRef.current;
+    pendingScrubTimeRef.current = null;
+    if (nextTime === null || !pointerScrubbingRef.current) return;
+    scrubPreviewTimeRef.current = nextTime;
+    setScrubPreviewTime(nextTime);
+  }, []);
+
+  React.useEffect(() => () => {
+    pointerScrubbingRef.current = false;
+    cancelPendingScrubPreview();
+    scrubPreviewTimeRef.current = null;
+  }, [cancelPendingScrubPreview]);
 
   React.useEffect(() => {
     const unsubscribe = audioEngine.subscribe(setEngineStatus);
@@ -314,18 +342,25 @@ const SongStudyPageContent = ({ study }) => {
   }, [loadedMidi?.bpm, playback.currentMidi?.bpm, playback.tempoFactor]);
 
   React.useEffect(() => {
+    pointerScrubbingRef.current = false;
+    cancelPendingScrubPreview();
+    scrubPreviewTimeRef.current = null;
+    setScrubPreviewTime(null);
     setQueuedStartTime(0);
-  }, [study?.id]);
+  }, [cancelPendingScrubPreview, study?.id]);
 
   const displayMidi = playback.currentMidi || loadedMidi;
   const firstNoteTime = displayMidi?.notes?.[0]?.time || 0;
   const transportDuration = displayMidi?.duration || 0;
   const transportElapsed = transportDuration > 0 ? playback.progress * transportDuration : 0;
   const hasActiveTransport = playback.isPlaying || playback.isPaused;
-  const transportPosition = hasActiveTransport ? transportElapsed : queuedStartTime;
+  const transportPosition = scrubPreviewTime ?? (
+    hasActiveTransport ? transportElapsed : queuedStartTime
+  );
   const previewTime = (
     hasActiveTransport
     || queuedStartTime > 0
+    || scrubPreviewTime !== null
   )
     ? transportPosition
     : firstNoteTime;
@@ -404,7 +439,35 @@ const SongStudyPageContent = ({ study }) => {
   };
 
   const handleScrubChange = (event) => {
-    seekToTime(Number(event.target.value));
+    const nextTime = Number(event.currentTarget.value);
+    if (!pointerScrubbingRef.current) {
+      seekToTime(nextTime);
+      return;
+    }
+    pendingScrubTimeRef.current = nextTime;
+    if (scrubFrameRef.current === null) {
+      scrubFrameRef.current = requestAnimationFrame(flushScrubPreview);
+    }
+  };
+
+  const handleScrubPointerDown = () => {
+    cancelPendingScrubPreview();
+    pointerScrubbingRef.current = true;
+    scrubPreviewTimeRef.current = null;
+    setScrubPreviewTime(null);
+  };
+
+  const handleScrubPointerEnd = (event) => {
+    if (!pointerScrubbingRef.current) return;
+    const pendingTime = pendingScrubTimeRef.current;
+    const previewTime = scrubPreviewTimeRef.current;
+    const targetTime = Number(event.currentTarget.value);
+    const finalTime = pendingTime ?? previewTime ?? targetTime;
+    pointerScrubbingRef.current = false;
+    cancelPendingScrubPreview();
+    scrubPreviewTimeRef.current = null;
+    setScrubPreviewTime(null);
+    seekToTime(finalTime);
   };
 
   const handleSkip = (deltaSeconds) => {
@@ -443,6 +506,10 @@ const SongStudyPageContent = ({ study }) => {
               step="0.1"
               value={Math.min(transportPosition, transportDuration || 0)}
               onChange={handleScrubChange}
+              onPointerDown={handleScrubPointerDown}
+              onPointerUp={handleScrubPointerEnd}
+              onPointerCancel={handleScrubPointerEnd}
+              onBlur={handleScrubPointerEnd}
               disabled={!transportDuration}
               aria-label="Study transport"
               style={{

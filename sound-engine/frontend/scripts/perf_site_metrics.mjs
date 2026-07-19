@@ -567,6 +567,10 @@ const voiceLoopSource = await readFile(
   path.join(sourceDir, 'pages', 'VoiceLoopLabPage.jsx'),
   'utf8'
 );
+const songStudySource = await readFile(
+  path.join(sourceDir, 'pages', 'SongStudyPage.jsx'),
+  'utf8'
+);
 const voiceLoopDefersScoreRenderUntilInteraction = (
   /const renderInputRevisionRef = React\.useRef\(0\)/.test(voiceLoopSource)
   && /const renderedRevisionRef = React\.useRef\(-1\)/.test(voiceLoopSource)
@@ -594,6 +598,17 @@ const voiceLoopContinuousRangesCoalesceByFrame = (
   && /\.\.\.continuousRangeFlushProps/.test(voiceLoopSource)
   && /cancelAnimationFrame\(continuousChangeFrameRef\.current\)/.test(voiceLoopSource)
   && !/const handleControlChange =/.test(voiceLoopSource)
+);
+const songStudyPointerScrubDefersEngineSeek = (
+  /const \[scrubPreviewTime, setScrubPreviewTime\] = React\.useState\(null\)/.test(songStudySource)
+  && /const pendingScrubTimeRef = React\.useRef\(null\)/.test(songStudySource)
+  && /requestAnimationFrame\(flushScrubPreview\)/.test(songStudySource)
+  && /\|\| scrubPreviewTime !== null/.test(songStudySource)
+  && /if \(!pointerScrubbingRef\.current\) \{\s*seekToTime\(nextTime\)/.test(songStudySource)
+  && /const finalTime = pendingTime \?\? previewTime \?\? targetTime/.test(songStudySource)
+  && /seekToTime\(finalTime\)/.test(songStudySource)
+  && /onPointerUp=\{handleScrubPointerEnd\}/.test(songStudySource)
+  && /cancelAnimationFrame\(scrubFrameRef\.current\)/.test(songStudySource)
 );
 const keyboardNotePlaybackSource = await readFile(
   path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'useNotePlayback.js'),
@@ -939,6 +954,11 @@ const report = {
     voiceLoopRangeStateObjectClonesPer240HzFrame:
       voiceLoopContinuousRangesCoalesceByFrame ? 1 : 4,
     voiceLoopContinuousRangesCoalesceByFrame,
+    songStudyScrubPreviewUpdatesPer240HzFrame:
+      songStudyPointerScrubDefersEngineSeek ? 1 : 4,
+    songStudySchedulerRebuildsPerPointerScrub:
+      songStudyPointerScrubDefersEngineSeek ? 1 : 2400,
+    songStudyPointerScrubDefersEngineSeek,
     keyboardVelocityStateUpdatesPerNote: keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
     keyboardVelocityOnlyReactCommitsPerFrame:
       keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
@@ -1219,7 +1239,7 @@ if (getStereoPairEvaluationsPerFrame() > 512) {
 }
 const countBudgetChecks = [
   ['Guard initial JS requests', initialJs.length, 2],
-  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 10],
+  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 11],
   ['Guard raw interval sites', report.staticSignals.setIntervalCalls, 0],
   ['Guard nested external CSS imports', report.staticSignals.externalCssImportCalls, 0],
   ['D11 direct runtime dependencies', directRuntimeDependencies.length, 5],
@@ -1577,6 +1597,13 @@ if (!voiceLoopContinuousRangesCoalesceByFrame) {
     expected: 'latest numeric patch once per frame with release flush and unmount cleanup'
   });
 }
+if (!songStudyPointerScrubDefersEngineSeek) {
+  failures.push({
+    name: 'Guard Song Study pointer scrub scheduling',
+    actual: 'raw pointer samples rebuild MIDI scheduling and active voices',
+    expected: 'frame-rate visual preview and one exact engine seek on release'
+  });
+}
 if (!keyboardAvoidsUnobservedInteractionWork) {
   failures.push({
     name: 'Guard allocation-free unprofiled keyboard interaction path',
@@ -1622,7 +1649,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 89,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 90,
   failures
 };
 
