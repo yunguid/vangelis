@@ -29,7 +29,7 @@ const hiddenPanelPropsEqual = (previous, next) => (
   || (previous.active === next.active && previous.value === next.value)
 );
 
-const MidiPanelContent = React.memo(({ value }) => {
+const MidiPanelContent = React.memo(({ active, value }) => {
   const {
     isPlaying,
     isPaused,
@@ -45,6 +45,7 @@ const MidiPanelContent = React.memo(({ value }) => {
 
   return (
     <MidiTab
+      active={active}
       isPlaying={isPlaying}
       isPaused={isPaused}
       progress={progress}

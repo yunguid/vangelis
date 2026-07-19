@@ -104,4 +104,19 @@ describe('MidiTab', () => {
     view.rerender(<MidiTab {...props} progress={0.5} />);
     expect(getBuiltInMidiFiles).toHaveBeenCalledTimes(1);
   });
+
+  it('folds inactive rows while preserving the library search state', () => {
+    const props = defaultProps();
+    const view = render(<MidiTab {...props} active />);
+    const search = screen.getByRole('searchbox', { name: /filter midi files/i });
+    fireEvent.change(search, { target: { value: 'rachmaninoff' } });
+
+    view.rerender(<MidiTab {...props} active={false} />);
+    expect(screen.queryByRole('searchbox', { name: /filter midi files/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^\d{6} sergei rachmaninoff$/i })).not.toBeInTheDocument();
+
+    view.rerender(<MidiTab {...props} active />);
+    expect(screen.getByRole('searchbox', { name: /filter midi files/i })).toHaveValue('rachmaninoff');
+    expect(getBuiltInMidiFiles).toHaveBeenCalledTimes(1);
+  });
 });

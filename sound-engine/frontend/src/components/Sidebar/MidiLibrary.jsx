@@ -10,7 +10,7 @@ const numericPatchName = (id) => {
   return String(100000 + ((hash >>> 0) % 900000));
 };
 
-const MidiLibrary = ({ onPlay }) => {
+const MidiLibrary = ({ active = true, onPlay }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -91,6 +91,8 @@ const MidiLibrary = ({ onPlay }) => {
       setIsLoading(false);
     }
   }, [onPlay]);
+
+  if (!active) return null;
 
   return (
     <>

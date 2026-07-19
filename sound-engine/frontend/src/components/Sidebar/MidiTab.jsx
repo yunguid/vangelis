@@ -7,6 +7,7 @@ import MidiLibrary from './MidiLibrary.jsx';
  * in a memoized child so those progress commits never reconcile its rows.
  */
 const MidiTab = ({
+  active = true,
   isPlaying,
   isPaused,
   progress,
@@ -24,7 +25,7 @@ const MidiTab = ({
 
   return (
     <div className="midi-tab">
-      <div className="midi-tab__section">
+      {active ? <div className="midi-tab__section">
         <MidiPlayer
           isPlaying={isPlaying}
           isPaused={isPaused}
@@ -37,8 +38,8 @@ const MidiTab = ({
           onStop={onStop}
           onTempoChange={onTempoChange}
         />
-      </div>
-      <MidiLibrary onPlay={onPlay} />
+      </div> : null}
+      <MidiLibrary active={active} onPlay={onPlay} />
     </div>
   );
 };

@@ -73,17 +73,23 @@ const outputs = [[left, right]];
 for (let i = 0; i < 500; i++) proc.process([], outputs);
 
 const t0 = process.hrtime.bigint();
+const cpu0 = process.cpuUsage();
 for (let i = 0; i < BLOCKS; i++) proc.process([], outputs);
+const cpu = process.cpuUsage(cpu0);
 const t1 = process.hrtime.bigint();
 
 const elapsedMs = Number(t1 - t0) / 1e6;
+const cpuElapsedMs = (cpu.user + cpu.system) / 1000;
 const audioMs = (BLOCKS * BLOCK / SAMPLE_RATE) * 1000;
-const headroom = audioMs / elapsedMs;
+const wallHeadroom = audioMs / elapsedMs;
+const cpuHeadroom = audioMs / cpuElapsedMs;
 
 let active = 0;
 for (const v of proc.voices) if (v.active) active++;
 
 console.log(`active voices:      ${active} (x4 unison, FM+filter+LFO on)`);
 console.log(`rendered:           ${(audioMs / 1000).toFixed(1)}s of audio in ${(elapsedMs / 1000).toFixed(2)}s`);
-console.log(`per 128-frame block: ${(elapsedMs / BLOCKS * 1000).toFixed(1)}us (budget: ${(BLOCK / SAMPLE_RATE * 1e6).toFixed(0)}us)`);
-console.log(`realtime headroom:  ${headroom.toFixed(1)}x`);
+console.log(`CPU render time:    ${(cpuElapsedMs / 1000).toFixed(2)}s`);
+console.log(`CPU per block:      ${(cpuElapsedMs / BLOCKS * 1000).toFixed(1)}us`);
+console.log(`CPU headroom:       ${cpuHeadroom.toFixed(1)}x`);
+console.log(`wall headroom:      ${wallHeadroom.toFixed(1)}x (includes competing system load)`);

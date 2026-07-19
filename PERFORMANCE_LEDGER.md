@@ -6,8 +6,8 @@ and does not move another user-facing metric outside its budget.
 
 ## Routes in scope
 
-`#/`, `#/sound-designer`, `#/control-kit`, `#/voice-loop`, `#/midi-pipeline`,
-`#/study-songs`, built-in `#/study/:slug`, and generated `#/study/generated/:jobId`.
+`#/`, `#/sound-designer`, `#/control-kit`, `#/voice-loop`, `#/pipeline/midi-builder`,
+`#/studies`, built-in `#/studies/:slug`, and generated `#/studies/generated/:jobId`.
 
 ## Collection protocol
 
@@ -4013,4 +4013,99 @@ Implemented boundaries and controls:
 - UI-tell census: 22 total, unchanged.
 - React best-practices review: subscription state is colocated in the provider; its enabled effect has
   complete dependencies and cleanup; context fan-out reaches only the eight animation consumers.
+- `git diff --check`: pass.
+
+## Optimization batch 77 — live route baselines and state-preserving MIDI DOM folding
+
+Collected from the production preview in Chrome 150 on Apple Silicon macOS; five same-origin runs per
+route; independent-origin cold captures; the opt-in browser probe; real rail interactions; DOM snapshots;
+generated production closures; and focused lifecycle tests. The fixed environment was 2,560 x 1,440 at
+DPR 1, dark color scheme, 18 reported logical processors, 32 GiB reported device memory, no CPU
+throttling, and visible-document state. The generated-study capture intentionally used a missing job and
+therefore covers its 500/error shell rather than a completed generated study.
+
+### Independent-origin cold production captures
+
+| Route | TTFB | DCL | Load | FCP | LCP | CLS | Long tasks | Transfer | DOM nodes / depth | Heap |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Home | 0.9 ms | 18.7 ms | 27.8 ms | 60 ms | 60 ms | 0 | 0 | 111.60 KiB | 179 / 12 | 6.94 MiB |
+| Sound Designer | 1.2 ms | 28.2 ms | 40.9 ms | 72 ms | 100 ms | 0 | 0 | 102.31 KiB | 212 / 14 | 8.40 MiB |
+| Control Kit | 2.1 ms | 27.6 ms | 40.2 ms | 76 ms | 92 ms | 0 | 0 | 66.45 KiB | 526 / 16 | 7.52 MiB |
+| Voice Loop | 1.3 ms | 39.3 ms | 53.5 ms | 88 ms | 112 ms | 0 | 0 | 79.62 KiB | 278 / 12 | 7.24 MiB |
+| MIDI Pipeline | 1.1 ms | 31.8 ms | 45.9 ms | 72 ms | 80 ms | 0 | 0 | 75.45 KiB | 72 / 11 | 7.10 MiB |
+| Studies | 1.5 ms | 59.3 ms | 72.4 ms | 144 ms | 144 ms | 0 | 0 | 72.29 KiB | 72 / 11 | 7.03 MiB |
+| Built-in study | 1.9 ms | 42.2 ms | 55.8 ms | 120 ms | 220 ms | 0 | 0 | 148.15 KiB | 195 / 11 | 9.65 MiB |
+| Generated error shell | 1.6 ms | 58.1 ms | 73.3 ms | 128 ms | 156 ms | 0 | 0 | 72.89 KiB | 60 / 10 | 7.01 MiB |
+
+### Five-run warm/revalidated medians
+
+The preview server sends `Cache-Control: no-cache`; the first run fetched the route closure and the next
+four revalidated it. Transfer is therefore the median warm/revalidated transfer, while decoded bytes and
+DOM/heap still describe the complete mounted route.
+
+| Route | TTFB | DCL | Load | FCP | LCP | CLS | Long tasks / worst | Transfer | DOM nodes | Heap |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Home | 1.6 ms | 39.7 ms | 62.3 ms | 140 ms | 168 ms | 0 | 1 / 238 ms | 7.03 KiB | 179 | 7.49 MiB |
+| Sound Designer | 1.4 ms | 45.4 ms | 64.8 ms | 184 ms | 184 ms | 0 | 0 / 0 ms | 6.74 KiB | 212 | 6.80 MiB |
+| Control Kit | 1.3 ms | 43.8 ms | 61.3 ms | 232 ms | 232 ms | 0 | 0 / 0 ms | 2.05 KiB | 526 | 7.61 MiB |
+| Voice Loop | 1.0 ms | 40.6 ms | 58.6 ms | 204 ms | 212 ms | 0 | 0 / 0 ms | 3.81 KiB | 278 | 7.29 MiB |
+| MIDI Pipeline | 1.9 ms | 42.4 ms | 62.9 ms | 88 ms | 104 ms | 0 | 0 / 0 ms | 4.69 KiB | 72 | 7.09 MiB |
+| Studies | 1.2 ms | 42.6 ms | 61.5 ms | 92 ms | 100 ms | 0 | 0 / 0 ms | 4.69 KiB | 72 | 7.03 MiB |
+| Built-in study | 1.3 ms | 39.4 ms | 65.4 ms | 96 ms | 180 ms | 0 | 0 / 0 ms | 7.91 KiB | 195 | 8.09 MiB |
+| Generated error shell | 1.1 ms | 45.7 ms | 64.5 ms | 100 ms | 108 ms | 0 | 0 / 0 ms | 4.69 KiB | 60 | 7.02 MiB |
+
+Six measured secondary-route transitions reached first paint in 8.2-14.5 ms and a painted committed
+route in 17.3-40.9 ms, below the N11 250 ms and N12 500 ms budgets. Recording commit readiness
+separately fixed the prior probe ambiguity where a Suspense fallback could satisfy “next paint.”
+
+| Metric | Before | Batch 77 | Change |
+|---|---:|---:|---:|
+| Closed MIDI panel DOM nodes | 573 | 178 | -68.9% |
+| Closed MIDI panel buttons | 86 | 6 | -93.0% |
+| Closed MIDI catalog rows | 78 | 0 | removed |
+| Search query after close/reopen | preserved by mounted DOM | preserved by component state | exact |
+| Hidden MIDI renders per progress update | 0 | 0 | preserved |
+| Initial Home JS gzip | 68.15 KiB | 68.08 KiB | -0.07 KiB |
+| Sound Designer route JS gzip | 63.56 KiB | 63.50 KiB | -0.06 KiB |
+| Production deployment bytes | 1,491.37 KiB | 1,491.87 KiB | +0.50 KiB |
+| Automated production budgets | 119 | 120 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- The opt-in `?profile=1` probe now emits JSON snapshots after initial paint, LCP, and committed route
+  readiness, including browser/viewport environment data. Normal production startup still excludes the
+  dynamically imported probe and all console reporting.
+- Route transitions retain their hash-change start, measure fallback/first paint independently, and finish
+  only after the real route component commits and paints. The reported DOM and heap therefore belong to
+  usable UI rather than the loading fallback.
+- The inactive MIDI transport and catalog render `null` while their owning components stay mounted. Search,
+  selection, and async state survive close/reopen, while the 78-row list and transport controls leave the DOM.
+- The existing closed-context comparator still prevents progress updates from re-entering the hidden panel;
+  the new fold removes retained DOM without trading back any of the Batch 3 render-isolation work.
+- A production guard requires the active flag to reach both MIDI boundaries and requires the library's
+  state-preserving inactive return, preventing the hidden catalog from silently returning.
+
+### Batch 77 verification gates
+
+- Focused suite: 3 files, 21/21 tests pass, including opt-in snapshot reporting, fallback-versus-committed
+  route timing, inactive MIDI folding, search-state preservation, Sidebar context freezing, and reopen sync.
+- Production delivery/static/dependency/route guardrails: 120/120 pass; the closed MIDI model reports zero
+  hidden rows while retaining zero expensive progress-driven renders.
+- Live production verification: closed MIDI DOM falls from 573 to 178 nodes and from 86 to 6 buttons; all
+  78 rows disappear; reopening restores the exact `rachmaninoff` query and six matching rows.
+- The browser matrix establishes live values for N01-N06, N11-N15, M01-M02, M07-M08, and L01 across all
+  route shells. It also exposes the next evidence-backed bottleneck: Home's intended 700/1,800 ms visual
+  deferrals currently share the first available idle slot, producing repeatable 95-304 ms long tasks.
+- Full suite: 67 files, 554/554 tests pass across the probe, Sidebar/MIDI state lifecycle, every route,
+  audio runtime, worklets, controls, visuals, keyboard, polling, scheduling, and storage.
+- Warmed combined visual workload: 86.67% lower normalized median CPU than the legacy reference on the
+  release pass, with the established 78.18% analyzer-sample, 65.71% resample-sample, and 50% scene-frame
+  reductions intact.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass, and
+  saturated heap drift is -38 KiB over 4,000 blocks. No audio/runtime source differs from the previously
+  gated `acb7843` checkpoint; the concurrent desktop DSP wall run was intentionally not used for a release
+  comparison because Arc and Ableton were consuming material CPU/GPU capacity.
+- The isolated DSP harness now reports process CPU cost and wall headroom separately, making scheduler and
+  competing-application load explicit instead of silently attributing it to DSP work.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity. UI-tell census: 22, unchanged.
 - `git diff --check`: pass.

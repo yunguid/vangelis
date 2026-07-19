@@ -50,6 +50,7 @@ const Root = () => {
 
   React.useEffect(() => {
     window.scrollTo(0, 0);
+    window.__vangelisPerf?.markRouteReady?.(window.location.hash || '#/');
   }, [route]);
 
   if (studyRoute?.kind === 'builtin') {
@@ -95,13 +96,16 @@ const profilingRequested = (
   import.meta.env.DEV
   || new URLSearchParams(window.location.search).has('profile')
 );
+const consoleProfilingRequested = new URLSearchParams(window.location.search).has('profile');
 if (profilingRequested) {
   const startProbe = () => {
     const schedule = window.requestIdleCallback
       || ((callback) => window.setTimeout(callback, 0));
     schedule(() => {
       import('./utils/performanceProbe.js')
-        .then(({ startPerformanceProbe }) => startPerformanceProbe())
+        .then(({ startPerformanceProbe }) => startPerformanceProbe({
+          reportToConsole: consoleProfilingRequested
+        }))
         .catch(() => {});
     });
   };

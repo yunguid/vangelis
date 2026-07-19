@@ -277,6 +277,14 @@ const sidebarSource = await readFile(
   path.join(sourceDir, 'components', 'Sidebar', 'index.jsx'),
   'utf8'
 );
+const midiTabSource = await readFile(
+  path.join(sourceDir, 'components', 'Sidebar', 'MidiTab.jsx'),
+  'utf8'
+);
+const midiLibrarySource = await readFile(
+  path.join(sourceDir, 'components', 'Sidebar', 'MidiLibrary.jsx'),
+  'utf8'
+);
 const sidebarIntentPrefetchImports = (
   sidebarRailSource.match(/import\s*\(\s*['"](?:\.\.\/\.\.\/App\.jsx|\.\.\/\.\.\/pages\/SoundDesignerPage\.jsx)['"]\s*\)/g)
   || []
@@ -295,6 +303,13 @@ const sidebarHiddenPanelsFreezeContext = (
   && /<MidiPanelBridge active=\{isOpen && !disabled\}/.test(sidebarSource)
   && /<SoundPanelBridge active=\{isOpen && !disabled\}/.test(sidebarSource)
   && /\(hasOpened \|\| isOpen\)/.test(sidebarSource)
+);
+const sidebarInactiveMidiDomIsFolded = (
+  /const MidiPanelContent = React\.memo\(\(\{ active, value \}\)/.test(sidebarSource)
+  && /<MidiTab\s+active=\{active\}/.test(sidebarSource)
+  && /active = true/.test(midiTabSource)
+  && /<MidiLibrary active=\{active\}/.test(midiTabSource)
+  && /if \(!active\) return null;/.test(midiLibrarySource)
 );
 const audioAnalysisPolicySource = await readFile(
   path.join(sourceDir, 'utils', 'audioAnalysisPolicy.js'),
@@ -957,8 +972,10 @@ const report = {
       sidebarHiddenPanelsFreezeContext ? 0 : 5,
     hiddenMidiPanelExpensiveRendersPerClosedProgressUpdate:
       sidebarHiddenPanelsFreezeContext ? 0 : 3,
+    hiddenMidiPanelRowsWhileClosed: sidebarInactiveMidiDomIsFolded ? 0 : 78,
     hiddenPanelContextBridgeRendersPerClosedUpdate: 1,
     sidebarHiddenPanelsFreezeContext,
+    sidebarInactiveMidiDomIsFolded,
     sceneActiveFrameRateHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
     sceneIdleFrameRateHz: 1000 / SCENE_IDLE_FRAME_INTERVAL_MS,
     sceneFrequencyBoundaryEvaluationsPerSteadyStateFrame: sceneCachesBandRanges ? 0 : 22,
@@ -1235,6 +1252,13 @@ if (!sidebarHiddenPanelsFreezeContext) {
     name: 'Guard hidden sidebar panels from context churn',
     actual: 'closed mounted panel subtrees rerender on sound or MIDI context updates',
     expected: 'cheap context bridge only, preserved local state, and immediate resync on reopen'
+  });
+}
+if (!sidebarInactiveMidiDomIsFolded) {
+  failures.push({
+    name: 'Guard inactive MIDI panel DOM folding',
+    actual: 'the closed panel retains the full MIDI transport and 78-row catalog subtree',
+    expected: 'state-preserving inactive components with zero hidden MIDI rows'
   });
 }
 if (retiredPublicArtifacts.length > 0 || productionServiceWorkerRegistrationCalls > 0) {
@@ -1919,7 +1943,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 101,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 102,
   failures
 };
 

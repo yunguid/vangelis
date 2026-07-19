@@ -9,9 +9,9 @@ const { midiTabRenderSpy, soundTabRenderSpy } = vi.hoisted(() => ({
 }));
 
 vi.mock('./MidiTab.jsx', () => ({
-  default: () => {
+  default: ({ active = true }) => {
     midiTabRenderSpy();
-    return <div data-testid="midi-tab">MIDI content</div>;
+    return active ? <div data-testid="midi-tab">MIDI content</div> : null;
   }
 }));
 
@@ -193,6 +193,7 @@ describe('Sidebar', () => {
         </MidiTransportContext.Provider>
       </SoundControlsContext.Provider>
     );
+    expect(screen.queryByTestId('midi-tab')).not.toBeInTheDocument();
     const rendersAfterClose = midiTabRenderSpy.mock.calls.length;
 
     view.rerender(

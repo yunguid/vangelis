@@ -30,7 +30,8 @@ const rounded = (value) => Number((value || 0).toFixed(2));
 export function startPerformanceProbe({
   performanceRef = performance,
   documentRef = document,
-  windowRef = window
+  windowRef = window,
+  reportToConsole = false
 } = {}) {
   const state = {
     fcp: 0,
@@ -43,6 +44,8 @@ export function startPerformanceProbe({
   };
   const observers = [];
   const supported = new Set(globalThis.PerformanceObserver?.supportedEntryTypes || []);
+  const pendingRouteTransitions = new Map();
+  let reportSnapshot = () => {};
 
   const observe = (type, onEntries, extra = {}) => {
     if (typeof PerformanceObserver === 'undefined' || !supported.has(type)) return;
@@ -57,11 +60,17 @@ export function startPerformanceProbe({
 
   observe('paint', (entries) => {
     const fcp = entries.find((entry) => entry.name === 'first-contentful-paint');
-    if (fcp) state.fcp = fcp.startTime;
+    if (fcp) {
+      state.fcp = fcp.startTime;
+      reportSnapshot('paint');
+    }
   });
   observe('largest-contentful-paint', (entries) => {
     const latest = entries[entries.length - 1];
-    if (latest) state.lcp = latest.startTime;
+    if (latest) {
+      state.lcp = latest.startTime;
+      reportSnapshot('lcp');
+    }
   });
   observe('layout-shift', (entries) => {
     for (const entry of entries) {
@@ -77,16 +86,22 @@ export function startPerformanceProbe({
 
   const nextFrame = windowRef.requestAnimationFrame.bind(windowRef);
   const handleRouteChange = () => {
+    const route = windowRef.location.hash || '#/';
+    if (pendingRouteTransitions.has(route)) return;
     const start = performanceRef.now();
+    const transition = {
+      route,
+      start,
+      timestamp: Date.now(),
+      nextPaintMs: null
+    };
+    pendingRouteTransitions.set(route, transition);
     nextFrame(() => nextFrame(() => {
-      state.routeTransitions.push({
-        route: windowRef.location.hash || '#/',
-        nextPaintMs: performanceRef.now() - start,
-        timestamp: Date.now()
-      });
+      transition.nextPaintMs = performanceRef.now() - start;
     }));
   };
   windowRef.addEventListener('hashchange', handleRouteChange);
+  windowRef.addEventListener('popstate', handleRouteChange);
 
   const snapshot = () => {
     const navigation = performanceRef.getEntriesByType('navigation')[0];
@@ -95,6 +110,17 @@ export function startPerformanceProbe({
     return {
       route: windowRef.location.hash || '#/',
       capturedAt: new Date().toISOString(),
+      environment: {
+        userAgent: windowRef.navigator?.userAgent || '',
+        hardwareConcurrency: windowRef.navigator?.hardwareConcurrency || null,
+        deviceMemoryGb: windowRef.navigator?.deviceMemory || null,
+        viewport: {
+          width: windowRef.innerWidth || 0,
+          height: windowRef.innerHeight || 0,
+          dpr: windowRef.devicePixelRatio || 1
+        },
+        visibility: documentRef.visibilityState || 'unknown'
+      },
       navigation: navigation ? {
         ttfbMs: rounded(navigation.responseStart - navigation.requestStart),
         domContentLoadedMs: rounded(navigation.domContentLoadedEventEnd),
@@ -142,8 +168,33 @@ export function startPerformanceProbe({
     }
   };
 
+  const markRouteReady = (route = windowRef.location.hash || '#/') => {
+    const transition = pendingRouteTransitions.get(route);
+    if (!transition) return;
+    nextFrame(() => nextFrame(() => {
+      const interactiveMs = performanceRef.now() - transition.start;
+      state.routeTransitions.push({
+        route,
+        nextPaintMs: transition.nextPaintMs ?? interactiveMs,
+        interactiveMs,
+        timestamp: transition.timestamp
+      });
+      pendingRouteTransitions.delete(route);
+      reportSnapshot('route-ready');
+    }));
+  };
+
+  reportSnapshot = (phase = 'manual') => {
+    if (!reportToConsole) return null;
+    const report = snapshot();
+    windowRef.console?.info?.('[vangelis-perf]', phase, JSON.stringify(report));
+    return report;
+  };
+
   const api = {
     snapshot,
+    markRouteReady,
+    reportSnapshot,
     measureInteraction,
     exportJson: () => JSON.stringify(snapshot(), null, 2),
     reset() {
@@ -152,16 +203,20 @@ export function startPerformanceProbe({
       state.routeTransitions.length = 0;
       state.manualInteractions.length = 0;
       state.cls = 0;
+      pendingRouteTransitions.clear();
     },
     stop() {
       observers.forEach((observer) => observer.disconnect());
       windowRef.removeEventListener('hashchange', handleRouteChange);
+      windowRef.removeEventListener('popstate', handleRouteChange);
+      pendingRouteTransitions.clear();
       if (windowRef.__vangelisPerf === api) delete windowRef.__vangelisPerf;
     }
   };
 
   windowRef.__vangelisPerf?.stop?.();
   windowRef.__vangelisPerf = api;
+  nextFrame(() => nextFrame(() => reportSnapshot('initial')));
   return api;
 }
 
