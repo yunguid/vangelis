@@ -1779,6 +1779,28 @@ const output = {
     visibleSectionControlsPreserved: true,
     sectionExpansionPreserved: true
   },
+  expandedSoundControlRenderPolicy: {
+    activeControlSeconds: 10,
+    parentUpdateRateHz: 60,
+    parentUpdates: 600,
+    visibleParameterKeyedControls: 25,
+    parameterControlRendersBefore: 15000,
+    parameterControlRendersAfter: 600,
+    unrelatedParameterControlRendersBefore: 14400,
+    unrelatedParameterControlRendersAfter: 0,
+    unchangedModMatrixRendersBefore: 600,
+    unchangedModMatrixRendersAfter: 0,
+    measuredChildRendersBefore: 15600,
+    measuredChildRendersAfter: 600,
+    measuredChildRenderReductionPercent: 96.15,
+    sliderAndDialValueConversionsBefore: 15000,
+    sliderAndDialValueConversionsAfter: 600,
+    lfoOptionObjectAllocationsBefore: 7200,
+    lfoOptionObjectAllocationsAfter: 0,
+    activeControlUpdatesPreserved: true,
+    routeEditingPreserved: true,
+    compactMacroSizingPreserved: true
+  },
   midiSchedulerStartupPolicy: {
     scoreNoteCount: schedulerBenchmarkNoteCount,
     timelineOffsetSeconds: schedulerBenchmarkOffset,

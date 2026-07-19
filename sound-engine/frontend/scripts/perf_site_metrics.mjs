@@ -782,6 +782,17 @@ const collapsedSoundControlBodiesAreLazy = (
   && /activeSections\.color \? <div className="control-section">/.test(audioControlsSource)
   && /activeSections\.modulation \? <div className="control-section">/.test(audioControlsSource)
 );
+const expandedSoundControlsIsolateParameterRenders = (
+  /const LFO_SHAPE_STRING_OPTIONS = LFO_SHAPE_OPTIONS\.map\(/.test(audioControlsSource)
+  && /const AudioParamSlider = React\.memo\(/.test(audioControlsSource)
+  && /const AudioParamMacroDial = React\.memo\(/.test(audioControlsSource)
+  && /const ModRoutesControl = React\.memo\(/.test(audioControlsSource)
+  && /areModRoutesEqual\(previousProps\.routes, nextProps\.routes\)/.test(audioControlsSource)
+  && /<AudioParamSlider/.test(audioControlsSource)
+  && /<AudioParamMacroDial/.test(audioControlsSource)
+  && /<ModRoutesControl/.test(audioControlsSource)
+  && !/options=\{LFO_SHAPE_OPTIONS\.map\(/.test(audioControlsSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -1148,7 +1159,16 @@ const report = {
       collapsedSoundControlBodiesAreLazy ? 0 : 29,
     collapsedSoundHiddenLfoOptionObjectAllocationsPerAudioParamFrame:
       collapsedSoundControlBodiesAreLazy ? 0 : 12,
-    collapsedSoundControlBodiesAreLazy
+    collapsedSoundControlBodiesAreLazy,
+    expandedSoundParameterControlRendersPerAudioParamFrame:
+      expandedSoundControlsIsolateParameterRenders ? 1 : 25,
+    expandedSoundUnrelatedParameterControlRendersPerAudioParamFrame:
+      expandedSoundControlsIsolateParameterRenders ? 0 : 24,
+    expandedSoundUnchangedModMatrixRendersPerAudioParamFrame:
+      expandedSoundControlsIsolateParameterRenders ? 0 : 1,
+    expandedSoundLfoOptionObjectAllocationsPerAudioParamFrame:
+      expandedSoundControlsIsolateParameterRenders ? 0 : 12,
+    expandedSoundControlsIsolateParameterRenders
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1861,6 +1881,13 @@ if (!collapsedSoundControlBodiesAreLazy) {
     expected: 'parent-gated section children with visible summaries and on-demand body construction'
   });
 }
+if (!expandedSoundControlsIsolateParameterRenders) {
+  failures.push({
+    name: 'Guard expanded Sound-control parameter isolation',
+    actual: 'one parameter update re-enters sibling sliders, macro dials, matrix, or option mapping',
+    expected: 'parameter-keyed memo children, route-aware matrix equality, and hoisted LFO options'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1871,7 +1898,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 99,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 100,
   failures
 };
 

@@ -3913,3 +3913,54 @@ Implemented boundaries and controls:
 - React best-practices review: collapsed state remains colocated; semantic section buttons and ARIA
   relationships are unchanged; hidden children are omitted before element creation rather than synced.
 - `git diff --check`: pass.
+
+## Optimization batch 75 — parameter-keyed expanded Sound controls
+
+Collected from the open Home Sound sidebar with all primary sections expanded; a ten-second 60 Hz
+single-control drag; source-level memo/route guards; generated production closures; the full suite;
+and isolated audio/visual gates.
+
+| Metric | Batch 74 | Batch 75 | Change |
+|---|---:|---:|---:|
+| Measured child renders over ten seconds | 15,600 | 600 | -96.15% |
+| Unrelated slider/macro renders | 14,400 | 0 | removed |
+| Unchanged modulation-matrix renders | 600 | 0 | removed |
+| Slider/dial value conversions | 15,000 | 600 | -96.0% |
+| LFO option-object allocations | 7,200 | 0 | removed |
+| Active control updates | live | live | preserved |
+| Initial Home JS gzip | 68.15 KiB | 68.15 KiB | unchanged |
+| Sound Designer route JS gzip | 63.56 KiB | 63.57 KiB | +0.01 KiB |
+| Production deployment bytes | 1,490.54 KiB | 1,491.16 KiB | +0.62 KiB |
+| Automated production budgets | 117 | 118 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added memoized parameter-slider and macro-dial boundaries that receive only their immutable
+  descriptor, current scalar value, stable dispatcher, and small presentation flags. Only the active
+  control re-enters conversion, formatting, ValueSlider, or EffectMacroDial work.
+- Added a route-aware modulation-matrix boundary that compares the normalized `src`, `dst`, and
+  `depth` fields, skipping equivalent new arrays while preserving every actual edit.
+- Hoisted the numeric-to-string LFO shape options once at module initialization instead of remapping
+  twelve option objects on every expanded modulation render.
+- Added production signals for active/unrelated controls, unchanged matrix work, and option allocation,
+  plus a guard requiring every isolation boundary and hoisted option set.
+
+### Batch 75 verification gates
+
+- Full suite: 66 files, 550/550 tests pass, including AudioControls, macro dials, ValueSlider,
+  Sidebar, Home, audio, Sound Designer, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 118/118 pass; a changed expanded parameter
+  reports one active control render, zero unrelated renders, zero matrix renders, and zero option objects.
+- The ten-second model removes 15,000 measured child renders, 14,400 redundant conversions, and
+  7,200 option allocations while preserving values, route editing, and compact macro sizing.
+- Warmed combined visual workload: 80.24% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 416.9 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: memo inputs are scalar/stable, callbacks remain current through stable
+  dispatchers, route equality covers every rendered field, and accessible control semantics are intact.
+- `git diff --check`: pass.

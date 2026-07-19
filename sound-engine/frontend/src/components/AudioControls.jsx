@@ -37,6 +37,10 @@ import {
 
 const formatMilliseconds = (value) => `${Math.round(value)} ms`;
 const getOptionLabel = (options, value) => options.find((option) => option.value === value)?.label || value;
+const LFO_SHAPE_STRING_OPTIONS = LFO_SHAPE_OPTIONS.map((option) => ({
+  ...option,
+  value: String(option.value)
+}));
 
 const ESSENTIAL_SLIDERS = [
   makePercentSlider('volume', {
@@ -258,6 +262,76 @@ const EFFECT_DIALS = {
   ]
 };
 
+const AudioParamSlider = React.memo(({ slider, paramValue, onParamChange }) => {
+  const paramDefault = AUDIO_PARAM_DEFAULTS[slider.param];
+  const handleChange = React.useCallback((value) => {
+    onParamChange(slider.param, slider.fromSlider(value));
+  }, [onParamChange, slider]);
+
+  return (
+    <SliderControl
+      id={slider.id}
+      label={slider.label}
+      value={slider.toSlider(paramValue)}
+      displayValue={slider.display(paramValue)}
+      min={slider.min}
+      max={slider.max}
+      step={slider.step}
+      defaultValue={typeof paramDefault === 'number' ? slider.toSlider(paramDefault) : undefined}
+      onChange={handleChange}
+      helpText={slider.helpText}
+    />
+  );
+});
+
+const AudioParamMacroDial = React.memo(({
+  slider,
+  paramValue,
+  onParamChange,
+  accent,
+  disabled,
+  compact
+}) => {
+  const handleChange = React.useCallback((value) => {
+    onParamChange(slider.param, value);
+  }, [onParamChange, slider]);
+
+  return (
+    <EffectMacroDial
+      id={slider.id}
+      label={slider.label}
+      value={paramValue}
+      displayValue={slider.display(paramValue)}
+      accent={accent}
+      disabled={disabled}
+      size={compact ? 88 : 112}
+      compact={compact}
+      onChange={handleChange}
+    />
+  );
+});
+
+const areModRoutesEqual = (previousRoutes, nextRoutes) => {
+  if (previousRoutes === nextRoutes) return true;
+  if (previousRoutes.length !== nextRoutes.length) return false;
+  return previousRoutes.every((route, index) => {
+    const nextRoute = nextRoutes[index];
+    return route.src === nextRoute.src
+      && route.dst === nextRoute.dst
+      && route.depth === nextRoute.depth;
+  });
+};
+
+const ModRoutesControl = React.memo(({ routes, onParamChange }) => {
+  const handleChange = React.useCallback((nextRoutes) => {
+    onParamChange('modRoutes', nextRoutes);
+  }, [onParamChange]);
+  return <ModMatrixEditor routes={routes} onChange={handleChange} />;
+}, (previousProps, nextProps) => (
+  previousProps.onParamChange === nextProps.onParamChange
+  && areModRoutesEqual(previousProps.routes, nextProps.routes)
+));
+
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
   delay: false,
@@ -359,20 +433,12 @@ const AudioControls = ({
 
   const renderSlider = (slider) => {
     const paramValue = getParam(slider.param);
-    const paramDefault = AUDIO_PARAM_DEFAULTS[slider.param];
     return (
-      <SliderControl
+      <AudioParamSlider
         key={slider.id}
-        id={slider.id}
-        label={slider.label}
-        value={slider.toSlider(paramValue)}
-        displayValue={slider.display(paramValue)}
-        min={slider.min}
-        max={slider.max}
-        step={slider.step}
-        defaultValue={typeof paramDefault === 'number' ? slider.toSlider(paramDefault) : undefined}
-        onChange={(value) => onParamChange(slider.param, slider.fromSlider(value))}
-        helpText={slider.helpText}
+        slider={slider}
+        paramValue={paramValue}
+        onParamChange={onParamChange}
       />
     );
   };
@@ -380,17 +446,14 @@ const AudioControls = ({
   const renderMacroDial = (slider, accent, disabled = false) => {
     const paramValue = getParam(slider.param);
     return (
-      <EffectMacroDial
+      <AudioParamMacroDial
         key={slider.id}
-        id={slider.id}
-        label={slider.label}
-        value={paramValue}
-        displayValue={slider.display(paramValue)}
+        slider={slider}
+        paramValue={paramValue}
+        onParamChange={onParamChange}
         accent={accent}
         disabled={disabled}
-        size={compact ? 88 : 112}
         compact={compact}
-        onChange={(value) => onParamChange(slider.param, value)}
       />
     );
   };
@@ -687,10 +750,7 @@ const AudioControls = ({
               id="lfo1-shape"
               label="LFO 1 shape"
               value={String(getParam('lfo1Shape'))}
-              options={LFO_SHAPE_OPTIONS.map((option) => ({
-                ...option,
-                value: String(option.value)
-              }))}
+              options={LFO_SHAPE_STRING_OPTIONS}
               onChange={(value) => onParamChange('lfo1Shape', Number(value))}
             />
             {renderSlider(LFO1_RATE_SLIDER)}
@@ -698,10 +758,7 @@ const AudioControls = ({
               id="lfo2-shape"
               label="LFO 2 shape"
               value={String(getParam('lfo2Shape'))}
-              options={LFO_SHAPE_OPTIONS.map((option) => ({
-                ...option,
-                value: String(option.value)
-              }))}
+              options={LFO_SHAPE_STRING_OPTIONS}
               onChange={(value) => onParamChange('lfo2Shape', Number(value))}
             />
             {renderSlider(LFO2_RATE_SLIDER)}
@@ -711,9 +768,9 @@ const AudioControls = ({
             {MOD_ENV_SLIDERS.map(renderSlider)}
           </div>
 
-          <ModMatrixEditor
+          <ModRoutesControl
             routes={Array.isArray(audioParams?.modRoutes) ? audioParams.modRoutes : []}
-            onChange={(routes) => onParamChange('modRoutes', routes)}
+            onParamChange={onParamChange}
           />
         </div> : null}
       </CollapsibleSection>
