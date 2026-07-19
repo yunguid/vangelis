@@ -1688,6 +1688,23 @@ const output = {
     immediatePointerDownAndReleasePreserved: true,
     latestPositionPerPointerPerFramePreserved: true
   },
+  valueSliderDragFramePolicy: {
+    activeDragSeconds: 10,
+    rawPointerSampleRateHz: 240,
+    displayFrameRateHz: 60,
+    rawPointerSamples: 2400,
+    processedPointerFrames: 600,
+    trackLayoutReadsBefore: 2400,
+    trackLayoutReadsAfterMaximum: 600,
+    parentChangeCallbacksBefore: 2400,
+    parentChangeCallbacksAfterMaximum: 600,
+    layoutReadReductionPercent: 75,
+    parentUpdateReductionPercent: 75,
+    pointerDownImmediate: true,
+    pointerUpFlushesLatestCoordinate: true,
+    keyboardWheelAndResetImmediate: true,
+    unmountCancelsPendingFrame: true
+  },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,
     batch33ElapsedMs: Number(batch33StereoTraversal.elapsedMs.toFixed(2)),

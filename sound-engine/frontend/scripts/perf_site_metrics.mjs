@@ -616,6 +616,18 @@ const keyboardCoalescesPointerMovesByFrame = (
     .test(keyboardPointerInputSource)
   && /cancelAnimationFrame\(moveFrameId\)/.test(keyboardPointerInputSource)
 );
+const valueSliderSource = await readFile(
+  path.join(sourceDir, 'components', 'controls', 'ValueSlider.jsx'),
+  'utf8'
+);
+const valueSliderCoalescesPointerMovesByFrame = (
+  /const pendingPointerXRef = useRef\(null\)/.test(valueSliderSource)
+  && /const pointerMoveFrameRef = useRef\(null\)/.test(valueSliderSource)
+  && /requestAnimationFrame\(flushPointerMove\)/.test(valueSliderSource)
+  && /commit\(valueFromPointer\(pendingClientX\)\)/.test(valueSliderSource)
+  && /useEffect\(\(\) => cancelPendingPointerMove/.test(valueSliderSource)
+  && /cancelAnimationFrame\(pointerMoveFrameRef\.current\)/.test(valueSliderSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -889,7 +901,12 @@ const report = {
     keyboardPointerDomHitTestsPer240HzFrame:
       keyboardCoalescesPointerMovesByFrame ? 1 : 4,
     keyboardPointerMoveListenerPassive: keyboardCoalescesPointerMovesByFrame,
-    keyboardCoalescesPointerMovesByFrame
+    keyboardCoalescesPointerMovesByFrame,
+    valueSliderLayoutReadsPer240HzFrame:
+      valueSliderCoalescesPointerMovesByFrame ? 1 : 4,
+    valueSliderParentUpdatesPer240HzFrame:
+      valueSliderCoalescesPointerMovesByFrame ? 1 : 4,
+    valueSliderCoalescesPointerMovesByFrame
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1504,6 +1521,13 @@ if (!keyboardCoalescesPointerMovesByFrame) {
     expected: 'one passive, latest-position pointer update per active pointer per frame'
   });
 }
+if (!valueSliderCoalescesPointerMovesByFrame) {
+  failures.push({
+    name: 'Guard frame-coalesced value-slider dragging',
+    actual: 'raw pointer samples synchronously read layout and update parent state',
+    expected: 'latest-coordinate layout read and change callback once per frame with release flush'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1514,7 +1538,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 85,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 86,
   failures
 };
 

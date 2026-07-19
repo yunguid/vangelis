@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { clamp } from '../../utils/math.js';
 
 /**
@@ -31,6 +31,8 @@ const ValueSlider = ({
 }) => {
   const trackRef = useRef(null);
   const draggingRef = useRef(false);
+  const pendingPointerXRef = useRef(null);
+  const pointerMoveFrameRef = useRef(null);
 
   const span = max - min === 0 ? 1 : max - min;
   const safeValue = clamp(Number.isFinite(value) ? value : min, min, max);
@@ -57,25 +59,53 @@ const ValueSlider = ({
     return quantize(min + ratio * span, step);
   }, [min, span, step, quantize, safeValue]);
 
+  const flushPointerMove = useCallback(() => {
+    pointerMoveFrameRef.current = null;
+    const clientX = pendingPointerXRef.current;
+    pendingPointerXRef.current = null;
+    if (clientX !== null && draggingRef.current) {
+      commit(valueFromPointer(clientX));
+    }
+  }, [commit, valueFromPointer]);
+
+  const cancelPendingPointerMove = useCallback(() => {
+    if (pointerMoveFrameRef.current !== null) {
+      cancelAnimationFrame(pointerMoveFrameRef.current);
+      pointerMoveFrameRef.current = null;
+    }
+    pendingPointerXRef.current = null;
+  }, []);
+
+  useEffect(() => cancelPendingPointerMove, [cancelPendingPointerMove]);
+
   const handlePointerDown = useCallback((event) => {
     if (disabled || event.button !== 0) return;
     event.preventDefault();
+    cancelPendingPointerMove();
     draggingRef.current = true;
     event.currentTarget.setPointerCapture?.(event.pointerId);
     event.currentTarget.focus();
     commit(valueFromPointer(event.clientX));
-  }, [disabled, commit, valueFromPointer]);
+  }, [disabled, cancelPendingPointerMove, commit, valueFromPointer]);
 
   const handlePointerMove = useCallback((event) => {
     if (!draggingRef.current) return;
-    commit(valueFromPointer(event.clientX));
-  }, [commit, valueFromPointer]);
+    pendingPointerXRef.current = event.clientX;
+    if (pointerMoveFrameRef.current === null) {
+      pointerMoveFrameRef.current = requestAnimationFrame(flushPointerMove);
+    }
+  }, [flushPointerMove]);
 
   const endDrag = useCallback((event) => {
     if (!draggingRef.current) return;
+    const pendingClientX = pendingPointerXRef.current;
+    cancelPendingPointerMove();
+    if (pendingClientX !== null) {
+      commit(valueFromPointer(pendingClientX));
+    }
     draggingRef.current = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
-  }, []);
+  }, [cancelPendingPointerMove, commit, valueFromPointer]);
 
   const nudge = useCallback((direction, fine, coarse) => {
     const effStep = fine ? step / 10 : coarse ? step * 10 : step;

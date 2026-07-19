@@ -3118,3 +3118,58 @@ Implemented boundaries and controls:
 - React best-practices review: effect dependencies and cleanup are complete; state remains
   colocated to actual consumers; the targeted feedback path preserves accessible current state.
 - `git diff --check`: pass.
+
+## Optimization batch 61 — frame-coalesced continuous sliders
+
+Collected from the shared production `ValueSlider` used by MIDI transport and sound controls; a
+240 Hz ten-second drag model on a 60 Hz display; layout-read and change-callback spies; release-
+flush and unmount-cleanup assertions; generated production closures; the full suite; and isolated
+audio/visual gates.
+
+| Metric | Batch 60 | Batch 61 | Change |
+|---|---:|---:|---:|
+| Track layout reads per 240 Hz input frame | 4 | at most 1 | -75.00% |
+| Parent change callbacks per 240 Hz input frame | 4 | at most 1 | -75.00% |
+| Layout reads over ten-second drag | 2,400 | at most 600 | -75.00% |
+| Parent updates over ten-second drag | 2,400 | at most 600 | -75.00% |
+| Pointer-down and pointer-up final value | immediate | immediate | preserved |
+| Home route JS gzip | 67.84 KiB | 67.83 KiB | -0.01 KiB |
+| Song Study route JS gzip | 65.60 KiB | 65.59 KiB | -0.01 KiB |
+| Sound Designer route JS gzip | 63.36 KiB | 63.35 KiB | -0.01 KiB |
+| Production deployment bytes | 1,485.57 KiB | 1,485.96 KiB | +0.39 KiB |
+| Automated production budgets | 103 | 104 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Continuous pointer moves now store only the latest horizontal coordinate and schedule one shared
+  animation-frame flush. Coordinate-to-value conversion, `getBoundingClientRect`, quantization, and
+  the parent callback run at most once per displayed frame instead of once per device sample.
+- Pointer down still focuses, captures, and commits immediately. Pointer up/cancel synchronously
+  flushes any final coordinate before releasing capture and cancels the queued frame, so the final
+  value cannot lag behind the gesture.
+- Keyboard nudges, wheel input, Home/End, and double-click reset retain their immediate paths. Hook
+  cleanup cancels pending frame work on unmount, preventing a callback into a retired control.
+- Added a deterministic four-sample drag test proving zero pre-frame layout work, one latest-value
+  callback after the frame, and an immediate final-value release flush with no duplicate callback.
+  Production guards reject device-rate layout reads or parent updates.
+
+### Batch 61 verification gates
+
+- Full suite: 63 files, 536/536 tests pass, including the expanded slider cadence/release case,
+  Audio Controls and MIDI panel coverage, and all Sound Designer, MIDI playback, keyboard,
+  control-kit, radar, Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 104/104 pass; a 240 Hz drag reports at
+  most one layout read and one parent update per 60 Hz display frame.
+- The ten-second model removes 1,800 layout reads and 1,800 parent callbacks, reducing each from
+  2,400 to at most 600 while preserving the exact latest coordinate on release.
+- Warmed combined visual workload: 80.19% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 422.6 us per 128-frame block with 6.3x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: scheduled work has explicit unmount cleanup and complete callback
+  dependencies; keyboard and accessibility semantics remain native and unchanged.
+- `git diff --check`: pass.

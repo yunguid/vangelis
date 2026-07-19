@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { act, fireEvent, render } from '@testing-library/react';
 import ValueSlider from './ValueSlider.jsx';
 
 // D4 regression: the thumb used to be positioned with
@@ -14,6 +14,11 @@ import ValueSlider from './ValueSlider.jsx';
 // jsdom doesn't run layout, so these tests pin the custom-property contract
 // the CSS depends on, plus the fill element's presence.
 describe('ValueSlider', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   const renderSlider = (props = {}) => render(
     <ValueSlider
       ariaLabel="Test slider"
@@ -68,5 +73,43 @@ describe('ValueSlider', () => {
       'value-slider__fill',
       'value-slider__thumb'
     ]);
+  });
+
+  it('coalesces raw drag samples to the latest coordinate per frame', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    const { container } = renderSlider({ onChange });
+    const slider = container.querySelector('.value-slider');
+    const getBoundingClientRect = vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 100
+    });
+    const dispatchPointer = (type, properties) => {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      Object.assign(event, properties);
+      fireEvent(slider, event);
+    };
+
+    dispatchPointer('pointerdown', { button: 0, pointerId: 7, clientX: 0 });
+    getBoundingClientRect.mockClear();
+    onChange.mockClear();
+    dispatchPointer('pointermove', { pointerId: 7, clientX: 20 });
+    dispatchPointer('pointermove', { pointerId: 7, clientX: 40 });
+    dispatchPointer('pointermove', { pointerId: 7, clientX: 60 });
+    dispatchPointer('pointermove', { pointerId: 7, clientX: 80 });
+
+    expect(getBoundingClientRect).not.toHaveBeenCalled();
+    expect(onChange).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(16));
+    expect(getBoundingClientRect).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith(0.8);
+
+    dispatchPointer('pointermove', { pointerId: 7, clientX: 90 });
+    dispatchPointer('pointerup', { pointerId: 7, clientX: 90 });
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenLastCalledWith(0.9);
+    act(() => vi.advanceTimersByTime(16));
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 });
