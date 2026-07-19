@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import AudioControls from './AudioControls.jsx';
 
 vi.mock('./EffectMacroDial.jsx', () => ({
+  EffectMacroActivityProvider: ({ children }) => children,
   default: ({ label, size, compact, disabled }) => (
     <div data-testid={`macro-dial-${label.toLowerCase()}`}>
       {`${label}:${size}:${compact}:${disabled}`}

@@ -3964,3 +3964,53 @@ Implemented boundaries and controls:
 - React best-practices review: memo inputs are scalar/stable, callbacks remain current through stable
   dispatchers, route equality covers every rendered field, and accessible control semantics are intact.
 - `git diff --check`: pass.
+
+## Optimization batch 76 — shared macro-dial audio activity subscription
+
+Collected from the expanded Delay and Reverb macro grids; 600 modeled audio-activity transitions;
+provider subscription/cleanup tests; source-level fan-out guards; generated production closures;
+the full suite; and isolated audio/visual gates.
+
+| Metric | Batch 75 | Batch 76 | Change |
+|---|---:|---:|---:|
+| Audio-engine activity subscriptions with 8 dials | 8 | 1 | -87.5% |
+| Engine listener calls over 600 transitions | 4,800 | 600 | -87.5% |
+| Dial context updates | 4,800 | 4,800 | preserved |
+| Parent AudioControls renders per transition | 0 | 0 | unchanged |
+| Subscriptions with both macro sections collapsed | 0 | 0 | preserved |
+| Initial Home JS gzip | 68.15 KiB | 68.15 KiB | unchanged |
+| Sound Designer route JS gzip | 63.57 KiB | 63.56 KiB | -0.01 KiB |
+| Production deployment bytes | 1,491.16 KiB | 1,491.37 KiB | +0.21 KiB |
+| Automated production budgets | 118 | 119 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Added one EffectMacroActivityProvider around AudioControls. It subscribes only while Delay or
+  Reverb is expanded, publishes the engine's active flag through a narrow context, and unsubscribes
+  as soon as both macro sections collapse.
+- Removed the identical audioEngine subscription and local activity state from every individual dial.
+  Dials consume the shared context, retaining their own canvas, drag state, and visibility-aware loop.
+- Kept provider state below AudioControls: activity changes update context consumers without
+  re-running the parent control tree or invalidating parameter-keyed memo boundaries.
+- Added a three-dial regression proving one subscription, live activity publication, and one cleanup,
+  plus static signals for expanded/collapsed subscription and listener counts.
+
+### Batch 76 verification gates
+
+- Full suite: 67 files, 551/551 tests pass, including the new provider fan-out case and all dial,
+  AudioControls, Sidebar, Home, audio, Sound Designer, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 119/119 pass; expanded macro grids report
+  one engine subscription and one engine listener per transition, while collapsed grids report zero.
+- The 600-transition model removes 4,200 engine listener invocations without changing any of the
+  4,800 required dial activity updates or the 24 Hz visibility-aware canvas cadence.
+- Warmed combined visual workload: 80.28% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -39 KB over 4,000 blocks.
+- Isolated DSP benchmark: 418.6 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: subscription state is colocated in the provider; its enabled effect has
+  complete dependencies and cleanup; context fan-out reaches only the eight animation consumers.
+- `git diff --check`: pass.

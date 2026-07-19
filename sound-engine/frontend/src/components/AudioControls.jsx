@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import EffectMacroDial from './EffectMacroDial.jsx';
+import EffectMacroDial, { EffectMacroActivityProvider } from './EffectMacroDial.jsx';
 import {
   AUDIO_PARAM_DEFAULTS,
   DELAY_DIVISION_OPTIONS,
@@ -496,6 +496,7 @@ const AudioControls = ({
   ].filter(Boolean).join(' ');
 
   return (
+    <EffectMacroActivityProvider enabled={activeSections.delay || activeSections.reverb}>
     <div className={containerClassName}>
       <CollapsibleSection
         id="essentials"
@@ -775,6 +776,7 @@ const AudioControls = ({
         </div> : null}
       </CollapsibleSection>
     </div>
+    </EffectMacroActivityProvider>
   );
 };
 

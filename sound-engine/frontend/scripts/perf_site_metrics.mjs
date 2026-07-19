@@ -793,6 +793,14 @@ const expandedSoundControlsIsolateParameterRenders = (
   && /<ModRoutesControl/.test(audioControlsSource)
   && !/options=\{LFO_SHAPE_OPTIONS\.map\(/.test(audioControlsSource)
 );
+const macroDialsShareAudioActivitySubscription = (
+  /const EffectMacroActivityContext = React\.createContext\(false\)/.test(effectMacroDialSource)
+  && /export const EffectMacroActivityProvider =/.test(effectMacroDialSource)
+  && /return audioEngine\.subscribeActivity\(\(activity\) =>/.test(effectMacroDialSource)
+  && /const isAudioActive = React\.useContext\(EffectMacroActivityContext\)/.test(effectMacroDialSource)
+  && !/useEffect\(\(\) => audioEngine\.subscribeActivity/.test(effectMacroDialSource)
+  && /<EffectMacroActivityProvider enabled=\{activeSections\.delay \|\| activeSections\.reverb\}>/.test(audioControlsSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -1168,7 +1176,13 @@ const report = {
       expandedSoundControlsIsolateParameterRenders ? 0 : 1,
     expandedSoundLfoOptionObjectAllocationsPerAudioParamFrame:
       expandedSoundControlsIsolateParameterRenders ? 0 : 12,
-    expandedSoundControlsIsolateParameterRenders
+    expandedSoundControlsIsolateParameterRenders,
+    expandedMacroDialAudioEngineActivitySubscriptions:
+      macroDialsShareAudioActivitySubscription ? 1 : 8,
+    collapsedMacroDialAudioEngineActivitySubscriptions: 0,
+    macroDialEngineListenerInvocationsPerActivityTransition:
+      macroDialsShareAudioActivitySubscription ? 1 : 8,
+    macroDialsShareAudioActivitySubscription
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1888,6 +1902,13 @@ if (!expandedSoundControlsIsolateParameterRenders) {
     expected: 'parameter-keyed memo children, route-aware matrix equality, and hoisted LFO options'
   });
 }
+if (!macroDialsShareAudioActivitySubscription) {
+  failures.push({
+    name: 'Guard shared macro-dial audio activity subscription',
+    actual: 'each visible effect dial independently subscribes to the audio engine',
+    expected: 'one enabled provider subscription with context fan-out and collapsed cleanup'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1898,7 +1919,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 100,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 101,
   failures
 };
 

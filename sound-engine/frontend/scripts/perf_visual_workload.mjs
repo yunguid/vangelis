@@ -1801,6 +1801,24 @@ const output = {
     routeEditingPreserved: true,
     compactMacroSizingPreserved: true
   },
+  sharedMacroDialActivityPolicy: {
+    expandedMacroDialCount: 8,
+    activityTransitionsPerSession: 600,
+    audioEngineSubscriptionsBefore: 8,
+    audioEngineSubscriptionsAfter: 1,
+    subscriptionReductionPercent: 87.5,
+    engineListenerInvocationsBefore: 4800,
+    engineListenerInvocationsAfter: 600,
+    engineListenerInvocationReductionPercent: 87.5,
+    dialContextUpdatesBefore: 4800,
+    dialContextUpdatesAfter: 4800,
+    parentAudioControlsRendersPerActivityTransitionAfter: 0,
+    subscriptionsWhenMacroSectionsCollapsedBefore: 0,
+    subscriptionsWhenMacroSectionsCollapsedAfter: 0,
+    activityAnimationPreserved: true,
+    disabledProviderCleanupPreserved: true,
+    visibilityAwareDialCadencePreserved: true
+  },
   midiSchedulerStartupPolicy: {
     scoreNoteCount: schedulerBenchmarkNoteCount,
     timelineOffsetSeconds: schedulerBenchmarkOffset,

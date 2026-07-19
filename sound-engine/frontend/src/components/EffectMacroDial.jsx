@@ -7,6 +7,27 @@ const TRACK_START = Math.PI * 0.72;
 const TRACK_END = Math.PI * 2.28;
 const TRACK_SPAN = TRACK_END - TRACK_START;
 const ACTIVE_FRAME_INTERVAL_MS = 1000 / 24;
+const EffectMacroActivityContext = React.createContext(false);
+
+export const EffectMacroActivityProvider = ({ enabled, children }) => {
+  const [isAudioActive, setIsAudioActive] = React.useState(
+    () => !!audioEngine.getActivity()?.isActive
+  );
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    setIsAudioActive(!!audioEngine.getActivity()?.isActive);
+    return audioEngine.subscribeActivity((activity) => {
+      setIsAudioActive(!!activity?.isActive);
+    });
+  }, [enabled]);
+
+  return (
+    <EffectMacroActivityContext.Provider value={isAudioActive}>
+      {children}
+    </EffectMacroActivityContext.Provider>
+  );
+};
 
 const clamp01 = (value) => Math.min(Math.max(value, 0), 1);
 
@@ -138,13 +159,7 @@ const EffectMacroDial = ({
       startValue: 0
     };
   }
-  const [isAudioActive, setIsAudioActive] = React.useState(
-    () => !!audioEngine.getActivity()?.isActive
-  );
-
-  useEffect(() => audioEngine.subscribeActivity((activity) => {
-    setIsAudioActive(!!activity?.isActive);
-  }), []);
+  const isAudioActive = React.useContext(EffectMacroActivityContext);
 
   useEffect(() => {
     const canvas = canvasRef.current;
