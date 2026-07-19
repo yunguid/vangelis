@@ -4880,3 +4880,36 @@ code in the initial route graph.
   unchanged at 12.15 KiB gzip and 5.50 KiB gzip.
 - The prior audio effect ring-buffer batch remains verified separately: 225/225 synth renders bit-exact,
   7/7 FX cases pass, and the worklet aggregate remains within the 38.7 KiB gate.
+
+## Live route matrix refresh — 2026-07-19
+
+The route pass was repeated against the local Vite server with the built-in probe enabled. This is a
+same-session, warm-development matrix on Chrome 150 / Apple Silicon (18 logical cores, 32 GB reported
+device memory, 2560×1440 viewport, DPR 1). Resource totals are cumulative within the tab, so they are
+useful for route growth and DOM-shape comparisons but are not cold-transfer or field p75 claims.
+
+| Route | Settled DOM / depth | Canvases | Cumulative resources | Transfer | Decoded | Settled heap | Route-specific evidence |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `#/` | 531 / 15 | 6 | 76 | 19.92 KB | 1,965.07 KB | 17.77 / 21.71 MB | FCP 36 ms, LCP 56 ms, CLS 0, 0 long tasks |
+| `#/sound-designer` | 198 / 14 | 5 | 82 | 21.68 KB | 2,091.51 KB | 17.95 / 22.37 MB | FCP 36 ms, LCP 56 ms, CLS 0, 0 long tasks |
+| `#/control-kit` | 435 / 16 | 0 | 92 | 24.61 KB | 2,347.85 KB | 18.20 / 23.12 MB | Route settled; SPA probe keeps navigation LCP non-independent |
+| `#/voice-loop` | 278 / 12 | 0 | 98 | 26.07 KB | 2,604.59 KB | 12.26 / 17.01 MB | Route settled; SPA probe keeps navigation LCP non-independent |
+| `#/pipeline/midi-builder` | 71 / 11 | 0 | 105 | 28.13 KB | 2,740.60 KB | 12.60 / 17.14 MB | Route settled; compactest editor surface |
+| `#/studies` | 72 / 11 | 0 | 108 | 29.00 KB | 2,777.80 KB | 12.76 / 17.18 MB | Route settled; catalog index surface |
+| `#/studies/to-the-unknown-man` | 185 / 11 | 1 | 118 | 31.93 KB | 3,016.41 KB | 14.64 / 18.98 MB | MIDI module 0.2 ms, file read 1.5 ms, decode 34.6 ms, flatten 1.4 ms |
+
+The home and sound-designer probes both remained under the existing first-paint and interaction ceilings,
+with no console warnings or errors. The study route’s 34.6 ms MIDI decode is the clearest route-specific
+CPU cost in this pass; it is isolated to the catalog/import surface and should be profiled separately from
+the real-time worklet before changing it. The current steady-state synth benchmark remains 285–291 µs per
+128-frame block (9.2–9.4× CPU headroom), and the exact-output audio audit remains the release gate for any
+future DSP change.
+
+### Route-matrix verification controls
+
+- Browser checks: every route settled, the sidebar controls remained addressable, and the probe reported
+  zero console warnings/errors during navigation and interaction checks.
+- Production guardrails: 138/138 pass after the matrix run; no delivery or route budget changed.
+- Repository checks: full suite 68 files / 582 tests, audio audit 225 bit-exact renders plus 7 FX cases,
+  visual workload report pass, and `git diff --check` pass.
+- This refresh adds measurement only; it does not convert cumulative local-dev bytes into a cold-load claim.
