@@ -125,12 +125,11 @@ class TapBuffer {
 
   read(delaySamples) {
     let readIndex = this.writeIndex - delaySamples;
-    while (readIndex < 0) {
-      readIndex += this.length;
-    }
+    // delaySamples < length, so one branch handles the ring wrap.
+    if (readIndex < 0) readIndex += this.length;
 
     const indexA = Math.floor(readIndex);
-    const indexB = (indexA + 1) % this.length;
+    const indexB = indexA + 1 < this.length ? indexA + 1 : 0;
     const frac = readIndex - indexA;
     const sampleA = this.buffer[indexA];
     const sampleB = this.buffer[indexB];

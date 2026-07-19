@@ -124,12 +124,11 @@ class DelayProcessor extends AudioWorkletProcessor {
 
   readInterpolated(buffer, delaySamples) {
     let readIndex = this.writeIndex - delaySamples;
-    while (readIndex < 0) {
-      readIndex += this.bufferLength;
-    }
+    // delaySamples < bufferLength, so one branch handles the ring wrap.
+    if (readIndex < 0) readIndex += this.bufferLength;
 
     const indexA = Math.floor(readIndex);
-    const indexB = (indexA + 1) % this.bufferLength;
+    const indexB = indexA + 1 < this.bufferLength ? indexA + 1 : 0;
     const frac = readIndex - indexA;
     const sampleA = buffer[indexA];
     const sampleB = buffer[indexB];

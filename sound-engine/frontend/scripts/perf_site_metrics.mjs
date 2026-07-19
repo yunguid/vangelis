@@ -957,11 +957,13 @@ const macroDialsShareAudioActivitySubscription = (
   && !/useEffect\(\(\) => audioEngine\.subscribeActivity/.test(effectMacroDialSource)
   && /<EffectMacroActivityProvider enabled=\{activeSections\.delay \|\| activeSections\.reverb\}>/.test(audioControlsSource)
 );
-const [svfSource, voiceDspSource, synthWorkletDspSource, lfoDspSource] = await Promise.all([
+const [svfSource, voiceDspSource, synthWorkletDspSource, lfoDspSource, delayWorkletSource, reverbWorkletSource] = await Promise.all([
   readFile(path.join(sourceDir, 'audio', 'dsp', 'svf.js'), 'utf8'),
   readFile(path.join(sourceDir, 'audio', 'dsp', 'voice.js'), 'utf8'),
   readFile(path.join(sourceDir, 'audio', 'synth-worklet.js'), 'utf8'),
-  readFile(path.join(sourceDir, 'audio', 'dsp', 'lfo.js'), 'utf8')
+  readFile(path.join(sourceDir, 'audio', 'dsp', 'lfo.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'audio', 'delay-worklet.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'audio', 'reverb-worklet.js'), 'utf8')
 ]);
 const svfCachesSettledAndStereoCoefficients = (
   /recalculateCoefficients\(\)/.test(svfSource)
@@ -1003,6 +1005,14 @@ const lfoSharesExactSineValuesAcrossVoices = (
   && /valueCache\.lfoValue = value/.test(lfoDspSource)
   && /this\.lfo1\.next\(dspValueCache\)/.test(voiceDspSource)
   && /this\.lfo2\.next\(dspValueCache\)/.test(voiceDspSource)
+);
+const delayUsesBranchBasedRingRead = (
+  /if \(readIndex < 0\) readIndex \+= this\.bufferLength/.test(delayWorkletSource)
+  && /const indexB = indexA \+ 1 < this\.bufferLength \? indexA \+ 1 : 0/.test(delayWorkletSource)
+);
+const reverbUsesBranchBasedRingRead = (
+  /if \(readIndex < 0\) readIndex \+= this\.length/.test(reverbWorkletSource)
+  && /const indexB = indexA \+ 1 < this\.length \? indexA \+ 1 : 0/.test(reverbWorkletSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1454,7 +1464,11 @@ const report = {
     synchronizedTwentyFourVoiceSineLfoEvaluationsPerSample:
       lfoSharesExactSineValuesAcrossVoices ? 1 : 24,
     divergentVoiceSineLfoEvaluationsPerSample: 24,
-    lfoSharesExactSineValuesAcrossVoices
+    lfoSharesExactSineValuesAcrossVoices,
+    delayRingReadModuloCallsPerTap: delayUsesBranchBasedRingRead ? 0 : 2,
+    delayUsesBranchBasedRingRead,
+    reverbRingReadModuloCallsPerTap: reverbUsesBranchBasedRingRead ? 0 : 2,
+    reverbUsesBranchBasedRingRead
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -2353,6 +2367,20 @@ if (!lfoSharesExactSineValuesAcrossVoices) {
     name: 'Guard exact cross-voice sine-LFO reuse',
     actual: 'synchronized voices repeat identical sine evaluation',
     expected: 'one processor-local exact-phase sine value with independent per-voice LFO state'
+  });
+}
+if (!delayUsesBranchBasedRingRead) {
+  failures.push({
+    name: 'Guard branch-based delay ring reads',
+    actual: 'per-tap circular reads use a wrap loop or modulo for adjacent index',
+    expected: 'at most one conditional wrap and one conditional adjacent-index increment'
+  });
+}
+if (!reverbUsesBranchBasedRingRead) {
+  failures.push({
+    name: 'Guard branch-based reverb ring reads',
+    actual: 'per-tap circular reads use a wrap loop or modulo for adjacent index',
+    expected: 'at most one conditional wrap and one conditional adjacent-index increment'
   });
 }
 if (routeChunks.length < 7) {
