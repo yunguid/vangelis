@@ -441,7 +441,7 @@ const AudioControls = ({
         onToggle={toggleSection}
         summary={<EffectSummary items={[`${percentValue(getParam('volume'))}% level`]} />}
       >
-        {ESSENTIAL_SLIDERS.map(renderSlider)}
+        {activeSections.essentials ? ESSENTIAL_SLIDERS.map(renderSlider) : null}
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -462,7 +462,7 @@ const AudioControls = ({
           delayStatus
         ]} />}
       >
-        <div className="control-section">
+        {activeSections.delay ? <div className="control-section">
           <SegmentedControl
             id="delay-preset"
             label="Preset"
@@ -547,7 +547,7 @@ const AudioControls = ({
               {showDelayAdvanced ? 'Hide detail' : 'Shape repeats'}
             </button>
           </div>
-        </div>
+        </div> : null}
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -568,7 +568,7 @@ const AudioControls = ({
           `${Math.round(getParam('reverbMix') * 100)}% wet`
         ]} />}
       >
-        <div className="control-section">
+        {activeSections.reverb ? <div className="control-section">
           <SegmentedControl
             id="reverb-mode"
             label="Mode"
@@ -598,7 +598,7 @@ const AudioControls = ({
               {showReverbAdvanced ? 'Hide detail' : 'Shape space'}
             </button>
           </div>
-        </div>
+        </div> : null}
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -608,9 +608,9 @@ const AudioControls = ({
         onToggle={toggleSection}
         summary={<EffectSummary items={[`${percentValue(getParam('distortion'))}% drive`]} />}
       >
-        <div className="control-section">
+        {activeSections.color ? <div className="control-section">
           {renderSlider(DISTORTION_SLIDER)}
-        </div>
+        </div> : null}
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -624,7 +624,7 @@ const AudioControls = ({
           useFilter ? 'Filter on' : 'Filter off'
         ]} />}
       >
-        <div className="control-section">
+        {activeSections.modulation ? <div className="control-section">
           <label className="toggle-row" htmlFor="use-adsr">
             <span>ADSR envelope</span>
             <input
@@ -715,7 +715,7 @@ const AudioControls = ({
             routes={Array.isArray(audioParams?.modRoutes) ? audioParams.modRoutes : []}
             onChange={(routes) => onParamChange('modRoutes', routes)}
           />
-        </div>
+        </div> : null}
       </CollapsibleSection>
     </div>
   );

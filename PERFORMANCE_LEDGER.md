@@ -3864,3 +3864,52 @@ Implemented boundaries and controls:
 - React best-practices review: scheduler state is ref-owned and does not trigger rendering; the effect
   retains complete snapshot dependencies; page-exit cleanup cancels the timer before the final write.
 - `git diff --check`: pass.
+
+## Optimization batch 74 — lazy collapsed Sound-control bodies
+
+Collected from the open Home Sound sidebar with its default four collapsed sections; a ten-second
+60 Hz parameter stream; source-level body guards; generated production closures; the full suite;
+and isolated audio/visual gates.
+
+| Metric | Batch 73 | Batch 74 | Change |
+|---|---:|---:|---:|
+| Collapsed section-body evaluations | 2,400 | 0 | removed |
+| Conservative hidden control-element allocations | 17,400 | 0 | removed |
+| Hidden slider/dial conversions | 15,000 | 0 | removed |
+| Hidden LFO option-object allocations | 7,200 | 0 | removed |
+| Visible summaries | live | live | preserved |
+| Initial Home JS gzip | 68.15 KiB | 68.15 KiB | unchanged |
+| Sound Designer route JS gzip | 63.56 KiB | 63.56 KiB | unchanged |
+| Production deployment bytes | 1,490.47 KiB | 1,490.54 KiB | +0.07 KiB |
+| Automated production budgets | 116 | 117 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Gated each AudioControls body at its parent call site. React no longer evaluates the delay,
+  reverb, color, or modulation child expressions before CollapsibleSection discards them.
+- Applied the same boundary to Essentials when explicitly collapsed, while keeping every section
+  header, status summary, enable toggle, and expansion affordance mounted and current.
+- Prevented hidden slider conversion/formatting calls, macro-dial element construction, modulation
+  matrix element construction, and two per-frame remaps of the six LFO shape options.
+- Added production signals for hidden body, control-element, and option-object work, plus a guard
+  requiring all five section bodies to remain parent-gated.
+
+### Batch 74 verification gates
+
+- Full suite: 66 files, 550/550 tests pass, including AudioControls, Sidebar state preservation,
+  Home session persistence, audio, Sound Designer, visual, MIDI, and route cases.
+- Production delivery/static/dependency/route guardrails: 117/117 pass; collapsed audio frames report
+  zero body evaluations, zero hidden control elements, and zero hidden LFO option objects.
+- The ten-second conservative model removes 39,600 explicit hidden element/conversion/option-object
+  operations while preserving live summaries, visible controls, and on-demand section expansion.
+- Warmed combined visual workload: 80.34% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass,
+  and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 416.7 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: collapsed state remains colocated; semantic section buttons and ARIA
+  relationships are unchanged; hidden children are omitted before element creation rather than synced.
+- `git diff --check`: pass.

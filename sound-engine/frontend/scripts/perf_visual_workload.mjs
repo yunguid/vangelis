@@ -1759,6 +1759,26 @@ const output = {
     pageExitFlushPreserved: true,
     unmountCancellationPreserved: true
   },
+  collapsedSoundControlBodyPolicy: {
+    activeControlSeconds: 10,
+    parentUpdateRateHz: 60,
+    parentUpdates: 600,
+    collapsedSections: 4,
+    collapsedSectionBodyEvaluationsBefore: 2400,
+    collapsedSectionBodyEvaluationsAfter: 0,
+    conservativeHiddenControlElementsPerFrameBefore: 29,
+    conservativeHiddenControlElementAllocationsBefore: 17400,
+    conservativeHiddenControlElementAllocationsAfter: 0,
+    hiddenSliderAndDialConversionsPerFrameBefore: 25,
+    hiddenSliderAndDialConversionsBefore: 15000,
+    hiddenSliderAndDialConversionsAfter: 0,
+    hiddenLfoOptionObjectsPerFrameBefore: 12,
+    hiddenLfoOptionObjectsBefore: 7200,
+    hiddenLfoOptionObjectsAfter: 0,
+    collapsedSummaryUpdatesPreserved: true,
+    visibleSectionControlsPreserved: true,
+    sectionExpansionPreserved: true
+  },
   midiSchedulerStartupPolicy: {
     scoreNoteCount: schedulerBenchmarkNoteCount,
     timelineOffsetSeconds: schedulerBenchmarkOffset,

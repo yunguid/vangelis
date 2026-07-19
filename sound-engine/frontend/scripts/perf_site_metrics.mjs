@@ -715,11 +715,12 @@ const [soundDesignerSource, soundDesignerAdvancedSource, presetShelfSource] = aw
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerAdvancedStages.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'components', 'PresetShelf.jsx'), 'utf8')
 ]);
-const [appSource, audioEngineRuntimeSource, audioEngineEffectsSource, trailingDeadlineSchedulerSource] = await Promise.all([
+const [appSource, audioEngineRuntimeSource, audioEngineEffectsSource, trailingDeadlineSchedulerSource, audioControlsSource] = await Promise.all([
   readFile(path.join(sourceDir, 'App.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'utils', 'audioEngineRuntime.js'), 'utf8'),
   readFile(path.join(sourceDir, 'utils', 'audioEngine', 'effects.js'), 'utf8'),
-  readFile(path.join(sourceDir, 'utils', 'trailingDeadlineScheduler.js'), 'utf8')
+  readFile(path.join(sourceDir, 'utils', 'trailingDeadlineScheduler.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'components', 'AudioControls.jsx'), 'utf8')
 ]);
 const controlKitPrimitivesIsolateRenders = (
   [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
@@ -773,6 +774,13 @@ const homeSessionPersistenceUsesDeadlineScheduler = (
   && /sessionSaveSchedulerRef\.current\.schedule\(\)/.test(appSource)
   && /sessionSaveSchedulerRef\.current\.cancel\(\)/.test(appSource)
   && !/sessionSaveTimeoutRef/.test(appSource)
+);
+const collapsedSoundControlBodiesAreLazy = (
+  /activeSections\.essentials \? ESSENTIAL_SLIDERS\.map\(renderSlider\) : null/.test(audioControlsSource)
+  && /activeSections\.delay \? <div className="control-section">/.test(audioControlsSource)
+  && /activeSections\.reverb \? <div className="control-section">/.test(audioControlsSource)
+  && /activeSections\.color \? <div className="control-section">/.test(audioControlsSource)
+  && /activeSections\.modulation \? <div className="control-section">/.test(audioControlsSource)
 );
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
@@ -1133,7 +1141,14 @@ const report = {
       homeSessionPersistenceUsesDeadlineScheduler ? 51 : 600,
     homeSessionSaveTimerCancellationsPer600Updates:
       homeSessionPersistenceUsesDeadlineScheduler ? 0 : 599,
-    homeSessionPersistenceUsesDeadlineScheduler
+    homeSessionPersistenceUsesDeadlineScheduler,
+    collapsedSoundControlBodyEvaluationsPerAudioParamFrame:
+      collapsedSoundControlBodiesAreLazy ? 0 : 4,
+    collapsedSoundHiddenControlElementAllocationsPerAudioParamFrame:
+      collapsedSoundControlBodiesAreLazy ? 0 : 29,
+    collapsedSoundHiddenLfoOptionObjectAllocationsPerAudioParamFrame:
+      collapsedSoundControlBodiesAreLazy ? 0 : 12,
+    collapsedSoundControlBodiesAreLazy
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1839,6 +1854,13 @@ if (!homeSessionPersistenceUsesDeadlineScheduler) {
     expected: 'one deadline-driven timer chain with final snapshot, page-exit flush, and cleanup'
   });
 }
+if (!collapsedSoundControlBodiesAreLazy) {
+  failures.push({
+    name: 'Guard lazy collapsed Sound-control bodies',
+    actual: 'collapsed sections still construct hidden control elements and option objects',
+    expected: 'parent-gated section children with visible summaries and on-demand body construction'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1849,7 +1871,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 98,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 99,
   failures
 };
 
