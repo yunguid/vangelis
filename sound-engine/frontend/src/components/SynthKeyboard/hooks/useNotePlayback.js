@@ -15,9 +15,11 @@ export function useNotePlayback({
   const pointerToNoteRef = useRef(null);
   if (!pointerToNoteRef.current) pointerToNoteRef.current = new Map();
 
+  // Returns false when the request was rejected (invalid note, or the note is
+  // already owned by another input source); true when this call took ownership.
   const startNote = useCallback((noteMeta, { pointerId = null, velocity = 0.85 } = {}) => {
     if (!noteMeta || !noteMeta.frequency) {
-      return;
+      return false;
     }
 
     const status = audioEngine.getStatus();
@@ -25,7 +27,7 @@ export function useNotePlayback({
       activeNotesRef.current.has(noteMeta.noteId)
       || pendingNotesRef.current.has(noteMeta.noteId)
     ) {
-      return;
+      return false;
     }
 
     const velocityNormalized = clamp(velocity, 0.05, 1);
@@ -95,7 +97,7 @@ export function useNotePlayback({
 
     if (audioEngine.context && (!requiresWorklet || workletReady)) {
       playPreparedNote();
-      return;
+      return true;
     }
 
     const token = { paintInteraction };
@@ -118,7 +120,7 @@ export function useNotePlayback({
         : audioEngine.ensureAudioContext();
     } catch (_) {
       clearFailedPendingNote();
-      return;
+      return false;
     }
 
     Promise.resolve(preparation).then(() => {
@@ -144,6 +146,7 @@ export function useNotePlayback({
         clearFailedPendingNote();
       }
     });
+    return true;
   }, [waveformRef, audioParamsRef, wasmReadyRef, scheduleVisualUpdate]);
 
   const stopNote = useCallback((noteId, pointerId = null) => {

@@ -36,8 +36,18 @@ export function useKeyboardInput({
     if (isTextEntryTarget(event.target)) {
       return;
     }
+    // Modifier chords (Cmd+Z, Ctrl+A, ...) belong to the browser/OS — never
+    // swallow them into notes or octave changes. Keyup stays unguarded so a
+    // release still reaches the held-note map even if a modifier went down
+    // after the note started.
+    if (event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
 
     const key = event.key.toLowerCase();
+    // Held notes are keyed by the physical key (event.code) so Shift changing
+    // event.key between press and release (';' -> ':') cannot orphan a note.
+    const physicalKey = event.code || key;
 
     if (key === 'z') {
       event.preventDefault();
@@ -56,7 +66,7 @@ export function useKeyboardInput({
     }
 
     event.preventDefault();
-    if (keyToNoteRef.current.has(key)) {
+    if (keyToNoteRef.current.has(physicalKey)) {
       return;
     }
 
@@ -72,9 +82,13 @@ export function useKeyboardInput({
       ? performance.now()
       : null;
     try {
-      const velocity = velocityFromKeyboard(key);
-      keyToNoteRef.current.set(key, meta.noteId);
-      startNote(meta, { velocity });
+      const velocity = velocityFromKeyboard(physicalKey);
+      // Register ownership only when startNote accepts the request — if the
+      // note is already held by another input (e.g. a pointer), this keyup
+      // must not be able to kill that voice.
+      if (startNote(meta, { velocity }) !== false) {
+        keyToNoteRef.current.set(physicalKey, meta.noteId);
+      }
     } finally {
       if (handlerStart !== null) {
         performanceProbe?.recordInteraction?.(
@@ -87,11 +101,11 @@ export function useKeyboardInput({
   }, [getNote, setOctaveOffset, startNote, velocityFromKeyboard]);
 
   const handleKeyboardUp = useCallback((event) => {
-    const key = event.key.toLowerCase();
-    const noteId = keyToNoteRef.current.get(key);
+    const physicalKey = event.code || event.key.toLowerCase();
+    const noteId = keyToNoteRef.current.get(physicalKey);
     if (!noteId) return;
     event.preventDefault();
-    keyToNoteRef.current.delete(key);
+    keyToNoteRef.current.delete(physicalKey);
     stopNote(noteId);
   }, [stopNote]);
 

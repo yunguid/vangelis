@@ -258,8 +258,18 @@ const App = () => {
         setShowShortcuts(false);
       }
 
-      // Space bar toggles recording (only if not focused on input)
-      if (event.key === ' ' && event.target.tagName !== 'BUTTON') {
+      // Space bar toggles recording — but never on key auto-repeat (a held
+      // Space would otherwise machine-gun start/stop, downloading a WAV per
+      // toggle), and never when Space belongs to the focused control.
+      const targetTag = event.target?.tagName;
+      if (
+        event.key === ' '
+        && !event.repeat
+        && targetTag !== 'BUTTON'
+        && targetTag !== 'SELECT'
+        && targetTag !== 'A'
+        && event.target?.getAttribute?.('role') !== 'slider'
+      ) {
         event.preventDefault();
         handleRecordToggle();
       }
