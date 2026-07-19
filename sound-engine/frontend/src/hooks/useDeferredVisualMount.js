@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 
-export const PRIMARY_VISUAL_IDLE_TIMEOUT_MS = 700;
-export const AMBIENT_VISUAL_IDLE_TIMEOUT_MS = 1800;
+export const PRIMARY_VISUAL_DELAY_MS = 700;
+export const AMBIENT_VISUAL_DELAY_MS = 1800;
+export const VISUAL_IDLE_TIMEOUT_MS = 250;
 
 const isVisible = (documentRef) => (
   documentRef.visibilityState
@@ -14,12 +15,13 @@ export function scheduleDeferredVisualMount(
   {
     windowRef = window,
     documentRef = document,
-    timeoutMs = PRIMARY_VISUAL_IDLE_TIMEOUT_MS
+    delayMs = PRIMARY_VISUAL_DELAY_MS
   } = {}
 ) {
   let cancelled = false;
   let activated = false;
   let frameId = null;
+  let delayId = null;
   let idleId = null;
   let fallbackId = null;
 
@@ -31,6 +33,10 @@ export function scheduleDeferredVisualMount(
     if (idleId !== null) {
       windowRef.cancelIdleCallback?.(idleId);
       idleId = null;
+    }
+    if (delayId !== null) {
+      windowRef.clearTimeout(delayId);
+      delayId = null;
     }
     if (fallbackId !== null) {
       windowRef.clearTimeout(fallbackId);
@@ -51,18 +57,24 @@ export function scheduleDeferredVisualMount(
   };
 
   const scheduleIdle = () => {
-    frameId = null;
+    delayId = null;
     if (cancelled || activated || !isVisible(documentRef)) return;
     if (typeof windowRef.requestIdleCallback === 'function') {
-      idleId = windowRef.requestIdleCallback(mount, { timeout: timeoutMs });
+      idleId = windowRef.requestIdleCallback(mount, { timeout: VISUAL_IDLE_TIMEOUT_MS });
     } else {
       fallbackId = windowRef.setTimeout(mount, 0);
     }
   };
 
+  const scheduleDelay = () => {
+    frameId = null;
+    if (cancelled || activated || !isVisible(documentRef)) return;
+    delayId = windowRef.setTimeout(scheduleIdle, delayMs);
+  };
+
   function scheduleAfterPaint() {
     if (cancelled || activated || frameId !== null || !isVisible(documentRef)) return;
-    frameId = windowRef.requestAnimationFrame(scheduleIdle);
+    frameId = windowRef.requestAnimationFrame(scheduleDelay);
   }
 
   function syncVisibility() {
@@ -83,8 +95,8 @@ export function scheduleDeferredVisualMount(
   };
 }
 
-export function useDeferredVisualMount(timeoutMs = PRIMARY_VISUAL_IDLE_TIMEOUT_MS) {
+export function useDeferredVisualMount(delayMs = PRIMARY_VISUAL_DELAY_MS) {
   const [ready, setReady] = useState(false);
-  useEffect(() => scheduleDeferredVisualMount(() => setReady(true), { timeoutMs }), [timeoutMs]);
+  useEffect(() => scheduleDeferredVisualMount(() => setReady(true), { delayMs }), [delayMs]);
   return ready;
 }

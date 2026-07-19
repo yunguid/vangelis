@@ -4109,3 +4109,69 @@ Implemented boundaries and controls:
   competing-application load explicit instead of silently attributing it to DSP work.
 - Production dependency audit: 0 vulnerabilities at low-or-higher severity. UI-tell census: 22, unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 78 — staggered Home visual initialization
+
+Collected from five production-preview Home documents in Chrome 150 on Apple Silicon macOS; the
+opt-in settled browser snapshot; lifecycle-controlled scheduler tests; generated production closures;
+the full suite; and isolated audio/visual gates. The browser environment remained 2,560 x 1,440 at
+DPR 1, dark color scheme, 18 reported logical processors, 32 GiB reported device memory, no CPU
+throttling, and visible-document state.
+
+| Metric | Batch 77 five-run median | Batch 78 five-run median | Change |
+|---|---:|---:|---:|
+| Home long tasks after visual startup | 1 | 0 | removed |
+| Home worst long task | 238 ms | 0 ms | removed |
+| Home FCP | 140 ms | 72 ms | -48.6% |
+| Home LCP | 168 ms | 88 ms | -47.6% |
+| Home CLS | 0 | 0 | unchanged |
+| Settled Home canvases | 6 | 6 | preserved |
+| Intended primary-visual minimum delay | not enforced | 700 ms | enforced |
+| Intended ambient-visual minimum delay | not enforced | 1,800 ms | enforced |
+| Maximum idle-callback deadline | 700/1,800 ms | 250 ms | bounded |
+| Initial Home JS gzip | 68.11 KiB | 68.11 KiB | unchanged |
+| Sound Designer route JS gzip | 63.53 KiB | 63.52 KiB | -0.01 KiB |
+| Production deployment bytes | 1,491.97 KiB | 1,492.14 KiB | +0.17 KiB |
+| Automated production budgets | 120 | 121 | +1 guardrail |
+
+The five Batch 78 documents reported FCP values of 72, 68, 72, 72, and 68 ms; LCP values of 72,
+104, 80, 88, and 96 ms; and zero long tasks in every settled snapshot. Each settled document had
+179 DOM nodes and all six expected canvases, proving the clean samples did not merely omit the visual
+systems. The earlier defect was semantic: `requestIdleCallback(..., { timeout })` specifies a maximum
+deadline, not a minimum delay, so both visual callbacks could run in the same first idle opportunity.
+
+Implemented boundaries and controls:
+
+- The deferred-visual scheduler now crosses the first painted frame, waits a real minimum delay with
+  `setTimeout`, and only then requests an idle slice with a 250 ms deadline. Primary WaveCandy work and
+  the ambient WebGL scene therefore cannot initialize in the same startup task.
+- Home keeps the intended 700 ms primary and 1,800 ms ambient stages; Sound Designer uses the same
+  700 ms primary stage. Hidden-document transitions cancel every frame, delay, idle, and fallback handle,
+  then restart the complete delay when the document becomes visible.
+- The fallback path still mounts in browsers without `requestIdleCallback`; unmount and hidden-state
+  tests cover cancellation before the frame, minimum-delay, and idle stages.
+- The opt-in performance probe now emits one `settled` snapshot at 2.6 seconds, after both deferred
+  visual stages. This timer and console report exist only under `?profile=1`; the normal production entry
+  still dynamically excludes the probe.
+- A production guard requires the exact paint -> minimum-delay -> idle chain, the 700/1,800 ms stage
+  values, and an idle deadline no greater than 250 ms.
+
+### Batch 78 verification gates
+
+- Focused scheduler, probe, Home, and Sound Designer suites: 5 files, 45/45 tests pass, including minimum
+  delay, idle/fallback activation, hidden/unmount cancellation, settled reporting, and both visual routes.
+- Live production verification: 5/5 settled Home documents report zero long tasks, zero CLS, 179 nodes,
+  and six canvases; median FCP/LCP are 72/88 ms.
+- Full suite: 67 files, 555/555 tests pass across scheduling, profiling, every route, audio runtime,
+  worklets, controls, visuals, keyboard, polling, and storage.
+- Production delivery/static/dependency/route guardrails: 121/121 pass. Initial Home payload is unchanged;
+  the +0.17 KiB deployment delta is isolated to the opt-in profiling chunk and scheduler metadata.
+- Warmed combined visual workload: 80.93% lower normalized median CPU than the legacy reference, with
+  the established 78.18% analyzer-sample, 65.71% resample-sample, and 50% scene-frame reductions intact.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds pass, and
+  saturated heap drift is -38 KiB over 4,000 blocks.
+- The concurrent desktop DSP sample reports 2.5x process-CPU headroom and 1.4x wall headroom. As in Batch
+  77, the lower wall figure includes competing Arc/Ableton load and is not used as a source-regression
+  claim; no audio or worklet source changed in this batch.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity. UI-tell census: 22, unchanged.
+- `git diff --check`: pass.

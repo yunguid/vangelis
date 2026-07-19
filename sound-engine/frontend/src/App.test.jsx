@@ -59,8 +59,8 @@ describe('App', () => {
     expect(screen.getByText('Vangelis')).toBeInTheDocument();
     expect(screen.queryByTestId('scene-mock')).not.toBeInTheDocument();
     expect(screen.queryByTestId('wave-candy-mock')).not.toBeInTheDocument();
-    expect(await screen.findByTestId('scene-mock')).toBeInTheDocument();
-    expect(await screen.findByTestId('wave-candy-mock')).toBeInTheDocument();
+    expect(await screen.findByTestId('scene-mock', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByTestId('wave-candy-mock', {}, { timeout: 3000 })).toBeInTheDocument();
   });
 
   it('renders keyboard section', () => {

@@ -4,6 +4,7 @@ import { scheduleDeferredVisualMount } from './useDeferredVisualMount.js';
 const createHarness = (visibilityState = 'visible') => {
   const frameCallbacks = new Map();
   const idleCallbacks = new Map();
+  const timeoutCallbacks = new Map();
   const visibilityListeners = new Set();
   let nextId = 1;
   const documentRef = {
@@ -32,27 +33,34 @@ const createHarness = (visibilityState = 'visible') => {
       return id;
     }),
     cancelIdleCallback: vi.fn((id) => idleCallbacks.delete(id)),
-    setTimeout: vi.fn(),
-    clearTimeout: vi.fn()
+    setTimeout: vi.fn((callback) => {
+      const id = nextId++;
+      timeoutCallbacks.set(id, callback);
+      return id;
+    }),
+    clearTimeout: vi.fn((id) => timeoutCallbacks.delete(id))
   };
-  return { documentRef, windowRef, frameCallbacks, idleCallbacks };
+  return { documentRef, windowRef, frameCallbacks, idleCallbacks, timeoutCallbacks };
 };
 
 describe('scheduleDeferredVisualMount', () => {
-  it('waits for a post-paint idle slot before activating', () => {
+  it('waits for a minimum post-paint delay and then an idle slot before activating', () => {
     const harness = createHarness();
     const activate = vi.fn();
-    scheduleDeferredVisualMount(activate, { ...harness, timeoutMs: 700 });
+    scheduleDeferredVisualMount(activate, { ...harness, delayMs: 700 });
 
     expect(activate).not.toHaveBeenCalled();
     expect(harness.windowRef.requestAnimationFrame).toHaveBeenCalledTimes(1);
     harness.frameCallbacks.get(1)(16);
     expect(activate).not.toHaveBeenCalled();
+    expect(harness.windowRef.setTimeout).toHaveBeenCalledWith(expect.any(Function), 700);
+    harness.timeoutCallbacks.get(2)();
+    expect(activate).not.toHaveBeenCalled();
     expect(harness.windowRef.requestIdleCallback).toHaveBeenCalledWith(
       expect.any(Function),
-      { timeout: 700 }
+      { timeout: 250 }
     );
-    harness.idleCallbacks.get(2)();
+    harness.idleCallbacks.get(3)();
     expect(activate).toHaveBeenCalledTimes(1);
   });
 
@@ -66,12 +74,27 @@ describe('scheduleDeferredVisualMount', () => {
 
     harness.frameCallbacks.get(1)(16);
     harness.documentRef.setVisibility('hidden');
-    expect(harness.windowRef.cancelIdleCallback).toHaveBeenCalledWith(2);
+    expect(harness.windowRef.clearTimeout).toHaveBeenCalledWith(2);
     harness.documentRef.setVisibility('visible');
     expect(harness.windowRef.requestAnimationFrame).toHaveBeenCalledTimes(2);
   });
 
-  it('cancels pending frame and idle work on unmount', () => {
+  it('keeps the minimum delay when requestIdleCallback is unavailable', () => {
+    const harness = createHarness();
+    const activate = vi.fn();
+    delete harness.windowRef.requestIdleCallback;
+    delete harness.windowRef.cancelIdleCallback;
+    scheduleDeferredVisualMount(activate, { ...harness, delayMs: 700 });
+
+    harness.frameCallbacks.get(1)(16);
+    harness.timeoutCallbacks.get(2)();
+    expect(activate).not.toHaveBeenCalled();
+    expect(harness.windowRef.setTimeout).toHaveBeenLastCalledWith(expect.any(Function), 0);
+    harness.timeoutCallbacks.get(3)();
+    expect(activate).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancels pending frame, delay, and idle work on unmount', () => {
     const harness = createHarness();
     const activate = vi.fn();
     const cancelFrameStage = scheduleDeferredVisualMount(activate, harness);
@@ -79,10 +102,17 @@ describe('scheduleDeferredVisualMount', () => {
     expect(harness.windowRef.cancelAnimationFrame).toHaveBeenCalledWith(1);
 
     const second = createHarness();
-    const cancelIdleStage = scheduleDeferredVisualMount(activate, second);
+    const cancelDelayStage = scheduleDeferredVisualMount(activate, second);
     second.frameCallbacks.get(1)(16);
+    cancelDelayStage();
+    expect(second.windowRef.clearTimeout).toHaveBeenCalledWith(2);
+
+    const third = createHarness();
+    const cancelIdleStage = scheduleDeferredVisualMount(activate, third);
+    third.frameCallbacks.get(1)(16);
+    third.timeoutCallbacks.get(2)();
     cancelIdleStage();
-    expect(second.windowRef.cancelIdleCallback).toHaveBeenCalledWith(2);
+    expect(third.windowRef.cancelIdleCallback).toHaveBeenCalledWith(3);
     expect(activate).not.toHaveBeenCalled();
   });
 });

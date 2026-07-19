@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getDomStats, percentile, startPerformanceProbe } from './performanceProbe.js';
+import {
+  getDomStats,
+  percentile,
+  PERFORMANCE_SETTLED_REPORT_DELAY_MS,
+  startPerformanceProbe
+} from './performanceProbe.js';
 
 describe('performanceProbe helpers', () => {
   it('computes stable percentile boundaries', () => {
@@ -16,6 +21,7 @@ describe('performanceProbe helpers', () => {
 
   it('reports an opt-in snapshot after the initial paint boundary', () => {
     const reports = [];
+    const timeouts = [];
     const documentElement = document.createElement('html');
     const performanceRef = {
       now: () => 24,
@@ -34,6 +40,11 @@ describe('performanceProbe helpers', () => {
       },
       addEventListener: () => {},
       removeEventListener: () => {},
+      setTimeout: (callback, delay) => {
+        timeouts.push({ callback, delay });
+        return timeouts.length;
+      },
+      clearTimeout: () => {},
       console: { info: (...args) => reports.push(args) }
     };
 
@@ -51,6 +62,10 @@ describe('performanceProbe helpers', () => {
       navigation: { ttfbMs: 2, domContentLoadedMs: 12, loadMs: 20 },
       dom: { nodes: 1, maxDepth: 1, canvases: 0 }
     });
+    expect(timeouts).toHaveLength(1);
+    expect(timeouts[0].delay).toBe(PERFORMANCE_SETTLED_REPORT_DELAY_MS);
+    timeouts[0].callback();
+    expect(reports[1].slice(0, 2)).toEqual(['[vangelis-perf]', 'settled']);
     probe.stop();
   });
 

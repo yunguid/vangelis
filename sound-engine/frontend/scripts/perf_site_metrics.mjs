@@ -7,6 +7,11 @@ import {
   WAVE_CANDY_FRAME_INTERVAL_MS
 } from '../src/utils/visualFramePolicy.js';
 import {
+  AMBIENT_VISUAL_DELAY_MS,
+  PRIMARY_VISUAL_DELAY_MS,
+  VISUAL_IDLE_TIMEOUT_MS
+} from '../src/hooks/useDeferredVisualMount.js';
+import {
   GONIOMETER_POINTS_PER_CSS_PIXEL,
   MONO_ANALYSER_FFT_SIZE,
   STEREO_ANALYSER_FFT_SIZE,
@@ -538,6 +543,16 @@ const deferredAudioWarmupConsumers = (
 const deferredVisualMountConsumers = (
   playableRouteSource.match(/useDeferredVisualMount\s*\(/g) || []
 ).length;
+const deferredVisualMountSource = await readFile(
+  path.join(sourceDir, 'hooks', 'useDeferredVisualMount.js'),
+  'utf8'
+);
+const deferredVisualMountUsesMinimumDelay = (
+  /requestAnimationFrame\(scheduleDelay\)/.test(deferredVisualMountSource)
+  && /setTimeout\(scheduleIdle, delayMs\)/.test(deferredVisualMountSource)
+  && /windowRef\.requestIdleCallback\(mount, \{ timeout: VISUAL_IDLE_TIMEOUT_MS \}\)/
+    .test(deferredVisualMountSource)
+);
 const eagerMutableHookInitializers = (
   productionSourceText.match(
     /(?:React\.)?use(?:Ref|State)\(\s*(?:new\s+(?:Map|Set|VerletChain)\s*\(|loadAppSession\s*\(\s*\)|\{|\[)/g
@@ -1061,6 +1076,10 @@ const report = {
     eagerPlayableRouteAudioWarmupCalls,
     deferredAudioWarmupConsumers,
     deferredVisualMountConsumers,
+    primaryVisualMinimumDelayMs: PRIMARY_VISUAL_DELAY_MS,
+    ambientVisualMinimumDelayMs: AMBIENT_VISUAL_DELAY_MS,
+    visualIdleCallbackTimeoutMs: VISUAL_IDLE_TIMEOUT_MS,
+    deferredVisualMountUsesMinimumDelay,
     productionEagerMutableHookInitializers: eagerMutableHookInitializers,
     hotPlaybackRedundantContainerAllocationsPerRender:
       eagerMutableHookInitializers === 0 ? 0 : 14,
@@ -1765,6 +1784,21 @@ if (deferredVisualMountConsumers !== 3) {
     expected: 3
   });
 }
+if (
+  !deferredVisualMountUsesMinimumDelay
+  || PRIMARY_VISUAL_DELAY_MS < 700
+  || AMBIENT_VISUAL_DELAY_MS < 1800
+  || VISUAL_IDLE_TIMEOUT_MS > 250
+) {
+  failures.push({
+    name: 'Guard staggered deferred-visual mounting',
+    primaryDelayMs: PRIMARY_VISUAL_DELAY_MS,
+    ambientDelayMs: AMBIENT_VISUAL_DELAY_MS,
+    idleTimeoutMs: VISUAL_IDLE_TIMEOUT_MS,
+    minimumDelayStage: deferredVisualMountUsesMinimumDelay,
+    expected: '700/1800 ms minimum delays before a <=250 ms idle deadline'
+  });
+}
 if (eagerMutableHookInitializers !== 0) {
   failures.push({
     name: 'Guard lazy mutable React hook initialization',
@@ -1943,7 +1977,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 102,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 103,
   failures
 };
 

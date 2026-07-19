@@ -26,6 +26,7 @@ export function getDomStats(root = document.documentElement) {
 }
 
 const rounded = (value) => Number((value || 0).toFixed(2));
+export const PERFORMANCE_SETTLED_REPORT_DELAY_MS = 2600;
 
 export function startPerformanceProbe({
   performanceRef = performance,
@@ -46,6 +47,7 @@ export function startPerformanceProbe({
   const supported = new Set(globalThis.PerformanceObserver?.supportedEntryTypes || []);
   const pendingRouteTransitions = new Map();
   let reportSnapshot = () => {};
+  let settledReportId = null;
 
   const observe = (type, onEntries, extra = {}) => {
     if (typeof PerformanceObserver === 'undefined' || !supported.has(type)) return;
@@ -209,6 +211,10 @@ export function startPerformanceProbe({
       observers.forEach((observer) => observer.disconnect());
       windowRef.removeEventListener('hashchange', handleRouteChange);
       windowRef.removeEventListener('popstate', handleRouteChange);
+      if (settledReportId !== null) {
+        windowRef.clearTimeout?.(settledReportId);
+        settledReportId = null;
+      }
       pendingRouteTransitions.clear();
       if (windowRef.__vangelisPerf === api) delete windowRef.__vangelisPerf;
     }
@@ -217,6 +223,12 @@ export function startPerformanceProbe({
   windowRef.__vangelisPerf?.stop?.();
   windowRef.__vangelisPerf = api;
   nextFrame(() => nextFrame(() => reportSnapshot('initial')));
+  if (reportToConsole && typeof windowRef.setTimeout === 'function') {
+    settledReportId = windowRef.setTimeout(() => {
+      settledReportId = null;
+      reportSnapshot('settled');
+    }, PERFORMANCE_SETTLED_REPORT_DELAY_MS);
+  }
   return api;
 }
 

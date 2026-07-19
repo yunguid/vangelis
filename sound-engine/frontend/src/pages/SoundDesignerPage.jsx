@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import SynthKeyboard from '../components/SynthKeyboard';
 import { useAudioEngineWarmup } from '../hooks/useAudioEngineWarmup.js';
 import {
-  PRIMARY_VISUAL_IDLE_TIMEOUT_MS,
+  PRIMARY_VISUAL_DELAY_MS,
   useDeferredVisualMount
 } from '../hooks/useDeferredVisualMount.js';
 import { audioEngine } from '../utils/audioEngine.js';
@@ -110,7 +110,7 @@ const BaseStage = React.memo(({ waveformType, onWaveformChange, presetShelfProps
 
 const SoundDesignerPage = () => {
   useAudioEngineWarmup();
-  const showWaveCandy = useDeferredVisualMount(PRIMARY_VISUAL_IDLE_TIMEOUT_MS);
+  const showWaveCandy = useDeferredVisualMount(PRIMARY_VISUAL_DELAY_MS);
   const [engineStatus, setEngineStatus] = React.useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = React.useState(() => DEFAULT_WAVEFORM);
   const [audioParams, setAudioParams] = React.useState(() => (

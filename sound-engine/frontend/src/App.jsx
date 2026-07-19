@@ -14,8 +14,8 @@ import { useMidiPlayback } from './hooks/useMidiPlayback.js';
 import { useWebMidiInput } from './hooks/useWebMidiInput.js';
 import { useAudioEngineWarmup } from './hooks/useAudioEngineWarmup.js';
 import {
-  AMBIENT_VISUAL_IDLE_TIMEOUT_MS,
-  PRIMARY_VISUAL_IDLE_TIMEOUT_MS,
+  AMBIENT_VISUAL_DELAY_MS,
+  PRIMARY_VISUAL_DELAY_MS,
   useDeferredVisualMount
 } from './hooks/useDeferredVisualMount.js';
 import {
@@ -48,8 +48,8 @@ const isTextInputTarget = (target) => {
 
 const App = () => {
   useAudioEngineWarmup();
-  const showPrimaryVisual = useDeferredVisualMount(PRIMARY_VISUAL_IDLE_TIMEOUT_MS);
-  const showAmbientScene = useDeferredVisualMount(AMBIENT_VISUAL_IDLE_TIMEOUT_MS);
+  const showPrimaryVisual = useDeferredVisualMount(PRIMARY_VISUAL_DELAY_MS);
+  const showAmbientScene = useDeferredVisualMount(AMBIENT_VISUAL_DELAY_MS);
   const [initialSession] = useState(loadAppSession);
   const [engineStatus, setEngineStatus] = useState(() => audioEngine.getStatus());
   const [waveformType, setWaveformType] = useState(() => initialSession.waveformType || DEFAULT_WAVEFORM);
