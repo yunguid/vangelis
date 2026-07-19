@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Fader,
   Knob,
@@ -28,6 +28,10 @@ const VOICE_MODE_OPTIONS = [
   { value: 'poly', label: 'Poly' },
   { value: 'uni', label: 'Uni' }
 ];
+
+const formatPercent = (value) => `${Math.round(value * 100)}%`;
+const formatInteger = (value) => `${Math.round(value)}`;
+const formatFixedTwo = (value) => value.toFixed(2);
 
 const useIsNarrow = (breakpoint) => {
   const [isNarrow, setIsNarrow] = useState(() => (
@@ -105,6 +109,11 @@ const ControlKitPage = () => {
   const [delayOn, setDelayOn] = useState(true);
   const [delayMix, setDelayMix] = useState(0.3);
   const [delayTime, setDelayTime] = useState(375);
+  const faderTrioSetters = useMemo(() => [0, 1, 2].map((index) => (
+    (next) => setFaderTrio((previous) => (
+      previous.map((value, itemIndex) => (itemIndex === index ? next : value))
+    ))
+  )), []);
 
   return (
     <div className="control-kit">
@@ -121,11 +130,11 @@ const ControlKitPage = () => {
           <SpecimenRow title="Knob">
             <Specimen caption="md">
               <Knob id="spec-knob-md" label="Level" value={knobMd} min={0} max={1} step={0.01}
-                defaultValue={0.5} format={(v) => `${Math.round(v * 100)}%`} onChange={setKnobMd} />
+                defaultValue={0.5} format={formatPercent} onChange={setKnobMd} />
             </Specimen>
             <Specimen caption="sm">
               <Knob id="spec-knob-sm" label="Trim" value={knobSm} min={0} max={1} step={0.01}
-                defaultValue={0.3} size="sm" format={(v) => `${Math.round(v * 100)}%`} onChange={setKnobSm} />
+                defaultValue={0.3} size="sm" format={formatPercent} onChange={setKnobSm} />
             </Specimen>
             <Specimen caption="bipolar">
               <Knob id="spec-knob-bipolar" label="Detune" value={knobBipolar} min={-50} max={50} step={1}
@@ -154,7 +163,7 @@ const ControlKitPage = () => {
           <SpecimenRow title="Fader">
             <Specimen caption="horizontal, continuous">
               <Fader id="spec-fader-continuous" label="Mix" value={faderContinuous} min={0} max={1}
-                defaultValue={0.6} unit="%" format={(v) => `${Math.round(v * 100)}%`} onChange={setFaderContinuous} />
+                defaultValue={0.6} unit="%" format={formatPercent} onChange={setFaderContinuous} />
             </Specimen>
             <Specimen caption="horizontal, stepped (8 ticks)">
               <Fader id="spec-fader-stepped" label="Steps" value={faderStepped} min={0} max={7} step={1}
@@ -173,8 +182,8 @@ const ControlKitPage = () => {
                     defaultValue={0.5}
                     orientation="vertical"
                     length={verticalFaderLength}
-                    format={(val) => `${Math.round(val * 100)}%`}
-                    onChange={(next) => setFaderTrio((prev) => prev.map((p, i) => (i === index ? next : p)))}
+                    format={formatPercent}
+                    onChange={faderTrioSetters[index]}
                   />
                 ))}
               </div>
@@ -220,9 +229,9 @@ const ControlKitPage = () => {
             <Module title="Filter">
               <ToggleBtn id="mod-filter-on" label="Filter" checked={filterOn} onChange={setFilterOn} />
               <Knob id="mod-filter-cutoff" label="Cutoff" value={filterCutoff} min={20} max={20000} step={10}
-                defaultValue={8000} disabled={!filterOn} unit="Hz" format={(v) => `${Math.round(v)}`} onChange={setFilterCutoff} />
+                defaultValue={8000} disabled={!filterOn} unit="Hz" format={formatInteger} onChange={setFilterCutoff} />
               <Knob id="mod-filter-res" label="Res" value={filterRes} min={0} max={1} step={0.01}
-                defaultValue={0.2} disabled={!filterOn} format={(v) => `${Math.round(v * 100)}%`} onChange={setFilterRes} />
+                defaultValue={0.2} disabled={!filterOn} format={formatPercent} onChange={setFilterRes} />
               <NumField id="mod-filter-env" label="Env" value={filterEnv} min={-100} max={100} step={1}
                 defaultValue={0} disabled={!filterOn} unit="%" onChange={setFilterEnv} />
             </Module>
@@ -231,23 +240,23 @@ const ControlKitPage = () => {
               <div className="control-kit__adsr">
                 <Fader id="mod-env-a" label="A" value={envAttack} min={0} max={2} step={0.01}
                   defaultValue={0.05} orientation="vertical" length={verticalFaderLength} unit="s"
-                  format={(v) => v.toFixed(2)} onChange={setEnvAttack} />
+                  format={formatFixedTwo} onChange={setEnvAttack} />
                 <Fader id="mod-env-d" label="D" value={envDecay} min={0} max={2} step={0.01}
                   defaultValue={0.3} orientation="vertical" length={verticalFaderLength} unit="s"
-                  format={(v) => v.toFixed(2)} onChange={setEnvDecay} />
+                  format={formatFixedTwo} onChange={setEnvDecay} />
                 <Fader id="mod-env-s" label="S" value={envSustain} min={0} max={1} step={0.01}
                   defaultValue={0.7} orientation="vertical" length={verticalFaderLength}
-                  format={(v) => `${Math.round(v * 100)}%`} onChange={setEnvSustain} />
+                  format={formatPercent} onChange={setEnvSustain} />
                 <Fader id="mod-env-r" label="R" value={envRelease} min={0} max={4} step={0.01}
                   defaultValue={0.4} orientation="vertical" length={verticalFaderLength} unit="s"
-                  format={(v) => v.toFixed(2)} onChange={setEnvRelease} />
+                  format={formatFixedTwo} onChange={setEnvRelease} />
               </div>
             </Module>
 
             <Module title="Delay">
               <ToggleBtn id="mod-delay-on" label="Delay" checked={delayOn} onChange={setDelayOn} />
               <Fader id="mod-delay-mix" label="Mix" value={delayMix} min={0} max={1} step={0.01}
-                defaultValue={0.3} disabled={!delayOn} format={(v) => `${Math.round(v * 100)}%`} onChange={setDelayMix} />
+                defaultValue={0.3} disabled={!delayOn} format={formatPercent} onChange={setDelayMix} />
               <NumField id="mod-delay-time" label="Time" value={delayTime} min={10} max={2000} step={5}
                 defaultValue={375} disabled={!delayOn} unit="ms" onChange={setDelayTime} />
             </Module>

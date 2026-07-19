@@ -255,4 +255,4 @@ const NumField = ({
   );
 };
 
-export default NumField;
+export default React.memo(NumField);

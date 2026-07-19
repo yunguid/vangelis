@@ -151,4 +151,18 @@ describe('Fader component', () => {
     expect(onChange).toHaveBeenLastCalledWith(4);
     expect(Number.isInteger(onChange.mock.calls.at(-1)[0])).toBe(true);
   });
+
+  it('skips unchanged parent rerenders while updating when its value changes', () => {
+    const format = vi.fn((value) => `${value}`);
+    const onChange = vi.fn();
+    const props = { id: 'memo-fader', label: 'Memo', value: 0.5, format, onChange };
+    const { rerender } = render(<Fader {...props} />);
+    expect(format).toHaveBeenCalledTimes(1);
+
+    rerender(<Fader {...props} />);
+    expect(format).toHaveBeenCalledTimes(1);
+
+    rerender(<Fader {...props} value={0.7} />);
+    expect(format).toHaveBeenCalledTimes(2);
+  });
 });

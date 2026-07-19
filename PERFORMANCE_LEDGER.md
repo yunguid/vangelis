@@ -3291,3 +3291,67 @@ Implemented boundaries and controls:
 - React best-practices review: frame work has explicit release and unmount cleanup, dependencies are
   complete, and native range keyboard and accessible-label semantics remain intact.
 - `git diff --check`: pass.
+
+## Optimization batch 64 — isolated Control Kit primitives and static geometry
+
+Collected from the production Control Kit route's 29 top-level primitives and seven nested knob
+readouts; React memo-boundary format spies; a ten-second 60 Hz active-knob model; steady-state knob
+and fader SVG geometry allocation counts; generated production closures; the full suite; and
+isolated audio/visual gates.
+
+| Metric | Batch 63 | Batch 64 | Change |
+|---|---:|---:|---:|
+| Primitive renders per active-knob parent update | 36 | at most 2 | -94.44% |
+| Unrelated primitive renders per parent update | 34 | 0 | removed |
+| Primitive renders over ten-second knob drag | 21,600 | at most 1,200 | -94.44% |
+| Knob tick trig evaluations over drag | 26,400 | 0 | removed |
+| Knob tick point objects over drag | 13,200 | 0 | removed |
+| Knob tick React elements over drag | 6,600 | 0 | removed |
+| Fader tick Set allocations over drag | 600 | 0 | removed |
+| Fader tick React elements over drag | 3,000 | 0 | removed |
+| Home route JS gzip | 67.83 KiB | 67.83 KiB | unchanged |
+| Control Kit route JS gzip | 54.06 KiB | 54.18 KiB | +0.12 KiB |
+| Sound Designer route JS gzip | 63.35 KiB | 63.35 KiB | unchanged |
+| Production deployment bytes | 1,487.48 KiB | 1,487.57 KiB | +0.09 KiB |
+| Automated production budgets | 106 | 107 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- Wrapped the five shared primitives—Knob, Fader, NumField, ToggleBtn, and SegmentSelect—in shallow
+  memo boundaries. A route state change now re-enters only the control whose value or dependent
+  disabled state changed; sibling primitive subtrees retain their rendered result.
+- Hoisted every Control Kit format function and memoized the three fader-trio setters. Primitive
+  props now remain referentially stable across unrelated page updates, allowing the memo boundaries
+  to hold instead of being defeated by fresh inline callbacks.
+- Precomputed both knob sizes' eleven static tick elements once at module initialization. Active
+  value renders still update the arc, pointer, visible value, and ARIA value, but no longer repeat 22
+  Cartesian point calculations or allocate eleven tick elements per frame.
+- Memoized fader tick elements by orientation, ratios, and track length and replaced the per-render
+  major-index Set. Cap, fill, visible value, and ARIA state still follow every published value while
+  static track geometry remains reusable.
+- Added parent-rerender regression cases for knobs and faders: unchanged scalar and function props do
+  not re-run formatting, while a changed value does. A production guard requires all five memo
+  boundaries, stable page callbacks, and both static-geometry caches.
+
+### Batch 64 verification gates
+
+- Full suite: 64 files, 541/541 tests pass, including the new knob/fader memo-boundary cases and all
+  Sound Designer, Voice Loop, MIDI playback, keyboard, control-kit, radar, Song Study, canvas,
+  numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 107/107 pass; active knob updates report at
+  most two primitive renders, zero unrelated primitive renders, and zero steady-state static tick
+  allocations for both knobs and faders.
+- The ten-second model removes at least 20,400 primitive renders, 26,400 trigonometric evaluations,
+  13,200 point objects, 9,600 static tick elements, and 600 Set allocations while retaining exact
+  control value, interaction, visible readout, and accessibility behavior.
+- Warmed combined visual workload: 80.32% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -40 KB over 4,000 blocks.
+- Isolated DSP benchmark: 413.7 us per 128-frame block with 6.4x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: memoization is applied to measured expensive subtrees with stable
+  props; active value and accessibility state remain explicit; hook dependencies and cleanup hold.
+- `git diff --check`: pass.

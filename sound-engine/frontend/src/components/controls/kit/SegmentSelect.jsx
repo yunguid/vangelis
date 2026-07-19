@@ -109,4 +109,4 @@ const SegmentSelect = ({
   );
 };
 
-export default SegmentSelect;
+export default React.memo(SegmentSelect);

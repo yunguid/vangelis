@@ -137,7 +137,40 @@ const Fader = ({
   const svgHeight = isVertical ? trackLength : CROSS_SIZE;
   const grooveCross = CROSS_SIZE / 2;
 
-  const majorIndexes = new Set([0, tickRatios.length - 1, Math.floor((tickRatios.length - 1) / 2)]);
+  const tickElements = useMemo(() => {
+    const lastIndex = tickRatios.length - 1;
+    const middleIndex = Math.floor(lastIndex / 2);
+    return tickRatios.map((tickRatio, index) => {
+      const isMajor = index === 0 || index === middleIndex || index === lastIndex;
+      const tickLen = isMajor ? 7 : 4;
+      if (isVertical) {
+        const y = getVerticalCapCenter(tickRatio, trackLength);
+        return (
+          <line
+            key={index}
+            x1={grooveCross + CAP_CROSS / 2 + 2}
+            x2={grooveCross + CAP_CROSS / 2 + 2 + tickLen}
+            y1={y}
+            y2={y}
+            className="kit-fader__tick"
+            strokeWidth={isMajor ? 1.25 : 1}
+          />
+        );
+      }
+      const x = getHorizontalCapCenter(tickRatio, trackLength);
+      return (
+        <line
+          key={index}
+          y1={grooveCross + CAP_CROSS / 2 + 2}
+          y2={grooveCross + CAP_CROSS / 2 + 2 + tickLen}
+          x1={x}
+          x2={x}
+          className="kit-fader__tick"
+          strokeWidth={isMajor ? 1.25 : 1}
+        />
+      );
+    });
+  }, [isVertical, tickRatios, trackLength]);
 
   return (
     <div className={`kit-fader kit-fader--${orientation}${disabled ? ' kit-fader--disabled' : ''}`}>
@@ -175,22 +208,7 @@ const Fader = ({
                 height={trackLength}
                 className="kit-fader__groove"
               />
-              {tickRatios.map((r, i) => {
-                const isMajor = majorIndexes.has(i);
-                const tickLen = isMajor ? 7 : 4;
-                const y = getVerticalCapCenter(r, trackLength);
-                return (
-                  <line
-                    key={i}
-                    x1={grooveCross + CAP_CROSS / 2 + 2}
-                    x2={grooveCross + CAP_CROSS / 2 + 2 + tickLen}
-                    y1={y}
-                    y2={y}
-                    className="kit-fader__tick"
-                    strokeWidth={isMajor ? 1.25 : 1}
-                  />
-                );
-              })}
+              {tickElements}
               <rect
                 x={grooveCross - GROOVE_THICKNESS / 2}
                 y={Math.min(travelStart, capCenter)}
@@ -224,22 +242,7 @@ const Fader = ({
                 height={GROOVE_THICKNESS}
                 className="kit-fader__groove"
               />
-              {tickRatios.map((r, i) => {
-                const isMajor = majorIndexes.has(i);
-                const tickLen = isMajor ? 7 : 4;
-                const x = getHorizontalCapCenter(r, trackLength);
-                return (
-                  <line
-                    key={i}
-                    y1={grooveCross + CAP_CROSS / 2 + 2}
-                    y2={grooveCross + CAP_CROSS / 2 + 2 + tickLen}
-                    x1={x}
-                    x2={x}
-                    className="kit-fader__tick"
-                    strokeWidth={isMajor ? 1.25 : 1}
-                  />
-                );
-              })}
+              {tickElements}
               <rect
                 x={Math.min(travelStart, capCenter)}
                 y={grooveCross - GROOVE_THICKNESS / 2}
@@ -274,4 +277,4 @@ const Fader = ({
   );
 };
 
-export default Fader;
+export default React.memo(Fader);

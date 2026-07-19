@@ -180,4 +180,18 @@ describe('Knob', () => {
     expect(readout).toBeTruthy();
     expect(readout.textContent).toContain('Cutoff');
   });
+
+  it('skips unchanged parent rerenders while updating when its value changes', () => {
+    const format = vi.fn((value) => `${value}`);
+    const onChange = vi.fn();
+    const props = { id: 'memo-knob', label: 'Memo', value: 0.5, format, onChange };
+    const { rerender } = render(<Knob {...props} />);
+    const callsAfterMount = format.mock.calls.length;
+
+    rerender(<Knob {...props} />);
+    expect(format).toHaveBeenCalledTimes(callsAfterMount);
+
+    rerender(<Knob {...props} value={0.7} />);
+    expect(format.mock.calls.length).toBeGreaterThan(callsAfterMount);
+  });
 });

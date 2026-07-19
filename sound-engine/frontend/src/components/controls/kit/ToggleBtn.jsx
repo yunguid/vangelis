@@ -46,4 +46,4 @@ const ToggleBtn = ({
   );
 };
 
-export default ToggleBtn;
+export default React.memo(ToggleBtn);

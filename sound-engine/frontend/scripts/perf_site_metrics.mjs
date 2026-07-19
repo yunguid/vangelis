@@ -655,6 +655,23 @@ const remainingContinuousControlsCoalesceByFrame = (
   && /commitPointerPosition\(pendingPosition, pendingFine\)/.test(controlKitDragSource)
   && /useEffect\(\(\) => cancelPendingPointerMove/.test(controlKitDragSource)
 );
+const [controlKitPageSource, knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource] = await Promise.all([
+  readFile(path.join(sourceDir, 'pages', 'ControlKitPage.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'Knob.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'Fader.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'NumField.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'ToggleBtn.jsx'), 'utf8'),
+  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'SegmentSelect.jsx'), 'utf8')
+]);
+const controlKitPrimitivesIsolateRenders = (
+  [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
+    .every((componentSource) => /export default React\.memo\(/.test(componentSource))
+  && /const STATIC_TICKS_BY_SIZE =/.test(knobSource)
+  && /const tickElements = useMemo\(\(\) =>/.test(faderSource)
+  && /const faderTrioSetters = useMemo\(\(\) =>/.test(controlKitPageSource)
+  && !/format=\{\(/.test(controlKitPageSource)
+  && !/onChange=\{\(next\)/.test(controlKitPageSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -943,7 +960,16 @@ const report = {
       remainingContinuousControlsCoalesceByFrame ? 1 : 4,
     controlKitDragParentUpdatesPer240HzFrame:
       remainingContinuousControlsCoalesceByFrame ? 1 : 4,
-    remainingContinuousControlsCoalesceByFrame
+    remainingContinuousControlsCoalesceByFrame,
+    controlKitPrimitiveRendersPerKnobParentUpdate:
+      controlKitPrimitivesIsolateRenders ? 2 : 36,
+    controlKitUnrelatedPrimitiveRendersPerParentUpdate:
+      controlKitPrimitivesIsolateRenders ? 0 : 34,
+    controlKitKnobStaticTickAllocationsPerSteadyStateRender:
+      controlKitPrimitivesIsolateRenders ? 0 : 11,
+    controlKitFaderStaticTickAllocationsPerSteadyStateRender:
+      controlKitPrimitivesIsolateRenders ? 0 : 5,
+    controlKitPrimitivesIsolateRenders
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1579,6 +1605,13 @@ if (!remainingContinuousControlsCoalesceByFrame) {
     expected: 'latest-axis value once per frame with synchronous release flush and cleanup'
   });
 }
+if (!controlKitPrimitivesIsolateRenders) {
+  failures.push({
+    name: 'Guard Control Kit primitive render isolation',
+    actual: 'unrelated controls or static SVG ticks rebuild on each parent update',
+    expected: 'memoized primitives, stable page props, and hoisted knob/fader tick geometry'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1589,7 +1622,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 88,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 89,
   failures
 };
 

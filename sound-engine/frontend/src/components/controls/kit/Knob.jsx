@@ -43,6 +43,29 @@ const describeArc = (cx, cy, r, startAngle, endAngle) => {
   return `M ${start.x.toFixed(2)} ${start.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${end.x.toFixed(2)} ${end.y.toFixed(2)}`;
 };
 
+const STATIC_TICKS_BY_SIZE = Object.fromEntries(
+  Object.entries(SIZE_CONFIG).map(([size, cfg]) => {
+    const cx = cfg.svg / 2;
+    const cy = cfg.svg / 2;
+    const ticks = Array.from({ length: TICK_COUNT }, (_, index) => {
+      const angle = START_ANGLE + (index * SWEEP) / (TICK_COUNT - 1);
+      const isMajor = index === 0 || index === 5 || index === TICK_COUNT - 1;
+      const tickLen = isMajor ? cfg.tickMajor : cfg.tickMinor;
+      const outer = polarToCartesian(cx, cy, cfg.ringR, angle);
+      const inner = polarToCartesian(cx, cy, cfg.ringR - tickLen, angle);
+      return (
+        <line
+          key={index}
+          x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
+          className="kit-knob__tick"
+          strokeWidth={isMajor ? 1.25 : 1}
+        />
+      );
+    });
+    return [size, ticks];
+  })
+);
+
 const Knob = ({
   id,
   label,
@@ -144,22 +167,7 @@ const Knob = ({
     };
   }, []);
 
-  const ticks = [];
-  for (let i = 0; i < TICK_COUNT; i += 1) {
-    const angle = START_ANGLE + (i * SWEEP) / (TICK_COUNT - 1);
-    const isMajor = i === 0 || i === 5 || i === TICK_COUNT - 1;
-    const tickLen = isMajor ? cfg.tickMajor : cfg.tickMinor;
-    const outer = polarToCartesian(cx, cy, cfg.ringR, angle);
-    const inner = polarToCartesian(cx, cy, cfg.ringR - tickLen, angle);
-    ticks.push(
-      <line
-        key={i}
-        x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
-        className="kit-knob__tick"
-        strokeWidth={isMajor ? 1.25 : 1}
-      />
-    );
-  }
+  const ticks = STATIC_TICKS_BY_SIZE[size] || STATIC_TICKS_BY_SIZE.md;
 
   const arcPath = bipolar
     ? (valueAngle >= centerAngle
@@ -231,4 +239,4 @@ const Knob = ({
   );
 };
 
-export default Knob;
+export default React.memo(Knob);
