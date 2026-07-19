@@ -227,6 +227,35 @@ describe('state-variable filter', () => {
     expect(f.targetCutoff).toBe(f.getMaxCutoff());
     expect(f.resonance).toBe(0.1);
   });
+
+  it('reuses settled coefficients until cutoff or resonance changes', () => {
+    const f = new StateVariableFilter(SR);
+    f.setParams({ cutoff: 4000, resonance: 2, mode: 0 });
+    f.reset();
+    const tanSpy = vi.spyOn(Math, 'tan');
+    for (let i = 0; i < 256; i++) f.process(Math.sin(i * 0.1));
+    expect(tanSpy).not.toHaveBeenCalled();
+    tanSpy.mockRestore();
+  });
+
+  it('shares stereo coefficients without changing right-channel samples', () => {
+    const left = new StateVariableFilter(SR);
+    const independentRight = new StateVariableFilter(SR);
+    const sharedRight = new StateVariableFilter(SR);
+    for (const filter of [left, independentRight, sharedRight]) {
+      filter.setParams({ cutoff: 4000, resonance: 2, mode: 0 });
+      filter.reset();
+    }
+
+    for (let i = 0; i < 512; i++) {
+      const input = Math.sin(i * 0.17) * 0.7;
+      const modulatedCutoff = 4000 * Math.pow(2, Math.sin(i * 0.013) * 0.2);
+      left.process(input * 0.8, modulatedCutoff);
+      const expected = independentRight.process(input, modulatedCutoff);
+      const actual = sharedRight.processStereoPartner(input, left);
+      expect(actual).toBe(expected);
+    }
+  });
 });
 
 describe('mod-route compiler', () => {

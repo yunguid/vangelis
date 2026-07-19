@@ -23,7 +23,7 @@ and does not move another user-facing metric outside its budget.
 ## Metric catalog (100 core metrics)
 
 The executable report publishes additional derived and structural signals; this table is the stable,
-human-facing catalog. Delivery ceilings below reflect the current Batch 82 contract, not Baseline 0.
+human-facing catalog. Delivery ceilings below reflect the current Batch 83 contract, not Baseline 0.
 
 | ID | Metric | Budget / target | Method |
 |---|---|---|---|
@@ -4521,3 +4521,82 @@ Implemented boundaries and controls:
 - Audio audit passes unchanged, including deterministic preset rendering and the established synth/FX,
   alias, and saturated-heap gates. Production dependency audit reports 0 vulnerabilities.
 - UI-tell census remains 22. `git diff --check` passes.
+
+## Optimization batch 83 — exact-output DSP invariant caching
+
+Collected from the Batch 83 candidate and a detached `557aafc` Batch 82 worktree on the same
+Apple Silicon macOS host. Five candidate/baseline pairs ran in alternating order with the identical
+24-voice, four-way-unison, FM, filter, and cutoff-LFO workload. The desktop was not isolated: load
+averages were 5.49 / 5.98 / 6.33. Therefore the absolute samples are recorded as contention evidence,
+not substituted for the catalog's isolated A01/A02 gate. The interleaved comparison is valid for the
+source change because both revisions saw the same workload, process, host, and nearby contention.
+
+The profile identified repeated transcendental and invariant arithmetic inside every voice sample:
+both channels independently rebuilt identical state-variable-filter coefficients; settled filters still
+called `tan`; static unison detune ratios still called `pow` per sub-voice; and stable base pitch rebuilt
+the FM phase increment and Carson-rule alias cap per sample.
+
+| Worst-case worklet sample | Batch 82 baseline | Batch 83 candidate | Change |
+|---|---:|---:|---:|
+| Pair 1 CPU/block | 987.9 us | 873.9 us | -11.5% |
+| Pair 2 CPU/block | 996.2 us | 901.4 us | -9.5% |
+| Pair 3 CPU/block | 1,011.3 us | 943.7 us | -6.7% |
+| Pair 4 CPU/block | 1,020.1 us | 909.5 us | -10.8% |
+| Pair 5 CPU/block | 1,006.9 us | 963.6 us | -4.3% |
+| Median CPU/block | 1,006.9 us | 909.5 us | -97.4 us / -9.7% |
+| Median realtime headroom | 2.6x | 2.9x | +11.5% |
+
+Every candidate measurement beat its paired baseline. The 909.5 us absolute median remains below the
+historical isolated 467 us / 5.7x contract because the host was heavily contended; the target was not
+weakened and this run is not presented as an isolated-gate pass.
+
+Implemented boundaries and controls:
+
+- The state-variable filter caches coefficients until smoothed cutoff or resonance actually changes.
+  A stereo partner reuses the left channel's already-smoothed coefficients while preserving independent
+  right-channel integrator state, mode, bounds, and non-finite recovery.
+- Four unison detune ratios are computed when parameters change. Per-sample `pow` remains only for a
+  genuinely modulated detune route.
+- Base sample delta, FM phase increment, and the Carson-rule maximum FM index are recomputed only when
+  base frequency or parameters change. Pitch bend, glide, and modulation still invalidate through the
+  exact base-frequency comparison.
+- Unit coverage proves that 256 settled filter samples issue no `Math.tan` call and that 512 modulated
+  right-channel samples remain bit-exact against an independently processed filter.
+- The production report publishes five new hot-path counters and adds two guards. It now rejects
+  repeated settled/right-channel SVF coefficient work or stable detune/FM invariant work.
+
+| Delivery metric | Batch 82 | Batch 83 | Change |
+|---|---:|---:|---:|
+| Initial JS raw / gzip | 30.25 / 12.15 KiB | 30.25 / 12.15 KiB | unchanged |
+| Total production JS raw | 410.96 KiB | 412.80 KiB | +1.84 KiB |
+| Total production JS gzip | 140.76 KiB | 141.16 KiB | +0.40 KiB |
+| Production deployment bytes | 1,379.08 KiB | 1,380.93 KiB | +1.85 KiB |
+| Worklet aggregate raw | about 36.0 KiB | 37.82 KiB | within 38.7 KiB gate |
+| Automated production budgets | 133 | 135 | +2 guardrails |
+
+The byte increase is isolated to the lazy audio worklet and does not affect initial or static route
+closures. The accepted 0.40 KiB gzip cost buys a repeatable 9.7% median reduction in the site's
+worst-case DSP workload.
+
+### Batch 83 verification gates
+
+- Production browser matrix: all eight route shapes render without an error boundary, stuck route shell,
+  or console warning/error. The generated missing fixture exposes its expected accessible `Request failed
+  with 500` status.
+- Production interaction matrix: Home's lazy key path loads the worklet and six canvases without errors;
+  the Sound panel opens and the retired `Return to keyboard` monogram link count stays zero; built-in song
+  playback advances transport to 0.7 seconds and Stop returns it to zero; Sound Designer Base -> Tone
+  navigation exposes the live Tone filter controls.
+- Full suite: 67 files and 575/575 tests pass. The standalone worklet protocol suite also passes every
+  waveform, preset, modulation, pitch, glide, stealing, and release case.
+- Audio audit: 225/225 synth renders are bit-exact, 7/7 stereo FX cases pass, audible aliases remain
+  saw -41.11 dB / square -54.95 dB / triangle -71.85 dB / FM-sine -51.34 dB, and saturated heap drift
+  is -43 KiB over 4,000 blocks.
+- Production delivery/static/dependency/route guardrails: 135/135 pass. The new report records zero
+  settled stereo SVF coefficient evaluations, one modulated stereo evaluation instead of two, zero
+  stable four-voice detune `pow` calls, and zero stable FM-invariant rebuilds per voice sample.
+- Warmed combined visual workload remains 83.2% lower normalized CPU than the legacy reference, with
+  78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer scene frames intact.
+- Production dependency audit: 0 vulnerabilities. UI-tell census: 22, unchanged. `git diff --check`: pass.
+- React best-practices review: no JSX or hook code changed; route lazy boundaries, memoization, native
+  semantics, keyboard accessibility, and effect cleanup remain covered by the unchanged component suite.

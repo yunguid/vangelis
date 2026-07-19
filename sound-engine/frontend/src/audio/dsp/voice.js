@@ -24,6 +24,10 @@ export class Voice {
     this.phase = 0.0;
     this.modPhase = 0.0;
     this.prevFmOffset = 0.0;
+    this.cachedBaseFrequency = NaN;
+    this.cachedBaseDt = 0.0;
+    this.cachedFmPhaseIncrement = 0.0;
+    this.cachedFmMaxIndexCycles = 0.0;
     this.envelope = new Envelope(sampleRate);
     this.modEnvelope = new Envelope(sampleRate);
     // Stereo filter pair: the R filter is only exercised when unison spreads
@@ -41,6 +45,7 @@ export class Voice {
     this.unisonVoices = 1;
     this.unisonDetune = 0.0;
     this.unisonPhases = new Float32Array(4);
+    this.unisonDetuneRatios = new Float64Array(4);
     // Equal-power pan gains per unison sub-voice (unity at center so a
     // single-voice note renders identically on both channels).
     this.unisonGainL = new Float32Array(4);
@@ -83,6 +88,7 @@ export class Voice {
     this.fmRatio = typeof params.fmRatio === 'number' ? params.fmRatio : this.fmRatio;
     const fmIndex = typeof params.fmIndex === 'number' ? params.fmIndex : this.fmIndex * TWO_PI;
     this.fmIndex = fmIndex / TWO_PI; // radians -> cycles
+    this.cachedBaseFrequency = NaN;
 
     this.useFilter = !!params.useFilter;
     const filterParams = {
@@ -112,6 +118,8 @@ export class Voice {
       const theta = ((pan + 1) * Math.PI) / 4;
       this.unisonGainL[i] = SQRT2 * Math.cos(theta);
       this.unisonGainR[i] = SQRT2 * Math.sin(theta);
+      const detune = (i - (n - 1) / 2) * this.unisonDetune;
+      this.unisonDetuneRatios[i] = detune === 0.0 ? 1.0 : Math.pow(2, detune / 1200.0);
     }
 
     const prevRoutes = this.routes;
@@ -291,7 +299,17 @@ export class Voice {
     }
 
     const baseFrequency = this.frequency * pitchMultiplier;
-    const baseDt = baseFrequency / this.sampleRate;
+    let baseDt = this.cachedBaseDt;
+    if (baseFrequency !== this.cachedBaseFrequency) {
+      baseDt = baseFrequency / this.sampleRate;
+      const fmFreq = this.fmRatio * baseFrequency;
+      this.cachedBaseFrequency = baseFrequency;
+      this.cachedBaseDt = baseDt;
+      this.cachedFmPhaseIncrement = this.fmRatio * baseDt;
+      this.cachedFmMaxIndexCycles = fmFreq > 0.0
+        ? Math.max(0.0, (0.42 * this.sampleRate - baseFrequency) / fmFreq - 1.0) / TWO_PI
+        : 0.0;
+    }
 
     let fmOffset = 0.0;
     let effFmIndex = (this.useFM ? this.fmIndex : 0.0) + fmIndexAdd / TWO_PI;
@@ -299,15 +317,9 @@ export class Voice {
       // Carson-rule anti-alias cap: the highest significant PM sideband sits
       // near fc + (I+1)*fm with I in radians. Keeping it below ~0.42*fs stops
       // bright FM patches from sparkling with aliased partials at high notes.
-      const fmFreq = this.fmRatio * baseFrequency;
-      if (fmFreq > 0) {
-        const maxIndexCycles = Math.max(
-          0.0,
-          (0.42 * this.sampleRate - baseFrequency) / fmFreq - 1.0
-        ) / TWO_PI;
-        effFmIndex = clamp(effFmIndex, -maxIndexCycles, maxIndexCycles);
-      }
-      const modPhase = (this.modPhase + (this.fmRatio * baseDt)) % 1.0;
+      const maxIndexCycles = this.cachedFmMaxIndexCycles;
+      effFmIndex = clamp(effFmIndex, -maxIndexCycles, maxIndexCycles);
+      const modPhase = (this.modPhase + this.cachedFmPhaseIncrement) % 1.0;
       this.modPhase = modPhase;
       fmOffset = Math.sin(TWO_PI * modPhase) * effFmIndex;
     }
@@ -324,7 +336,9 @@ export class Voice {
     const effDetune = this.unisonDetune + detuneAdd;
     for (let i = 0; i < unison; i++) {
       const detune = (i - (unison - 1) / 2) * effDetune;
-      const detuneRatio = detune === 0 ? 1.0 : Math.pow(2, detune / 1200.0);
+      const detuneRatio = detuneAdd === 0.0
+        ? this.unisonDetuneRatios[i]
+        : (detune === 0.0 ? 1.0 : Math.pow(2, detune / 1200.0));
       const phase = this.unisonPhases[i];
       const phaseWithMod = (phase + fmOffset) % 1.0;
       const dt = Math.min(0.45, baseDt * detuneRatio + fmRate);
@@ -355,7 +369,7 @@ export class Voice {
         ? this.filterL.targetCutoff * Math.pow(2, cutoffOct)
         : undefined;
       sampleL = this.filterL.process(sampleL, modCutoff);
-      sampleR = stereo ? this.filterR.process(sampleR, modCutoff) : sampleL;
+      sampleR = stereo ? this.filterR.processStereoPartner(sampleR, this.filterL) : sampleL;
     }
 
     // Apply steal fade-out if being stolen

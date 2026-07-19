@@ -957,6 +957,25 @@ const macroDialsShareAudioActivitySubscription = (
   && !/useEffect\(\(\) => audioEngine\.subscribeActivity/.test(effectMacroDialSource)
   && /<EffectMacroActivityProvider enabled=\{activeSections\.delay \|\| activeSections\.reverb\}>/.test(audioControlsSource)
 );
+const [svfSource, voiceDspSource] = await Promise.all([
+  readFile(path.join(sourceDir, 'audio', 'dsp', 'svf.js'), 'utf8'),
+  readFile(path.join(sourceDir, 'audio', 'dsp', 'voice.js'), 'utf8')
+]);
+const svfCachesSettledAndStereoCoefficients = (
+  /recalculateCoefficients\(\)/.test(svfSource)
+  && /this\.cutoff !== this\.coefficientCutoff/.test(svfSource)
+  && /processStereoPartner\(input, coefficientSource\)/.test(svfSource)
+  && /this\.coefficientA3 = coefficientSource\.coefficientA3/.test(svfSource)
+  && /this\.filterR\.processStereoPartner\(sampleR, this\.filterL\)/.test(voiceDspSource)
+);
+const voiceCachesStablePitchAndUnisonInvariants = (
+  /this\.unisonDetuneRatios = new Float64Array\(4\)/.test(voiceDspSource)
+  && /this\.unisonDetuneRatios\[i\] = detune === 0\.0/.test(voiceDspSource)
+  && /detuneAdd === 0\.0\s*\? this\.unisonDetuneRatios\[i\]/.test(voiceDspSource)
+  && /baseFrequency !== this\.cachedBaseFrequency/.test(voiceDspSource)
+  && /this\.cachedFmPhaseIncrement = this\.fmRatio \* baseDt/.test(voiceDspSource)
+  && /this\.cachedFmMaxIndexCycles = fmFreq > 0\.0/.test(voiceDspSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -1382,7 +1401,17 @@ const report = {
     collapsedMacroDialAudioEngineActivitySubscriptions: 0,
     macroDialEngineListenerInvocationsPerActivityTransition:
       macroDialsShareAudioActivitySubscription ? 1 : 8,
-    macroDialsShareAudioActivitySubscription
+    macroDialsShareAudioActivitySubscription,
+    settledStereoSvfCoefficientEvaluationsPerVoiceSample:
+      svfCachesSettledAndStereoCoefficients ? 0 : 2,
+    modulatedStereoSvfCoefficientEvaluationsPerVoiceSample:
+      svfCachesSettledAndStereoCoefficients ? 1 : 2,
+    svfCachesSettledAndStereoCoefficients,
+    unmodulatedFourVoiceUnisonDetunePowCallsPerVoiceSample:
+      voiceCachesStablePitchAndUnisonInvariants ? 0 : 4,
+    stablePitchFmInvariantRecomputationsPerVoiceSample:
+      voiceCachesStablePitchAndUnisonInvariants ? 0 : 3,
+    voiceCachesStablePitchAndUnisonInvariants
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -2248,6 +2277,20 @@ if (!macroDialsShareAudioActivitySubscription) {
     expected: 'one enabled provider subscription with context fan-out and collapsed cleanup'
   });
 }
+if (!svfCachesSettledAndStereoCoefficients) {
+  failures.push({
+    name: 'Guard cached stereo SVF coefficients',
+    actual: 'settled or right-channel filters repeat transcendental coefficient work',
+    expected: 'recompute only after parameter smoothing changes and share one stereo coefficient set'
+  });
+}
+if (!voiceCachesStablePitchAndUnisonInvariants) {
+  failures.push({
+    name: 'Guard cached voice pitch invariants',
+    actual: 'stable detune, FM increment, or Carson cap recomputed per voice sample',
+    expected: 'parameter-time detune ratios and frequency-change-scoped FM invariants'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -2258,7 +2301,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 115,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 117,
   failures
 };
 
