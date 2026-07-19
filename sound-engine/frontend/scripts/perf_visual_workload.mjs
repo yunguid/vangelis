@@ -1653,6 +1653,27 @@ const output = {
     visibilityAware25HzCadencePreserved: true,
     ariaCurrentTracksActiveCell: true
   },
+  voiceLoopContinuousRangePolicy: {
+    activeDragSeconds: 10,
+    rangeControlCount: 12,
+    rawInputSampleRateHz: 240,
+    displayFrameRateHz: 60,
+    rawInputSamples: 2400,
+    processedStatePatches: 600,
+    routeStateUpdaterCallsBefore: 2400,
+    routeStateUpdaterCallsAfterMaximum: 600,
+    routeStateObjectClonesBefore: 2400,
+    routeStateObjectClonesAfterMaximum: 600,
+    activeSpeedAudioParamWritesPerUpdate: 4,
+    activeSpeedAudioParamWritesBefore: 9600,
+    activeSpeedAudioParamWritesAfterMaximum: 2400,
+    synthesisRerenderDebounceTimersBefore: 2400,
+    synthesisRerenderDebounceTimersAfterMaximum: 600,
+    parentUpdateReductionPercent: 75,
+    releaseFlushesLatestValue: true,
+    keyboardReleaseAndBlurFlushLatestValue: true,
+    unmountCancelsPendingFrame: true
+  },
   keyboardInteractionHotPathPolicy: {
     successfulNotesPerSession: 300,
     velocityStateUpdatesPerNoteBefore: 1,

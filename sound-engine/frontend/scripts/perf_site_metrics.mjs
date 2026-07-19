@@ -586,6 +586,15 @@ const voiceLoopUsesTargetedPlayheadFeedback = (
   && /ref=\{scoreGridRef\}/.test(voiceLoopSource)
   && /startVisibilityAwareRafLoop/.test(voiceLoopSource)
 );
+const voiceLoopContinuousRangesCoalesceByFrame = (
+  /const pendingContinuousFormRef = React\.useRef\(null\)/.test(voiceLoopSource)
+  && /const pendingContinuousControlsRef = React\.useRef\(null\)/.test(voiceLoopSource)
+  && /requestAnimationFrame\(flushContinuousChanges\)/.test(voiceLoopSource)
+  && /onChange=\{queueContinuousChange\}/.test(voiceLoopSource)
+  && /\.\.\.continuousRangeFlushProps/.test(voiceLoopSource)
+  && /cancelAnimationFrame\(continuousChangeFrameRef\.current\)/.test(voiceLoopSource)
+  && !/const handleControlChange =/.test(voiceLoopSource)
+);
 const keyboardNotePlaybackSource = await readFile(
   path.join(sourceDir, 'components', 'SynthKeyboard', 'hooks', 'useNotePlayback.js'),
   'utf8'
@@ -908,6 +917,11 @@ const report = {
     voiceLoopPlayheadMaximumEventRowReconciliationsPerTick:
       voiceLoopUsesTargetedPlayheadFeedback ? 0 : 192,
     voiceLoopUsesTargetedPlayheadFeedback,
+    voiceLoopRangeStateUpdatesPer240HzFrame:
+      voiceLoopContinuousRangesCoalesceByFrame ? 1 : 4,
+    voiceLoopRangeStateObjectClonesPer240HzFrame:
+      voiceLoopContinuousRangesCoalesceByFrame ? 1 : 4,
+    voiceLoopContinuousRangesCoalesceByFrame,
     keyboardVelocityStateUpdatesPerNote: keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
     keyboardVelocityOnlyReactCommitsPerFrame:
       keyboardAvoidsUnobservedInteractionWork ? 0 : 1,
@@ -1179,7 +1193,7 @@ if (getStereoPairEvaluationsPerFrame() > 512) {
 }
 const countBudgetChecks = [
   ['Guard initial JS requests', initialJs.length, 2],
-  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 9],
+  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 10],
   ['Guard raw interval sites', report.staticSignals.setIntervalCalls, 0],
   ['Guard nested external CSS imports', report.staticSignals.externalCssImportCalls, 0],
   ['D11 direct runtime dependencies', directRuntimeDependencies.length, 5],
@@ -1530,6 +1544,13 @@ if (!voiceLoopUsesTargetedPlayheadFeedback) {
     expected: 'visibility-aware direct previous/current score-cell feedback'
   });
 }
+if (!voiceLoopContinuousRangesCoalesceByFrame) {
+  failures.push({
+    name: 'Guard Voice Loop continuous controls at display cadence',
+    actual: 'range samples clone route state at raw device rate',
+    expected: 'latest numeric patch once per frame with release flush and unmount cleanup'
+  });
+}
 if (!keyboardAvoidsUnobservedInteractionWork) {
   failures.push({
     name: 'Guard allocation-free unprofiled keyboard interaction path',
@@ -1568,7 +1589,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 87,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 88,
   failures
 };
 

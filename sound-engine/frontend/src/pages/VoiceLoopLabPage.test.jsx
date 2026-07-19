@@ -105,4 +105,42 @@ describe('VoiceLoopLabPage', () => {
     expect(scoreCells[14]).toHaveClass('is-active');
     expect(scoreCells[14]).toHaveAttribute('aria-current', 'true');
   });
+
+  it('coalesces range changes by frame and flushes the release value', () => {
+    vi.useFakeTimers();
+    let commitCount = 0;
+    const cancelFrameSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
+    const { container, unmount } = render(
+      <React.Profiler id="voice-loop" onRender={() => { commitCount += 1; }}>
+        <VoiceLoopLabPage />
+      </React.Profiler>
+    );
+    const speed = container.querySelector('input[name="speed"]');
+    const initialCommitCount = commitCount;
+
+    fireEvent.change(speed, { target: { value: '1.1' } });
+    fireEvent.change(speed, { target: { value: '1.2' } });
+    fireEvent.change(speed, { target: { value: '1.3' } });
+    fireEvent.change(speed, { target: { value: '1.4' } });
+    expect(commitCount).toBe(initialCommitCount);
+
+    act(() => vi.advanceTimersByTime(16));
+    const commitsAfterFrame = commitCount;
+    expect(commitsAfterFrame).toBeGreaterThan(initialCommitCount);
+    expect(commitsAfterFrame).toBeLessThanOrEqual(initialCommitCount + 2);
+    expect(speed).toHaveValue('1.4');
+
+    fireEvent.change(speed, { target: { value: '1.5' } });
+    fireEvent.pointerUp(speed, { pointerId: 7 });
+    const commitsAfterRelease = commitCount;
+    expect(commitsAfterRelease).toBeGreaterThan(commitsAfterFrame);
+    expect(commitsAfterRelease).toBeLessThanOrEqual(commitsAfterFrame + 2);
+    expect(speed).toHaveValue('1.5');
+    act(() => vi.advanceTimersByTime(16));
+    expect(commitCount).toBe(commitsAfterRelease);
+
+    fireEvent.change(speed, { target: { value: '1.6' } });
+    unmount();
+    expect(cancelFrameSpy).toHaveBeenCalled();
+  });
 });

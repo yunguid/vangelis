@@ -207,6 +207,63 @@ const VoiceLoopLabPage = () => {
   const renderedRevisionRef = React.useRef(-1);
   const scoreGridRef = React.useRef(null);
   const activeEventIndexRef = React.useRef(-1);
+  const pendingContinuousFormRef = React.useRef(null);
+  const pendingContinuousControlsRef = React.useRef(null);
+  const continuousChangeFrameRef = React.useRef(null);
+
+  const flushContinuousChanges = React.useCallback(() => {
+    if (continuousChangeFrameRef.current !== null) {
+      cancelAnimationFrame(continuousChangeFrameRef.current);
+      continuousChangeFrameRef.current = null;
+    }
+
+    const formPatch = pendingContinuousFormRef.current;
+    const controlsPatch = pendingContinuousControlsRef.current;
+    pendingContinuousFormRef.current = null;
+    pendingContinuousControlsRef.current = null;
+
+    if (formPatch) {
+      setForm((current) => ({ ...current, ...formPatch }));
+    }
+    if (controlsPatch) {
+      setControls((current) => ({ ...current, ...controlsPatch }));
+    }
+  }, []);
+
+  const queueContinuousChange = React.useCallback((event) => {
+    const { name, value } = event.currentTarget;
+    const numericValue = Number(value);
+    if (name === 'bpm') {
+      pendingContinuousFormRef.current = {
+        ...pendingContinuousFormRef.current,
+        bpm: numericValue
+      };
+    } else {
+      pendingContinuousControlsRef.current = {
+        ...pendingContinuousControlsRef.current,
+        [name]: numericValue
+      };
+    }
+    if (continuousChangeFrameRef.current === null) {
+      continuousChangeFrameRef.current = requestAnimationFrame(flushContinuousChanges);
+    }
+  }, [flushContinuousChanges]);
+
+  React.useEffect(() => () => {
+    if (continuousChangeFrameRef.current !== null) {
+      cancelAnimationFrame(continuousChangeFrameRef.current);
+    }
+    continuousChangeFrameRef.current = null;
+    pendingContinuousFormRef.current = null;
+    pendingContinuousControlsRef.current = null;
+  }, []);
+
+  const continuousRangeFlushProps = React.useMemo(() => ({
+    onPointerUp: flushContinuousChanges,
+    onPointerCancel: flushContinuousChanges,
+    onKeyUp: flushContinuousChanges,
+    onBlur: flushContinuousChanges
+  }), [flushContinuousChanges]);
 
   const events = React.useMemo(() => parseScoreEvents(score), [score]);
 
@@ -478,15 +535,7 @@ const VoiceLoopLabPage = () => {
     const { name, value } = event.target;
     setForm((current) => ({
       ...current,
-      [name]: name === 'bpm' ? Number(value) : value
-    }));
-  };
-
-  const handleControlChange = (event) => {
-    const { name, value } = event.target;
-    setControls((current) => ({
-      ...current,
-      [name]: Number(value)
+      [name]: value
     }));
   };
 
@@ -606,66 +655,66 @@ const VoiceLoopLabPage = () => {
 
             <label className="voice-loop-field">
               <span>Tempo {form.bpm}</span>
-              <input type="range" name="bpm" min="90" max="180" value={form.bpm} onChange={handleFormChange} />
+              <input type="range" name="bpm" min="90" max="180" value={form.bpm} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
             </label>
 
             <label className="voice-loop-field">
               <span>Speed {controls.speed.toFixed(2)}</span>
-              <input type="range" name="speed" min="0.6" max="1.8" step="0.01" value={controls.speed} onChange={handleControlChange} />
+              <input type="range" name="speed" min="0.6" max="1.8" step="0.01" value={controls.speed} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
             </label>
 
             <label className="voice-loop-field">
               <span>Tone {Math.round(controls.tone)}</span>
-              <input type="range" name="tone" min="900" max="7800" step="10" value={controls.tone} onChange={handleControlChange} />
+              <input type="range" name="tone" min="900" max="7800" step="10" value={controls.tone} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
             </label>
 
             <div className="voice-loop-control-grid">
               <label className="voice-loop-field">
                 <span>Wet {controls.wet.toFixed(2)}</span>
-                <input type="range" name="wet" min="0" max="0.55" step="0.01" value={controls.wet} onChange={handleControlChange} />
+                <input type="range" name="wet" min="0" max="0.55" step="0.01" value={controls.wet} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
               <label className="voice-loop-field">
                 <span>Gain {controls.gain.toFixed(2)}</span>
-                <input type="range" name="gain" min="0.1" max="1.25" step="0.01" value={controls.gain} onChange={handleControlChange} />
+                <input type="range" name="gain" min="0.1" max="1.25" step="0.01" value={controls.gain} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
             </div>
 
             <div className="voice-loop-control-grid">
               <label className="voice-loop-field">
                 <span>Effort {controls.effort.toFixed(2)}</span>
-                <input type="range" name="effort" min="0.35" max="1" step="0.01" value={controls.effort} onChange={handleControlChange} />
+                <input type="range" name="effort" min="0.35" max="1" step="0.01" value={controls.effort} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
               <label className="voice-loop-field">
                 <span>Scale {controls.scale.toFixed(2)}</span>
-                <input type="range" name="scale" min="0.82" max="1.3" step="0.01" value={controls.scale} onChange={handleControlChange} />
+                <input type="range" name="scale" min="0.82" max="1.3" step="0.01" value={controls.scale} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
             </div>
 
             <div className="voice-loop-control-grid">
               <label className="voice-loop-field">
                 <span>Breath {controls.breath.toFixed(2)}</span>
-                <input type="range" name="breath" min="0" max="0.28" step="0.01" value={controls.breath} onChange={handleControlChange} />
+                <input type="range" name="breath" min="0" max="0.28" step="0.01" value={controls.breath} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
               <label className="voice-loop-field">
                 <span>Vibrato {controls.vibratoDepth.toFixed(1)}</span>
-                <input type="range" name="vibratoDepth" min="0" max="8" step="0.1" value={controls.vibratoDepth} onChange={handleControlChange} />
+                <input type="range" name="vibratoDepth" min="0" max="8" step="0.1" value={controls.vibratoDepth} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
             </div>
 
             <div className="voice-loop-control-grid">
               <label className="voice-loop-field">
                 <span>Vib rate {controls.vibratoRate.toFixed(1)}</span>
-                <input type="range" name="vibratoRate" min="3" max="9" step="0.1" value={controls.vibratoRate} onChange={handleControlChange} />
+                <input type="range" name="vibratoRate" min="3" max="9" step="0.1" value={controls.vibratoRate} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
               <label className="voice-loop-field">
                 <span>Tremolo {controls.tremoloDepth.toFixed(2)}</span>
-                <input type="range" name="tremoloDepth" min="0" max="0.32" step="0.01" value={controls.tremoloDepth} onChange={handleControlChange} />
+                <input type="range" name="tremoloDepth" min="0" max="0.32" step="0.01" value={controls.tremoloDepth} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
               </label>
             </div>
 
             <label className="voice-loop-field">
               <span>Trem rate {controls.tremoloRate.toFixed(1)}</span>
-              <input type="range" name="tremoloRate" min="2" max="12" step="0.1" value={controls.tremoloRate} onChange={handleControlChange} />
+              <input type="range" name="tremoloRate" min="2" max="12" step="0.1" value={controls.tremoloRate} onChange={queueContinuousChange} {...continuousRangeFlushProps} />
             </label>
 
             {(meta.warning || error) && (

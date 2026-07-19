@@ -3231,3 +3231,63 @@ Implemented boundaries and controls:
 - React best-practices review: animation-frame work has explicit release and unmount cleanup;
   callback dependencies are complete; native keyboard and accessible slider semantics are unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 63 — frame-coalesced Voice Loop ranges
+
+Collected from all twelve production Voice Loop range inputs; a 240 Hz ten-second drag model on a
+60 Hz display; React Profiler commit boundaries; active AudioParam and synthesis-rerender paths;
+release, keyboard, blur, and unmount assertions; generated production closures; the full suite; and
+isolated audio/visual gates.
+
+| Metric | Batch 62 | Batch 63 | Change |
+|---|---:|---:|---:|
+| Route state updater calls per 240 Hz input frame | 4 | at most 1 | -75.00% |
+| Route state object clones per 240 Hz input frame | 4 | at most 1 | -75.00% |
+| State patches over ten-second drag | 2,400 | at most 600 | -75.00% |
+| Active speed-drag AudioParam writes | 9,600 | at most 2,400 | -75.00% |
+| Synthesis rerender debounce schedules | 2,400 | at most 600 | -75.00% |
+| Pointer/key release and blur final value | immediate | immediate | preserved |
+| Home route JS gzip | 67.83 KiB | 67.83 KiB | unchanged |
+| Voice Loop route JS gzip | 62.18 KiB | 62.36 KiB | +0.18 KiB |
+| Sound Designer route JS gzip | 63.35 KiB | 63.35 KiB | unchanged |
+| Production deployment bytes | 1,486.85 KiB | 1,487.48 KiB | +0.63 KiB |
+| Explicit animation-frame sites | 9 | 10 | +1 bounded coalescer |
+| Automated production budgets | 105 | 106 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- All twelve native ranges now publish numeric state patches through one route-level animation-
+  frame scheduler. Repeated samples retain only the latest value per changed field, and different
+  fields changed before the same frame are merged into one form/control patch pair.
+- The speed, gain, tone, and wet path therefore reaches the live audio graph no more than once per
+  displayed frame. Voice synthesis inputs likewise create no more than one 260 ms rerender-debounce
+  cycle per frame while retaining the existing single final render after the gesture settles.
+- Pointer up/cancel, keyboard release, and blur flush the latest pending patch immediately. Unmount
+  cancels the frame and clears both pending patch objects, preventing state publication after route
+  teardown.
+- Added a React Profiler regression case proving four raw range changes cause no pre-frame commit,
+  one bounded update batch publishes the latest value, release publishes its final value without a
+  trailing frame, and unmount cancels scheduled work. A production guard rejects device-rate range
+  state updates or missing release/cleanup behavior.
+
+### Batch 63 verification gates
+
+- Full suite: 64 files, 539/539 tests pass, including the expanded Voice Loop range cadence,
+  release, and teardown case and all Sound Designer, MIDI playback, keyboard, control-kit, radar,
+  Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 106/106 pass; the twelve ranges report at
+  most one state updater and one state-object clone per 60 Hz display frame under a 240 Hz stream.
+- The ten-second interaction model removes 1,800 route state updates and object clones. During live
+  speed adjustment it also removes 7,200 AudioParam writes; synthesis controls avoid 1,800 redundant
+  debounce timer schedules while preserving the final deferred audio render.
+- Warmed combined visual workload: 80.28% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -19 KB over 4,000 blocks.
+- Isolated DSP benchmark: 406.7 us per 128-frame block with 6.6x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: frame work has explicit release and unmount cleanup, dependencies are
+  complete, and native range keyboard and accessible-label semantics remain intact.
+- `git diff --check`: pass.
