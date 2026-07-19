@@ -3173,3 +3173,61 @@ Implemented boundaries and controls:
 - React best-practices review: scheduled work has explicit unmount cleanup and complete callback
   dependencies; keyboard and accessibility semantics remain native and unchanged.
 - `git diff --check`: pass.
+
+## Optimization batch 62 — frame-coalesced remaining control drags
+
+Collected from the production Sound-panel effect macro and the shared Control Kit drag hook used by
+knobs, faders, and numeric fields; two 240 Hz ten-second drag models on a 60 Hz display; callback-
+cadence, release-flush, and unmount-cleanup assertions; generated production closures; the full
+suite; and isolated audio/visual gates.
+
+| Metric | Batch 61 | Batch 62 | Change |
+|---|---:|---:|---:|
+| Effect macro parent callbacks per 240 Hz input frame | 4 | at most 1 | -75.00% |
+| Control Kit parent callbacks per 240 Hz input frame | 4 | at most 1 | -75.00% |
+| Combined parent callbacks over two ten-second drags | 4,800 | at most 1,200 | -75.00% |
+| Control Kit drag-state commits per gesture | 2 | 2 | unchanged |
+| Pointer-up final value | immediate | immediate | preserved |
+| Home route JS gzip | 67.83 KiB | 67.83 KiB | unchanged |
+| Control Kit route JS gzip | 53.91 KiB | 54.06 KiB | +0.15 KiB |
+| Sound Designer route JS gzip | 63.35 KiB | 63.35 KiB | unchanged |
+| Production deployment bytes | 1,485.96 KiB | 1,486.85 KiB | +0.89 KiB |
+| Explicit animation-frame sites | 7 | 9 | +2 bounded coalescers |
+| Automated production budgets | 104 | 105 | +1 guardrail |
+
+Implemented boundaries and controls:
+
+- The effect macro now retains only the latest vertical coordinate during a pointer burst and
+  schedules one animation-frame flush. Delta calculation and the parent change callback therefore
+  run at the display cadence instead of the device sampling cadence.
+- The shared `useDragValue` hook applies the same policy to Control Kit knobs, faders, and numeric
+  fields. The hook retains its two gesture-boundary `isDragging` commits; continuous samples do not
+  add React state or create device-rate parent updates.
+- Pointer release synchronously applies the latest pending coordinate before clearing each drag,
+  then cancels the queued frame so it cannot duplicate the final update. Unmount cleanup cancels
+  pending work in both implementations.
+- Added deterministic tests proving that four same-frame samples produce one latest-value callback,
+  and that a subsequent release flushes its value immediately without a trailing duplicate. The
+  global animation-frame topology budget now accounts for the two intentional schedulers, while a
+  feature-specific production guard requires their bounded cadence and cleanup contract.
+
+### Batch 62 verification gates
+
+- Full suite: 64 files, 538/538 tests pass, including new effect-macro and shared drag-hook cadence
+  cases, updated knob timing coverage, and all Sound Designer, MIDI playback, keyboard, control-kit,
+  radar, Song Study, canvas, numerical, scene, and audio cases.
+- Production delivery/static/dependency/route guardrails: 105/105 pass; both control families report
+  at most one parent update per 60 Hz display frame under a 240 Hz pointer stream.
+- The two ten-second interaction models remove 3,600 parent callbacks, reducing the combined total
+  from 4,800 to at most 1,200 while preserving the final pointer coordinate on release.
+- Warmed combined visual workload: 80.36% lower normalized median CPU than the legacy reference on
+  the release pass, with 78.18% fewer analyzer samples, 65.71% fewer resample samples, and 50% fewer
+  scene frames and scene-band evaluations.
+- Audio audit: 225/225 synth renders bit-exact, 7/7 FX cases pass, all audible alias thresholds
+  pass, and saturated heap drift is -38 KB over 4,000 blocks.
+- Isolated DSP benchmark: 407.4 us per 128-frame block with 6.5x realtime headroom.
+- Production dependency audit: 0 vulnerabilities at low-or-higher severity.
+- UI-tell census: 22 total, unchanged.
+- React best-practices review: animation-frame work has explicit release and unmount cleanup;
+  callback dependencies are complete; native keyboard and accessible slider semantics are unchanged.
+- `git diff --check`: pass.

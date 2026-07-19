@@ -1,7 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { quantizeValue } from './useDragValue.js';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import useDragValue, { quantizeValue } from './useDragValue.js';
 
 describe('quantizeValue', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it('clamps to min/max', () => {
     expect(quantizeValue(-5, 0, 10, 1)).toBe(0);
     expect(quantizeValue(50, 0, 10, 1)).toBe(10);
@@ -32,5 +38,48 @@ describe('quantizeValue', () => {
     expect(quantizeValue(3.6, 0, 7, 1)).toBe(4);
     expect(quantizeValue(-1, 0, 7, 1)).toBe(0);
     expect(quantizeValue(9, 0, 7, 1)).toBe(7);
+  });
+
+  it('coalesces drag values by frame and flushes the release position', () => {
+    vi.useFakeTimers();
+    const onChange = vi.fn();
+    const { result } = renderHook(() => useDragValue({
+      value: 0,
+      min: 0,
+      max: 1,
+      travel: 100,
+      onChange
+    }));
+    const currentTarget = {
+      setPointerCapture: vi.fn(),
+      releasePointerCapture: vi.fn()
+    };
+
+    act(() => result.current.dragHandlers.onPointerDown({
+      button: 0,
+      pointerId: 4,
+      clientY: 100,
+      preventDefault: vi.fn(),
+      currentTarget
+    }));
+    act(() => {
+      result.current.dragHandlers.onPointerMove({ pointerId: 4, clientY: 90, shiftKey: false });
+      result.current.dragHandlers.onPointerMove({ pointerId: 4, clientY: 80, shiftKey: false });
+      result.current.dragHandlers.onPointerMove({ pointerId: 4, clientY: 70, shiftKey: false });
+      result.current.dragHandlers.onPointerMove({ pointerId: 4, clientY: 60, shiftKey: false });
+    });
+    expect(onChange).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(16));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenLastCalledWith(0.4);
+
+    act(() => {
+      result.current.dragHandlers.onPointerMove({ pointerId: 4, clientY: 50, shiftKey: false });
+      result.current.dragHandlers.onPointerUp({ pointerId: 4, currentTarget });
+    });
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange).toHaveBeenLastCalledWith(0.5);
+    act(() => vi.advanceTimersByTime(16));
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 });

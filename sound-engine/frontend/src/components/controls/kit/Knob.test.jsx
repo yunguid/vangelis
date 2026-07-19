@@ -1,5 +1,5 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render } from '@testing-library/react';
 import Knob from './Knob.jsx';
 
 // jsdom has no PointerEvent constructor and Elements lack
@@ -27,6 +27,10 @@ beforeAll(() => {
 });
 
 describe('Knob', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   const renderKnob = (props = {}) => render(
     <Knob
       id="k1"
@@ -120,12 +124,15 @@ describe('Knob', () => {
   });
 
   it('vertical pointer drag up increases the value, drag down decreases it', () => {
+    vi.useFakeTimers();
     const onChange = vi.fn();
     const { container } = renderKnob({ value: 0.5, min: 0, max: 1, onChange });
     const slider = container.querySelector('#k1');
 
     fireEvent.pointerDown(slider, { pointerId: 1, clientY: 100, clientX: 0, button: 0 });
     fireEvent.pointerMove(slider, { pointerId: 1, clientY: 25, clientX: 0 }); // up 75px of 150 travel
+    expect(onChange).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(16));
     expect(onChange).toHaveBeenLastCalledWith(1);
 
     fireEvent.pointerUp(slider, { pointerId: 1, clientY: 25, clientX: 0 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 
@@ -128,6 +128,8 @@ const EffectMacroDial = ({
 }) => {
   const canvasRef = useRef(null);
   const dragRef = useRef(null);
+  const pendingClientYRef = useRef(null);
+  const moveFrameRef = useRef(null);
   if (!dragRef.current) {
     dragRef.current = {
       active: false,
@@ -174,14 +176,32 @@ const EffectMacroDial = ({
     });
   }, [accent, disabled, isAudioActive, label, value]);
 
-  const updateFromDelta = (clientY) => {
+  const updateFromDelta = useCallback((clientY) => {
     const drag = dragRef.current;
     const delta = (drag.startY - clientY) / 180;
     onChange(clamp01(drag.startValue + delta));
-  };
+  }, [onChange]);
+
+  const flushPointerMove = useCallback(() => {
+    moveFrameRef.current = null;
+    const clientY = pendingClientYRef.current;
+    pendingClientYRef.current = null;
+    if (clientY !== null && dragRef.current.active) updateFromDelta(clientY);
+  }, [updateFromDelta]);
+
+  const cancelPendingPointerMove = useCallback(() => {
+    if (moveFrameRef.current !== null) {
+      cancelAnimationFrame(moveFrameRef.current);
+      moveFrameRef.current = null;
+    }
+    pendingClientYRef.current = null;
+  }, []);
+
+  useEffect(() => cancelPendingPointerMove, [cancelPendingPointerMove]);
 
   const handlePointerDown = (event) => {
     if (disabled) return;
+    cancelPendingPointerMove();
     dragRef.current = {
       active: true,
       pointerId: event.pointerId,
@@ -193,11 +213,17 @@ const EffectMacroDial = ({
 
   const handlePointerMove = (event) => {
     if (!dragRef.current.active || dragRef.current.pointerId !== event.pointerId) return;
-    updateFromDelta(event.clientY);
+    pendingClientYRef.current = event.clientY;
+    if (moveFrameRef.current === null) {
+      moveFrameRef.current = requestAnimationFrame(flushPointerMove);
+    }
   };
 
   const handlePointerUp = (event) => {
     if (dragRef.current.pointerId !== event.pointerId) return;
+    const pendingClientY = pendingClientYRef.current;
+    cancelPendingPointerMove();
+    if (pendingClientY !== null) updateFromDelta(pendingClientY);
     dragRef.current.active = false;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
   };

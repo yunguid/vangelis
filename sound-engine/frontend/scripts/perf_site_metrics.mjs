@@ -628,6 +628,24 @@ const valueSliderCoalescesPointerMovesByFrame = (
   && /useEffect\(\(\) => cancelPendingPointerMove/.test(valueSliderSource)
   && /cancelAnimationFrame\(pointerMoveFrameRef\.current\)/.test(valueSliderSource)
 );
+const effectMacroDialSource = await readFile(
+  path.join(sourceDir, 'components', 'EffectMacroDial.jsx'),
+  'utf8'
+);
+const controlKitDragSource = await readFile(
+  path.join(sourceDir, 'components', 'controls', 'kit', 'useDragValue.js'),
+  'utf8'
+);
+const remainingContinuousControlsCoalesceByFrame = (
+  /const pendingClientYRef = useRef\(null\)/.test(effectMacroDialSource)
+  && /requestAnimationFrame\(flushPointerMove\)/.test(effectMacroDialSource)
+  && /updateFromDelta\(pendingClientY\)/.test(effectMacroDialSource)
+  && /useEffect\(\(\) => cancelPendingPointerMove/.test(effectMacroDialSource)
+  && /const pendingPositionRef = useRef\(null\)/.test(controlKitDragSource)
+  && /requestAnimationFrame\(flushPointerMove\)/.test(controlKitDragSource)
+  && /commitPointerPosition\(pendingPosition, pendingFine\)/.test(controlKitDragSource)
+  && /useEffect\(\(\) => cancelPendingPointerMove/.test(controlKitDragSource)
+);
 const count = (pattern) => (sourceText.match(pattern) || []).length;
 const countCss = (pattern) => (sourceCssText.match(pattern) || []).length;
 const largestInitial = [...initialJs].sort((a, b) => b.bytes - a.bytes)[0] || null;
@@ -906,7 +924,12 @@ const report = {
       valueSliderCoalescesPointerMovesByFrame ? 1 : 4,
     valueSliderParentUpdatesPer240HzFrame:
       valueSliderCoalescesPointerMovesByFrame ? 1 : 4,
-    valueSliderCoalescesPointerMovesByFrame
+    valueSliderCoalescesPointerMovesByFrame,
+    effectMacroDialParentUpdatesPer240HzFrame:
+      remainingContinuousControlsCoalesceByFrame ? 1 : 4,
+    controlKitDragParentUpdatesPer240HzFrame:
+      remainingContinuousControlsCoalesceByFrame ? 1 : 4,
+    remainingContinuousControlsCoalesceByFrame
   },
   networkHints: {
     earlyExternalStylesheets: [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="(https?:\/\/[^"?#]+)/g)]
@@ -1156,7 +1179,7 @@ if (getStereoPairEvaluationsPerFrame() > 512) {
 }
 const countBudgetChecks = [
   ['Guard initial JS requests', initialJs.length, 2],
-  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 7],
+  ['M11 explicit RAF sites', report.staticSignals.requestAnimationFrameCalls, 9],
   ['Guard raw interval sites', report.staticSignals.setIntervalCalls, 0],
   ['Guard nested external CSS imports', report.staticSignals.externalCssImportCalls, 0],
   ['D11 direct runtime dependencies', directRuntimeDependencies.length, 5],
@@ -1528,6 +1551,13 @@ if (!valueSliderCoalescesPointerMovesByFrame) {
     expected: 'latest-coordinate layout read and change callback once per frame with release flush'
   });
 }
+if (!remainingContinuousControlsCoalesceByFrame) {
+  failures.push({
+    name: 'Guard all remaining continuous controls at display cadence',
+    actual: 'effect dials or control-kit drag primitives publish at raw device rate',
+    expected: 'latest-axis value once per frame with synchronous release flush and cleanup'
+  });
+}
 if (routeChunks.length < 7) {
   failures.push({
     name: 'D09 secondary route chunks',
@@ -1538,7 +1568,7 @@ if (routeChunks.length < 7) {
 
 report.budgets = {
   passed: failures.length === 0,
-  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 86,
+  checks: budgetChecks.length + countBudgetChecks.length + routeBudgetChecks.length + 87,
   failures
 };
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { clamp } from '../../../utils/math.js';
 
 /**
@@ -50,6 +50,9 @@ const useDragValue = ({
 }) => {
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef(null);
+  const pendingPositionRef = useRef(null);
+  const pendingFineRef = useRef(false);
+  const moveFrameRef = useRef(null);
 
   // `quantStep` defaults to the control's own `step` (drag and normal
   // keyboard nudges land on that grid). Fine keyboard/wheel nudges pass a
@@ -62,9 +65,43 @@ const useDragValue = ({
     if (quantized !== value) onChange(quantized);
   }, [disabled, onChange, min, max, step, value]);
 
+  const commitPointerPosition = useCallback((currentPos, fineMode) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    // vertical: up (smaller clientY) = increase. horizontal: right = increase.
+    const rawDelta = axis === 'vertical'
+      ? drag.startPos - currentPos
+      : currentPos - drag.startPos;
+    const fine = fineMode ? FINE_MULTIPLIER : 1;
+    const span = max - min;
+    const safeTravel = travel > 0 ? travel : DEFAULT_TRAVEL_PX;
+    commit(drag.startValue + (rawDelta / safeTravel) * span * fine);
+  }, [axis, commit, max, min, travel]);
+
+  const flushPointerMove = useCallback(() => {
+    moveFrameRef.current = null;
+    const currentPos = pendingPositionRef.current;
+    const fineMode = pendingFineRef.current;
+    pendingPositionRef.current = null;
+    pendingFineRef.current = false;
+    if (currentPos !== null) commitPointerPosition(currentPos, fineMode);
+  }, [commitPointerPosition]);
+
+  const cancelPendingPointerMove = useCallback(() => {
+    if (moveFrameRef.current !== null) {
+      cancelAnimationFrame(moveFrameRef.current);
+      moveFrameRef.current = null;
+    }
+    pendingPositionRef.current = null;
+    pendingFineRef.current = false;
+  }, []);
+
+  useEffect(() => cancelPendingPointerMove, [cancelPendingPointerMove]);
+
   const handlePointerDown = useCallback((event) => {
     if (disabled || event.button !== 0) return;
     event.preventDefault();
+    cancelPendingPointerMove();
     // Guarded: setPointerCapture throws NotFoundError if the UA doesn't
     // consider this pointerId "active" (observed with certain synthetic
     // dispatch sequences). A throw here must never abort arming the drag —
@@ -80,25 +117,27 @@ const useDragValue = ({
       startValue: value
     };
     setDragging(true);
-  }, [disabled, axis, value]);
+  }, [axis, cancelPendingPointerMove, disabled, value]);
 
   const handlePointerMove = useCallback((event) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    const currentPos = axis === 'vertical' ? event.clientY : event.clientX;
-    // vertical: up (smaller clientY) = increase. horizontal: right = increase.
-    const rawDelta = axis === 'vertical'
-      ? drag.startPos - currentPos
-      : currentPos - drag.startPos;
-    const fine = event.shiftKey ? FINE_MULTIPLIER : 1;
-    const span = max - min;
-    const safeTravel = travel > 0 ? travel : DEFAULT_TRAVEL_PX;
-    commit(drag.startValue + (rawDelta / safeTravel) * span * fine);
-  }, [axis, travel, max, min, commit]);
+    pendingPositionRef.current = axis === 'vertical' ? event.clientY : event.clientX;
+    pendingFineRef.current = event.shiftKey;
+    if (moveFrameRef.current === null) {
+      moveFrameRef.current = requestAnimationFrame(flushPointerMove);
+    }
+  }, [axis, flushPointerMove]);
 
   const endDrag = useCallback((event) => {
     const drag = dragRef.current;
     if (!drag || (event && drag.pointerId !== event.pointerId)) return;
+    const pendingPosition = pendingPositionRef.current;
+    const pendingFine = pendingFineRef.current;
+    cancelPendingPointerMove();
+    if (pendingPosition !== null) {
+      commitPointerPosition(pendingPosition, pendingFine);
+    }
     try {
       event?.currentTarget?.releasePointerCapture?.(event.pointerId);
     } catch {
@@ -106,7 +145,7 @@ const useDragValue = ({
     }
     dragRef.current = null;
     setDragging(false);
-  }, []);
+  }, [cancelPendingPointerMove, commitPointerPosition]);
 
   const handleDoubleClick = useCallback(() => {
     if (disabled || typeof defaultValue !== 'number') return;

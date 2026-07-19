@@ -1705,6 +1705,25 @@ const output = {
     keyboardWheelAndResetImmediate: true,
     unmountCancelsPendingFrame: true
   },
+  remainingContinuousControlFramePolicy: {
+    activeDragSecondsPerControlFamily: 10,
+    controlFamilies: 2,
+    rawPointerSampleRateHz: 240,
+    displayFrameRateHz: 60,
+    rawPointerSamplesCombined: 4800,
+    processedPointerFramesCombined: 1200,
+    parentChangeCallbacksBeforeCombined: 4800,
+    parentChangeCallbacksAfterMaximumCombined: 1200,
+    parentUpdateReductionPercent: 75,
+    effectMacroDialCallbacksPer240HzFrameBefore: 4,
+    effectMacroDialCallbacksPer240HzFrameAfterMaximum: 1,
+    controlKitDragCallbacksPer240HzFrameBefore: 4,
+    controlKitDragCallbacksPer240HzFrameAfterMaximum: 1,
+    controlKitDragStateCommitsPerGestureBefore: 2,
+    controlKitDragStateCommitsPerGestureAfter: 2,
+    releaseFlushesLatestValue: true,
+    unmountCancelsPendingFrames: true
+  },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,
     batch33ElapsedMs: Number(batch33StereoTraversal.elapsedMs.toFixed(2)),
