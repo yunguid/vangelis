@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "updated": "2026-07-19",
+  "entries": [
+    {
+      "id": "schubert-d899-3-impromptu-gflat",
+      "title": "Impromptu in G-flat major",
+      "altTitles": ["Impromptu Op. 90 No. 3", "Impromptu D.899 No. 3"],
+      "composer": "Franz Schubert",
+      "composerYears": "1797-1828",
+      "catalog": { "d": "D.899", "op": "Op. 90", "no": 3 },
+      "key": "G-flat major",
+      "movement": null,
+      "genre": "impromptu",
+      "period": "romantic",
+      "yearComposed": "1827",
+      "tags": ["piano", "lyrical", "cantabile", "study"],
+      "difficulty": "advanced",
+      "featuredRank": 1,
+      "durationSeconds": 343,
+      "noteCount": 2601,
+      "timeSignature": "8/4",
+      "file": "midi/classical/schubert-d899-3-impromptu-gflat.mid",
+      "sha256": "d85909810a5fd5228fa88403c87a77a2e88034d9d9a8337a43dde682062b33e2",
+      "byteSize": 39514,
+      "provenance": {
+        "source": "piano-midi.de (Bernd Krueger)",
+        "sourceUrl": "https://web.archive.org/web/20230510125308id_/http://www.piano-midi.de/midis/schubert/schuim-3.mid",
+        "infoUrl": "http://www.piano-midi.de/schub.htm",
+        "encoder": "Bernd Krueger",
+        "encoderEdition": "2014-03-19",
+        "license": "CC BY-SA 3.0 DE",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+        "licenseEvidenceUrl": "https://web.archive.org/web/20241211185851/http://www.piano-midi.de/copy.htm",
+        "attribution": "MIDI performance by Bernd Krueger, http://www.piano-midi.de, licensed CC BY-SA 3.0 DE; redistributed under identical license conditions.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "schubert", "franz", "impromptu", "gflat", "g-flat", "ges-dur", "gb major",
+        "d899", "d.899", "op90", "op. 90", "opus 90", "no 3", "piano", "romantic", "1827"
+      ],
+      "studyNotes": "A single cantabile melody floats over an unbroken stream of sextuplet arpeggios for nearly six minutes. Follow the top voice against the bass line: the middle texture never stops moving, yet the piece reads as three slow layers. Written in 1827, published posthumously in 1857 (transposed to G major by the first publisher; the original G-flat is what you hear)."
+    }
+  ]
+}

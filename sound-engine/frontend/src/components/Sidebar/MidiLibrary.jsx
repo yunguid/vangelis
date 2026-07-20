@@ -21,9 +21,12 @@ const MidiLibrary = ({ active = true, onPlay }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef(null);
+  // Originals keep their machine code-names; curated catalog entries (real
+  // classical works with provenance) display their true titles and sort
+  // featured-first so the flagship study is always the first classical row.
   const builtInFiles = useMemo(() => getBuiltInMidiFiles().map((file) => ({
     ...file,
-    displayName: numericPatchName(file.id)
+    displayName: file.displayTitle || numericPatchName(file.id)
   })), []);
   const filteredFiles = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -41,7 +44,11 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     {
       key: 'classics',
       title: 'Classics',
-      files: filteredFiles.filter((file) => !file.id.startsWith('original-'))
+      files: filteredFiles
+        .filter((file) => !file.id.startsWith('original-'))
+        .sort((left, right) => (
+          (left.featuredRank ?? Infinity) - (right.featuredRank ?? Infinity)
+        ))
     }
   ].filter((group) => group.files.length > 0), [filteredFiles]);
 
@@ -195,7 +202,11 @@ const MidiLibrary = ({ active = true, onPlay }) => {
                       <span className="midi-tab__file-name">{file.displayName}</span>
                     </span>
                     {file.composer && (
-                      <span className="midi-tab__file-composer">{file.composer}</span>
+                      <span className="midi-tab__file-composer">
+                        {file.catalogLabel
+                          ? `${file.composer} · ${file.catalogLabel}`
+                          : file.composer}
+                      </span>
                     )}
                   </button>
                 </li>

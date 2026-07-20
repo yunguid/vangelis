@@ -58,6 +58,53 @@
   gap: 18px;
 }
 
+.song-study__meta-line {
+  margin: 6px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary, rgba(235, 219, 178, 0.72));
+}
+
+.song-study__notes {
+  border-top: 1px solid rgba(235, 219, 178, 0.14);
+  padding-top: 12px;
+}
+
+.song-study__notes p {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, rgba(235, 219, 178, 0.72));
+}
+
+.song-study__provenance {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 18px;
+  border-top: 1px solid rgba(235, 219, 178, 0.14);
+  padding-top: 10px;
+  font-size: 12px;
+  color: var(--color-text-tertiary, rgba(235, 219, 178, 0.55));
+}
+
+.song-study__provenance-links {
+  display: inline-flex;
+  gap: 14px;
+}
+
+.song-study__provenance a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.song-study__provenance a:hover,
+.song-study__provenance a:focus-visible {
+  color: var(--color-text-primary);
+}
+
 .song-study__title-group {
   min-width: 0;
   display: flex;

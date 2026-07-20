@@ -89,6 +89,15 @@
   border-top: 0;
 }
 
+.study-library__study--featured {
+  border-left: 2px solid rgba(215, 153, 33, 0.6);
+  padding-left: 14px;
+}
+
+.study-library__study--featured .study-library__study-kicker {
+  color: var(--color-accent, #d79921);
+}
+
 .study-library__study:last-child,
 .study-library__run:last-child {
   padding-bottom: 0;

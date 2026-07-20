@@ -514,6 +514,17 @@ const SongStudyPageContent = ({ study }) => {
           <div className="song-study__title-group">
             <span className="song-study__eyebrow">{study.eyebrow}</span>
             <h1 ref={titleRef}>{study.title}</h1>
+            {study.meta && (
+              <p className="song-study__meta-line">
+                {[
+                  study.artist && study.meta.composerYears
+                    ? `${study.artist} (${study.meta.composerYears})`
+                    : study.artist,
+                  study.meta.key,
+                  study.meta.duration
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
           </div>
 
           <div className="song-study__status">
@@ -711,6 +722,38 @@ const SongStudyPageContent = ({ study }) => {
 
           </div>
         </section>
+
+        {study.studyNotes && (
+          <section className="song-study__notes" aria-label="Study notes">
+            <p>{study.studyNotes}</p>
+          </section>
+        )}
+
+        {study.provenance && (
+          <footer className="song-study__provenance" aria-label="Source and license">
+            <span>
+              Source: {study.provenance.source}
+              {study.provenance.encoderEdition
+                ? ` · edition ${study.provenance.encoderEdition}`
+                : ''}
+              {study.provenance.retrieved
+                ? ` · retrieved ${study.provenance.retrieved}`
+                : ''}
+            </span>
+            <span className="song-study__provenance-links">
+              {study.provenance.licenseUrl && (
+                <a href={study.provenance.licenseUrl} target="_blank" rel="noreferrer">
+                  {study.provenance.license}
+                </a>
+              )}
+              {study.provenance.sourceUrl && (
+                <a href={study.provenance.sourceUrl} target="_blank" rel="noreferrer">
+                  Archived source
+                </a>
+              )}
+            </span>
+          </footer>
+        )}
       </main>
       <SidebarNavigation />
     </div>

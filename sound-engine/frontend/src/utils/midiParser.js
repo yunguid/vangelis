@@ -5,6 +5,7 @@
  */
 
 import russianMidiLibrary from '../data/russianMidiLibrary.json';
+import classicalCatalog from '../data/classicalCatalog.json';
 import { ORIGINAL_CUE_IDS, getOriginalCueName } from '../data/originalCueNames.js';
 import { withBase } from './baseUrl.js';
 
@@ -241,6 +242,21 @@ function flattenTracks(tracks) {
 export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   const toBuiltInPath = (relativePath) => withBase(`midi/${relativePath}`, base);
 
+  // Curated classical catalog (src/data/classicalCatalog.json): entries carry
+  // real musicological metadata + provenance, so they display by true title
+  // (unlike the code-named originals) and sort featured-first.
+  const classicalFiles = classicalCatalog.entries.map((entry) => ({
+    id: entry.id,
+    name: entry.title,
+    path: withBase(entry.file, base),
+    composer: entry.composer,
+    sourceUrl: entry.provenance?.sourceUrl,
+    displayTitle: entry.title,
+    catalogLabel: [entry.catalog?.op, entry.catalog?.d].filter(Boolean).join(' · ')
+      + (entry.catalog?.no ? ` No. ${entry.catalog.no}` : ''),
+    featuredRank: entry.featuredRank ?? null
+  }));
+
   const russianFiles = russianMidiLibrary.map((entry) => ({
     id: entry.id,
     name: entry.name,
@@ -262,6 +278,7 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
 
   return [
     ...originalFiles,
+    ...classicalFiles,
     {
       id: 'vangelis-to-the-unknown-man',
       name: 'To the Unknown Man',
