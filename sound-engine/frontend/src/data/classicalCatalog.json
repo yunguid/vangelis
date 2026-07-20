@@ -5,16 +5,28 @@
     {
       "id": "schubert-d899-3-impromptu-gflat",
       "title": "Impromptu in G-flat major",
-      "altTitles": ["Impromptu Op. 90 No. 3", "Impromptu D.899 No. 3"],
+      "altTitles": [
+        "Impromptu Op. 90 No. 3",
+        "Impromptu D.899 No. 3"
+      ],
       "composer": "Franz Schubert",
       "composerYears": "1797-1828",
-      "catalog": { "d": "D.899", "op": "Op. 90", "no": 3 },
+      "catalog": {
+        "d": "D.899",
+        "op": "Op. 90",
+        "no": 3
+      },
       "key": "G-flat major",
       "movement": null,
       "genre": "impromptu",
       "period": "romantic",
       "yearComposed": "1827",
-      "tags": ["piano", "lyrical", "cantabile", "study"],
+      "tags": [
+        "piano",
+        "lyrical",
+        "cantabile",
+        "study"
+      ],
       "difficulty": "advanced",
       "featuredRank": 1,
       "durationSeconds": 343,
@@ -36,24 +48,50 @@
         "retrieved": "2026-07-19"
       },
       "searchTokens": [
-        "schubert", "franz", "impromptu", "gflat", "g-flat", "ges-dur", "gb major",
-        "d899", "d.899", "op90", "op. 90", "opus 90", "no 3", "piano", "romantic", "1827"
+        "schubert",
+        "franz",
+        "impromptu",
+        "gflat",
+        "g-flat",
+        "ges-dur",
+        "gb major",
+        "d899",
+        "d.899",
+        "op90",
+        "op. 90",
+        "opus 90",
+        "no 3",
+        "piano",
+        "romantic",
+        "1827"
       ],
       "studyNotes": "A single cantabile melody floats over an unbroken stream of sextuplet arpeggios for nearly six minutes. Follow the top voice against the bass line: the middle texture never stops moving, yet the piece reads as three slow layers. Written in 1827, published posthumously in 1857 (transposed to G major by the first publisher; the original G-flat is what you hear)."
     },
     {
       "id": "schubert-d899-1-impromptu-cminor",
       "title": "Impromptu in C minor",
-      "altTitles": ["Impromptu Op. 90 No. 1", "Impromptu D.899 No. 1"],
+      "altTitles": [
+        "Impromptu Op. 90 No. 1",
+        "Impromptu D.899 No. 1"
+      ],
       "composer": "Franz Schubert",
       "composerYears": "1797-1828",
-      "catalog": { "d": "D.899", "op": "Op. 90", "no": 1 },
+      "catalog": {
+        "d": "D.899",
+        "op": "Op. 90",
+        "no": 1
+      },
       "key": "C minor",
       "movement": null,
       "genre": "impromptu",
       "period": "romantic",
       "yearComposed": "1827",
-      "tags": ["piano", "march", "variations", "study"],
+      "tags": [
+        "piano",
+        "march",
+        "variations",
+        "study"
+      ],
       "difficulty": "advanced",
       "featuredRank": 2,
       "durationSeconds": 461,
@@ -75,24 +113,49 @@
         "retrieved": "2026-07-19"
       },
       "searchTokens": [
-        "schubert", "franz", "impromptu", "c minor", "cminor", "c-moll",
-        "d899", "d.899", "op90", "op. 90", "opus 90", "no 1", "piano", "romantic", "1827"
+        "schubert",
+        "franz",
+        "impromptu",
+        "c minor",
+        "cminor",
+        "c-moll",
+        "d899",
+        "d.899",
+        "op90",
+        "op. 90",
+        "opus 90",
+        "no 1",
+        "piano",
+        "romantic",
+        "1827"
       ],
       "studyNotes": "A bare unison G, then a solemn march melody that Schubert varies continuously for almost eight minutes — the same tune retold in minor and major, over triplets, against syncopations. Track how each return of the theme changes register and accompaniment while the pulse never breaks."
     },
     {
       "id": "schubert-d899-2-impromptu-eflat",
       "title": "Impromptu in E-flat major",
-      "altTitles": ["Impromptu Op. 90 No. 2", "Impromptu D.899 No. 2"],
+      "altTitles": [
+        "Impromptu Op. 90 No. 2",
+        "Impromptu D.899 No. 2"
+      ],
       "composer": "Franz Schubert",
       "composerYears": "1797-1828",
-      "catalog": { "d": "D.899", "op": "Op. 90", "no": 2 },
+      "catalog": {
+        "d": "D.899",
+        "op": "Op. 90",
+        "no": 2
+      },
       "key": "E-flat major",
       "movement": null,
       "genre": "impromptu",
       "period": "romantic",
       "yearComposed": "1827",
-      "tags": ["piano", "scherzando", "virtuosic", "study"],
+      "tags": [
+        "piano",
+        "scherzando",
+        "virtuosic",
+        "study"
+      ],
       "difficulty": "advanced",
       "featuredRank": 3,
       "durationSeconds": 270,
@@ -114,24 +177,49 @@
         "retrieved": "2026-07-19"
       },
       "searchTokens": [
-        "schubert", "franz", "impromptu", "e-flat", "eflat", "es-dur",
-        "d899", "d.899", "op90", "op. 90", "opus 90", "no 2", "piano", "romantic", "1827"
+        "schubert",
+        "franz",
+        "impromptu",
+        "e-flat",
+        "eflat",
+        "es-dur",
+        "d899",
+        "d.899",
+        "op90",
+        "op. 90",
+        "opus 90",
+        "no 2",
+        "piano",
+        "romantic",
+        "1827"
       ],
       "studyNotes": "Right-hand scale ribbons run almost without pause — E-flat major spun into continuous triplet eighths — until a stormy B minor middle section snaps the mood. Watch the left hand: a plain waltz-like accompaniment that keeps the racing right hand honest, and a coda that ends the major-key piece defiantly in minor."
     },
     {
       "id": "schubert-d899-4-impromptu-aflat",
       "title": "Impromptu in A-flat major",
-      "altTitles": ["Impromptu Op. 90 No. 4", "Impromptu D.899 No. 4"],
+      "altTitles": [
+        "Impromptu Op. 90 No. 4",
+        "Impromptu D.899 No. 4"
+      ],
       "composer": "Franz Schubert",
       "composerYears": "1797-1828",
-      "catalog": { "d": "D.899", "op": "Op. 90", "no": 4 },
+      "catalog": {
+        "d": "D.899",
+        "op": "Op. 90",
+        "no": 4
+      },
       "key": "A-flat major",
       "movement": null,
       "genre": "impromptu",
       "period": "romantic",
       "yearComposed": "1827",
-      "tags": ["piano", "arpeggios", "chorale", "study"],
+      "tags": [
+        "piano",
+        "arpeggios",
+        "chorale",
+        "study"
+      ],
       "difficulty": "advanced",
       "featuredRank": 4,
       "durationSeconds": 420,
@@ -153,10 +241,499 @@
         "retrieved": "2026-07-19"
       },
       "searchTokens": [
-        "schubert", "franz", "impromptu", "a-flat", "aflat", "as-dur",
-        "d899", "d.899", "op90", "op. 90", "opus 90", "no 4", "piano", "romantic", "1827"
+        "schubert",
+        "franz",
+        "impromptu",
+        "a-flat",
+        "aflat",
+        "as-dur",
+        "d899",
+        "d.899",
+        "op90",
+        "op. 90",
+        "opus 90",
+        "no 4",
+        "piano",
+        "romantic",
+        "1827"
       ],
       "studyNotes": "Cascading sixteenth-note arpeggios open in A-flat minor even though the piece is titled in the major — the sunrise into A-flat major arrives only after each cascade resolves. The trio section is a long-breathed chorale in C-sharp minor. Listen for the left hand's offbeat chords answering every right-hand fall."
+    },
+    {
+      "altTitles": [
+        "Album for the Young, Op. 39 No. 1"
+      ],
+      "composerYears": "1840-1893",
+      "movement": null,
+      "genre": "character piece",
+      "period": "romantic",
+      "yearComposed": "1878",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "beginner",
+      "featuredRank": null,
+      "durationSeconds": 70,
+      "noteCount": 246,
+      "timeSignature": "3/4",
+      "sha256": "7ec37d25e8ea12d0b2053a5916140f7d03b4cdf1357c01171fd8a3c1d8c6e50f",
+      "byteSize": 2661,
+      "id": "tchaikovsky-op39-1-morning-prayer",
+      "title": "Morning Prayer",
+      "composer": "Pyotr Ilyich Tchaikovsky",
+      "catalog": {
+        "op": "Op. 39",
+        "no": 1
+      },
+      "key": "G major",
+      "file": "midi/classical/tchaikovsky-op39-1-morning-prayer.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/TchaikovskyPI/O39/01MorningPrayer/01MorningPrayer.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2032",
+        "encoder": "Rem Zolotykh",
+        "encoderEdition": "2015-07-09",
+        "license": "Public Domain (CC0)",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2032",
+        "attribution": "Typeset for the Mutopia Project by Rem Zolotykh; Public Domain (CC0).",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "tchaikovsky",
+        "album for the young",
+        "morning prayer",
+        "op39",
+        "op. 39",
+        "g major",
+        "piano",
+        "children",
+        "1878"
+      ],
+      "studyNotes": "The opening page of the Album for the Young: a four-voice hymn in G major. Every phrase is a model of choral voice-leading — follow how the inner voices move by step while the outer voices frame the cadences."
+    },
+    {
+      "altTitles": [
+        "Album for the Young, Op. 39 No. 5"
+      ],
+      "composerYears": "1840-1893",
+      "movement": null,
+      "genre": "march",
+      "period": "romantic",
+      "yearComposed": "1878",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "beginner",
+      "featuredRank": null,
+      "durationSeconds": 40,
+      "noteCount": 318,
+      "timeSignature": "2/4",
+      "sha256": "a9717d793785c3c702d85e20f99a81de60faedd29fc4e7dcb240fbc99a9b0d2b",
+      "byteSize": 2983,
+      "id": "tchaikovsky-op39-5-march-wooden-soldiers",
+      "title": "March of the Wooden Soldiers",
+      "composer": "Pyotr Ilyich Tchaikovsky",
+      "catalog": {
+        "op": "Op. 39",
+        "no": 5
+      },
+      "key": "D major",
+      "file": "midi/classical/tchaikovsky-op39-5-march-wooden-soldiers.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/TchaikovskyPI/O39/05MarchOfTheWoodenSoldiers/05MarchOfTheWoodenSoldiers.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1806",
+        "encoder": "Anonymous (Mutopia typesetter)",
+        "encoderEdition": "2015-01-17",
+        "license": "Public Domain (CC0)",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1806",
+        "attribution": "Typeset for the Mutopia Project by Anonymous (Mutopia typesetter); Public Domain (CC0).",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "tchaikovsky",
+        "album for the young",
+        "march",
+        "wooden soldiers",
+        "op39",
+        "op. 39",
+        "d major",
+        "piano",
+        "1878"
+      ],
+      "studyNotes": "A toy march in miniature: crisp dotted rhythms, terraced dynamics, and phrase lengths of exactly four bars. A perfect first study in articulation contrast between staccato chords and connected melody."
+    },
+    {
+      "altTitles": [
+        "Album for the Young, Op. 39 No. 16"
+      ],
+      "composerYears": "1840-1893",
+      "movement": null,
+      "genre": "song arrangement",
+      "period": "romantic",
+      "yearComposed": "1878",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "beginner",
+      "featuredRank": null,
+      "durationSeconds": 55,
+      "noteCount": 188,
+      "timeSignature": "2/4",
+      "sha256": "112c3b61dab55f58bc44d9f3522ef21b3479ffa1953097783ff8c4f10e40175d",
+      "byteSize": 1900,
+      "id": "tchaikovsky-op39-16-old-french-song",
+      "title": "Old French Song",
+      "composer": "Pyotr Ilyich Tchaikovsky",
+      "catalog": {
+        "op": "Op. 39",
+        "no": 16
+      },
+      "key": "G minor",
+      "file": "midi/classical/tchaikovsky-op39-16-old-french-song.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/TchaikovskyPI/O39/16OldFrenchSong/16OldFrenchSong.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2080",
+        "encoder": "David McNamara",
+        "encoderEdition": "2015-11-27",
+        "license": "Public Domain (CC0)",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2080",
+        "attribution": "Typeset for the Mutopia Project by David McNamara; Public Domain (CC0).",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "tchaikovsky",
+        "album for the young",
+        "old french song",
+        "op39",
+        "op. 39",
+        "g minor",
+        "piano",
+        "1878"
+      ],
+      "studyNotes": "A modal-tinged melody over a drone-like bass, said to derive from a 16th-century French tune. Notice how the middle section brightens without ever losing the folk melancholy of G minor."
+    },
+    {
+      "altTitles": [
+        "Prelude Op. 23 No. 4"
+      ],
+      "composerYears": "1873-1943",
+      "movement": null,
+      "genre": "prelude",
+      "period": "romantic",
+      "yearComposed": "1903",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "advanced",
+      "featuredRank": null,
+      "durationSeconds": 277,
+      "noteCount": 1337,
+      "timeSignature": "3/4",
+      "sha256": "101eca0c49bf8c284f8678a1bf2eb6e728a0598952c338799d59d61d3f17b97c",
+      "byteSize": 12501,
+      "id": "rachmaninoff-op23-4-prelude-d",
+      "title": "Prelude in D major",
+      "composer": "Sergei Rachmaninoff",
+      "catalog": {
+        "op": "Op. 23",
+        "no": 4
+      },
+      "key": "D major",
+      "file": "midi/classical/rachmaninoff-op23-4-prelude-d.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/RachmaninoffS/O23/rach-prelude23-04/rach-prelude23-04.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1993",
+        "encoder": "Abel Cheung",
+        "encoderEdition": "2014-08-15",
+        "license": "Creative Commons Attribution-ShareAlike 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1993",
+        "attribution": "Typeset for the Mutopia Project by Abel Cheung; Creative Commons Attribution-ShareAlike 4.0.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "rachmaninoff",
+        "prelude",
+        "op23",
+        "op. 23",
+        "d major",
+        "piano",
+        "romantic",
+        "1903"
+      ],
+      "studyNotes": "A nocturne-like cantilena: three layers — bass, arpeggiated middle, and a long-spun melody — that trade places as the texture thickens. Study how the climax is engineered by widening the registral gap rather than just playing louder."
+    },
+    {
+      "altTitles": [
+        "Prelude Op. 23 No. 5"
+      ],
+      "composerYears": "1873-1943",
+      "movement": null,
+      "genre": "prelude",
+      "period": "romantic",
+      "yearComposed": "1901",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "advanced",
+      "featuredRank": null,
+      "durationSeconds": 227,
+      "noteCount": 3858,
+      "timeSignature": "4/4",
+      "sha256": "c0c8f2af8129307bdfe72cedb07e701341f8254d3270a482c298c67948f1b28d",
+      "byteSize": 39859,
+      "id": "rachmaninoff-op23-5-prelude-gminor",
+      "title": "Prelude in G minor",
+      "composer": "Sergei Rachmaninoff",
+      "catalog": {
+        "op": "Op. 23",
+        "no": 5
+      },
+      "key": "G minor",
+      "file": "midi/classical/rachmaninoff-op23-5-prelude-gminor.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/RachmaninoffS/O23/rach-prelude23-05/rach-prelude23-05.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2001",
+        "encoder": "Joram Berger",
+        "encoderEdition": "2015-09-28",
+        "license": "Creative Commons Attribution-ShareAlike 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=2001",
+        "attribution": "Typeset for the Mutopia Project by Joram Berger; Creative Commons Attribution-ShareAlike 4.0.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "rachmaninoff",
+        "prelude",
+        "op23",
+        "op. 23",
+        "g minor",
+        "alla marcia",
+        "piano",
+        "romantic",
+        "1901"
+      ],
+      "studyNotes": "The famous alla marcia: an iron staccato march frames a soaring lyrical middle section. The study problem is character switching — the same hands must snap between percussive chords and legato song within a single bar."
+    },
+    {
+      "altTitles": [
+        "St. John’s Eve on Bald Mountain (piano arrangement)"
+      ],
+      "composerYears": "1839-1881",
+      "movement": null,
+      "genre": "tone poem (piano arrangement)",
+      "period": "romantic",
+      "yearComposed": "1867",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "advanced",
+      "featuredRank": null,
+      "durationSeconds": 611,
+      "noteCount": 9313,
+      "timeSignature": "2/2",
+      "sha256": "e8000d60d4e9ba0f35a1514d2c1444b6a895d2284bae26c1d87eb8e0b815e94d",
+      "byteSize": 79556,
+      "id": "mussorgsky-night-on-bald-mountain-chernov",
+      "title": "Night on Bald Mountain",
+      "composer": "Modest Mussorgsky",
+      "catalog": {},
+      "key": "D minor",
+      "file": "midi/classical/mussorgsky-night-on-bald-mountain-chernov.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/MussorgskyM/nobm/nobm.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1892",
+        "encoder": "Robert Clausecker",
+        "encoderEdition": "2013-12-08",
+        "license": "Creative Commons Attribution 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1892",
+        "attribution": "Piano arrangement by Konstantin Chernov (1865-1937); typeset for the Mutopia Project by Robert Clausecker; Creative Commons Attribution 3.0.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "mussorgsky",
+        "night on bald mountain",
+        "bald mountain",
+        "chernov",
+        "d minor",
+        "tone poem",
+        "piano",
+        "halloween",
+        "1867"
+      ],
+      "studyNotes": "Konstantin Chernov’s piano arrangement of the orchestral tone poem. Ten minutes of storm: tremolo textures imitating string sections, brass-like chord stabs, and the quiet dawn coda. Listen for how one piano fakes an orchestra."
+    },
+    {
+      "altTitles": [
+        "Etude Op. 11 No. 4"
+      ],
+      "composerYears": "1844-1908",
+      "movement": null,
+      "genre": "etude",
+      "period": "romantic",
+      "yearComposed": "1876",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "intermediate",
+      "featuredRank": null,
+      "durationSeconds": 171,
+      "noteCount": 967,
+      "timeSignature": "3/4",
+      "sha256": "e8b498990f1a7696f7a19ccb51e7c6ccd033501903e9c1ffe9cd4aee67ebc3a6",
+      "byteSize": 9133,
+      "id": "rimsky-korsakov-op11-4-etude",
+      "title": "Etude in D-flat major",
+      "composer": "Nikolai Rimsky-Korsakov",
+      "catalog": {
+        "op": "Op. 11",
+        "no": 4
+      },
+      "key": "D-flat major",
+      "file": "midi/classical/rimsky-korsakov-op11-4-etude.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/Rimsky-KorsakovN/O11/rimsky-korsakov-op11-4/rimsky-korsakov-op11-4.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1600",
+        "encoder": "Thomas Amthor",
+        "encoderEdition": "2008-11-24",
+        "license": "Creative Commons Attribution-ShareAlike 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1600",
+        "attribution": "Typeset for the Mutopia Project by Thomas Amthor; Creative Commons Attribution-ShareAlike 3.0.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "rimsky-korsakov",
+        "rimsky",
+        "korsakov",
+        "etude",
+        "op11",
+        "op. 11",
+        "d-flat major",
+        "dflat",
+        "db major",
+        "piano",
+        "1876"
+      ],
+      "studyNotes": "A perpetual-motion study from the four Op. 11 pieces: even sixteenths cycle through shifting harmonic colors. Track the left hand’s guide tones — they carry the actual melody under the etude figuration."
+    },
+    {
+      "altTitles": [
+        "Prelude Op. 11 No. 1"
+      ],
+      "composerYears": "1872-1915",
+      "movement": null,
+      "genre": "prelude",
+      "period": "romantic",
+      "yearComposed": "1896",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "intermediate",
+      "featuredRank": null,
+      "durationSeconds": 42,
+      "noteCount": 472,
+      "timeSignature": "4/4",
+      "sha256": "4dad84aa0fdfeb695c3e54706d2c5dd731b6893e6a6fff166f5ee1344f17cae1",
+      "byteSize": 4910,
+      "id": "scriabin-op11-1-prelude",
+      "title": "Prelude in C major",
+      "composer": "Alexander Scriabin",
+      "catalog": {
+        "op": "Op. 11",
+        "no": 1
+      },
+      "key": "C major",
+      "file": "midi/classical/scriabin-op11-1-prelude.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/ScriabinA/O11/Scriabin_prelude_op11no1/Scriabin_prelude_op11no1.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1779",
+        "encoder": "Keith OHara",
+        "encoderEdition": "2010-12-21",
+        "license": "Public Domain (CC0)",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1779",
+        "attribution": "Typeset for the Mutopia Project by Keith OHara; Public Domain (CC0).",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "scriabin",
+        "prelude",
+        "op11",
+        "op. 11",
+        "c major",
+        "vivace",
+        "piano",
+        "1896"
+      ],
+      "studyNotes": "Forty seconds of floating quintuplets — Chopin’s prelude idea refracted through Scriabin’s early harmonic haze. The meter is 2/2 but the right hand moves in fives; feel how the downbeats stay airborne."
+    },
+    {
+      "altTitles": [],
+      "composerYears": "1888-1914",
+      "movement": null,
+      "genre": "prelude",
+      "period": "romantic",
+      "yearComposed": "c. 1908",
+      "tags": [
+        "piano",
+        "study"
+      ],
+      "difficulty": "intermediate",
+      "featuredRank": null,
+      "durationSeconds": 402,
+      "noteCount": 1184,
+      "timeSignature": "21/16",
+      "sha256": "5782f9f75231881618a0e515fd231b9266f033c80061c93cd6926edd8f156592",
+      "byteSize": 10128,
+      "id": "stanchinsky-prelude-lydian",
+      "title": "Prelude in Lydian Mode",
+      "composer": "Alexei Stanchinsky",
+      "catalog": {},
+      "key": "Lydian mode",
+      "file": "midi/classical/stanchinsky-prelude-lydian.mid",
+      "provenance": {
+        "source": "Mutopia Project",
+        "sourceUrl": "https://www.mutopiaproject.org/ftp/StanchinskyAV/pilm/pilm.mid",
+        "infoUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1957",
+        "encoder": "Robert Clausecker",
+        "encoderEdition": "2014-07-13",
+        "license": "Creative Commons Attribution 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "licenseEvidenceUrl": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1957",
+        "attribution": "Typeset for the Mutopia Project by Robert Clausecker; Creative Commons Attribution 4.0.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "stanchinsky",
+        "prelude",
+        "lydian",
+        "mode",
+        "modal",
+        "piano",
+        "russian",
+        "1908"
+      ],
+      "studyNotes": "A rarity from a composer who died at 26: a prelude built on the raised-fourth glow of the Lydian mode. Hear how the harmony refuses ordinary dominant-tonic gravity — resolution arrives by mode, not by cadence."
     }
   ]
 }

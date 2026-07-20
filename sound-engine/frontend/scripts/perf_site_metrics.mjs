@@ -1514,7 +1514,9 @@ const budgetChecks = [
   // their prior ~0.8 MiB level while the classical learning catalog gets its
   // own bounded D00b allowance (see CATALOG_LEDGER.md).
   ['D00 public static raw', publicStaticBytes, 1.05 * 1024 * 1024],
-  ['D00b classical catalog raw', classicalCatalogBytes, 256 * 1024],
+  // 384 KiB since the legacy public/midi/russian corpus migrated into the
+  // hash-verified catalog (same bytes, one audited bucket).
+  ['D00b classical catalog raw', classicalCatalogBytes, 384 * 1024],
   ['D01 HTML raw', htmlMetric.bytes, 5 * 1024],
   ['D02 HTML gzip', htmlMetric.gzipBytes, 2 * 1024],
   ['D03 initial JS raw', sum(initialJs, 'bytes'), 35 * 1024],

@@ -4,7 +4,6 @@
  * @module utils/midiParser
  */
 
-import russianMidiLibrary from '../data/russianMidiLibrary.json';
 import classicalCatalog from '../data/classicalCatalog.json';
 import { ORIGINAL_CUE_IDS, getOriginalCueName } from '../data/originalCueNames.js';
 import { withBase } from './baseUrl.js';
@@ -257,14 +256,6 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
     featuredRank: entry.featuredRank ?? null
   }));
 
-  const russianFiles = russianMidiLibrary.map((entry) => ({
-    id: entry.id,
-    name: entry.name,
-    path: toBuiltInPath(`russian/${entry.id}.mid`),
-    composer: entry.composer,
-    sourceUrl: entry.sourceUrl
-  }));
-
   // Original in-house cues, composed for the synth presets — see
   // scripts/generate_original_midis.mjs. They play through whatever preset
   // is currently loaded. Display names come from the shared
@@ -285,7 +276,6 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
       path: toBuiltInPath('to-the-unknown-man.mid'),
       composer: 'Vangelis'
     },
-    ...russianFiles,
     // Rachmaninoff Piano Concerto No. 2
     {
       id: 'rachmaninoff-concerto2-mov1',

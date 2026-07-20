@@ -10,6 +10,9 @@
  *   node scripts/sync_classical_midis.mjs            # sync + verify + report
  *   node scripts/sync_classical_midis.mjs --dry-run  # plan + report, no network
  *   node scripts/sync_classical_midis.mjs --verify   # verify existing files only
+ *   node scripts/sync_classical_midis.mjs --pin      # for entries with null
+ *     sha256: download, then print the hash/size block to paste into the
+ *     manifest (nothing is auto-written to the manifest — pins stay reviewable)
  *
  * Network behavior: domain allowlist, one request at a time, polite spacing
  * with jitter, bounded timeouts, retries with exponential backoff. Archive
@@ -34,6 +37,7 @@ const MAX_ATTEMPTS = 3;
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has('--dry-run');
 const verifyOnly = args.has('--verify');
+const pinMode = args.has('--pin');
 
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 const jitter = (ms) => ms + Math.floor(Math.random() * (ms / 2));
@@ -88,6 +92,11 @@ const download = async (entry, targetPath) => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const bytes = Buffer.from(await response.arrayBuffer());
       const digest = sha256(bytes);
+      if (entry.sha256 === null) {
+        await fs.mkdir(path.dirname(targetPath), { recursive: true });
+        await fs.writeFile(targetPath, bytes);
+        return { pinned: { id: entry.id, sha256: digest, byteSize: bytes.byteLength } };
+      }
       if (bytes.byteLength !== entry.byteSize || digest !== entry.sha256) {
         throw new Error(
           `integrity mismatch (got ${bytes.byteLength}B ${digest.slice(0, 12)}…, `
@@ -96,7 +105,7 @@ const download = async (entry, targetPath) => {
       }
       await fs.mkdir(path.dirname(targetPath), { recursive: true });
       await fs.writeFile(targetPath, bytes);
-      return;
+      return {};
     } catch (error) {
       lastError = error;
       if (attempt < MAX_ATTEMPTS) {
@@ -112,11 +121,13 @@ const entries = catalog.entries || [];
 const report = { verified: 0, downloaded: 0, failed: 0, planned: 0 };
 const failures = [];
 const licenseRows = [];
+const pinnedResults = [];
 
 let firstRequestDone = false;
 for (const entry of entries) {
   const targetPath = resolveTargetPath(entry.file);
-  const local = await verifyLocal(entry, targetPath);
+  const unpinned = entry.sha256 === null;
+  const local = unpinned ? { state: 'unpinned' } : await verifyLocal(entry, targetPath);
   licenseRows.push([
     entry.id,
     entry.provenance.license,
@@ -127,6 +138,13 @@ for (const entry of entries) {
   if (local.state === 'verified') {
     report.verified += 1;
     console.log(`[ok]       ${entry.id} (sha256 verified)`);
+    continue;
+  }
+
+  if (unpinned && !pinMode) {
+    report.failed += 1;
+    failures.push({ id: entry.id, reason: 'sha256 is null — run --pin and record the hash' });
+    console.error(`[fail]     ${entry.id} has no pinned sha256`);
     continue;
   }
 
@@ -147,9 +165,14 @@ for (const entry of entries) {
     if (firstRequestDone) await sleep(jitter(REQUEST_SPACING_MS));
     firstRequestDone = true;
     console.log(`[download] ${entry.id}`);
-    await download(entry, targetPath);
+    const outcome = await download(entry, targetPath);
     report.downloaded += 1;
-    console.log(`[ok]       ${entry.id} downloaded + sha256 verified`);
+    if (outcome?.pinned) {
+      pinnedResults.push(outcome.pinned);
+      console.log(`[pin]      ${entry.id} sha256 ${outcome.pinned.sha256.slice(0, 12)}… (${outcome.pinned.byteSize}B)`);
+    } else {
+      console.log(`[ok]       ${entry.id} downloaded + sha256 verified`);
+    }
   } catch (error) {
     report.failed += 1;
     failures.push({ id: entry.id, reason: error.message });
@@ -162,6 +185,10 @@ console.log(`entries: ${entries.length}  verified: ${report.verified}  downloade
 console.log('\nlicense table:');
 for (const [id, license, source, retrieved] of licenseRows) {
   console.log(`  ${id}  |  ${license}  |  ${source}  |  retrieved ${retrieved}`);
+}
+if (pinnedResults.length > 0) {
+  console.log('\npinned hashes — paste into classicalCatalog.json, then re-run --verify:');
+  console.log(JSON.stringify(pinnedResults, null, 2));
 }
 if (failures.length > 0) {
   console.log('\nfailures/omissions:');
