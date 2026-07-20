@@ -130,6 +130,10 @@ frontend/src/
   the CS-80 / Blade Runner palette, classic rare synths (Prophet-5, Jupiter-8,
   Oberheim, PPG, Fairlight, Juno-106, ARP 2600, Memorymoog) and modern
   hyperpop / trap / rage production sounds
+- Patch Lab: 12 additional original patches in `utils/patchLabPresets.js`
+  (Cinema Analog / Orchestral Pop / Beat Lab / Experimental), technique
+  studies authored against the same CLEAN_PATCH slate and test contract;
+  loads with the factory bank in one deferred step
 - Every factory patch spreads over a fully-specified clean slate so preset
   switching is deterministic (nothing leaks from the previous sound)
 - PresetShelf UI: category groups, prev/next cycling, active-patch readout,
@@ -145,6 +149,23 @@ frontend/src/
 - Play MIDI through the synth with full sound engine
 - Visual feedback on keyboard shows active notes
 - Play/pause/stop controls with progress bar
+
+### Classical Learning Catalog
+- `src/data/classicalCatalog.json` (schema v1): hash-verified classical
+  works with full musicological metadata (composer, catalogue numbers,
+  key, genre, period, duration) and per-file provenance (source URL,
+  encoder, license + license URL, attribution, sha256, retrieval date)
+- Featured flagship: Schubert — Impromptu in G-flat major, Op. 90 No. 3
+  (D.899), first on `#/studies` and its MIDI idle-prefetched there
+- Sources: piano-midi.de (Bernd Krueger, CC BY-SA 3.0 DE, via pinned
+  Internet Archive snapshots) and the Mutopia Project (per-piece PD/CC)
+- `npm run sync:midis` → `scripts/sync_classical_midis.mjs`: allowlisted,
+  throttled, resumable importer; verifies sha256 on every entry; `--pin`
+  prints hashes for new entries (never auto-writes the manifest);
+  `--dry-run` / `--verify` modes; prints a license/audit table
+- Gates: `classicalCatalog.test.js` (schema, hashes on disk, provenance
+  completeness, featured rank) and a perf-budget line (D00b ≤ 384 KiB +
+  manifest↔directory bijection guard). History: `CATALOG_LEDGER.md`
 
 ### Recording
 - Record button captures all audio output
