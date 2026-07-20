@@ -6,7 +6,9 @@
 import { MOD_SRC, MOD_DST } from '../audio/dsp/constants.js';
 
 // Short aliases over the engine's mod-matrix enums, for compact patch tables.
-const SRC = Object.freeze({
+// Exported (with CLEAN_PATCH) so sibling banks — the Patch Lab — author
+// against the identical clean-slate contract.
+export const SRC = Object.freeze({
   LFO1: MOD_SRC.LFO1,
   LFO2: MOD_SRC.LFO2,
   AMP_ENV: MOD_SRC.AMP_ENV,
@@ -15,7 +17,7 @@ const SRC = Object.freeze({
   KEY: MOD_SRC.KEY_TRACK,
   WHEEL: MOD_SRC.MOD_WHEEL
 });
-const DST = Object.freeze({
+export const DST = Object.freeze({
   PITCH: MOD_DST.PITCH,
   CUTOFF: MOD_DST.CUTOFF,
   AMP: MOD_DST.AMP,
@@ -29,7 +31,7 @@ const DST = Object.freeze({
  * sound. Field set mirrors AUDIO_PARAM_DEFAULTS minus volume/pan (those stay
  * under user control when a preset loads).
  */
-const CLEAN_PATCH = Object.freeze({
+export const CLEAN_PATCH = Object.freeze({
   useADSR: true,
   attack: 0.01, decay: 0.18, sustain: 0.76, release: 0.42,
   useFM: false, fmRatio: 2, fmIndex: 2,

@@ -4,7 +4,7 @@ import {
   loadUserPresets,
   saveUserPreset
 } from '../utils/userPresetStorage.js';
-import { FACTORY_PRESET_COUNT } from '../utils/presetCatalogMeta.js';
+import { FACTORY_PRESET_COUNT, PATCH_LAB_PRESET_COUNT } from '../utils/presetCatalogMeta.js';
 
 /**
  * PresetShelf — categorized preset browser for the Sound tab.
@@ -43,8 +43,17 @@ const PresetShelf = ({
   const ensureFactoryCatalog = useCallback(() => {
     if (factoryCatalog) return Promise.resolve(factoryCatalog);
     if (!catalogPromiseRef.current) {
-      catalogPromiseRef.current = import('../utils/factoryPresets.js')
-        .then((catalog) => {
+      // Factory bank + Patch Lab load together in one deferred step; both
+      // stay out of every route's static closure.
+      catalogPromiseRef.current = Promise.all([
+        import('../utils/factoryPresets.js'),
+        import('../utils/patchLabPresets.js')
+      ])
+        .then(([factory, lab]) => {
+          const catalog = {
+            FACTORY_PRESETS: [...factory.FACTORY_PRESETS, ...lab.PATCH_LAB_PRESETS],
+            PRESET_CATEGORIES: [...factory.PRESET_CATEGORIES, ...lab.PATCH_LAB_CATEGORIES]
+          };
           if (mountedRef.current) {
             setFactoryCatalog(catalog);
             setCatalogError('');
@@ -79,8 +88,11 @@ const PresetShelf = ({
     () => [...factoryPresets, ...userPresets],
     [factoryPresets, userPresets]
   );
-  const presetCount = (factoryCatalog ? factoryPresets.length : FACTORY_PRESET_COUNT)
-    + userPresets.length;
+  const presetCount = (
+    factoryCatalog
+      ? factoryPresets.length
+      : FACTORY_PRESET_COUNT + PATCH_LAB_PRESET_COUNT
+  ) + userPresets.length;
 
   const factoryByCategory = useMemo(() => {
     const groups = new Map(presetCategories.map((category) => [category, []]));
