@@ -40,6 +40,123 @@
         "d899", "d.899", "op90", "op. 90", "opus 90", "no 3", "piano", "romantic", "1827"
       ],
       "studyNotes": "A single cantabile melody floats over an unbroken stream of sextuplet arpeggios for nearly six minutes. Follow the top voice against the bass line: the middle texture never stops moving, yet the piece reads as three slow layers. Written in 1827, published posthumously in 1857 (transposed to G major by the first publisher; the original G-flat is what you hear)."
+    },
+    {
+      "id": "schubert-d899-1-impromptu-cminor",
+      "title": "Impromptu in C minor",
+      "altTitles": ["Impromptu Op. 90 No. 1", "Impromptu D.899 No. 1"],
+      "composer": "Franz Schubert",
+      "composerYears": "1797-1828",
+      "catalog": { "d": "D.899", "op": "Op. 90", "no": 1 },
+      "key": "C minor",
+      "movement": null,
+      "genre": "impromptu",
+      "period": "romantic",
+      "yearComposed": "1827",
+      "tags": ["piano", "march", "variations", "study"],
+      "difficulty": "advanced",
+      "featuredRank": 2,
+      "durationSeconds": 461,
+      "noteCount": 4973,
+      "timeSignature": "4/4",
+      "file": "midi/classical/schubert-d899-1-impromptu-cminor.mid",
+      "sha256": "1c2598167d0bdd2b3485ae7d1b29e5178f9461ac03e8d6a4fa143125a684e1e8",
+      "byteSize": 41477,
+      "provenance": {
+        "source": "piano-midi.de (Bernd Krueger)",
+        "sourceUrl": "https://web.archive.org/web/20230510125310id_/http://www.piano-midi.de/midis/schubert/schuim-1.mid",
+        "infoUrl": "http://www.piano-midi.de/schub.htm",
+        "encoder": "Bernd Krueger",
+        "encoderEdition": "2014-03-18",
+        "license": "CC BY-SA 3.0 DE",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+        "licenseEvidenceUrl": "https://web.archive.org/web/20241211185851/http://www.piano-midi.de/copy.htm",
+        "attribution": "MIDI performance by Bernd Krueger, http://www.piano-midi.de, licensed CC BY-SA 3.0 DE; redistributed under identical license conditions.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "schubert", "franz", "impromptu", "c minor", "cminor", "c-moll",
+        "d899", "d.899", "op90", "op. 90", "opus 90", "no 1", "piano", "romantic", "1827"
+      ],
+      "studyNotes": "A bare unison G, then a solemn march melody that Schubert varies continuously for almost eight minutes — the same tune retold in minor and major, over triplets, against syncopations. Track how each return of the theme changes register and accompaniment while the pulse never breaks."
+    },
+    {
+      "id": "schubert-d899-2-impromptu-eflat",
+      "title": "Impromptu in E-flat major",
+      "altTitles": ["Impromptu Op. 90 No. 2", "Impromptu D.899 No. 2"],
+      "composer": "Franz Schubert",
+      "composerYears": "1797-1828",
+      "catalog": { "d": "D.899", "op": "Op. 90", "no": 2 },
+      "key": "E-flat major",
+      "movement": null,
+      "genre": "impromptu",
+      "period": "romantic",
+      "yearComposed": "1827",
+      "tags": ["piano", "scherzando", "virtuosic", "study"],
+      "difficulty": "advanced",
+      "featuredRank": 3,
+      "durationSeconds": 270,
+      "noteCount": 3143,
+      "timeSignature": "3/4",
+      "file": "midi/classical/schubert-d899-2-impromptu-eflat.mid",
+      "sha256": "69db8100c8cfd376a9f5e7fe141b0b0e8bc01d18324959eb1370c74e6ae96274",
+      "byteSize": 29519,
+      "provenance": {
+        "source": "piano-midi.de (Bernd Krueger)",
+        "sourceUrl": "https://web.archive.org/web/20230510125308id_/http://www.piano-midi.de/midis/schubert/schuim-2.mid",
+        "infoUrl": "http://www.piano-midi.de/schub.htm",
+        "encoder": "Bernd Krueger",
+        "encoderEdition": "2014-03-18",
+        "license": "CC BY-SA 3.0 DE",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+        "licenseEvidenceUrl": "https://web.archive.org/web/20241211185851/http://www.piano-midi.de/copy.htm",
+        "attribution": "MIDI performance by Bernd Krueger, http://www.piano-midi.de, licensed CC BY-SA 3.0 DE; redistributed under identical license conditions.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "schubert", "franz", "impromptu", "e-flat", "eflat", "es-dur",
+        "d899", "d.899", "op90", "op. 90", "opus 90", "no 2", "piano", "romantic", "1827"
+      ],
+      "studyNotes": "Right-hand scale ribbons run almost without pause — E-flat major spun into continuous triplet eighths — until a stormy B minor middle section snaps the mood. Watch the left hand: a plain waltz-like accompaniment that keeps the racing right hand honest, and a coda that ends the major-key piece defiantly in minor."
+    },
+    {
+      "id": "schubert-d899-4-impromptu-aflat",
+      "title": "Impromptu in A-flat major",
+      "altTitles": ["Impromptu Op. 90 No. 4", "Impromptu D.899 No. 4"],
+      "composer": "Franz Schubert",
+      "composerYears": "1797-1828",
+      "catalog": { "d": "D.899", "op": "Op. 90", "no": 4 },
+      "key": "A-flat major",
+      "movement": null,
+      "genre": "impromptu",
+      "period": "romantic",
+      "yearComposed": "1827",
+      "tags": ["piano", "arpeggios", "chorale", "study"],
+      "difficulty": "advanced",
+      "featuredRank": 4,
+      "durationSeconds": 420,
+      "noteCount": 5716,
+      "timeSignature": "3/4",
+      "file": "midi/classical/schubert-d899-4-impromptu-aflat.mid",
+      "sha256": "0573877b1a9db6bbb552ab882ca78c1703089218149cf6647e7e800f355e47d9",
+      "byteSize": 48219,
+      "provenance": {
+        "source": "piano-midi.de (Bernd Krueger)",
+        "sourceUrl": "https://web.archive.org/web/20230510125308id_/http://www.piano-midi.de/midis/schubert/schuim-4.mid",
+        "infoUrl": "http://www.piano-midi.de/schub.htm",
+        "encoder": "Bernd Krueger",
+        "encoderEdition": "2014-03-19",
+        "license": "CC BY-SA 3.0 DE",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/de/deed.en",
+        "licenseEvidenceUrl": "https://web.archive.org/web/20241211185851/http://www.piano-midi.de/copy.htm",
+        "attribution": "MIDI performance by Bernd Krueger, http://www.piano-midi.de, licensed CC BY-SA 3.0 DE; redistributed under identical license conditions.",
+        "retrieved": "2026-07-19"
+      },
+      "searchTokens": [
+        "schubert", "franz", "impromptu", "a-flat", "aflat", "as-dur",
+        "d899", "d.899", "op90", "op. 90", "opus 90", "no 4", "piano", "romantic", "1827"
+      ],
+      "studyNotes": "Cascading sixteenth-note arpeggios open in A-flat minor even though the piece is titled in the major — the sunrise into A-flat major arrives only after each cascade resolves. The trio section is a long-breathed chorale in C-sharp minor. Listen for the left hand's offbeat chords answering every right-hand fall."
     }
   ]
 }

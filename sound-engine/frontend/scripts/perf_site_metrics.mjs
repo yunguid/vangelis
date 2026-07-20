@@ -66,6 +66,22 @@ const deploymentBytes = (await Promise.all(distPaths.map(async (file) => (await 
 const publicStaticBytes = (await Promise.all(publicPaths.map(async (file) => (await stat(file)).size)))
   .reduce((total, size) => total + size, 0);
 const publicRelativePaths = publicPaths.map((file) => path.relative(publicDir, file));
+// Classical learning catalog (src/data/classicalCatalog.json): its MIDI corpus
+// gets a dedicated byte allowance plus a manifest<->directory bijection guard
+// so the catalog can grow deliberately without becoming an unbounded dump.
+const classicalCatalogManifest = JSON.parse(
+  await readFile(path.join(sourceDir, 'data/classicalCatalog.json'), 'utf8')
+);
+const classicalDirPaths = publicRelativePaths
+  .filter((relative) => relative.startsWith('midi/classical/'));
+const classicalCatalogBytes = (await Promise.all(
+  classicalDirPaths.map(async (relative) => (await stat(path.join(publicDir, relative))).size)
+)).reduce((total, size) => total + size, 0);
+const classicalManifestFiles = new Set(
+  classicalCatalogManifest.entries.map((entry) => entry.file)
+);
+const classicalOrphanFiles = classicalDirPaths
+  .filter((relative) => !classicalManifestFiles.has(relative));
 const assetPaths = (await walkFiles(assetsDir)).sort();
 const assetMetrics = await Promise.all(assetPaths.map(measureFile));
 const jsAssets = assetMetrics.filter(({ file }) => file.endsWith('.js'));
@@ -1064,6 +1080,8 @@ const report = {
     deploymentKb: roundKb(deploymentBytes),
     publicStaticFileCount: publicPaths.length,
     publicStaticKb: roundKb(publicStaticBytes),
+    classicalCatalogKb: roundKb(classicalCatalogBytes),
+    classicalCatalogFileCount: classicalDirPaths.length,
     htmlKb: roundKb(htmlMetric.bytes),
     htmlGzipKb: roundKb(htmlMetric.gzipBytes),
     jsAssetCount: jsAssets.length,
@@ -1492,7 +1510,11 @@ const report = {
 
 const budgetChecks = [
   ['D00 deployment raw', deploymentBytes, 1.65 * 1024 * 1024],
-  ['D00 public static raw', publicStaticBytes, 0.95 * 1024 * 1024],
+  // Raised from 0.95 MiB on 2026-07-19: non-catalog public assets stay at
+  // their prior ~0.8 MiB level while the classical learning catalog gets its
+  // own bounded D00b allowance (see CATALOG_LEDGER.md).
+  ['D00 public static raw', publicStaticBytes, 1.05 * 1024 * 1024],
+  ['D00b classical catalog raw', classicalCatalogBytes, 256 * 1024],
   ['D01 HTML raw', htmlMetric.bytes, 5 * 1024],
   ['D02 HTML gzip', htmlMetric.gzipBytes, 2 * 1024],
   ['D03 initial JS raw', sum(initialJs, 'bytes'), 35 * 1024],
@@ -1509,6 +1531,13 @@ const failures = budgetChecks
     actualKb: roundKb(actual),
     maximumKb: roundKb(maximum)
   }));
+if (classicalOrphanFiles.length > 0) {
+  failures.push({
+    name: 'Guard classical catalog manifest coverage',
+    orphanFiles: classicalOrphanFiles,
+    expected: 'every public/midi/classical file listed in classicalCatalog.json'
+  });
+}
 if (!productionUsesPreactCompat) {
   failures.push({
     name: 'Guard compact production UI runtime',
