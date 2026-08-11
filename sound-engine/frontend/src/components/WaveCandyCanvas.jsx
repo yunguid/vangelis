@@ -66,13 +66,26 @@ const SPECTRUM_GRID_DB_RATIOS = Float64Array.from(
   dbToUnit
 );
 
+// Vertical inset for the spectrum trace. Hot bands clamp at 0 dBFS, which
+// used to pin the envelope flat against the tile's top edge while quiet
+// bands sat on the bottom edge — a full-height slab when playing. Drawing
+// into this inset band keeps the trace inside the frame: headroom above the
+// peaks, and the silence floor visibly off the bottom edge.
+const SPECTRUM_TRACE_TOP = 0.24;
+const SPECTRUM_TRACE_BOTTOM = 0.1;
+const SPECTRUM_TRACE_SPAN = 1 - SPECTRUM_TRACE_TOP - SPECTRUM_TRACE_BOTTOM;
+
+const spectrumUnitToY = (unit, height) => (
+  (SPECTRUM_TRACE_TOP + (1 - unit) * SPECTRUM_TRACE_SPAN) * height
+);
+
 const traceSpectrumPath = (ctx, data, width, height) => {
   const cells = data.length;
   const xScale = cells > 1 ? width / (cells - 1) : 0;
   ctx.beginPath();
   for (let i = 0; i < cells; i++) {
     const x = i * xScale;
-    const y = height - dbToUnit(data[i]) * height;
+    const y = spectrumUnitToY(dbToUnit(data[i]), height);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
@@ -93,24 +106,26 @@ const drawSpectrum = (ctx, rawDb, chainDb, width, height, resized, gradientCache
     ctx.lineTo(x, height);
   }
   for (let i = 0; i < SPECTRUM_GRID_DB_RATIOS.length; i++) {
-    const y = height - SPECTRUM_GRID_DB_RATIOS[i] * height;
+    const y = spectrumUnitToY(SPECTRUM_GRID_DB_RATIOS[i], height);
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
   }
   ctx.stroke();
 
+  const floorY = spectrumUnitToY(0, height);
+
   // Raw FFT (ground truth) as a faint bed under the physical envelope
   traceSpectrumPath(ctx, rawDb, width, height);
-  ctx.lineTo(width, height);
-  ctx.lineTo(0, height);
+  ctx.lineTo(width, floorY);
+  ctx.lineTo(0, floorY);
   ctx.closePath();
   ctx.fillStyle = 'rgba(140, 220, 255, 0.1)';
   ctx.fill();
 
   // Verlet/Lagrange envelope: gradient body + glowing string on top
   traceSpectrumPath(ctx, chainDb, width, height);
-  ctx.lineTo(width, height);
-  ctx.lineTo(0, height);
+  ctx.lineTo(width, floorY);
+  ctx.lineTo(0, floorY);
   ctx.closePath();
   if (resized || !gradientCache.current) {
     const fill = ctx.createLinearGradient(0, 0, 0, height);
