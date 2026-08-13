@@ -53,7 +53,6 @@ import {
 import { drawWaveCandyMeterGrid } from '../src/utils/waveCandyMeterGrid.js';
 import { loadAppSession } from '../src/utils/appSession.js';
 import { normalizeMidiNotes } from '../src/utils/midiPlaybackNotes.js';
-import { reusePipelineJobList } from '../src/utils/pipelineJobState.js';
 import {
   AUDIO_PARAM_DEFAULTS,
   AUDIO_PARAM_RANGES,
@@ -410,85 +409,6 @@ if (
     !== onePassMidiNormalizationBenchmark.normalizedCount
 ) {
   throw new Error('One-pass MIDI normalization changed sorted-score output');
-}
-
-const pipelinePollingJobCount = 100;
-const pipelinePollingBenchmarkIterations = 2000;
-const pipelinePollingSessionPolls = 300;
-const pipelinePollingJobs = Array.from(
-  { length: pipelinePollingJobCount },
-  (_, index) => ({
-    id: `job-${index}`,
-    updated_at: 100000 - index,
-    status: 'completed',
-    artist: `Artist ${index}`,
-    song: `Study ${index}`,
-    source_url: index % 2 === 0 ? `https://example.com/${index}` : '',
-    tempo_bpm: 90 + (index % 60),
-    artifacts: [{ kind: 'merged-midi', url: `/midi/generated-${index}.mid` }]
-  })
-);
-const createPipelineBenchmarkStudy = (job) => {
-  const mergedMidi = job.artifacts.find((artifact) => artifact.kind === 'merged-midi');
-  if (job.status !== 'completed' || !mergedMidi) return null;
-  return {
-    jobId: job.id,
-    title: job.song.trim(),
-    artist: job.artist.trim(),
-    sourceUrl: job.source_url.trim(),
-    midiUrl: mergedMidi.url,
-    tempoBpm: Math.round(job.tempo_bpm),
-    updatedAt: job.updated_at
-  };
-};
-const buildPipelineStudyChecksum = (jobs) => {
-  const studies = jobs
-    .map((job) => createPipelineBenchmarkStudy(job))
-    .filter(Boolean)
-    .sort((left, right) => (right.updatedAt || 0) - (left.updatedAt || 0));
-  let checksum = studies.length;
-  for (let index = 0; index < studies.length; index += 1) {
-    checksum += studies[index].jobId.length + studies[index].updatedAt;
-  }
-  return checksum;
-};
-const runLegacyPipelinePollingBenchmark = (iterations) => {
-  let checksum = 0;
-  let commitCount = 0;
-  const startedAt = performance.now();
-  for (let iteration = 0; iteration < iterations; iteration += 1) {
-    const nextJobs = pipelinePollingJobs.map((job) => ({ ...job }));
-    checksum = buildPipelineStudyChecksum(nextJobs);
-    commitCount += 1;
-  }
-  return { checksum, commitCount, elapsedMs: performance.now() - startedAt };
-};
-const runRevisionAwarePipelinePollingBenchmark = (iterations) => {
-  let currentJobs = pipelinePollingJobs;
-  let checksum = buildPipelineStudyChecksum(currentJobs);
-  let commitCount = 0;
-  const startedAt = performance.now();
-  for (let iteration = 0; iteration < iterations; iteration += 1) {
-    const nextJobs = pipelinePollingJobs.map((job) => ({ ...job }));
-    const reusableJobs = reusePipelineJobList(currentJobs, nextJobs);
-    if (reusableJobs !== currentJobs) {
-      currentJobs = reusableJobs;
-      checksum = buildPipelineStudyChecksum(currentJobs);
-      commitCount += 1;
-    }
-  }
-  return { checksum, commitCount, elapsedMs: performance.now() - startedAt };
-};
-runLegacyPipelinePollingBenchmark(20);
-runRevisionAwarePipelinePollingBenchmark(20);
-const legacyPipelinePollingBenchmark = runLegacyPipelinePollingBenchmark(
-  pipelinePollingBenchmarkIterations
-);
-const revisionAwarePipelinePollingBenchmark = runRevisionAwarePipelinePollingBenchmark(
-  pipelinePollingBenchmarkIterations
-);
-if (legacyPipelinePollingBenchmark.checksum !== revisionAwarePipelinePollingBenchmark.checksum) {
-  throw new Error('Revision-aware pipeline polling changed derived study output');
 }
 
 const srcFreq = new Uint8Array(AUDIO_FREQ_BINS);
@@ -1916,86 +1836,6 @@ const output = {
     normalizedChecksumDelta: 0,
     preservesUnsortedInputOrdering: true
   },
-  pipelinePollingIdentityPolicy: {
-    jobCount: pipelinePollingJobCount,
-    activeSessionMinutes: 10,
-    pollsPerActiveSession: pipelinePollingSessionPolls,
-    unchangedReactCommitsPerSessionBefore: pipelinePollingSessionPolls,
-    unchangedReactCommitsPerSessionAfter: 0,
-    avoidedReactCommitPercent: 100,
-    derivedJobEvaluationsPerSessionBefore:
-      pipelinePollingSessionPolls * pipelinePollingJobCount,
-    derivedJobEvaluationsPerSessionAfter: 0,
-    benchmarkIterations: pipelinePollingBenchmarkIterations,
-    legacyCommitCount: legacyPipelinePollingBenchmark.commitCount,
-    revisionAwareCommitCount: revisionAwarePipelinePollingBenchmark.commitCount,
-    legacyElapsedMs: Number(legacyPipelinePollingBenchmark.elapsedMs.toFixed(2)),
-    revisionAwareElapsedMs: Number(revisionAwarePipelinePollingBenchmark.elapsedMs.toFixed(2)),
-    elapsedReductionPercent: Number(reduction(
-      legacyPipelinePollingBenchmark.elapsedMs,
-      revisionAwarePipelinePollingBenchmark.elapsedMs
-    ).toFixed(2)),
-    derivedStudyChecksumDelta: 0,
-    unversionedResponsesAlwaysRetained: true
-  },
-  voiceLoopDeferredRenderPolicy: {
-    idleObservationMs: 2000,
-    coldAudioContextConstructionsBefore: 1,
-    coldAudioContextConstructionsAfter: 0,
-    coldScoreRendersBefore: 1,
-    coldScoreRendersAfter: 0,
-    stoppedParameterChanges: 20,
-    stoppedParameterChangeRendersBefore: 20,
-    stoppedParameterChangeRendersAfter: 0,
-    firstPlayRendersBefore: 0,
-    firstPlayRendersAfter: 1,
-    duplicatePostPlayRendersBefore: 1,
-    duplicatePostPlayRendersAfter: 0,
-    livePlaybackDebounceMsBefore: 260,
-    livePlaybackDebounceMsAfter: 260,
-    livePlaybackRerenderPreserved: true,
-    renderInputRevisionTracking: true
-  },
-  voiceLoopPlayheadRenderPolicy: {
-    activePlaybackSeconds: 60,
-    playheadUpdateRateHz: 25,
-    playheadTicks: 1500,
-    starterScoreEvents: 29,
-    maximumDisplayedScoreEvents: 192,
-    pageReactCommitsBefore: 1500,
-    pageReactCommitsAfter: 0,
-    starterEventRowReconciliationsBefore: 43500,
-    starterEventRowReconciliationsAfter: 0,
-    maximumEventRowReconciliationsBefore: 288000,
-    maximumEventRowReconciliationsAfter: 0,
-    scoreSliceArraysBefore: 1500,
-    scoreSliceArraysAfter: 0,
-    activeCellClassMutationsPerChangedTickBeforeMaximum: 2,
-    activeCellClassMutationsPerChangedTickAfterMaximum: 2,
-    visibilityAware25HzCadencePreserved: true,
-    ariaCurrentTracksActiveCell: true
-  },
-  voiceLoopContinuousRangePolicy: {
-    activeDragSeconds: 10,
-    rangeControlCount: 12,
-    rawInputSampleRateHz: 240,
-    displayFrameRateHz: 60,
-    rawInputSamples: 2400,
-    processedStatePatches: 600,
-    routeStateUpdaterCallsBefore: 2400,
-    routeStateUpdaterCallsAfterMaximum: 600,
-    routeStateObjectClonesBefore: 2400,
-    routeStateObjectClonesAfterMaximum: 600,
-    activeSpeedAudioParamWritesPerUpdate: 4,
-    activeSpeedAudioParamWritesBefore: 9600,
-    activeSpeedAudioParamWritesAfterMaximum: 2400,
-    synthesisRerenderDebounceTimersBefore: 2400,
-    synthesisRerenderDebounceTimersAfterMaximum: 600,
-    parentUpdateReductionPercent: 75,
-    releaseFlushesLatestValue: true,
-    keyboardReleaseAndBlurFlushLatestValue: true,
-    unmountCancelsPendingFrame: true
-  },
   keyboardInteractionHotPathPolicy: {
     successfulNotesPerSession: 300,
     velocityStateUpdatesPerNoteBefore: 1,
@@ -2149,38 +1989,8 @@ const output = {
     parentUpdateReductionPercent: 75,
     effectMacroDialCallbacksPer240HzFrameBefore: 4,
     effectMacroDialCallbacksPer240HzFrameAfterMaximum: 1,
-    controlKitDragCallbacksPer240HzFrameBefore: 4,
-    controlKitDragCallbacksPer240HzFrameAfterMaximum: 1,
-    controlKitDragStateCommitsPerGestureBefore: 2,
-    controlKitDragStateCommitsPerGestureAfter: 2,
     releaseFlushesLatestValue: true,
     unmountCancelsPendingFrames: true
-  },
-  controlKitRenderIsolationPolicy: {
-    activeDragSeconds: 10,
-    parentUpdateRateHz: 60,
-    parentUpdates: 600,
-    topLevelControlPrimitives: 29,
-    nestedKnobReadouts: 7,
-    totalControlPrimitives: 36,
-    primitiveRendersPerKnobUpdateBefore: 36,
-    primitiveRendersPerKnobUpdateAfterMaximum: 2,
-    unrelatedPrimitiveRendersPerUpdateBefore: 34,
-    unrelatedPrimitiveRendersPerUpdateAfter: 0,
-    primitiveRendersOverKnobDragBefore: 21600,
-    primitiveRendersOverKnobDragAfterMaximum: 1200,
-    primitiveRenderReductionPercent: 94.44,
-    knobStaticTickTrigEvaluationsBefore: 26400,
-    knobStaticTickTrigEvaluationsAfter: 0,
-    knobStaticTickPointObjectsBefore: 13200,
-    knobStaticTickPointObjectsAfter: 0,
-    knobStaticTickReactElementsBefore: 6600,
-    knobStaticTickReactElementsAfter: 0,
-    faderStaticTickSetAllocationsBefore: 600,
-    faderStaticTickSetAllocationsAfter: 0,
-    faderStaticTickReactElementsBefore: 3000,
-    faderStaticTickReactElementsAfter: 0,
-    activeControlValueAndAccessibilityUpdatesPreserved: true
   },
   stereoTraversalBenchmark: {
     iterations: stereoTraversalIterations,

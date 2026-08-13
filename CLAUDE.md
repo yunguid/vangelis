@@ -24,8 +24,8 @@ Vangelis is an expressive, playable web synthesizer that feels responsive and mu
   JS, so the DSP stays in hot-reloadable JS.
 - **Audio quality gates** - `npm run audit:audio` renders every factory preset (and the
   delay/reverb worklets) against golden masters in `frontend/golden/` — stereo
-  per-channel fingerprints, aliasing, DC, heap-drift metrics. See `ENGINE_DESCENT.md`
-  and `ENGINE_LEDGER.md` at the repo root for the improvement loop and its history.
+  per-channel fingerprints, aliasing, DC, heap-drift metrics. See `docs/ENGINE_DESCENT.md`
+  and `docs/ENGINE_LEDGER.md` for the improvement loop and its history.
 
 ### Audio Pipeline
 ```
@@ -76,7 +76,7 @@ frontend/src/
 │       └── hooks/             # Keyboard-specific hooks
 │
 ├── context/
-│   └── SynthContexts.jsx      # SoundControls / MidiTransport / VoicePhrase contexts
+│   └── SynthContexts.jsx      # SoundControls / MidiTransport contexts
 │
 ├── hooks/
 │   ├── useMidiPlayback.js     # MIDI scheduling and playback engine
@@ -165,7 +165,7 @@ frontend/src/
   `--dry-run` / `--verify` modes; prints a license/audit table
 - Gates: `classicalCatalog.test.js` (schema, hashes on disk, provenance
   completeness, featured rank) and a perf-budget line (D00b ≤ 384 KiB +
-  manifest↔directory bijection guard). History: `CATALOG_LEDGER.md`
+  manifest↔directory bijection guard). History: `docs/CATALOG_LEDGER.md`
 
 ### Recording
 - Record button captures all audio output
@@ -207,9 +207,8 @@ node scripts/bench_synth_worklet.mjs
 ## Dependencies
 
 ### Core
-- React 18
+- React 18 API (aliased to Preact via `preact/compat` in production builds; real React in tests)
 - Vite (build tool)
-- Three.js (3D background)
 
 ### Audio
 - @tonejs/midi (MIDI parsing)

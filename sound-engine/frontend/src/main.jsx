@@ -4,21 +4,14 @@ import './style.css';
 import {
   getActiveRoute,
   getStudyRouteMatch,
-  isControlKitRoute,
-  isMidiPipelineRoute,
   isSoundDesignerRoute,
-  isStudySongsRoute,
-  isVoiceLoopRoute
+  isStudySongsRoute
 } from './utils/routes.js';
 
-const ControlKitPage = React.lazy(() => import('./pages/ControlKitPage.jsx'));
 const App = React.lazy(() => import('./App.jsx'));
-const GeneratedSongStudyPage = React.lazy(() => import('./pages/GeneratedSongStudyPage.jsx'));
-const MidiPipelinePage = React.lazy(() => import('./pages/MidiPipelinePage.jsx'));
 const SongStudyPage = React.lazy(() => import('./pages/SongStudyPage.jsx'));
 const SoundDesignerPage = React.lazy(() => import('./pages/SoundDesignerPage.jsx'));
 const StudySongsPage = React.lazy(() => import('./pages/StudySongsPage.jsx'));
-const VoiceLoopLabPage = React.lazy(() => import('./pages/VoiceLoopLabPage.jsx'));
 
 const RouteLoading = () => (
   <div className="route-loading" role="status" aria-live="polite">
@@ -28,10 +21,7 @@ const RouteLoading = () => (
 
 const Root = () => {
   const [route, setRoute] = React.useState(() => getActiveRoute());
-  const showMidiPipeline = isMidiPipelineRoute(route);
   const showSoundDesigner = isSoundDesignerRoute(route);
-  const showControlKit = isControlKitRoute(route);
-  const showVoiceLoop = isVoiceLoopRoute(route);
   const showStudySongs = isStudySongsRoute(route);
   const studyRoute = getStudyRouteMatch(route);
 
@@ -57,24 +47,8 @@ const Root = () => {
     return <SongStudyPage studySlug={studyRoute.slug} />;
   }
 
-  if (studyRoute?.kind === 'generated') {
-    return <GeneratedSongStudyPage jobId={studyRoute.jobId} />;
-  }
-
-  if (showMidiPipeline) {
-    return <MidiPipelinePage />;
-  }
-
   if (showSoundDesigner) {
     return <SoundDesignerPage />;
-  }
-
-  if (showControlKit) {
-    return <ControlKitPage />;
-  }
-
-  if (showVoiceLoop) {
-    return <VoiceLoopLabPage />;
   }
 
   if (showStudySongs) {

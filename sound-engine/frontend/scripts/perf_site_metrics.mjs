@@ -108,7 +108,7 @@ const initialCss = cssAssets.filter(({ file }) => initialRefs.includes(file));
 const initialJsText = initialJs.map(({ file }) => jsTextByFile.get(file) || '').join('\n');
 const initialCssText = initialCss.map(({ file }) => cssTextByFile.get(file) || '').join('\n');
 const routeChunks = jsAssets.filter(({ file }) => (
-  /(?:ControlKit|GeneratedSongStudy|MidiPipeline|SongStudy|SoundDesigner|StudySongs|VoiceLoopLab)/.test(file)
+  /(?:SongStudy|SoundDesigner|StudySongs)/.test(file)
 ));
 const worklets = jsAssets.filter(({ file }) => file.includes('worklet'));
 const assetMetricByFile = new Map(assetMetrics.map((metric) => [metric.file, metric]));
@@ -119,13 +119,9 @@ const routeEntries = [
     route: 'home',
     entries: ['src/App.jsx']
   },
-  { route: 'control-kit', entries: ['src/pages/ControlKitPage.jsx'] },
-  { route: 'generated-study', entries: ['src/pages/GeneratedSongStudyPage.jsx'] },
-  { route: 'midi-pipeline', entries: ['src/pages/MidiPipelinePage.jsx'] },
   { route: 'song-study', entries: ['src/pages/SongStudyPage.jsx'] },
   { route: 'sound-designer', entries: ['src/pages/SoundDesignerPage.jsx'] },
-  { route: 'study-songs', entries: ['src/pages/StudySongsPage.jsx'] },
-  { route: 'voice-loop', entries: ['src/pages/VoiceLoopLabPage.jsx'] }
+  { route: 'study-songs', entries: ['src/pages/StudySongsPage.jsx'] }
 ];
 const fullSidebarManifestRecord = Object.values(manifest).find((record) => (
   record.dynamicImports?.includes('src/components/Sidebar/MidiTab.jsx')
@@ -236,10 +232,6 @@ const appManifestEntry = manifest['src/App.jsx'];
 const appDefersMidiParser = appManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false;
 const appDefersScene = appManifestEntry?.dynamicImports?.includes('src/components/Scene.jsx') || false;
 const appDefersWaveCandy = appManifestEntry?.dynamicImports?.includes('src/components/WaveCandy.jsx') || false;
-const generatedStudyManifestEntry = manifest['src/pages/GeneratedSongStudyPage.jsx'];
-const generatedDefersSongStudyPlayer = (
-  generatedStudyManifestEntry?.dynamicImports?.includes('src/pages/SongStudyPage.jsx') || false
-);
 const soundDesignerManifestEntry = manifest['src/pages/SoundDesignerPage.jsx'];
 const songStudyManifestEntry = manifest['src/pages/SongStudyPage.jsx'];
 const songStudyDefersMidiParser = (
@@ -275,11 +267,7 @@ const dynamicallyComposedCssClasses = new Set([
   'kit-numfield--align-right',
   'kit-numfield--bare',
   'kit-numfield--boxed',
-  'kit-togglebtn--sm',
-  'voice-loop-status--error',
-  'voice-loop-status--ready',
-  'voice-loop-status--warn',
-  'voice-loop-status--working'
+  'kit-togglebtn--sm'
 ]);
 const ownedCssClassNames = [...new Set(
   [...ownedCssAuditText.matchAll(/\.([_a-zA-Z]+[_a-zA-Z0-9-]*)/g)]
@@ -682,57 +670,9 @@ const midiNormalizerUsesOnePassFastPath = (
   && !/notes\s*\.map\(/.test(midiPlaybackNotesSource)
   && !/\.filter\(Boolean\)/.test(midiPlaybackNotesSource)
 );
-const pipelineJobStateSource = await readFile(
-  path.join(sourceDir, 'utils', 'pipelineJobState.js'),
-  'utf8'
-);
-const pipelinePollingSource = (await Promise.all([
-  path.join('pages', 'MidiPipelinePage.jsx'),
-  path.join('pages', 'GeneratedSongStudyPage.jsx'),
-  path.join('pages', 'StudySongsPage.jsx')
-].map((file) => readFile(path.join(sourceDir, file), 'utf8')))).join('\n');
-const pipelinePollingReusesJobSnapshots = (
-  (pipelinePollingSource.match(/reusePipelineJob(?:List)?\(/g) || []).length === 3
-  && /job\.updated_at !== null/.test(pipelineJobStateSource)
-  && /currentJob\.id === nextJob\.id/.test(pipelineJobStateSource)
-  && /currentJob\.updated_at === nextJob\.updated_at/.test(pipelineJobStateSource)
-  && /if \(currentJobs\.length !== nextJobs\.length\) return false/.test(pipelineJobStateSource)
-);
-const voiceLoopSource = await readFile(
-  path.join(sourceDir, 'pages', 'VoiceLoopLabPage.jsx'),
-  'utf8'
-);
 const songStudySource = await readFile(
   path.join(sourceDir, 'pages', 'SongStudyPage.jsx'),
   'utf8'
-);
-const voiceLoopDefersScoreRenderUntilInteraction = (
-  /const renderInputRevisionRef = React\.useRef\(0\)/.test(voiceLoopSource)
-  && /const renderedRevisionRef = React\.useRef\(-1\)/.test(voiceLoopSource)
-  && /renderedRevisionRef\.current = renderRevision/.test(voiceLoopSource)
-  && /!isPlaying\s*\|\|\s*renderedRevisionRef\.current === renderInputRevisionRef\.current/
-    .test(voiceLoopSource)
-  && /const timeoutId = window\.setTimeout\(async \(\) =>/.test(voiceLoopSource)
-  && /\}, 260\)/.test(voiceLoopSource)
-);
-const voiceLoopUsesTargetedPlayheadFeedback = (
-  !/setPlayhead/.test(voiceLoopSource)
-  && /const scoreGridRef = React\.useRef\(null\)/.test(voiceLoopSource)
-  && /const activeEventIndexRef = React\.useRef\(-1\)/.test(voiceLoopSource)
-  && /classList\.remove\('is-active'\)/.test(voiceLoopSource)
-  && /classList\.add\('is-active'\)/.test(voiceLoopSource)
-  && /setAttribute\('aria-current', 'true'\)/.test(voiceLoopSource)
-  && /ref=\{scoreGridRef\}/.test(voiceLoopSource)
-  && /startVisibilityAwareRafLoop/.test(voiceLoopSource)
-);
-const voiceLoopContinuousRangesCoalesceByFrame = (
-  /const pendingContinuousFormRef = React\.useRef\(null\)/.test(voiceLoopSource)
-  && /const pendingContinuousControlsRef = React\.useRef\(null\)/.test(voiceLoopSource)
-  && /requestAnimationFrame\(flushContinuousChanges\)/.test(voiceLoopSource)
-  && /onChange=\{queueContinuousChange\}/.test(voiceLoopSource)
-  && /\.\.\.continuousRangeFlushProps/.test(voiceLoopSource)
-  && /cancelAnimationFrame\(continuousChangeFrameRef\.current\)/.test(voiceLoopSource)
-  && !/const handleControlChange =/.test(voiceLoopSource)
 );
 const songStudyPointerScrubDefersEngineSeek = (
   /const \[scrubPreviewTime, setScrubPreviewTime\] = React\.useState\(null\)/.test(songStudySource)
@@ -834,28 +774,12 @@ const effectMacroDialSource = await readFile(
   path.join(sourceDir, 'components', 'EffectMacroDial.jsx'),
   'utf8'
 );
-const controlKitDragSource = await readFile(
-  path.join(sourceDir, 'components', 'controls', 'kit', 'useDragValue.js'),
-  'utf8'
-);
 const remainingContinuousControlsCoalesceByFrame = (
   /const pendingClientYRef = useRef\(null\)/.test(effectMacroDialSource)
   && /requestAnimationFrame\(flushPointerMove\)/.test(effectMacroDialSource)
   && /updateFromDelta\(pendingClientY\)/.test(effectMacroDialSource)
   && /useEffect\(\(\) => cancelPendingPointerMove/.test(effectMacroDialSource)
-  && /const pendingPositionRef = useRef\(null\)/.test(controlKitDragSource)
-  && /requestAnimationFrame\(flushPointerMove\)/.test(controlKitDragSource)
-  && /commitPointerPosition\(pendingPosition, pendingFine\)/.test(controlKitDragSource)
-  && /useEffect\(\(\) => cancelPendingPointerMove/.test(controlKitDragSource)
 );
-const [controlKitPageSource, knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource] = await Promise.all([
-  readFile(path.join(sourceDir, 'pages', 'ControlKitPage.jsx'), 'utf8'),
-  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'Knob.jsx'), 'utf8'),
-  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'Fader.jsx'), 'utf8'),
-  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'NumField.jsx'), 'utf8'),
-  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'ToggleBtn.jsx'), 'utf8'),
-  readFile(path.join(sourceDir, 'components', 'controls', 'kit', 'SegmentSelect.jsx'), 'utf8')
-]);
 const [soundDesignerSource, soundDesignerAdvancedSource, presetShelfSource] = await Promise.all([
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerPage.jsx'), 'utf8'),
   readFile(path.join(sourceDir, 'pages', 'SoundDesignerAdvancedStages.jsx'), 'utf8'),
@@ -883,25 +807,6 @@ const uiProfilesPaintedInteractions = (
   && /midi\.file\.parse-and-dispatch/.test(midiLibrarySource)
   && /preset\.apply\.paint/.test(presetShelfSource)
   && /preset\.step\.\$\{startedCold \? 'cold' : 'warm'\}/.test(presetShelfSource)
-);
-const controlKitBatchesTickPaths = (
-  /const STATIC_TICK_PATHS_BY_SIZE =/.test(knobSource)
-  && /kit-knob__tick--minor/.test(knobSource)
-  && /kit-knob__tick--major/.test(knobSource)
-  && !/<line[\s\S]{0,240}className="kit-knob__tick"/.test(knobSource)
-  && /const tickPaths = useMemo\(\(\) =>/.test(faderSource)
-  && /kit-fader__tick--minor/.test(faderSource)
-  && /kit-fader__tick--major/.test(faderSource)
-  && !/<line[\s\S]{0,240}className="kit-fader__tick"/.test(faderSource)
-);
-const controlKitPrimitivesIsolateRenders = (
-  [knobSource, faderSource, numFieldSource, toggleBtnSource, segmentSelectSource]
-    .every((componentSource) => /export default React\.memo\(/.test(componentSource))
-  && /const STATIC_TICK_PATHS_BY_SIZE =/.test(knobSource)
-  && /const tickElements = useMemo\(\(\) =>/.test(faderSource)
-  && /const faderTrioSetters = useMemo\(\(\) =>/.test(controlKitPageSource)
-  && !/format=\{\(/.test(controlKitPageSource)
-  && !/onChange=\{\(next\)/.test(controlKitPageSource)
 );
 const presetShelfPropsSource = soundDesignerSource.match(
   /const presetShelfProps = React\.useMemo\([\s\S]*?\}\), \[activePresetName, handlePresetApplied\]\);/
@@ -1172,7 +1077,6 @@ const report = {
     appDefersMidiParser,
     appDefersScene,
     appDefersWaveCandy,
-    generatedDefersSongStudyPlayer,
     songStudyDefersMidiParser,
     songStudyDefersBirdsEyeRadar,
     soundDesignerDefersWaveCandy,
@@ -1328,22 +1232,6 @@ const report = {
     midiNormalizerArraysPerImport: midiNormalizerUsesOnePassFastPath ? 1 : 2,
     midiNormalizerSortedInputSortCalls: midiNormalizerUsesOnePassFastPath ? 0 : 1,
     midiNormalizerUsesOnePassFastPath,
-    unchangedPipelinePollReactCommits: pipelinePollingReusesJobSnapshots ? 0 : 1,
-    pipelinePollingReusesJobSnapshots,
-    voiceLoopColdAudioContextConstructions:
-      voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
-    voiceLoopColdScoreRenders: voiceLoopDefersScoreRenderUntilInteraction ? 0 : 1,
-    voiceLoopDefersScoreRenderUntilInteraction,
-    voiceLoopPlayheadReactCommitsPerTick:
-      voiceLoopUsesTargetedPlayheadFeedback ? 0 : 1,
-    voiceLoopPlayheadMaximumEventRowReconciliationsPerTick:
-      voiceLoopUsesTargetedPlayheadFeedback ? 0 : 192,
-    voiceLoopUsesTargetedPlayheadFeedback,
-    voiceLoopRangeStateUpdatesPer240HzFrame:
-      voiceLoopContinuousRangesCoalesceByFrame ? 1 : 4,
-    voiceLoopRangeStateObjectClonesPer240HzFrame:
-      voiceLoopContinuousRangesCoalesceByFrame ? 1 : 4,
-    voiceLoopContinuousRangesCoalesceByFrame,
     songStudyScrubPreviewUpdatesPer240HzFrame:
       songStudyPointerScrubDefersEngineSeek ? 1 : 4,
     songStudySchedulerRebuildsPerPointerScrub:
@@ -1384,23 +1272,7 @@ const report = {
     valueSliderCoalescesPointerMovesByFrame,
     effectMacroDialParentUpdatesPer240HzFrame:
       remainingContinuousControlsCoalesceByFrame ? 1 : 4,
-    controlKitDragParentUpdatesPer240HzFrame:
-      remainingContinuousControlsCoalesceByFrame ? 1 : 4,
     remainingContinuousControlsCoalesceByFrame,
-    controlKitPrimitiveRendersPerKnobParentUpdate:
-      controlKitPrimitivesIsolateRenders ? 2 : 36,
-    controlKitUnrelatedPrimitiveRendersPerParentUpdate:
-      controlKitPrimitivesIsolateRenders ? 0 : 34,
-    controlKitKnobStaticTickAllocationsPerSteadyStateRender:
-      controlKitPrimitivesIsolateRenders ? 0 : 11,
-    controlKitFaderStaticTickAllocationsPerSteadyStateRender:
-      controlKitPrimitivesIsolateRenders ? 0 : 5,
-    controlKitKnobTickSvgNodeMaximumPerControl:
-      controlKitBatchesTickPaths ? 2 : 11,
-    controlKitFaderTickSvgNodeMaximumPerControl:
-      controlKitBatchesTickPaths ? 2 : 5,
-    controlKitBatchesTickPaths,
-    controlKitPrimitivesIsolateRenders,
     soundDesignerBaseStageRendersPerAudioParamFrame:
       soundDesignerBaseStageIsolatesParamRenders ? 0 : 1,
     soundDesignerFoldedPresetRendersPerAudioParamFrame:
@@ -1512,7 +1384,7 @@ const budgetChecks = [
   ['D00 deployment raw', deploymentBytes, 1.65 * 1024 * 1024],
   // Raised from 0.95 MiB on 2026-07-19: non-catalog public assets stay at
   // their prior ~0.8 MiB level while the classical learning catalog gets its
-  // own bounded D00b allowance (see CATALOG_LEDGER.md).
+  // own bounded D00b allowance (see docs/CATALOG_LEDGER.md).
   ['D00 public static raw', publicStaticBytes, 1.05 * 1024 * 1024],
   // 384 KiB since the legacy public/midi/russian corpus migrated into the
   // hash-verified catalog (same bytes, one audited bucket).
@@ -1993,12 +1865,8 @@ if (!fullSidebarChunk) {
   failures.push({ name: 'Guard isolated full sidebar chunk', actual: 0, minimum: 1 });
 }
 const navigationOnlyRouteNames = new Set([
-  'control-kit',
-  'generated-study',
-  'midi-pipeline',
   'song-study',
-  'study-songs',
-  'voice-loop'
+  'study-songs'
 ]);
 const navigationRoutesWithFullSidebar = routeClosures
   .filter(({ route, includesFullSidebar }) => navigationOnlyRouteNames.has(route) && includesFullSidebar)
@@ -2008,21 +1876,6 @@ if (navigationRoutesWithFullSidebar.length > 0) {
     name: 'Guard navigation-only route sidebar isolation',
     routes: navigationRoutesWithFullSidebar,
     expected: 'rail-only chrome'
-  });
-}
-if (!generatedDefersSongStudyPlayer) {
-  failures.push({ name: 'Guard Generated Study player transition import', actual: 'static', expected: 'dynamic' });
-}
-const generatedStudyClosure = routeClosures.find(({ route }) => route === 'generated-study');
-if (
-  generatedStudyClosure?.includesSongStudyPlayer
-  || generatedStudyClosure?.includesMidiParser
-  || generatedStudyClosure?.includesAudioEngine
-) {
-  failures.push({
-    name: 'Guard Generated Study status-shell isolation',
-    actual: 'player dependencies in static closure',
-    expected: 'status shell only'
   });
 }
 const songStudyClosure = routeClosures.find(({ route }) => route === 'song-study');
@@ -2218,34 +2071,6 @@ if (!midiNormalizerUsesOnePassFastPath) {
     expected: 'one output array with sorting only for detected unsorted input'
   });
 }
-if (!pipelinePollingReusesJobSnapshots) {
-  failures.push({
-    name: 'Guard revision-aware pipeline polling',
-    actual: 'fresh job identities committed for unchanged poll responses',
-    expected: 'id/updated_at snapshot reuse across all three polling routes'
-  });
-}
-if (!voiceLoopDefersScoreRenderUntilInteraction) {
-  failures.push({
-    name: 'Guard interaction-first Voice Loop rendering',
-    actual: 'AudioContext and score rendering scheduled before playback interaction',
-    expected: 'revision-aware rendering on first play and debounced only while playing'
-  });
-}
-if (!voiceLoopUsesTargetedPlayheadFeedback) {
-  failures.push({
-    name: 'Guard targeted Voice Loop playhead feedback',
-    actual: 'playhead animation commits React state and reconciles the full composer',
-    expected: 'visibility-aware direct previous/current score-cell feedback'
-  });
-}
-if (!voiceLoopContinuousRangesCoalesceByFrame) {
-  failures.push({
-    name: 'Guard Voice Loop continuous controls at display cadence',
-    actual: 'range samples clone route state at raw device rate',
-    expected: 'latest numeric patch once per frame with release flush and unmount cleanup'
-  });
-}
 if (!songStudyPointerScrubDefersEngineSeek) {
   failures.push({
     name: 'Guard Song Study pointer scrub scheduling',
@@ -2291,22 +2116,8 @@ if (!valueSliderCoalescesPointerMovesByFrame) {
 if (!remainingContinuousControlsCoalesceByFrame) {
   failures.push({
     name: 'Guard all remaining continuous controls at display cadence',
-    actual: 'effect dials or control-kit drag primitives publish at raw device rate',
+    actual: 'effect dials publish at raw device rate',
     expected: 'latest-axis value once per frame with synchronous release flush and cleanup'
-  });
-}
-if (!controlKitPrimitivesIsolateRenders) {
-  failures.push({
-    name: 'Guard Control Kit primitive render isolation',
-    actual: 'unrelated controls or static SVG ticks rebuild on each parent update',
-    expected: 'memoized primitives, stable page props, and hoisted knob/fader tick geometry'
-  });
-}
-if (!controlKitBatchesTickPaths) {
-  failures.push({
-    name: 'Guard constant-size Control Kit tick geometry',
-    actual: 'one SVG element retained per visual tick',
-    expected: 'at most two reusable major/minor SVG paths per knob or fader'
   });
 }
 if (!soundDesignerBaseStageIsolatesParamRenders) {
@@ -2414,11 +2225,11 @@ if (!reverbUsesBranchBasedRingRead) {
     expected: 'at most one conditional wrap and one conditional adjacent-index increment'
   });
 }
-if (routeChunks.length < 7) {
+if (routeChunks.length < 3) {
   failures.push({
     name: 'D09 secondary route chunks',
     actual: routeChunks.length,
-    minimum: 7
+    minimum: 3
   });
 }
 

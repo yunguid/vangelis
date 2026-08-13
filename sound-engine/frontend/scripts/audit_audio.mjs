@@ -2,9 +2,9 @@
 /**
  * Golden-master + audio-quality apparatus for the synth worklet.
  *
- * Renders deterministic phrases through every factory preset (headless, same
- * stubbing pattern as test_synth_worklet.mjs) and compares against stored
- * references in golden/synth/. Also measures engine-level aliasing through the
+ * Renders deterministic phrases through every factory preset (headless) and
+ * compares against stored references in golden/synth/. Also measures
+ * engine-level aliasing through the
  * full processor and hot-loop heap drift.
  *
  * Usage:

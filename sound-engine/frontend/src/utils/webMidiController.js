@@ -37,8 +37,7 @@ export function startWebMidiInput({
       frequency,
       waveformType: getWaveformType(),
       params: getAudioParams(),
-      velocity,
-      allowVoicePhrase: true
+      velocity
     });
   };
 

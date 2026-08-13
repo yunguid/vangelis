@@ -77,6 +77,13 @@ describe('Sidebar', () => {
     expect(designLink).toHaveAttribute('href', '#/sound-designer');
   });
 
+  it('renders a rail-level Studies nav link to the song study library', () => {
+    render(<Sidebar {...buildProps()} />);
+    const studiesLink = screen.getByRole('link', { name: /open the song study library/i });
+    expect(studiesLink).toBeInTheDocument();
+    expect(studiesLink).toHaveAttribute('href', '#/studies');
+  });
+
   it('opens selected tab when rail button clicked', () => {
     const onOpen = vi.fn();
     const onTabChange = vi.fn();

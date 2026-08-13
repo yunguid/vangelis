@@ -11,9 +11,6 @@ export const SoundControlsContext = createContext(null);
 /** MIDI transport: play/pause/stop/tempo + playback state */
 export const MidiTransportContext = createContext(null);
 
-/** Voice phrase state + handlers */
-export const VoicePhraseContext = createContext(null);
-
 const EMPTY = Object.freeze({});
 
 // Tolerant accessors: pages that render a disabled Sidebar rail (e.g. the
@@ -21,4 +18,3 @@ const EMPTY = Object.freeze({});
 // undefined-prop behavior.
 export const useSoundControls = () => useContext(SoundControlsContext) || EMPTY;
 export const useMidiTransport = () => useContext(MidiTransportContext) || EMPTY;
-export const useVoicePhrase = () => useContext(VoicePhraseContext) || EMPTY;

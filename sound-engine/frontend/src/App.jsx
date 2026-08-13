@@ -71,7 +71,6 @@ const App = () => {
   const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'sound');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
-  const voiceText = initialSession.voiceText;
   const [notice, setNotice] = useState('');
   const [activePresetName, setActivePresetName] = useState(null);
   const [controlSections, setControlSections] = useState(() => (
@@ -350,7 +349,6 @@ const App = () => {
       sidebarOpen,
       activeSampleId,
       sampleSelection,
-      voiceText,
       showShortcuts,
       tempoFactor: midiPlayback.tempoFactor
     };
@@ -362,7 +360,6 @@ const App = () => {
     controlSections,
     midiPlayback.tempoFactor,
     sampleSelection,
-    voiceText,
     showShortcuts,
     sidebarOpen,
     sidebarTab,

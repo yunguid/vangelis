@@ -31,7 +31,7 @@ export function useNotePlayback({
     }
 
     const velocityNormalized = clamp(velocity, 0.05, 1);
-    const requiresWorklet = !status.hasCustomSample && !status.hasVoicePhrase;
+    const requiresWorklet = !status.hasCustomSample;
     const workletReady = wasmReadyRef.current || status.wasmReady;
     const inputSource = pointerId === null ? 'keyboard' : 'pointer';
     const contextWasReady = !!audioEngine.context;

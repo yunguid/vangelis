@@ -21,12 +21,7 @@ vi.mock('./utils/audioEngine.js', () => ({
     clearCustomSample: vi.fn(),
     setCustomSampleBaseNote: vi.fn(),
     setTransportTempo: vi.fn(),
-    toggleRecording: vi.fn(),
-    getVoicePhraseStatus: vi.fn(() => ({ enabled: false, nextIndex: 0, lastChunk: null })),
-    subscribeVoicePhrase: vi.fn(() => () => {}),
-    setVoicePhrase: vi.fn(() => Promise.resolve({ chunkCount: 0 })),
-    setVoicePhraseEnabled: vi.fn(),
-    clearVoicePhrase: vi.fn()
+    toggleRecording: vi.fn()
   },
 }));
 

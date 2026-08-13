@@ -220,8 +220,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       frequency,
       waveformType: waveformRef.current,
       params,
-      velocity,
-      allowVoicePhrase: false
+      velocity
     });
     if (started?.voiceId) {
       startedVoiceIds.push(started.voiceId);

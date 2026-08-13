@@ -49,7 +49,6 @@ export const getDefaultSessionState = () => ({
   sidebarOpen: false,
   activeSampleId: null,
   sampleSelection: null,
-  voiceText: 'I am alive',
   showShortcuts: false,
   tempoFactor: 1
 });
@@ -79,7 +78,6 @@ export function loadAppSession() {
       sidebarOpen: !!parsed.sidebarOpen,
       activeSampleId: typeof parsed.activeSampleId === 'string' ? parsed.activeSampleId : null,
       sampleSelection: coerceSampleSelection(parsed.sampleSelection),
-      voiceText: typeof parsed.voiceText === 'string' ? parsed.voiceText.slice(0, 240) : fallback.voiceText,
       showShortcuts: !!parsed.showShortcuts,
       tempoFactor: typeof parsed.tempoFactor === 'number' && Number.isFinite(parsed.tempoFactor)
         ? Math.max(0.25, Math.min(2, parsed.tempoFactor))

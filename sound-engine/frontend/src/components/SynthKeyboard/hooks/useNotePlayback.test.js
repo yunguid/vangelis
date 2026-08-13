@@ -45,8 +45,7 @@ describe('useNotePlayback first-note preparation', () => {
     audioEngine.context = null;
     audioEngine.getStatus.mockReturnValue({
       wasmReady: false,
-      hasCustomSample: false,
-      hasVoicePhrase: false
+      hasCustomSample: false
     });
     audioEngine.playFrequency.mockReturnValue({ voiceId: 'C4' });
   });
@@ -69,8 +68,7 @@ describe('useNotePlayback first-note preparation', () => {
       audioEngine.context = { currentTime: 0 };
       audioEngine.getStatus.mockReturnValue({
         wasmReady: true,
-        hasCustomSample: false,
-        hasVoicePhrase: false
+        hasCustomSample: false
       });
       deferred.resolve();
       await deferred.promise;
@@ -139,8 +137,7 @@ describe('useNotePlayback first-note preparation', () => {
     audioEngine.context = { currentTime: 0 };
     audioEngine.getStatus.mockReturnValue({
       wasmReady: true,
-      hasCustomSample: false,
-      hasVoicePhrase: false
+      hasCustomSample: false
     });
     const { result } = renderPlayback();
 
@@ -154,8 +151,7 @@ describe('useNotePlayback first-note preparation', () => {
     audioEngine.context = { currentTime: 2 };
     audioEngine.getStatus.mockReturnValue({
       wasmReady: true,
-      hasCustomSample: false,
-      hasVoicePhrase: false
+      hasCustomSample: false
     });
     const { result } = renderPlayback();
 

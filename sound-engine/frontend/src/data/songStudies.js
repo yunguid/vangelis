@@ -102,43 +102,4 @@ const BUILT_IN_STUDIES_BY_SLUG = new Map(
   BUILT_IN_STUDIES.map((study) => [study.slug, study])
 );
 
-const cleanText = (value) => {
-  if (typeof value !== 'string') return '';
-  return value.trim();
-};
-
-const findMergedMidiArtifact = (job) => (
-  job?.artifacts?.find((artifact) => artifact.kind === 'merged-midi') || null
-);
-
 export const getBuiltInStudy = (slug) => BUILT_IN_STUDIES_BY_SLUG.get(slug) || null;
-
-export const hasPlayableStudy = (job) => (
-  job?.status === 'completed' && Boolean(findMergedMidiArtifact(job))
-);
-
-export const createGeneratedStudyFromJob = (job) => {
-  if (!hasPlayableStudy(job)) {
-    return null;
-  }
-
-  const mergedMidi = findMergedMidiArtifact(job);
-  const artist = cleanText(job.artist) || 'Pipeline capture';
-  const title = cleanText(job.song) || 'Untitled study';
-  const tempoBpm = Number.isFinite(job.tempo_bpm) ? Math.round(job.tempo_bpm) : null;
-
-  return {
-    id: job.id,
-    kind: 'generated',
-    jobId: job.id,
-    title,
-    artist,
-    eyebrow: tempoBpm ? `${artist} / ${tempoBpm} BPM` : `${artist} / pipeline study`,
-    sourceLabel: job.source_url ? 'YouTube import' : 'Search import',
-    sourceUrl: cleanText(job.source_url),
-    midiUrl: mergedMidi.url,
-    waveformType: DEFAULT_STUDY_WAVEFORM,
-    audioParams: DEFAULT_STUDY_AUDIO_PARAMS,
-    updatedAt: job.updated_at || 0
-  };
-};

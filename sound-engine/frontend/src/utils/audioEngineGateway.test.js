@@ -5,14 +5,12 @@ function createRuntime() {
   const listeners = {
     status: null,
     recording: null,
-    activity: null,
-    voicePhrase: null
+    activity: null
   };
   const runtime = {
     context: null,
     getStatus: vi.fn(() => ({ wasmReady: true, contextReady: true })),
     getActivity: vi.fn(() => ({ isActive: false, activeVoices: 0 })),
-    getVoicePhraseStatus: vi.fn(() => ({ enabled: false, chunkCount: 0 })),
     subscribe: vi.fn((listener) => {
       listeners.status = listener;
       return vi.fn();
@@ -24,11 +22,6 @@ function createRuntime() {
     subscribeActivity: vi.fn((listener) => {
       listeners.activity = listener;
       listener(runtime.getActivity());
-      return vi.fn();
-    }),
-    subscribeVoicePhrase: vi.fn((listener) => {
-      listeners.voicePhrase = listener;
-      listener(runtime.getVoicePhraseStatus());
       return vi.fn();
     }),
     setGlobalParams: vi.fn(),

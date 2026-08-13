@@ -1,5 +1,5 @@
 import React from 'react';
-import { SOUND_DESIGNER_HREF } from '../../utils/routes.js';
+import { SOUND_DESIGNER_HREF, STUDY_SONGS_HREF } from '../../utils/routes.js';
 import './Sidebar.css';
 
 let soundDesignerRoutePromise;
@@ -7,6 +7,13 @@ let soundDesignerRoutePromise;
 const preloadSoundDesignerRoute = () => {
   soundDesignerRoutePromise ||= import('../../pages/SoundDesignerPage.jsx');
   soundDesignerRoutePromise.catch(() => undefined);
+};
+
+let studySongsRoutePromise;
+
+const preloadStudySongsRoute = () => {
+  studySongsRoutePromise ||= import('../../pages/StudySongsPage.jsx');
+  studySongsRoutePromise.catch(() => undefined);
 };
 
 const SidebarRail = ({
@@ -79,6 +86,20 @@ const SidebarRail = ({
             <path d="M4 15 L9 15 L11 9 L14 19 L16 12 L20 12" />
           </svg>
           <span className="sidebar-rail__label">Design</span>
+        </a>
+        <a
+          className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'studies' ? 'sidebar-rail__btn--current' : ''}`}
+          href={STUDY_SONGS_HREF}
+          aria-label="Open the song study library"
+          aria-current={currentView === 'studies' ? 'page' : undefined}
+          onPointerEnter={preloadStudySongsRoute}
+          onFocus={preloadStudySongsRoute}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 6.5C10.3 5.1 7.9 4.5 4.5 4.5v13c3.4 0 5.8.6 7.5 2 1.7-1.4 4.1-2 7.5-2v-13c-3.4 0-5.8.6-7.5 2Z" />
+            <line x1="12" y1="6.5" x2="12" y2="19.5" />
+          </svg>
+          <span className="sidebar-rail__label">Studies</span>
         </a>
       </div>
       <div className="sidebar-rail__status" aria-label="Audio engine active">

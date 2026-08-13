@@ -12,22 +12,13 @@ const COLD_STATUS = Object.freeze({
   graphWarmed: false,
   error: null,
   isRecording: false,
-  hasCustomSample: false,
-  hasVoicePhrase: false
+  hasCustomSample: false
 });
 
 const COLD_ACTIVITY = Object.freeze({
   isActive: false,
   activeVoices: 0,
   updatedAt: 0
-});
-
-const COLD_VOICE_PHRASE = Object.freeze({
-  enabled: false,
-  chunkCount: 0,
-  nextIndex: 0,
-  lastChunk: null,
-  sourceText: ''
 });
 
 const defaultRuntimeLoader = () => import('./audioEngineRuntime.js')
@@ -44,7 +35,6 @@ export class LazyAudioEngineGateway {
     this.statusListeners = new Set();
     this.recordingListeners = new Set();
     this.activityListeners = new Set();
-    this.voicePhraseListeners = new Set();
     this.runtimeUnsubscribers = [];
   }
 
@@ -99,8 +89,7 @@ export class LazyAudioEngineGateway {
     this.runtimeUnsubscribers.push(
       runtime.subscribe((status) => this.emitStatus(status)),
       runtime.subscribeRecording((isRecording) => this.emitRecording(isRecording)),
-      runtime.subscribeActivity((activity) => this.emitActivity(activity)),
-      runtime.subscribeVoicePhrase((voicePhrase) => this.emitVoicePhrase(voicePhrase))
+      runtime.subscribeActivity((activity) => this.emitActivity(activity))
     );
   }
 
@@ -114,10 +103,6 @@ export class LazyAudioEngineGateway {
 
   emitActivity(activity) {
     this.activityListeners.forEach((listener) => listener(activity));
-  }
-
-  emitVoicePhrase(voicePhrase) {
-    this.voicePhraseListeners.forEach((listener) => listener(voicePhrase));
   }
 
   getStatus() {
@@ -142,16 +127,6 @@ export class LazyAudioEngineGateway {
     this.activityListeners.add(listener);
     listener(this.getActivity());
     return () => this.activityListeners.delete(listener);
-  }
-
-  getVoicePhraseStatus() {
-    return this.runtime?.getVoicePhraseStatus() || { ...COLD_VOICE_PHRASE };
-  }
-
-  subscribeVoicePhrase(listener) {
-    this.voicePhraseListeners.add(listener);
-    listener(this.getVoicePhraseStatus());
-    return () => this.voicePhraseListeners.delete(listener);
   }
 
   setGlobalParams(params) {
@@ -238,18 +213,6 @@ export class LazyAudioEngineGateway {
 
   setCustomSampleLoop(loop) {
     this.runtime?.setCustomSampleLoop(loop);
-  }
-
-  setVoicePhrase(options) {
-    return this.ensureRuntime().then((runtime) => runtime.setVoicePhrase(options));
-  }
-
-  setVoicePhraseEnabled(enabled) {
-    this.runtime?.setVoicePhraseEnabled(enabled);
-  }
-
-  clearVoicePhrase() {
-    this.runtime?.clearVoicePhrase();
   }
 
   startRecording() {
