@@ -8,6 +8,7 @@ import {
   isSoundDesignerRoute,
   isStudySongsRoute
 } from './utils/routes.js';
+import { confirmUnsavedNavigation } from './utils/unsavedNavigationGuard.js';
 
 const App = React.lazy(() => import('./App.jsx'));
 const PianoRollPage = React.lazy(() => import('./pages/PianoRollPage.jsx'));
@@ -23,14 +24,30 @@ const RouteLoading = () => (
 
 const Root = () => {
   const [route, setRoute] = React.useState(() => getActiveRoute());
+  const routeRef = React.useRef(route);
+  const restoringRouteRef = React.useRef(false);
+  routeRef.current = route;
   const showSoundDesigner = isSoundDesignerRoute(route);
   const showPianoRoll = isPianoRollRoute(route);
   const showStudySongs = isStudySongsRoute(route);
   const studyRoute = getStudyRouteMatch(route);
 
   React.useEffect(() => {
-    const syncRoute = () => {
-      setRoute(getActiveRoute());
+    const syncRoute = (event) => {
+      const nextRoute = getActiveRoute();
+      if (restoringRouteRef.current) {
+        if (nextRoute === routeRef.current) restoringRouteRef.current = false;
+        return;
+      }
+      if (nextRoute === routeRef.current) return;
+      if (!confirmUnsavedNavigation()) {
+        restoringRouteRef.current = true;
+        if (event?.type === 'popstate') window.history.forward();
+        else window.history.back();
+        return;
+      }
+      routeRef.current = nextRoute;
+      setRoute(nextRoute);
     };
 
     window.addEventListener('hashchange', syncRoute);

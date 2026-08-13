@@ -67,6 +67,13 @@ export const isInScale = (midi, rootPitchClass, scaleId) => {
   return scale.intervals.includes(interval);
 };
 
+export const isInChord = (midi, rootPitchClass, chordTypeId) => {
+  const chord = CHORD_TYPES.find((entry) => entry.id === chordTypeId);
+  if (!chord) return false;
+  const interval = (((midi - rootPitchClass) % 12) + 12) % 12;
+  return chord.intervals.some((entry) => entry % 12 === interval);
+};
+
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 const normalizeBars = (bars, fallback = 4) => {
@@ -282,6 +289,32 @@ export const duplicateNotes = (pattern, noteIds, snapBeats = null) => {
     ? Math.max(Math.ceil(rawSpan / snapBeats - 1e-6) * snapBeats, snapBeats)
     : rawSpan;
   return pasteNotesPayload(pattern, payload, span);
+};
+
+/**
+ * Clone a selection at the same pitch and time. Overlap is intentional: the
+ * returned ids let the editor select only the copies so an immediate arrow
+ * nudge can peel them away from their originals.
+ */
+export const cloneNotesInPlace = (pattern, noteIds) => {
+  const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
+  const sourceNotes = pattern.notes.filter((note) => ids.has(note.id));
+  if (sourceNotes.length === 0) return { pattern, noteIds: [] };
+
+  let nextNoteId = pattern.nextNoteId;
+  const clones = sourceNotes.map((note) => ({
+    ...note,
+    id: `note-${nextNoteId++}`
+  }));
+
+  return {
+    pattern: {
+      ...pattern,
+      nextNoteId,
+      notes: [...pattern.notes, ...clones]
+    },
+    noteIds: clones.map((note) => note.id)
+  };
 };
 
 /**

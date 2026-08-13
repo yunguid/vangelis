@@ -11,6 +11,7 @@ import {
   addTrack,
   applyNoteDelta,
   buildChords,
+  cloneNotesInPlace,
   copyNotesPayload,
   createPattern,
   deleteNote,
@@ -24,6 +25,7 @@ import {
   snapNotesToScale,
   getSnapBeats,
   isInScale,
+  isInChord,
   patternBeats,
   patternToMidiData,
   quantizeBeats,
@@ -304,6 +306,22 @@ describe('scale, chord, and loop tools', () => {
     expect(chord.pattern.notes.map((note) => note.midi).sort((a, b) => a - b)).toEqual([60, 64, 67]);
   });
 
+  it('clones selected notes in place so the copies can be nudged away', () => {
+    const added = addNote(createPattern(), { midi: 60, start: 1, duration: 1 });
+    const selected = new Set([added.note.id]);
+    const cloned = cloneNotesInPlace(added.pattern, selected);
+
+    expect(cloned.pattern.notes).toHaveLength(2);
+    expect(cloned.pattern.notes[1]).toMatchObject({ midi: 60, start: 1, duration: 1 });
+    expect(cloned.noteIds).toEqual(['note-2']);
+
+    const nudged = nudgeNotes(cloned.pattern, new Set(cloned.noteIds), 0.25, 1);
+    expect(nudged.notes.map(({ midi, start }) => ({ midi, start }))).toEqual([
+      { midi: 60, start: 1 },
+      { midi: 61, start: 1.25 }
+    ]);
+  });
+
   it('toggles a bar-rounded selection loop and crops playback to it', () => {
     let result = addNote(createPattern({ bars: 4 }), { midi: 60, start: 5, duration: 1 });
     const selected = new Set([result.note.id]);
@@ -342,6 +360,16 @@ describe('isInScale', () => {
         inScale.includes(pitchClass)
       );
     }
+  });
+});
+
+describe('isInChord', () => {
+  it('matches chord tones across octaves while excluding scale-only tones', () => {
+    expect(isInChord(60, 0, 'major')).toBe(true);
+    expect(isInChord(64, 0, 'major')).toBe(true);
+    expect(isInChord(67, 0, 'major')).toBe(true);
+    expect(isInChord(72, 0, 'major')).toBe(true);
+    expect(isInChord(62, 0, 'major')).toBe(false);
   });
 });
 
