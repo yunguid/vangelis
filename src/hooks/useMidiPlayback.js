@@ -59,6 +59,8 @@ function resolveMidiDuration(midiData) {
  * @property {function} stop - Stop playback completely
  * @property {function} setTempo - Set tempo multiplier (0.25-2.0)
  * @property {function} seekTo - Jump to a position in original MIDI seconds
+ * @property {function} replaceMidi - Replace an active score without resetting its transport position
+ * @property {function} getPlaybackProgress - Read current 0-1 progress directly from the audio clock
  */
 
 /**
@@ -67,7 +69,7 @@ function resolveMidiDuration(midiData) {
  * Schedules MIDI notes using setTimeout and plays them through the audio engine.
  * Provides play/pause/resume/stop controls and tracks active notes for visualization.
  *
- * @param {MidiPlaybackOptions} options - Playback configuration
+ * @param {MidiPlaybackOptions & {progressUpdateIntervalMs?: number}} options - Playback configuration
  * @returns {MidiPlaybackState} Playback state and controls
  *
  * @example
@@ -86,7 +88,11 @@ function resolveMidiDuration(midiData) {
  * // Show active notes on keyboard
  * <SynthKeyboard externalActiveNotes={activeNotes} />
  */
-export function useMidiPlayback({ waveformType, audioParams }) {
+export function useMidiPlayback({
+  waveformType,
+  audioParams,
+  progressUpdateIntervalMs = PROGRESS_UPDATE_INTERVAL_MS
+}) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isLooping, setIsLooping] = useState(false);
@@ -303,6 +309,33 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   }, []);
 
   /**
+   * Read the transport directly from the audio clock. Consumers that animate
+   * every frame (such as the piano-roll playhead) can use this without forcing
+   * the entire React tree to render at 60 Hz.
+   */
+  const getPlaybackProgress = useCallback(() => {
+    const pb = playbackRef.current;
+    if (!pb.midiData) return 0;
+
+    const duration = resolveMidiDuration(pb.midiData);
+    if (duration <= 0) return 0;
+
+    let elapsedOriginal;
+    if (isPausedRef.current) {
+      elapsedOriginal = pb.pauseOriginalTime;
+    } else if (isPlayingRef.current && audioEngine.context) {
+      elapsedOriginal = getElapsedOriginalTime(audioEngine.context.currentTime);
+    } else {
+      elapsedOriginal = pb.elapsedOriginalAtStart;
+    }
+
+    if (pb.loop) {
+      return ((elapsedOriginal % duration) + duration) % duration / duration;
+    }
+    return Math.min(Math.max(elapsedOriginal / duration, 0), 1);
+  }, [getElapsedOriginalTime]);
+
+  /**
    * Schedule notes through a rolling lookahead window. This prevents large
    * scores from allocating two timeout handles for every note up front.
    * @param {Array} notes - Array of MIDI notes to schedule
@@ -489,7 +522,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
         // stopping; hold the final frame so a late RAF cannot end the loop.
       }
 
-      if (frameTime - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL_MS) {
+      if (frameTime - lastProgressUpdate >= progressUpdateIntervalMs) {
         lastProgressUpdate = frameTime;
         setProgress(progressValue);
       }
@@ -497,7 +530,60 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     };
 
     stopProgressLoopRef.current = startVisibilityAwareRafLoop(updateProgress);
-  }, [getElapsedOriginalTime, stopInternal]);
+  }, [getElapsedOriginalTime, progressUpdateIntervalMs, stopInternal]);
+
+  /**
+   * Swap the score under an active transport without running the public
+   * stop/play sequence. The exact audio-clock position is sampled at commit
+   * time, so a debounced editor change cannot jump back to a stale UI frame.
+   */
+  const replaceMidi = useCallback((midiData) => {
+    const pb = playbackRef.current;
+    const ctx = audioEngine.context;
+    if (!pb.midiData || !ctx || !isPlayingRef.current || isPausedRef.current) {
+      return false;
+    }
+
+    const normalizedNotes = normalizeMidiNotes(midiData?.notes);
+    if (!midiData || normalizedNotes.length === 0) return false;
+
+    const previousDuration = resolveMidiDuration(pb.midiData);
+    const nextMidiData = {
+      ...midiData,
+      notes: normalizedNotes,
+      duration: resolveMidiDuration({ ...midiData, notes: normalizedNotes })
+    };
+    const nextDuration = nextMidiData.duration;
+    const elapsed = getElapsedOriginalTime(ctx.currentTime);
+    const cycleElapsed = pb.loop && previousDuration > 0
+      ? ((elapsed % previousDuration) + previousDuration) % previousDuration
+      : Math.min(Math.max(elapsed, 0), previousDuration);
+    const progressAtCommit = previousDuration > 0 ? cycleElapsed / previousDuration : 0;
+    const nextPosition = Math.min(progressAtCommit * nextDuration, Math.max(0, nextDuration - 0.001));
+
+    clearAllTimeouts();
+    stopAllNotes();
+
+    const now = ctx.currentTime;
+    pb.midiData = nextMidiData;
+    pb.startTime = now;
+    pb.pauseOriginalTime = 0;
+    pb.elapsedOriginalAtStart = nextPosition;
+
+    setCurrentMidi(nextMidiData);
+    setProgress(progressAtCommit);
+    scheduleNotes(nextMidiData.notes, nextPosition, now);
+    scheduleLoopBoundary(nextPosition);
+    startProgressLoop(nextDuration);
+    return true;
+  }, [
+    clearAllTimeouts,
+    getElapsedOriginalTime,
+    scheduleLoopBoundary,
+    scheduleNotes,
+    startProgressLoop,
+    stopAllNotes
+  ]);
 
   const resumeAudioContextIfNeeded = useCallback(async () => {
     await audioEngine.ensureWasm();
@@ -730,6 +816,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     resume,
     stop,
     setTempo,
-    seekTo
+    seekTo,
+    replaceMidi,
+    getPlaybackProgress
   };
 }

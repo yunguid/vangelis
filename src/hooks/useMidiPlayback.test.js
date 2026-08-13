@@ -158,6 +158,43 @@ describe('useMidiPlayback', () => {
     expect(result.current.progress).toBeCloseTo(0.4, 5);
   });
 
+  it('replaces a looping score at the exact audio-clock position without jumping back', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 4,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.5, velocity: 1 }]
+      }, { loop: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      audioEngine.context.currentTime = 1;
+      expect(result.current.replaceMidi({
+        duration: 4,
+        bpm: 120,
+        notes: [
+          { midi: 60, time: 0, duration: 0.5, velocity: 1 },
+          { midi: 64, time: 2, duration: 0.5, velocity: 1 }
+        ]
+      })).toBe(true);
+    });
+
+    expect(result.current.isPlaying).toBe(true);
+    expect(result.current.progress).toBeCloseTo(0.25, 5);
+    expect(result.current.getPlaybackProgress()).toBeCloseTo(0.25, 5);
+
+    audioEngine.context.currentTime = 1.5;
+    expect(result.current.getPlaybackProgress()).toBeCloseTo(0.375, 5);
+  });
+
   it('stops progress animation frames while the document is hidden', async () => {
     const frameCallbacks = [];
     let visibilityState = 'visible';

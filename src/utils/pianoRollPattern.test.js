@@ -241,6 +241,15 @@ describe('isInScale', () => {
     expect(isInScale(69, 9, 'natural-minor')).toBe(true); // A in A minor
     expect(isInScale(68, 9, 'natural-minor')).toBe(false); // G# in A minor
   });
+
+  it('maps every D# natural minor pitch class correctly', () => {
+    const inScale = [3, 5, 6, 8, 10, 11, 1]; // D#, F, F#, G#, A#, B, C#
+    for (let pitchClass = 0; pitchClass < 12; pitchClass += 1) {
+      expect(isInScale(60 + pitchClass, 3, 'natural-minor')).toBe(
+        inScale.includes(pitchClass)
+      );
+    }
+  });
 });
 
 describe('patternToMidiData', () => {

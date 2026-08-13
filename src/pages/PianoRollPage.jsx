@@ -59,7 +59,7 @@ const RESIZE_HANDLE_PX = 7;
 const AUDITION_MS = 260;
 const ROW_COUNT = PITCH_MAX - PITCH_MIN + 1;
 const GRID_HEIGHT = ROW_COUNT * ROW_HEIGHT;
-const EDIT_RESTART_DEBOUNCE_MS = 250;
+const EDIT_RESCHEDULE_DEBOUNCE_MS = 120;
 const HISTORY_LIMIT = 100;
 const ZOOM_MIN = 24;
 const ZOOM_MAX = 160;
@@ -78,6 +78,27 @@ const rowForMidi = (midi) => PITCH_MAX - midi;
 const midiForRow = (row) => PITCH_MAX - row;
 const isBlackKey = (midi) => [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 
+const PianoRollPlayhead = React.memo(({ getProgress, gridWidth }) => {
+  const playheadRef = React.useRef(null);
+
+  React.useEffect(() => {
+    let frameId = null;
+    const update = () => {
+      const node = playheadRef.current;
+      if (node) {
+        node.style.transform = `translate3d(${getProgress() * gridWidth}px, 0, 0)`;
+      }
+      frameId = requestAnimationFrame(update);
+    };
+    frameId = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(frameId);
+  }, [getProgress, gridWidth]);
+
+  return <div ref={playheadRef} className="piano-roll__playhead" aria-hidden="true" />;
+});
+
+PianoRollPlayhead.displayName = 'PianoRollPlayhead';
+
 const drawGrid = (canvas, { bars, snapBeats, scaleId, scaleRoot, pxPerBeat }) => {
   const width = bars * BEATS_PER_BAR * pxPerBeat;
   const dpr = window.devicePixelRatio || 1;
@@ -92,13 +113,20 @@ const drawGrid = (canvas, { bars, snapBeats, scaleId, scaleRoot, pxPerBeat }) =>
   for (let row = 0; row < ROW_COUNT; row += 1) {
     const midi = midiForRow(row);
     const y = row * ROW_HEIGHT;
-    ctx.fillStyle = isBlackKey(midi) ? 'rgba(10, 14, 21, 0.98)' : 'rgba(17, 23, 33, 0.98)';
+    const hasScale = Boolean(scaleId);
+    ctx.fillStyle = hasScale
+      ? (isBlackKey(midi) ? 'rgba(6, 9, 14, 0.99)' : 'rgba(10, 14, 20, 0.99)')
+      : (isBlackKey(midi) ? 'rgba(10, 14, 21, 0.98)' : 'rgba(17, 23, 33, 0.98)');
     ctx.fillRect(0, y, width, ROW_HEIGHT);
 
-    if (scaleId && isInScale(midi, scaleRoot, scaleId)) {
+    if (hasScale && isInScale(midi, scaleRoot, scaleId)) {
       const isRoot = (((midi - scaleRoot) % 12) + 12) % 12 === 0;
-      ctx.fillStyle = isRoot ? 'rgba(255, 164, 112, 0.13)' : 'rgba(255, 164, 112, 0.055)';
+      ctx.fillStyle = isRoot ? 'rgba(255, 132, 67, 0.30)' : 'rgba(117, 151, 164, 0.18)';
       ctx.fillRect(0, y, width, ROW_HEIGHT);
+      if (isRoot) {
+        ctx.fillStyle = 'rgba(255, 183, 134, 0.42)';
+        ctx.fillRect(0, y, width, 1);
+      }
     }
   }
 
@@ -157,7 +185,13 @@ const PianoRollPage = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState('sound');
 
-  const playback = useMidiPlayback({ waveformType, audioParams });
+  const playback = useMidiPlayback({
+    waveformType,
+    audioParams,
+    // The playhead reads the audio clock directly; this slower publication is
+    // only for secondary sidebar UI and keeps large patterns cheap to render.
+    progressUpdateIntervalMs: 120
+  });
 
   const scrollRef = React.useRef(null);
   const canvasRef = React.useRef(null);
@@ -262,8 +296,8 @@ const PianoRollPage = () => {
     playback.play(midiData, { loop: true });
   }, [playback.isPlaying, playback.isPaused, playback.play, playback.stop]);
 
-  // Live edits during loop playback restart the loop in place (debounced)
-  // so what you hear tracks what you see.
+  // Live edits replace the scheduled score at the exact audio-clock position.
+  // This keeps a debounced edit from seeking back to an older React frame.
   React.useEffect(() => {
     if (!playback.isPlaying || playback.isPaused) return undefined;
     if (editRestartTimeoutRef.current) clearTimeout(editRestartTimeoutRef.current);
@@ -274,9 +308,8 @@ const PianoRollPage = () => {
         playback.stop();
         return;
       }
-      const startAt = (playback.progress || 0) * midiData.duration;
-      playback.play(midiData, { startAt: Math.min(startAt, midiData.duration - 0.01), loop: true });
-    }, EDIT_RESTART_DEBOUNCE_MS);
+      playback.replaceMidi(midiData);
+    }, EDIT_RESCHEDULE_DEBOUNCE_MS);
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pattern]);
@@ -819,21 +852,71 @@ const PianoRollPage = () => {
   ]);
 
   const isRolling = playback.isPlaying && !playback.isPaused;
-  const playheadX = (playback.progress || 0) * gridWidth;
+
+  const activeScale = React.useMemo(
+    () => SCALES.find((scale) => scale.id === scaleId) || null,
+    [scaleId]
+  );
+  const scalePitchClasses = React.useMemo(() => {
+    if (!activeScale) return null;
+    return new Set(activeScale.intervals.map((interval) => (scaleRoot + interval) % 12));
+  }, [activeScale, scaleRoot]);
+  const isScaleMidi = React.useCallback((midi) => (
+    scalePitchClasses?.has(((midi % 12) + 12) % 12) || false
+  ), [scalePitchClasses]);
+  const isRootMidi = React.useCallback((midi) => (
+    Boolean(activeScale) && ((midi % 12) + 12) % 12 === scaleRoot
+  ), [activeScale, scaleRoot]);
 
   const keyRows = React.useMemo(() => {
     const rows = [];
     for (let row = 0; row < ROW_COUNT; row += 1) {
       const midi = midiForRow(row);
       const { noteName, octave, noteId } = midiNoteToName(midi);
-      rows.push({ midi, noteId, label: noteName === 'C' ? `C${octave}` : '', black: isBlackKey(midi) });
+      const inScale = isScaleMidi(midi);
+      const root = isRootMidi(midi);
+      rows.push({
+        midi,
+        noteId,
+        label: activeScale && inScale ? noteId : (noteName === 'C' ? `C${octave}` : ''),
+        black: isBlackKey(midi),
+        inScale,
+        root
+      });
     }
     return rows;
-  }, []);
+  }, [activeScale, isRootMidi, isScaleMidi]);
 
   const barMarkers = React.useMemo(() => (
     Array.from({ length: pattern.bars }, (_, index) => index)
   ), [pattern.bars]);
+
+  const outOfScaleCount = React.useMemo(() => (
+    activeScale ? pattern.notes.filter((note) => !isScaleMidi(note.midi)).length : 0
+  ), [activeScale, isScaleMidi, pattern.notes]);
+
+  const noteElements = React.useMemo(() => pattern.notes.map((note) => {
+    const outOfScale = Boolean(activeScale) && !isScaleMidi(note.midi);
+    const classNames = [
+      'piano-roll__note',
+      selectedIds.has(note.id) ? 'is-selected' : '',
+      outOfScale ? 'is-out-of-scale' : ''
+    ].filter(Boolean).join(' ');
+    return (
+      <div
+        key={note.id}
+        data-note-id={note.id}
+        className={classNames}
+        title={outOfScale ? `${midiNoteToName(note.midi).noteId} is outside ${SCALE_ROOTS[scaleRoot]} ${activeScale.label}` : undefined}
+        style={{
+          left: note.start * pxPerBeat,
+          top: rowForMidi(note.midi) * ROW_HEIGHT + 1,
+          width: Math.max(note.duration * pxPerBeat - 1, 4),
+          height: ROW_HEIGHT - 2
+        }}
+      />
+    );
+  }), [activeScale, isScaleMidi, pattern.notes, pxPerBeat, scaleRoot, selectedIds]);
 
   return (
     <div className="piano-roll-page">
@@ -982,6 +1065,25 @@ const PianoRollPage = () => {
               </select>
             </label>
 
+            {activeScale && (
+              <div className="piano-roll-scale-guide" aria-live="polite">
+                <strong>{SCALE_ROOTS[scaleRoot]} {activeScale.label}</strong>
+                <span className="piano-roll-scale-guide__item">
+                  <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--root" />
+                  Root
+                </span>
+                <span className="piano-roll-scale-guide__item">
+                  <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--tone" />
+                  In scale
+                </span>
+                {outOfScaleCount > 0 && (
+                  <span className="piano-roll-scale-guide__warning">
+                    {outOfScaleCount} outside
+                  </span>
+                )}
+              </div>
+            )}
+
             <div className="piano-roll-tray__actions">
               <button type="button" onClick={handleSave}>Save</button>
               <button type="button" onClick={handleClear}>Clear</button>
@@ -1050,7 +1152,13 @@ const PianoRollPage = () => {
               <button
                 key={key.midi}
                 type="button"
-                className={`piano-roll__key ${key.black ? 'piano-roll__key--black' : ''}`}
+                className={[
+                  'piano-roll__key',
+                  key.black ? 'piano-roll__key--black' : '',
+                  activeScale && !key.inScale ? 'is-out-of-scale' : '',
+                  key.inScale ? 'is-in-scale' : '',
+                  key.root ? 'is-scale-root' : ''
+                ].filter(Boolean).join(' ')}
                 style={{ height: ROW_HEIGHT }}
                 onPointerDown={() => handleKeyAudition(key.midi)}
                 aria-label={`Audition ${key.noteId}`}
@@ -1072,19 +1180,7 @@ const PianoRollPage = () => {
               onPointerCancel={handleLayerPointerUp}
               onDoubleClick={handleLayerDoubleClick}
             >
-              {pattern.notes.map((note) => (
-                <div
-                  key={note.id}
-                  data-note-id={note.id}
-                  className={`piano-roll__note ${selectedIds.has(note.id) ? 'is-selected' : ''}`}
-                  style={{
-                    left: note.start * pxPerBeat,
-                    top: rowForMidi(note.midi) * ROW_HEIGHT + 1,
-                    width: Math.max(note.duration * pxPerBeat - 1, 4),
-                    height: ROW_HEIGHT - 2
-                  }}
-                />
-              ))}
+              {noteElements}
               {drag?.mode === 'marquee' && (
                 <div
                   className="piano-roll__marquee"
@@ -1097,7 +1193,10 @@ const PianoRollPage = () => {
                 />
               )}
               {isRolling && (
-                <div className="piano-roll__playhead" style={{ transform: `translateX(${playheadX}px)` }} />
+                <PianoRollPlayhead
+                  getProgress={playback.getPlaybackProgress}
+                  gridWidth={gridWidth}
+                />
               )}
             </div>
           </div>
