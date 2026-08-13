@@ -173,8 +173,8 @@ src/
   adds a note, click selects, drag on empty space marquee-selects, drag
   moves the whole selection, right edge resizes, Delete/Backspace removes
   the selection, Cmd/Ctrl+A selects all, Esc deselects; right-click (or
-  right-drag sweep) erases, Space toggles the loop; Export .mid writes a
-  standard MIDI file via @tonejs/midi
+  right-drag sweep) erases, Space toggles playback; Record loop captures one
+  audio pass of the active loop as WAV
 - Pure pattern model in `utils/pianoRollPattern.js` (beats domain, 4/4;
   `patternToMidiData` converts to the seconds-domain shape
   `useMidiPlayback` consumes); patterns persist via

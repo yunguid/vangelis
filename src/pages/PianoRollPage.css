@@ -222,14 +222,6 @@
   opacity: 0.4;
 }
 
-.piano-roll-tray__field--toggle input {
-  width: 28px;
-  min-width: 28px;
-  height: 27px;
-  margin: 0;
-  accent-color: #e8783d;
-}
-
 .piano-roll-bar-stepper,
 .piano-roll-chord-tool {
   display: flex;
@@ -334,16 +326,8 @@
   border-radius: 1px;
 }
 
-.piano-roll-scale-guide__swatch--root {
-  background: rgba(255, 132, 67, 0.9);
-}
-
 .piano-roll-scale-guide__swatch--tone {
   background: rgba(89, 160, 177, 0.95);
-}
-
-.piano-roll-scale-guide__swatch--chord {
-  background: rgba(226, 178, 92, 0.95);
 }
 
 .piano-roll-scale-guide__warning {
@@ -374,12 +358,6 @@
   font-size: 0.68rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.piano-roll-tracks__heading span {
-  color: var(--color-text-secondary);
-  font-size: 0.55rem;
-  line-height: 1.25;
 }
 
 .piano-roll-tracks__list {
@@ -702,29 +680,20 @@
   filter: brightness(0.62);
 }
 
-.piano-roll__key.is-in-scale {
-  background: #668891;
-  color: rgba(9, 14, 19, 0.9);
-  font-weight: 700;
-}
-
-.piano-roll__key--black.is-in-scale {
-  background: #2e5059;
-  color: rgba(228, 242, 245, 0.92);
-}
-
+.piano-roll__key.is-in-scale,
 .piano-roll__key.is-in-chord,
+.piano-roll__key--black.is-in-scale,
 .piano-roll__key--black.is-in-chord {
-  background: #a98345;
-  color: rgba(22, 16, 7, 0.94);
-  box-shadow: inset -3px 0 0 rgba(255, 222, 157, 0.62);
+  background: #3f7480;
+  color: rgba(228, 242, 245, 0.92);
+  font-weight: 700;
+  filter: none;
 }
 
-.piano-roll__key.is-scale-root,
-.piano-roll__key--black.is-scale-root {
-  background: #c66d3d;
-  color: rgba(20, 12, 7, 0.95);
-  box-shadow: inset -4px 0 0 rgba(255, 210, 176, 0.82);
+.piano-roll-tray__actions button.is-recording {
+  border-color: rgba(255, 115, 100, 0.78);
+  background: rgba(180, 48, 39, 0.3);
+  color: rgba(255, 220, 215, 0.98);
 }
 
 .piano-roll__key:active {

@@ -440,7 +440,7 @@ export const snapNotesToScale = (pattern, noteIds, rootPitchClass, scaleId) => {
 
 export const snapMidiToScale = nearestScaleMidi;
 
-/** Cmd/Ctrl+L: toggle a bar-rounded loop spanning the selected notes. */
+/** Shift+Cmd/Ctrl+L: toggle a bar-rounded loop spanning selected notes. */
 export const toggleLoopForSelection = (pattern, noteIds) => {
   if (pattern.loopRange?.enabled) {
     return { ...pattern, loopRange: { ...pattern.loopRange, enabled: false } };

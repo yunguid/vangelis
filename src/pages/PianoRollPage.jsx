@@ -47,7 +47,6 @@ import {
   pasteNotesPayload,
   patternBeats,
   resizeNotes,
-  snapMidiToScale,
   snapNotesToScale,
   patternToMidiData,
   quantizeBeats,
@@ -84,6 +83,7 @@ const ZOOM_STEP = 1.15;
 const ZOOM_WHEEL_STEP = 1.08;
 const MAX_GRID_BACKING_WIDTH = 16384;
 const UNSAVED_WARNING = 'You have unsaved MIDI edits. Leave the editor and discard them?';
+const RECORDING_TAIL_MS = 160;
 
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
@@ -150,20 +150,10 @@ const drawGrid = (canvas, {
       const isScaleTone = isInScale(midi, scaleRoot, scaleId);
       const isChordTone = isInChord(midi, scaleRoot, chordTypeId);
       if (!isScaleTone && !isChordTone) continue;
-      const isRoot = (((midi - scaleRoot) % 12) + 12) % 12 === 0;
-      ctx.fillStyle = isRoot
-        ? 'rgba(255, 132, 67, 0.44)'
-        : isChordTone
-          ? 'rgba(226, 178, 92, 0.34)'
-          : 'rgba(89, 160, 177, 0.32)';
+      ctx.fillStyle = 'rgba(89, 160, 177, 0.38)';
       ctx.fillRect(0, y, width, ROW_HEIGHT);
-      if (isRoot) {
-        ctx.fillStyle = 'rgba(255, 200, 158, 0.68)';
-        ctx.fillRect(0, y, width, 1);
-      } else if (isChordTone) {
-        ctx.fillStyle = 'rgba(255, 219, 151, 0.38)';
-        ctx.fillRect(0, y, width, 1);
-      }
+      ctx.fillStyle = 'rgba(173, 223, 232, 0.42)';
+      ctx.fillRect(0, y, width, 1);
     }
   }
 
@@ -207,7 +197,6 @@ const PianoRollPage = () => {
   const [snapId, setSnapId] = React.useState('1/16');
   const [scaleId, setScaleId] = React.useState('');
   const [scaleRoot, setScaleRoot] = React.useState(0);
-  const [scaleLock, setScaleLock] = React.useState(false);
   const [chordTypeId, setChordTypeId] = React.useState('major');
   const [pxPerBeat, setPxPerBeat] = React.useState(56);
   const [trayOpen, setTrayOpen] = React.useState(true);
@@ -216,6 +205,7 @@ const PianoRollPage = () => {
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
   const [activeTrackId, setActiveTrackId] = React.useState('track-1');
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
+  const [isRecordingLoop, setIsRecordingLoop] = React.useState(false);
 
   const [waveformType, setWaveformType] = React.useState(() => DEFAULT_WAVEFORM);
   const [audioParams, setAudioParams] = React.useState(() => (
@@ -240,6 +230,8 @@ const PianoRollPage = () => {
   const auditionRef = React.useRef(null);
   const auditionTimeoutRef = React.useRef(null);
   const editRestartTimeoutRef = React.useRef(null);
+  const recordingTimeoutRef = React.useRef(null);
+  const recordingActiveRef = React.useRef(false);
   const patternRef = React.useRef(pattern);
   const cleanPatternRef = React.useRef(pattern);
   const hasUnsavedChangesRef = React.useRef(false);
@@ -303,6 +295,11 @@ const PianoRollPage = () => {
     audioEngine.setSanitizedGlobalParams(audioParams);
   }, [audioParams]);
 
+  React.useEffect(() => audioEngine.subscribeRecording((recording) => {
+    recordingActiveRef.current = recording;
+    setIsRecordingLoop(recording);
+  }), []);
+
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
@@ -327,6 +324,8 @@ const PianoRollPage = () => {
     if (auditionTimeoutRef.current) clearTimeout(auditionTimeoutRef.current);
     if (auditionRef.current) audioEngine.stopNote(auditionRef.current);
     if (editRestartTimeoutRef.current) clearTimeout(editRestartTimeoutRef.current);
+    if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
+    if (recordingActiveRef.current) audioEngine.stopRecording();
   }, []);
 
   const pushHistory = React.useCallback((snapshot) => {
@@ -623,7 +622,7 @@ const PianoRollPage = () => {
         ));
         return;
       }
-      if (mod && key === 'l') {
+      if (mod && event.shiftKey && key === 'l') {
         event.preventDefault();
         handleLoopSelection();
         return;
@@ -807,10 +806,7 @@ const PianoRollPage = () => {
   }, [pointerToGrid, findNoteAt, selectedIds, beginMove, pxPerBeat]);
 
   const handleLayerDoubleClick = React.useCallback((event) => {
-    const { beat, midi: rawMidi } = pointerToGrid(event);
-    const midi = scaleLock && scaleId
-      ? snapMidiToScale(rawMidi, scaleRoot, scaleId)
-      : rawMidi;
+    const { beat, midi } = pointerToGrid(event);
     const noteId = event.target.dataset?.noteId || null;
     const hitNote = noteId
       ? patternRef.current.notes.find((note) => note.id === noteId)
@@ -845,9 +841,6 @@ const PianoRollPage = () => {
     findNoteAt,
     pointerToGrid,
     pushHistory,
-    scaleId,
-    scaleLock,
-    scaleRoot,
     snapBeats
   ]);
 
@@ -998,39 +991,28 @@ const PianoRollPage = () => {
     window.location.hash = '#/';
   }, [playback.stop]);
 
-  const handleExportMidi = React.useCallback(async () => {
-    const source = patternRef.current;
-    const midiData = patternToMidiData(source);
+  const handleRecordLoop = React.useCallback(async () => {
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+      recordingTimeoutRef.current = null;
+    }
+    if (isRecordingLoop) {
+      playback.stop();
+      audioEngine.stopRecording();
+      return;
+    }
+
+    const midiData = patternToMidiData(patternRef.current, { useLoopRange: true });
     if (midiData.notes.length === 0) return;
-
-    const { Midi } = await import('@tonejs/midi');
-    const midi = new Midi();
-    midi.header.setTempo(source.bpm);
-    midi.header.name = midiData.name;
-    source.tracks.forEach((sourceTrack) => {
-      const notes = midiData.notes.filter((note) => note.trackId === sourceTrack.id);
-      if (notes.length === 0) return;
-      const track = midi.addTrack();
-      track.name = sourceTrack.name;
-      notes.forEach((note) => {
-        track.addNote({
-          midi: note.midi,
-          time: note.time,
-          duration: note.duration,
-          velocity: note.velocity
-        });
-      });
-    });
-
-    const safeName = (midiData.name || 'pattern').trim().replace(/[^\w-]+/g, '-') || 'pattern';
-    const blob = new Blob([midi.toArray()], { type: 'audio/midi' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${safeName}.mid`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }, []);
+    playback.stop();
+    await audioEngine.startRecording();
+    playback.play(midiData, { loop: false });
+    recordingTimeoutRef.current = setTimeout(() => {
+      recordingTimeoutRef.current = null;
+      playback.stop();
+      audioEngine.stopRecording();
+    }, Math.max(0, midiData.duration * 1000) + RECORDING_TAIL_MS);
+  }, [isRecordingLoop, playback.play, playback.stop]);
 
   const handleParamChange = React.useCallback((paramName, value) => {
     setAudioParams((prev) => sanitizeAudioParams({ ...prev, [paramName]: value }));
@@ -1127,21 +1109,13 @@ const PianoRollPage = () => {
   const isScaleMidi = React.useCallback((midi) => (
     scalePitchClasses?.has(((midi % 12) + 12) % 12) || false
   ), [scalePitchClasses]);
-  const isRootMidi = React.useCallback((midi) => (
-    Boolean(activeScale) && ((midi % 12) + 12) % 12 === scaleRoot
-  ), [activeScale, scaleRoot]);
   const isChordMidi = React.useCallback((midi) => (
     Boolean(activeScale) && isInChord(midi, scaleRoot, chordTypeId)
   ), [activeScale, chordTypeId, scaleRoot]);
-
-  const chordToneNames = React.useMemo(() => {
-    if (!activeScale) return [];
-    const chord = CHORD_TYPES.find((entry) => entry.id === chordTypeId);
-    if (!chord) return [];
-    return [...new Set(chord.intervals.map((interval) => (
-      SCALE_ROOTS[(scaleRoot + interval) % 12]
-    )))];
-  }, [activeScale, chordTypeId, scaleRoot]);
+  const activeChord = React.useMemo(
+    () => CHORD_TYPES.find((chord) => chord.id === chordTypeId) || CHORD_TYPES[0],
+    [chordTypeId]
+  );
 
   const keyRows = React.useMemo(() => {
     const rows = [];
@@ -1149,20 +1123,18 @@ const PianoRollPage = () => {
       const midi = midiForRow(row);
       const { noteName, octave, noteId } = midiNoteToName(midi);
       const inScale = isScaleMidi(midi);
-      const root = isRootMidi(midi);
       const inChord = isChordMidi(midi);
       rows.push({
         midi,
         noteId,
-        label: activeScale && inScale ? noteId : (noteName === 'C' ? `C${octave}` : ''),
+        label: activeScale && (inScale || inChord) ? noteId : (noteName === 'C' ? `C${octave}` : ''),
         black: isBlackKey(midi),
         inScale,
-        inChord,
-        root
+        inChord
       });
     }
     return rows;
-  }, [activeScale, isChordMidi, isRootMidi, isScaleMidi]);
+  }, [activeScale, isChordMidi, isScaleMidi]);
 
   const barMarkers = React.useMemo(() => (
     Array.from({ length: pattern.bars }, (_, index) => index)
@@ -1286,7 +1258,7 @@ const PianoRollPage = () => {
               <dt>⌘C ⌘X ⌘V</dt><dd>Copy · cut · paste</dd>
               <dt>⌘D</dt><dd>Duplicate right</dd>
               <dt>⇧⌘D</dt><dd>Clone in place, then nudge</dd>
-              <dt>⌘L</dt><dd>Loop selected bars</dd>
+              <dt>⇧⌘L</dt><dd>Loop selected bars</dd>
               <dt>⌘A · Esc</dt><dd>Select all · none</dd>
               <dt>Del</dt><dd>Delete selection</dd>
               <dt>Right-click</dt><dd>Erase</dd>
@@ -1379,16 +1351,6 @@ const PianoRollPage = () => {
               </select>
             </label>
 
-            <label className="piano-roll-tray__field piano-roll-tray__field--toggle">
-              <span>Scale lock</span>
-              <input
-                type="checkbox"
-                checked={scaleLock}
-                onChange={(event) => setScaleLock(event.target.checked)}
-                disabled={!scaleId}
-              />
-            </label>
-
             <label className="piano-roll-tray__field">
               <span>Chord</span>
               <span className="piano-roll-chord-tool">
@@ -1405,18 +1367,10 @@ const PianoRollPage = () => {
 
             {activeScale && (
               <div className="piano-roll-scale-guide" aria-live="polite">
-                <strong>{SCALE_ROOTS[scaleRoot]} {activeScale.label} scale</strong>
-                <span className="piano-roll-scale-guide__item">
-                  <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--root" />
-                  Root
-                </span>
-                <span className="piano-roll-scale-guide__item">
-                  <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--chord" />
-                  Chord {chordToneNames.join(' · ')}
-                </span>
+                <strong>{SCALE_ROOTS[scaleRoot]} {activeScale.label} · {activeChord.label} chord</strong>
                 <span className="piano-roll-scale-guide__item">
                   <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--tone" />
-                  Scale tone
+                  Highlighted notes
                 </span>
                 {outOfScaleCount > 0 && (
                   <span className="piano-roll-scale-guide__warning">
@@ -1436,10 +1390,17 @@ const PianoRollPage = () => {
             <div className="piano-roll-tray__actions">
               <button type="button" onClick={handleSave}>Save</button>
               <button type="button" onClick={handleLoopSelection} disabled={selectedIds.size === 0 && !loopRange}>
-                {loopRange ? 'Unloop ⌘L' : 'Loop selection ⌘L'}
+                {loopRange ? 'Unloop ⇧⌘L' : 'Loop selection ⇧⌘L'}
               </button>
               <button type="button" onClick={handleClear}>Clear layer</button>
-              <button type="button" onClick={handleExportMidi}>Export .mid</button>
+              <button
+                type="button"
+                className={isRecordingLoop ? 'is-recording' : ''}
+                onClick={handleRecordLoop}
+                disabled={!isRecordingLoop && pattern.notes.length === 0}
+              >
+                {isRecordingLoop ? '■ Stop recording' : '● Record loop'}
+              </button>
               <button type="button" onClick={handleOpenInPlayer}>Open in player</button>
             </div>
           </div>
@@ -1447,7 +1408,6 @@ const PianoRollPage = () => {
           <div className="piano-roll-tracks" aria-label="Instrument layers">
             <div className="piano-roll-tracks__heading">
               <strong>Layers</strong>
-              <span>Other layers appear as ghost notes</span>
             </div>
             <div className="piano-roll-tracks__list">
               {pattern.tracks.map((track) => {
@@ -1587,7 +1547,6 @@ const PianoRollPage = () => {
                   activeScale && !key.inScale ? 'is-out-of-scale' : '',
                   key.inScale ? 'is-in-scale' : '',
                   key.inChord ? 'is-in-chord' : '',
-                  key.root ? 'is-scale-root' : ''
                 ].filter(Boolean).join(' ')}
                 style={{ height: ROW_HEIGHT }}
                 onPointerDown={() => handleKeyAudition(key.midi)}
