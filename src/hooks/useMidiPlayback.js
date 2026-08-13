@@ -48,6 +48,7 @@ function resolveMidiDuration(midiData) {
  * @typedef {Object} MidiPlaybackState
  * @property {boolean} isPlaying - Whether playback is currently active
  * @property {boolean} isPaused - Whether playback is paused
+ * @property {boolean} isLooping - Whether the active playback repeats from time 0 at each cycle boundary (persists through pause, cleared by stop)
  * @property {number} progress - Playback progress (0-1)
  * @property {Set<string>} activeNotes - Currently playing note IDs
  * @property {Object|null} currentMidi - Current MIDI data being played
@@ -88,6 +89,7 @@ function resolveMidiDuration(midiData) {
 export function useMidiPlayback({ waveformType, audioParams }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isLooping, setIsLooping] = useState(false);
   const [progress, setProgress] = useState(0);
   const [activeNotes, setActiveNotes] = useState(() => new Set());
   const [currentMidi, setCurrentMidi] = useState(null);
@@ -116,7 +118,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       startTime: 0,
       pauseOriginalTime: 0,
       elapsedOriginalAtStart: 0,
-      midiData: null
+      midiData: null,
+      loop: false
     };
   }
   const publishActiveNotes = useVisibleSnapshotPublisher({
@@ -278,10 +281,12 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     playbackRef.current.startTime = 0;
     playbackRef.current.pauseOriginalTime = 0;
     playbackRef.current.elapsedOriginalAtStart = 0;
+    playbackRef.current.loop = false;
     scheduledVoiceMapRef.current.clear();
 
     setIsPlaying(false);
     setIsPaused(false);
+    setIsLooping(false);
     setProgress(0);
   }, [clearAllTimeouts, stopAllNotes]);
 
@@ -376,6 +381,51 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     pump();
   }, [scheduleTrackedTimeout, triggerNoteOn, triggerNoteOff]);
 
+  /**
+   * Arm the cycle-boundary timeout for looping playback. When the current
+   * pass reaches the end of the score, timing resets to the top and notes are
+   * re-scheduled from zero for a seamless repeat. The captured scheduler
+   * sequence guards the callback so a stop()/pause()/re-schedule racing the
+   * boundary cannot resurrect a cancelled playback.
+   * @param {number} elapsedOriginal - Position within the cycle in original MIDI seconds
+   * @private
+   */
+  const scheduleLoopBoundary = useCallback((elapsedOriginal) => {
+    const pb = playbackRef.current;
+    if (!pb.loop || !pb.midiData) return;
+
+    const armCycle = (cycleElapsedOriginal) => {
+      const duration = resolveMidiDuration(pb.midiData);
+      const remainingOriginal = Math.max(0, duration - cycleElapsedOriginal);
+      const sequence = schedulerSequenceRef.current;
+
+      scheduleTrackedTimeout(() => {
+        if (sequence !== schedulerSequenceRef.current) return;
+        if (!pb.loop || !isPlayingRef.current || isPausedRef.current) return;
+
+        const ctx = audioEngine.context;
+        if (!ctx) return;
+
+        // Hard cut at the boundary: cancel stale timers, release anything
+        // still sounding (a note ending exactly at the loop point gets its
+        // noteOff here), then restart the cycle from the top of the score.
+        clearAllTimeouts();
+        stopAllNotes();
+
+        const newStartTime = ctx.currentTime;
+        pb.startTime = newStartTime;
+        pb.pauseOriginalTime = 0;
+        pb.elapsedOriginalAtStart = 0;
+
+        setProgress(0);
+        scheduleNotes(pb.midiData.notes, 0, newStartTime);
+        armCycle(0);
+      }, (remainingOriginal / tempoFactorRef.current) * 1000);
+    };
+
+    armCycle(elapsedOriginal);
+  }, [clearAllTimeouts, scheduleNotes, scheduleTrackedTimeout, stopAllNotes]);
+
   // Tempo factor setter with clamping. Re-schedules remaining notes if tempo changes mid-playback.
   const setTempo = useCallback((factor) => {
     const clamped = Math.max(0.25, Math.min(2.0, factor));
@@ -412,7 +462,8 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     pb.elapsedOriginalAtStart = elapsedOriginal;
 
     scheduleNotes(pb.midiData.notes, elapsedOriginal, currentTime);
-  }, [clearAllTimeouts, getElapsedOriginalTime, scheduleNotes, stopAllNotes]);
+    scheduleLoopBoundary(elapsedOriginal);
+  }, [clearAllTimeouts, getElapsedOriginalTime, scheduleLoopBoundary, scheduleNotes, stopAllNotes]);
 
   /**
    * Start the progress update animation loop
@@ -430,8 +481,12 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       const progressValue = Math.min(elapsedOriginal / duration, 1);
 
       if (progressValue >= 1) {
-        stopInternal();
-        return;
+        if (!playbackRef.current.loop) {
+          stopInternal();
+          return;
+        }
+        // Looping playback wraps at the cycle-boundary timeout instead of
+        // stopping; hold the final frame so a late RAF cannot end the loop.
       }
 
       if (frameTime - lastProgressUpdate >= PROGRESS_UPDATE_INTERVAL_MS) {
@@ -456,6 +511,9 @@ export function useMidiPlayback({ waveformType, audioParams }) {
   /**
    * Start playing a MIDI file
    * @param {Object} midiData - Parsed MIDI data from parseMidiFile()
+   * @param {Object} [options] - Playback options
+   * @param {number} [options.startAt=0] - Timeline offset to begin from, in original MIDI seconds
+   * @param {boolean} [options.loop=false] - Repeat seamlessly from time 0 after each full pass until stop() or pause()
    */
   const play = useCallback((midiData, options = {}) => {
     const performanceProbe = typeof window !== 'undefined'
@@ -490,6 +548,7 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     const startAt = Number.isFinite(requestedStartAt)
       ? Math.min(Math.max(requestedStartAt, 0), midiDuration)
       : 0;
+    const loop = Boolean(options?.loop);
 
     const playRequestSeq = playRequestSeqRef.current + 1;
     playRequestSeqRef.current = playRequestSeq;
@@ -514,14 +573,17 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       playbackRef.current.startTime = startTime;
       playbackRef.current.pauseOriginalTime = 0;
       playbackRef.current.elapsedOriginalAtStart = startAt;
+      playbackRef.current.loop = loop;
 
       setCurrentMidi(effectiveMidiData);
       setIsPlaying(true);
       setIsPaused(false);
+      setIsLooping(loop);
       setProgress(midiDuration > 0 ? startAt / midiDuration : 0);
 
       // Schedule notes from the requested timeline offset.
       scheduleNotes(effectiveMidiData.notes, startAt, startTime);
+      scheduleLoopBoundary(startAt);
 
       // Start progress update loop
       startProgressLoop(midiDuration);
@@ -536,11 +598,13 @@ export function useMidiPlayback({ waveformType, audioParams }) {
     }).catch((error) => {
       paintInteraction?.cancel();
       if (playRequestSeq !== playRequestSeqRef.current) return;
+      playbackRef.current.loop = false;
       setIsPlaying(false);
       setIsPaused(false);
+      setIsLooping(false);
       console.warn('Failed to start MIDI playback:', error);
     });
-  }, [resumeAudioContextIfNeeded, stopInternal, scheduleNotes, startProgressLoop]);
+  }, [resumeAudioContextIfNeeded, stopInternal, scheduleNotes, scheduleLoopBoundary, startProgressLoop]);
 
   /**
    * Pause playback at current position
@@ -587,13 +651,14 @@ export function useMidiPlayback({ waveformType, audioParams }) {
 
       // Schedule from original timeline offset; includes notes sustaining through resume point.
       scheduleNotes(pb.midiData.notes, elapsedOriginal, newStartTime);
+      scheduleLoopBoundary(elapsedOriginal);
 
       // Restart progress loop
       startProgressLoop(resolveMidiDuration(pb.midiData));
     }).catch((error) => {
       console.warn('Failed to resume MIDI playback:', error);
     });
-  }, [isPaused, resumeAudioContextIfNeeded, scheduleNotes, startProgressLoop]);
+  }, [isPaused, resumeAudioContextIfNeeded, scheduleLoopBoundary, scheduleNotes, startProgressLoop]);
 
   /**
    * Stop playback completely and reset state
@@ -645,15 +710,17 @@ export function useMidiPlayback({ waveformType, audioParams }) {
       pb.elapsedOriginalAtStart = clampedTime;
 
       scheduleNotes(pb.midiData.notes, clampedTime, newStartTime);
+      scheduleLoopBoundary(clampedTime);
       startProgressLoop(duration);
     }).catch((error) => {
       console.warn('Failed to seek MIDI playback:', error);
     });
-  }, [clearAllTimeouts, resumeAudioContextIfNeeded, scheduleNotes, startProgressLoop, stopAllNotes]);
+  }, [clearAllTimeouts, resumeAudioContextIfNeeded, scheduleLoopBoundary, scheduleNotes, startProgressLoop, stopAllNotes]);
 
   return {
     isPlaying,
     isPaused,
+    isLooping,
     progress,
     activeNotes,
     currentMidi,

@@ -84,6 +84,13 @@ describe('Sidebar', () => {
     expect(studiesLink).toHaveAttribute('href', '#/studies');
   });
 
+  it('renders a rail-level Editor nav link to the pattern editor', () => {
+    render(<Sidebar {...buildProps()} />);
+    const editorLink = screen.getByRole('link', { name: /open the pattern editor/i });
+    expect(editorLink).toBeInTheDocument();
+    expect(editorLink).toHaveAttribute('href', '#/editor');
+  });
+
   it('opens selected tab when rail button clicked', () => {
     const onOpen = vi.fn();
     const onTabChange = vi.fn();

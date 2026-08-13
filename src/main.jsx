@@ -4,11 +4,13 @@ import './style.css';
 import {
   getActiveRoute,
   getStudyRouteMatch,
+  isPianoRollRoute,
   isSoundDesignerRoute,
   isStudySongsRoute
 } from './utils/routes.js';
 
 const App = React.lazy(() => import('./App.jsx'));
+const PianoRollPage = React.lazy(() => import('./pages/PianoRollPage.jsx'));
 const SongStudyPage = React.lazy(() => import('./pages/SongStudyPage.jsx'));
 const SoundDesignerPage = React.lazy(() => import('./pages/SoundDesignerPage.jsx'));
 const StudySongsPage = React.lazy(() => import('./pages/StudySongsPage.jsx'));
@@ -22,6 +24,7 @@ const RouteLoading = () => (
 const Root = () => {
   const [route, setRoute] = React.useState(() => getActiveRoute());
   const showSoundDesigner = isSoundDesignerRoute(route);
+  const showPianoRoll = isPianoRollRoute(route);
   const showStudySongs = isStudySongsRoute(route);
   const studyRoute = getStudyRouteMatch(route);
 
@@ -49,6 +52,10 @@ const Root = () => {
 
   if (showSoundDesigner) {
     return <SoundDesignerPage />;
+  }
+
+  if (showPianoRoll) {
+    return <PianoRollPage />;
   }
 
   if (showStudySongs) {

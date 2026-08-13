@@ -1,5 +1,5 @@
 import React from 'react';
-import { SOUND_DESIGNER_HREF, STUDY_SONGS_HREF } from '../../utils/routes.js';
+import { PIANO_ROLL_HREF, SOUND_DESIGNER_HREF, STUDY_SONGS_HREF } from '../../utils/routes.js';
 import './Sidebar.css';
 
 let soundDesignerRoutePromise;
@@ -7,6 +7,13 @@ let soundDesignerRoutePromise;
 const preloadSoundDesignerRoute = () => {
   soundDesignerRoutePromise ||= import('../../pages/SoundDesignerPage.jsx');
   soundDesignerRoutePromise.catch(() => undefined);
+};
+
+let pianoRollRoutePromise;
+
+const preloadPianoRollRoute = () => {
+  pianoRollRoutePromise ||= import('../../pages/PianoRollPage.jsx');
+  pianoRollRoutePromise.catch(() => undefined);
 };
 
 let studySongsRoutePromise;
@@ -86,6 +93,22 @@ const SidebarRail = ({
             <line x1="15.5" y1="6" x2="15.5" y2="13.5" />
           </svg>
           <span className="sidebar-rail__label">Play</span>
+        </a>
+        <a
+          className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'editor' ? 'sidebar-rail__btn--current' : ''}`}
+          href={PIANO_ROLL_HREF}
+          aria-label="Open the pattern editor"
+          aria-current={currentView === 'editor' ? 'page' : undefined}
+          onPointerEnter={preloadPianoRollRoute}
+          onFocus={preloadPianoRollRoute}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="1.5" />
+            <line x1="9" y1="4" x2="9" y2="20" />
+            <rect x="10.5" y="7" width="6" height="2.6" rx="0.6" fill="currentColor" stroke="none" />
+            <rect x="13" y="12" width="5" height="2.6" rx="0.6" fill="currentColor" stroke="none" />
+          </svg>
+          <span className="sidebar-rail__label">Editor</span>
         </a>
         <a
           className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'design' ? 'sidebar-rail__btn--current' : ''}`}

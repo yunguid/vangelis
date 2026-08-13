@@ -1,0 +1,496 @@
+.piano-roll-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  color: var(--color-text-primary);
+  background: var(--color-bg-deep);
+  padding-left: 72px; /* clear the fixed sidebar rail */
+  animation: piano-roll-enter 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes piano-roll-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.piano-roll-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 15, 23, 0.98);
+  flex: none;
+}
+
+.piano-roll-topbar__cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.piano-roll-topbar__cluster--right {
+  margin-left: auto;
+}
+
+.piano-roll-topbar__divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.piano-roll-topbar__collapse {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.piano-roll-topbar__collapse:hover {
+  color: rgba(255, 164, 112, 0.9);
+}
+
+.piano-roll-topbar__brand {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-topbar__name {
+  flex: 1;
+  min-width: 120px;
+  max-width: 320px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  padding: 4px 0;
+}
+
+.piano-roll-topbar__name:hover,
+.piano-roll-topbar__name:focus-visible {
+  outline: none;
+  border-bottom-color: rgba(255, 164, 112, 0.6);
+}
+
+.piano-roll-topbar__play {
+  min-width: 84px;
+  height: 28px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 164, 112, 0.9);
+  border-radius: 2px;
+  background: rgba(214, 93, 14, 0.88);
+  color: rgba(14, 10, 6, 0.96);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.piano-roll-topbar__play:hover {
+  background: rgba(255, 148, 89, 0.95);
+}
+
+.piano-roll-topbar__play.is-playing {
+  background: rgba(255, 210, 176, 0.95);
+  border-color: rgba(255, 236, 214, 0.95);
+}
+
+.piano-roll-topbar__zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-topbar__zoom span {
+  min-width: 38px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.piano-roll-topbar__fit {
+  width: auto !important;
+  padding: 0 9px;
+  font-size: 0.66rem !important;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.piano-roll-topbar__zoom button {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.piano-roll-topbar__zoom button:hover:not(:disabled) {
+  border-color: rgba(255, 164, 112, 0.7);
+}
+
+.piano-roll-topbar__zoom button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.piano-roll-tray {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(12, 18, 28, 0.72);
+  backdrop-filter: blur(16px);
+}
+
+.piano-roll-tray__fields {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.piano-roll-tray__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-tray__field input,
+.piano-roll-tray__field select {
+  min-width: 60px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  background: rgba(8, 12, 19, 0.85);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.78rem;
+}
+
+.piano-roll-tray__field select:disabled {
+  opacity: 0.4;
+}
+
+.piano-roll-tray__actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.piano-roll-tray__actions button {
+  padding: 6px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.piano-roll-tray__actions button:hover {
+  border-color: rgba(255, 164, 112, 0.7);
+  background: rgba(214, 93, 14, 0.12);
+}
+
+.piano-roll-tray__library summary {
+  cursor: pointer;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-tray__library ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 130px;
+  overflow-y: auto;
+}
+
+.piano-roll-tray__library li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.piano-roll-tray__load {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+
+.piano-roll-tray__load:hover {
+  border-bottom-color: rgba(255, 164, 112, 0.7);
+}
+
+.piano-roll-tray__library-meta {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-tray__delete {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.piano-roll-tray__delete:hover {
+  color: rgba(255, 164, 112, 0.9);
+}
+
+.piano-roll-topbar__help {
+  position: relative;
+}
+
+.piano-roll-topbar__help summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.piano-roll-topbar__help summary::-webkit-details-marker {
+  display: none;
+}
+
+.piano-roll-topbar__help summary:hover,
+.piano-roll-topbar__help[open] summary {
+  border-color: rgba(255, 164, 112, 0.7);
+  color: var(--color-text-primary);
+}
+
+.piano-roll-topbar__help-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  width: 264px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+  background: rgba(10, 15, 23, 0.98);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.piano-roll-topbar__help-panel h2 {
+  margin: 0 0 8px;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-topbar__help-panel dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  font-size: 0.7rem;
+}
+
+.piano-roll-topbar__help-panel dt {
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.piano-roll-topbar__help-panel dd {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: rgba(10, 14, 21, 0.98);
+}
+
+.piano-roll__content {
+  display: grid;
+}
+
+.piano-roll__corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  background: rgba(10, 15, 23, 0.98);
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.piano-roll__ruler {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: rgba(10, 15, 23, 0.98);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.piano-roll__bar-marker {
+  position: absolute;
+  top: 6px;
+  padding-left: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--color-text-secondary);
+  border-left: 1px solid rgba(255, 255, 255, 0.24);
+  height: calc(100% - 6px);
+}
+
+.piano-roll__keys {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.piano-roll__key {
+  border: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  background: #8f897b;
+  color: rgba(16, 20, 27, 0.85);
+  font-family: inherit;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-align: right;
+  padding: 0 6px 0 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.piano-roll__key--black {
+  background: #1b2029;
+  color: rgba(225, 236, 247, 0.55);
+}
+
+.piano-roll__key:active {
+  background: rgba(255, 164, 112, 0.85);
+  color: rgba(20, 24, 32, 0.9);
+}
+
+.piano-roll__grid {
+  position: relative;
+}
+
+.piano-roll__grid-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.piano-roll__notes {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+.piano-roll__note {
+  position: absolute;
+  background: linear-gradient(180deg, rgba(255, 148, 89, 0.95), rgba(214, 93, 14, 0.95));
+  border: 1px solid rgba(20, 12, 6, 0.85);
+  border-left: 3px solid rgba(255, 210, 176, 0.95);
+  border-radius: 1px;
+  box-sizing: border-box;
+  cursor: grab;
+}
+
+.piano-roll__note:hover {
+  filter: brightness(1.12);
+}
+
+.piano-roll__note.is-selected {
+  background: linear-gradient(180deg, rgba(255, 210, 176, 0.98), rgba(255, 148, 89, 0.98));
+  border-color: rgba(255, 236, 214, 0.95);
+  border-left-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 1px rgba(255, 210, 176, 0.55);
+}
+
+.piano-roll__marquee {
+  position: absolute;
+  border: 1px dashed rgba(255, 164, 112, 0.85);
+  background: rgba(255, 164, 112, 0.1);
+  pointer-events: none;
+}
+
+.piano-roll__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: rgba(255, 210, 176, 0.9);
+  box-shadow: 0 0 6px rgba(255, 164, 112, 0.7);
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .piano-roll-page {
+    padding-left: 0;
+  }
+
+  .piano-roll-tray__actions {
+    margin-left: 0;
+  }
+}

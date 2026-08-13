@@ -4,6 +4,9 @@ export const HOME_HREF = '#/';
 export const SOUND_DESIGNER_ROUTE = '/sound-designer';
 export const SOUND_DESIGNER_HREF = `#${SOUND_DESIGNER_ROUTE}`;
 
+export const PIANO_ROLL_ROUTE = '/editor';
+export const PIANO_ROLL_HREF = `#${PIANO_ROLL_ROUTE}`;
+
 export const STUDY_SONGS_ROUTE = '/studies';
 export const STUDY_SONGS_HREF = `#${STUDY_SONGS_ROUTE}`;
 
@@ -27,6 +30,11 @@ export const getActiveRoute = () => {
 export const isSoundDesignerRoute = (route) => (
   route === SOUND_DESIGNER_ROUTE
   || route === `${SOUND_DESIGNER_ROUTE}/`
+);
+
+export const isPianoRollRoute = (route) => (
+  route === PIANO_ROLL_ROUTE
+  || route === `${PIANO_ROLL_ROUTE}/`
 );
 
 export const isStudySongsRoute = (route) => (

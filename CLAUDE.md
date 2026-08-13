@@ -168,6 +168,23 @@ src/
   completeness, featured rank) and a perf-budget line (D00b ≤ 384 KiB +
   manifest↔directory bijection guard). History: `docs/CATALOG_LEDGER.md`
 
+### Piano Roll (`#/editor`)
+- Selection-first pattern editor (Ableton/Logic grammar): double-click
+  adds a note, click selects, drag on empty space marquee-selects, drag
+  moves the whole selection, right edge resizes, Delete/Backspace removes
+  the selection, Cmd/Ctrl+A selects all, Esc deselects; right-click (or
+  right-drag sweep) erases, Space toggles the loop; Export .mid writes a
+  standard MIDI file via @tonejs/midi
+- Pure pattern model in `utils/pianoRollPattern.js` (beats domain, 4/4;
+  `patternToMidiData` converts to the seconds-domain shape
+  `useMidiPlayback` consumes); patterns persist via
+  `utils/patternStorage.js` (localStorage)
+- Loop transport through the current patch (`useMidiPlayback`
+  `{ loop: true }`), selectable 1/2/4/8 bars, BPM 40-240, snap
+  1/4-1/32 incl. triplets, optional key/scale row highlighting
+- Canvas grid + DOM note layer; "Open in player" hands the pattern to the
+  home player via `utils/pendingMidiHandoff.js`
+
 ### Recording
 - Record button captures all audio output
 - Uses an AudioWorklet (`recorder-worklet.js`) to capture raw PCM on the audio thread

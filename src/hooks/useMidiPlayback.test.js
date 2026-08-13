@@ -723,4 +723,242 @@ describe('useMidiPlayback', () => {
     expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('sine');
     expect(result.current.currentMidi?.notes?.[0]?.instrumentFamily).toBe('piano');
   });
+
+  it('replays notes from the top after each cycle boundary when loop is enabled', async () => {
+    const frameCallbacks = [];
+    global.requestAnimationFrame = vi.fn((callback) => {
+      frameCallbacks.push(callback);
+      return frameCallbacks.length;
+    });
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.5, velocity: 1 }]
+      }, { loop: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 0.5;
+      frameCallbacks[0](0);
+    });
+    expect(result.current.progress).toBeCloseTo(0.5, 5);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 1;
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+    expect(audioEngine.playFrequency.mock.calls[1][0].noteId).toContain('midi-60-');
+    expect(result.current.progress).toBe(0);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 2;
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(3);
+    expect(result.current.isPlaying).toBe(true);
+  });
+
+  it('halts a looping playback on stop with no further scheduled notes', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.5, velocity: 1 }]
+      }, { loop: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      audioEngine.context.currentTime = 1;
+      vi.advanceTimersByTime(1_001);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      result.current.stop();
+    });
+    expect(result.current.isPlaying).toBe(false);
+    expect(result.current.isLooping).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 5;
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('does not retrigger notes past the end when loop is not requested', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.5, velocity: 1 }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.isLooping).toBe(false);
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 3;
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports isLooping while a loop is active and clears it on stop', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.5, velocity: 1 }]
+      }, { loop: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(true);
+    expect(result.current.isLooping).toBe(true);
+
+    await act(async () => {
+      result.current.stop();
+    });
+    expect(result.current.isLooping).toBe(false);
+  });
+
+  it('keeps the loop across pause and resume, cycling again at the boundary', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.5, velocity: 1 }]
+      }, { loop: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 0.6;
+      result.current.pause();
+    });
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.isLooping).toBe(true);
+
+    await act(async () => {
+      vi.advanceTimersByTime(5_000);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.resume();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(result.current.isPlaying).toBe(true);
+    expect(result.current.isLooping).toBe(true);
+
+    // 0.4s of the cycle remain; advance 1ms past the boundary so the fake
+    // clock covers the wrapped cycle's immediate retrigger as well.
+    await act(async () => {
+      audioEngine.context.currentTime = 1;
+      vi.advanceTimersByTime(401);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 2;
+      vi.advanceTimersByTime(1_000);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps looping after a mid-cycle tempo change', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'sine',
+      audioParams: { volume: 0.7, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.3 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{ midi: 60, time: 0, duration: 0.5, velocity: 1 }]
+      }, { loop: true });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 0.5;
+      result.current.setTempo(2.0);
+    });
+    expect(result.current.isLooping).toBe(true);
+
+    // 0.5s of score remain; at double speed the boundary lands in 250ms.
+    // Advance 1ms past it so the wrapped cycle's retrigger fires too.
+    await act(async () => {
+      audioEngine.context.currentTime = 0.75;
+      vi.advanceTimersByTime(251);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      audioEngine.context.currentTime = 1.25;
+      vi.advanceTimersByTime(500);
+    });
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(3);
+  });
 });

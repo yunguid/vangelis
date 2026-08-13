@@ -108,7 +108,7 @@ const initialCss = cssAssets.filter(({ file }) => initialRefs.includes(file));
 const initialJsText = initialJs.map(({ file }) => jsTextByFile.get(file) || '').join('\n');
 const initialCssText = initialCss.map(({ file }) => cssTextByFile.get(file) || '').join('\n');
 const routeChunks = jsAssets.filter(({ file }) => (
-  /(?:SongStudy|SoundDesigner|StudySongs)/.test(file)
+  /(?:SongStudy|SoundDesigner|StudySongs|PianoRoll)/.test(file)
 ));
 const worklets = jsAssets.filter(({ file }) => file.includes('worklet'));
 const assetMetricByFile = new Map(assetMetrics.map((metric) => [metric.file, metric]));
@@ -121,6 +121,7 @@ const routeEntries = [
   },
   { route: 'song-study', entries: ['src/pages/SongStudyPage.jsx'] },
   { route: 'sound-designer', entries: ['src/pages/SoundDesignerPage.jsx'] },
+  { route: 'editor', entries: ['src/pages/PianoRollPage.jsx'] },
   { route: 'study-songs', entries: ['src/pages/StudySongsPage.jsx'] }
 ];
 const fullSidebarManifestRecord = Object.values(manifest).find((record) => (
@@ -2224,11 +2225,11 @@ if (!reverbUsesBranchBasedRingRead) {
     expected: 'at most one conditional wrap and one conditional adjacent-index increment'
   });
 }
-if (routeChunks.length < 3) {
+if (routeChunks.length < 4) {
   failures.push({
     name: 'D09 secondary route chunks',
     actual: routeChunks.length,
-    minimum: 3
+    minimum: 4
   });
 }
 
