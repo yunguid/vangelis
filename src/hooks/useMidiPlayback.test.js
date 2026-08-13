@@ -78,6 +78,36 @@ describe('useMidiPlayback', () => {
     expect(audioEngine.stopNote).toHaveBeenCalledTimes(1);
   });
 
+  it('allows layered MIDI notes to override the current waveform', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'Sine',
+      audioParams: { volume: 0.7 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 1,
+        bpm: 120,
+        notes: [{
+          midi: 48,
+          time: 0,
+          duration: 0.1,
+          velocity: 1,
+          waveformType: 'Square'
+        }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      vi.runAllTimers();
+    });
+
+    expect(audioEngine.playFrequency).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playFrequency.mock.calls[0][0].waveformType).toBe('Square');
+  });
+
   it('records opt-in MIDI startup and scheduler lateness samples', async () => {
     const recordInteraction = vi.fn();
     const completePaint = vi.fn();

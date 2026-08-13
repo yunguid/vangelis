@@ -1,20 +1,27 @@
 import { describe, it, expect } from 'vitest';
 import {
+  BAR_CHUNK,
   BEATS_PER_BAR,
+  MAX_PATTERN_BARS,
   DEFAULT_VELOCITY,
   MIN_NOTE_BEATS,
   PITCH_MAX,
   PITCH_MIN,
   addNote,
+  addTrack,
   applyNoteDelta,
+  buildChords,
   copyNotesPayload,
   createPattern,
   deleteNote,
   deleteNotes,
+  deleteTrack,
   duplicateNotes,
   nudgeNotes,
+  normalizePattern,
   pasteNotesPayload,
   resizeNotes,
+  snapNotesToScale,
   getSnapBeats,
   isInScale,
   patternBeats,
@@ -22,6 +29,8 @@ import {
   quantizeBeats,
   quantizeBeatsFloor,
   setPatternBars,
+  toggleLoopForSelection,
+  updateTrack,
   updateNote
 } from './pianoRollPattern.js';
 
@@ -32,6 +41,8 @@ describe('createPattern', () => {
     expect(pattern.bpm).toBe(240);
     expect(pattern.bars).toBe(4);
     expect(patternBeats(pattern)).toBe(4 * BEATS_PER_BAR);
+    expect(pattern.tracks).toHaveLength(1);
+    expect(pattern.tracks[0].name).toBe('Lead');
   });
 });
 
@@ -139,8 +150,8 @@ describe('clipboard: copy / paste / duplicate / nudge', () => {
     const { pattern, ids } = buildSelection();
     const payload = copyNotesPayload(pattern, ids);
     expect(payload).toEqual([
-      { midi: 60, start: 0, duration: 1, velocity: DEFAULT_VELOCITY },
-      { midi: 64, start: 1, duration: 0.5, velocity: DEFAULT_VELOCITY }
+      { midi: 60, start: 0, duration: 1, velocity: DEFAULT_VELOCITY, trackId: 'track-1' },
+      { midi: 64, start: 1, duration: 0.5, velocity: DEFAULT_VELOCITY, trackId: 'track-1' }
     ]);
   });
 
@@ -222,6 +233,88 @@ describe('setPatternBars', () => {
     const straddler = shortened.notes.find((note) => note.midi === 62);
     expect(straddler.start + straddler.duration).toBeLessThanOrEqual(BEATS_PER_BAR);
   });
+
+  it('supports a chunked long timeline and clamps at the 256-bar cap', () => {
+    const expanded = setPatternBars(createPattern(), 200);
+    expect(expanded.bars % BAR_CHUNK).toBe(0);
+    expect(expanded.bars).toBe(200);
+    expect(setPatternBars(expanded, 999).bars).toBe(MAX_PATTERN_BARS);
+  });
+});
+
+describe('instrument layers', () => {
+  it('adds, updates, and deletes tracks with their notes', () => {
+    let pattern = createPattern();
+    const added = addTrack(pattern, { name: 'Bass', instrument: 'Square' });
+    pattern = added.pattern;
+    expect(added.track.id).toBe('track-2');
+    expect(pattern.tracks).toHaveLength(2);
+
+    pattern = updateTrack(pattern, added.track.id, { muted: true });
+    expect(pattern.tracks[1].muted).toBe(true);
+    ({ pattern } = addNote(pattern, {
+      midi: 36,
+      start: 0,
+      duration: 1,
+      trackId: added.track.id
+    }));
+    expect(deleteTrack(pattern, added.track.id).notes).toHaveLength(0);
+  });
+
+  it('upgrades legacy patterns and keeps same-pitch notes on separate tracks', () => {
+    let pattern = normalizePattern({
+      name: 'Old loop',
+      bpm: 120,
+      bars: 4,
+      nextNoteId: 2,
+      notes: [{ id: 'note-1', midi: 60, start: 0, duration: 1, velocity: 0.8 }]
+    });
+    expect(pattern.notes[0].trackId).toBe('track-1');
+    const added = addTrack(pattern);
+    pattern = added.pattern;
+    ({ pattern } = addNote(pattern, {
+      midi: 60,
+      start: 0,
+      duration: 1,
+      trackId: added.track.id
+    }));
+    expect(pattern.notes).toHaveLength(2);
+  });
+
+  it('filters muted tracks and carries each instrument into playback data', () => {
+    let pattern = createPattern({ bars: 1 });
+    const added = addTrack(pattern, { instrument: 'Square', muted: true });
+    pattern = added.pattern;
+    ({ pattern } = addNote(pattern, { midi: 60, start: 0, duration: 1, trackId: 'track-1' }));
+    ({ pattern } = addNote(pattern, { midi: 48, start: 0, duration: 1, trackId: added.track.id }));
+    const midiData = patternToMidiData(pattern);
+    expect(midiData.notes).toHaveLength(1);
+    expect(midiData.notes[0].waveformType).toBe('Sine');
+  });
+});
+
+describe('scale, chord, and loop tools', () => {
+  it('snaps selected notes to the nearest scale tone and builds triads', () => {
+    let result = addNote(createPattern(), { midi: 61, start: 0, duration: 1 });
+    let pattern = result.pattern;
+    const selected = new Set([result.note.id]);
+    pattern = snapNotesToScale(pattern, selected, 0, 'major');
+    expect(pattern.notes[0].midi).toBe(60);
+    const chord = buildChords(pattern, selected, 'major');
+    expect(chord.pattern.notes.map((note) => note.midi).sort((a, b) => a - b)).toEqual([60, 64, 67]);
+  });
+
+  it('toggles a bar-rounded selection loop and crops playback to it', () => {
+    let result = addNote(createPattern({ bars: 4 }), { midi: 60, start: 5, duration: 1 });
+    const selected = new Set([result.note.id]);
+    let pattern = toggleLoopForSelection(result.pattern, selected);
+    expect(pattern.loopRange).toEqual({ start: 4, end: 8, enabled: true });
+    const midiData = patternToMidiData(pattern, { useLoopRange: true });
+    expect(midiData.duration).toBe(2);
+    expect(midiData.notes[0].time).toBe(0.5);
+    pattern = toggleLoopForSelection(pattern, selected);
+    expect(pattern.loopRange.enabled).toBe(false);
+  });
 });
 
 describe('quantize', () => {
@@ -259,7 +352,7 @@ describe('patternToMidiData', () => {
 
     const midiData = patternToMidiData(pattern);
     expect(midiData.duration).toBe(2); // 4 beats at 120bpm
-    expect(midiData.notes[0]).toEqual({ midi: 60, time: 0, duration: 1, velocity: 0.5 });
-    expect(midiData.notes[1]).toEqual({ midi: 64, time: 1, duration: 0.5, velocity: DEFAULT_VELOCITY });
+    expect(midiData.notes[0]).toMatchObject({ midi: 60, time: 0, duration: 1, velocity: 0.5, trackId: 'track-1', waveformType: 'Sine' });
+    expect(midiData.notes[1]).toMatchObject({ midi: 64, time: 1, duration: 0.5, velocity: DEFAULT_VELOCITY, trackId: 'track-1', waveformType: 'Sine' });
   });
 });

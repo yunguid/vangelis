@@ -202,6 +202,77 @@
   opacity: 0.4;
 }
 
+.piano-roll-tray__field--toggle input {
+  width: 28px;
+  min-width: 28px;
+  height: 27px;
+  margin: 0;
+  accent-color: #e8783d;
+}
+
+.piano-roll-bar-stepper,
+.piano-roll-chord-tool {
+  display: flex;
+  align-items: center;
+  height: 27px;
+}
+
+.piano-roll-bar-stepper {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(8, 12, 19, 0.85);
+}
+
+.piano-roll-bar-stepper button,
+.piano-roll-chord-tool button,
+.piano-roll-scale-guide button {
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.piano-roll-bar-stepper button {
+  width: 26px;
+  font-size: 0.9rem;
+}
+
+.piano-roll-bar-stepper button:hover:not(:disabled),
+.piano-roll-chord-tool button:hover:not(:disabled),
+.piano-roll-scale-guide button:hover:not(:disabled) {
+  background: rgba(232, 120, 61, 0.18);
+}
+
+.piano-roll-bar-stepper button:disabled,
+.piano-roll-chord-tool button:disabled,
+.piano-roll-scale-guide button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.piano-roll-bar-stepper output {
+  min-width: 68px;
+  color: var(--color-text-primary);
+  font-size: 0.7rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.piano-roll-chord-tool select {
+  min-width: 86px;
+  height: 27px;
+}
+
+.piano-roll-chord-tool button,
+.piano-roll-scale-guide button {
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .piano-roll-tray__actions {
   display: flex;
   gap: 8px;
@@ -256,6 +327,132 @@
   border: 1px solid rgba(255, 115, 100, 0.35);
   background: rgba(255, 89, 72, 0.1);
   color: rgba(255, 174, 163, 0.95);
+  text-transform: uppercase;
+}
+
+.piano-roll-tracks {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.piano-roll-tracks__heading {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  gap: 2px;
+  width: 96px;
+}
+
+.piano-roll-tracks__heading strong {
+  color: var(--color-text-primary);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.piano-roll-tracks__heading span {
+  color: var(--color-text-secondary);
+  font-size: 0.55rem;
+  line-height: 1.25;
+}
+
+.piano-roll-tracks__list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.piano-roll-track {
+  display: grid;
+  grid-template-columns: 34px 88px 86px repeat(3, 26px);
+  align-items: center;
+  flex: none;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(8, 12, 19, 0.72);
+  opacity: 0.72;
+}
+
+.piano-roll-track.is-active {
+  border-color: var(--track-color);
+  box-shadow: inset 0 -2px 0 var(--track-color);
+  opacity: 1;
+}
+
+.piano-roll-track input,
+.piano-roll-track select,
+.piano-roll-track button,
+.piano-roll-tracks__add {
+  height: 28px;
+  min-width: 0;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.66rem;
+}
+
+.piano-roll-track input {
+  padding: 0 7px;
+}
+
+.piano-roll-track select {
+  padding: 0 4px;
+}
+
+.piano-roll-track button,
+.piano-roll-tracks__add {
+  cursor: pointer;
+}
+
+.piano-roll-track button:hover:not(:disabled),
+.piano-roll-tracks__add:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.piano-roll-track button.is-on {
+  background: var(--track-color);
+  color: rgba(8, 12, 19, 0.95);
+  font-weight: 800;
+}
+
+.piano-roll-track__select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-left: 0 !important;
+}
+
+.piano-roll-track__select i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--track-color);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--track-color) 60%, transparent);
+}
+
+.piano-roll-track__select span {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.piano-roll-track__delete:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.piano-roll-tracks__add {
+  flex: none;
+  padding: 0 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.22);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -530,6 +727,47 @@
   cursor: grab;
 }
 
+.piano-roll__note:not(.is-selected):not(.is-out-of-scale) {
+  background: var(--track-color, #e8783d);
+  border-left-color: color-mix(in srgb, var(--track-color, #e8783d) 45%, white);
+}
+
+.piano-roll__ghost-note {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--track-color, #66a6a8) 58%, transparent);
+  border-left: 2px solid var(--track-color, #66a6a8);
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--track-color, #66a6a8) 24%, transparent);
+  opacity: 0.62;
+  pointer-events: none;
+}
+
+.piano-roll__loop-region {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  border-left: 2px solid rgba(255, 210, 106, 0.85);
+  border-right: 2px solid rgba(255, 210, 106, 0.85);
+  background: rgba(255, 210, 106, 0.035);
+  box-shadow: inset 0 1px 0 rgba(255, 210, 106, 0.45);
+  pointer-events: none;
+}
+
+.piano-roll__loop-region span {
+  position: sticky;
+  left: 4px;
+  top: 3px;
+  display: inline-block;
+  padding: 2px 5px;
+  background: rgba(43, 35, 13, 0.9);
+  color: rgba(255, 224, 137, 0.95);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .piano-roll__note:hover {
   filter: brightness(1.12);
 }
@@ -564,7 +802,7 @@
   box-shadow: 0 0 6px rgba(255, 164, 112, 0.7);
   pointer-events: none;
   will-change: transform;
-  z-index: 2;
+  z-index: 3;
 }
 
 .piano-roll__playhead::before {

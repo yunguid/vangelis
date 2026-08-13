@@ -220,14 +220,14 @@ export function useMidiPlayback({
    * @returns {string[]} Voice ids actually started
    * @private
    */
-  const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity) => {
+  const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, noteOptions = {}) => {
     const startedVoiceIds = [];
     const params = audioParamsRef.current;
 
     const started = audioEngine.playFrequency({
       noteId: voiceId,
       frequency,
-      waveformType: waveformRef.current,
+      waveformType: noteOptions.waveformType || waveformRef.current,
       params,
       velocity
     });
@@ -389,7 +389,13 @@ export function useMidiPlayback({
 
         const startDelay = Math.max(0, (scheduledStart - now) * 1000);
         scheduleTrackedTimeout(() => {
-          const startedVoiceIds = triggerNoteOn(noteId, voiceId, frequency, note.velocity);
+          const startedVoiceIds = triggerNoteOn(
+            noteId,
+            voiceId,
+            frequency,
+            note.velocity,
+            note
+          );
           if (startedVoiceIds.length > 0) {
             scheduledVoiceMapRef.current.set(voiceId, startedVoiceIds);
           }

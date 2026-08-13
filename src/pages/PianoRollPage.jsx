@@ -14,34 +14,45 @@ import {
 } from '../utils/audioParams.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
 import {
-  BAR_OPTIONS,
+  BAR_CHUNK,
   BEATS_PER_BAR,
   BPM_MAX,
   BPM_MIN,
+  CHORD_TYPES,
   DEFAULT_VELOCITY,
+  MAX_PATTERN_BARS,
   MIN_NOTE_BEATS,
   PITCH_MAX,
   PITCH_MIN,
   SCALES,
   SCALE_ROOTS,
   SNAP_OPTIONS,
+  TRACK_INSTRUMENTS,
   addNote,
+  addTrack,
   applyNoteDelta,
+  buildChords,
   copyNotesPayload,
   createPattern,
   deleteNote,
   deleteNotes,
+  deleteTrack,
   duplicateNotes,
   getSnapBeats,
   isInScale,
   nudgeNotes,
+  normalizePattern,
   pasteNotesPayload,
   patternBeats,
   resizeNotes,
+  snapMidiToScale,
+  snapNotesToScale,
   patternToMidiData,
   quantizeBeats,
   quantizeBeatsFloor,
   setPatternBars,
+  toggleLoopForSelection,
+  updateTrack,
   updateNote
 } from '../utils/pianoRollPattern.js';
 import {
@@ -65,6 +76,7 @@ const ZOOM_MIN = 24;
 const ZOOM_MAX = 160;
 const ZOOM_STEP = 1.25;
 const ZOOM_WHEEL_STEP = 1.08;
+const MAX_GRID_BACKING_WIDTH = 16384;
 
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
@@ -78,7 +90,7 @@ const rowForMidi = (midi) => PITCH_MAX - midi;
 const midiForRow = (row) => PITCH_MAX - row;
 const isBlackKey = (midi) => [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 
-const PianoRollPlayhead = React.memo(({ getProgress, gridWidth }) => {
+const PianoRollPlayhead = React.memo(({ getProgress, offsetX = 0, travelWidth }) => {
   const playheadRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -86,13 +98,13 @@ const PianoRollPlayhead = React.memo(({ getProgress, gridWidth }) => {
     const update = () => {
       const node = playheadRef.current;
       if (node) {
-        node.style.transform = `translate3d(${getProgress() * gridWidth}px, 0, 0)`;
+        node.style.transform = `translate3d(${offsetX + getProgress() * travelWidth}px, 0, 0)`;
       }
       frameId = requestAnimationFrame(update);
     };
     frameId = requestAnimationFrame(update);
     return () => cancelAnimationFrame(frameId);
-  }, [getProgress, gridWidth]);
+  }, [getProgress, offsetX, travelWidth]);
 
   return <div ref={playheadRef} className="piano-roll__playhead" aria-hidden="true" />;
 });
@@ -102,13 +114,14 @@ PianoRollPlayhead.displayName = 'PianoRollPlayhead';
 const drawGrid = (canvas, { bars, snapBeats, scaleId, scaleRoot, pxPerBeat }) => {
   const width = bars * BEATS_PER_BAR * pxPerBeat;
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = width * dpr;
+  const backingWidth = Math.min(Math.ceil(width * dpr), MAX_GRID_BACKING_WIDTH);
+  canvas.width = backingWidth;
   canvas.height = GRID_HEIGHT * dpr;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${GRID_HEIGHT}px`;
 
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
+  ctx.scale(backingWidth / width, dpr);
 
   for (let row = 0; row < ROW_COUNT; row += 1) {
     const midi = midiForRow(row);
@@ -170,11 +183,14 @@ const PianoRollPage = () => {
   const [snapId, setSnapId] = React.useState('1/16');
   const [scaleId, setScaleId] = React.useState('');
   const [scaleRoot, setScaleRoot] = React.useState(0);
+  const [scaleLock, setScaleLock] = React.useState(false);
+  const [chordTypeId, setChordTypeId] = React.useState('major');
   const [pxPerBeat, setPxPerBeat] = React.useState(56);
   const [trayOpen, setTrayOpen] = React.useState(true);
   const [savedPatterns, setSavedPatterns] = React.useState(() => loadSavedPatterns());
   const [drag, setDrag] = React.useState(null);
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
+  const [activeTrackId, setActiveTrackId] = React.useState('track-1');
 
   const [waveformType, setWaveformType] = React.useState(() => DEFAULT_WAVEFORM);
   const [audioParams, setAudioParams] = React.useState(() => (
@@ -203,14 +219,32 @@ const PianoRollPage = () => {
   const historyRef = React.useRef({ undo: [], redo: [] });
   const gestureSnapshotRef = React.useRef(null);
   const clipboardRef = React.useRef(null);
+  const timelinePrimedRef = React.useRef(false);
 
   const snapBeats = getSnapBeats(snapId);
   const totalBeats = patternBeats(pattern);
   const gridWidth = totalBeats * pxPerBeat;
+  const activeTrack = pattern.tracks.find((track) => track.id === activeTrackId)
+    || pattern.tracks[0];
+  const activeTrackNotes = pattern.notes.filter((note) => note.trackId === activeTrack?.id);
+  const loopRange = pattern.loopRange?.enabled ? pattern.loopRange : null;
+  const playheadOffsetX = (loopRange?.start || 0) * pxPerBeat;
+  const playheadTravelWidth = loopRange
+    ? (loopRange.end - loopRange.start) * pxPerBeat
+    : gridWidth;
 
   React.useEffect(() => {
     patternRef.current = pattern;
   }, [pattern]);
+
+  React.useEffect(() => {
+    if (pattern.tracks.some((track) => track.id === activeTrackId)) return;
+    const fallback = pattern.tracks[0];
+    if (fallback) {
+      setActiveTrackId(fallback.id);
+      setWaveformType(fallback.instrument);
+    }
+  }, [activeTrackId, pattern.tracks]);
 
   React.useEffect(() => {
     audioEngine.setSanitizedGlobalParams(audioParams);
@@ -291,7 +325,7 @@ const PianoRollPage = () => {
       playback.stop();
       return;
     }
-    const midiData = patternToMidiData(patternRef.current);
+    const midiData = patternToMidiData(patternRef.current, { useLoopRange: true });
     if (midiData.notes.length === 0) return;
     playback.play(midiData, { loop: true });
   }, [playback.isPlaying, playback.isPaused, playback.play, playback.stop]);
@@ -303,7 +337,7 @@ const PianoRollPage = () => {
     if (editRestartTimeoutRef.current) clearTimeout(editRestartTimeoutRef.current);
     editRestartTimeoutRef.current = setTimeout(() => {
       editRestartTimeoutRef.current = null;
-      const midiData = patternToMidiData(patternRef.current);
+      const midiData = patternToMidiData(patternRef.current, { useLoopRange: true });
       if (midiData.notes.length === 0) {
         playback.stop();
         return;
@@ -331,10 +365,15 @@ const PianoRollPage = () => {
     const payload = clipboardRef.current;
     if (!payload || payload.length === 0) return;
     pushHistory(patternRef.current);
-    const { pattern: next, noteIds } = pasteNotesPayload(patternRef.current, payload);
+    const { pattern: next, noteIds } = pasteNotesPayload(
+      patternRef.current,
+      payload,
+      0,
+      activeTrackId
+    );
     setPattern(next);
     setSelectedIds(new Set(noteIds));
-  }, [pushHistory]);
+  }, [activeTrackId, pushHistory]);
 
   const handleDuplicate = React.useCallback(() => {
     if (selectedIds.size === 0) return;
@@ -370,6 +409,34 @@ const PianoRollPage = () => {
     });
   }, [selectedIds, commitPattern]);
 
+  const handleLoopSelection = React.useCallback(() => {
+    const next = toggleLoopForSelection(patternRef.current, selectedIds);
+    if (next === patternRef.current) return;
+    pushHistory(patternRef.current);
+    setPattern(next);
+  }, [pushHistory, selectedIds]);
+
+  const handleSnapSelectionToScale = React.useCallback(() => {
+    if (!scaleId || selectedIds.size === 0) return;
+    commitPattern((prev) => snapNotesToScale(prev, selectedIds, scaleRoot, scaleId));
+  }, [commitPattern, scaleId, scaleRoot, selectedIds]);
+
+  const handleBuildChord = React.useCallback(() => {
+    if (selectedIds.size === 0) return;
+    pushHistory(patternRef.current);
+    const { pattern: next, noteIds } = buildChords(
+      patternRef.current,
+      selectedIds,
+      chordTypeId
+    );
+    if (noteIds.length === 0) {
+      historyRef.current.undo.pop();
+      return;
+    }
+    setPattern(next);
+    setSelectedIds(new Set([...selectedIds, ...noteIds]));
+  }, [chordTypeId, pushHistory, selectedIds]);
+
   const zoomTouchedRef = React.useRef(false);
 
   const applyZoom = React.useCallback((factor, anchorClientX = null) => {
@@ -394,9 +461,8 @@ const PianoRollPage = () => {
     });
   }, []);
 
-  // Fit the whole pattern to the viewport width — the default view, and
-  // re-applied on bar-count and window-size changes until the user zooms
-  // manually.
+  // Fit is explicit: the default 100% zoom preserves a horizontally
+  // scrollable canvas so reaching the right edge can reveal more bars.
   const fitZoom = React.useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -407,17 +473,33 @@ const PianoRollPage = () => {
     setPxPerBeat(Math.min(Math.max(available / beats, ZOOM_MIN), ZOOM_MAX));
   }, []);
 
+  // Prime enough bars for the timeline to scroll on wide screens. Further
+  // chunks are appended by handleTimelineScroll as the right edge nears.
   React.useEffect(() => {
-    if (!zoomTouchedRef.current) fitZoom();
-  }, [pattern.bars, fitZoom]);
+    if (timelinePrimedRef.current) return;
+    const el = scrollRef.current;
+    if (!el || el.clientWidth <= KEY_COLUMN_WIDTH) return;
+    timelinePrimedRef.current = true;
+    const visibleBeats = (el.clientWidth - KEY_COLUMN_WIDTH) / pxPerBeat;
+    const wantedBars = Math.ceil((visibleBeats / BEATS_PER_BAR) + BAR_CHUNK);
+    const chunkedBars = Math.ceil(wantedBars / BAR_CHUNK) * BAR_CHUNK;
+    setPattern((prev) => (
+      chunkedBars > prev.bars
+        ? setPatternBars(prev, Math.min(MAX_PATTERN_BARS, chunkedBars))
+        : prev
+    ));
+  }, [pxPerBeat]);
 
-  React.useEffect(() => {
-    const onResize = () => {
-      if (!zoomTouchedRef.current) fitZoom();
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [fitZoom]);
+  const handleTimelineScroll = React.useCallback((event) => {
+    const el = event.currentTarget;
+    if (patternRef.current.bars >= MAX_PATTERN_BARS) return;
+    const threshold = BEATS_PER_BAR * pxPerBeat * 2;
+    if (el.scrollLeft + el.clientWidth < el.scrollWidth - threshold) return;
+    setPattern((prev) => setPatternBars(
+      prev,
+      Math.min(MAX_PATTERN_BARS, prev.bars + BAR_CHUNK)
+    ));
+  }, [pxPerBeat]);
 
   // Ctrl/Cmd + wheel zoom needs a non-passive native listener.
   React.useEffect(() => {
@@ -458,7 +540,16 @@ const PianoRollPage = () => {
       }
       if (mod && key === 'a') {
         event.preventDefault();
-        setSelectedIds(new Set(patternRef.current.notes.map((note) => note.id)));
+        setSelectedIds(new Set(
+          patternRef.current.notes
+            .filter((note) => note.trackId === activeTrackId)
+            .map((note) => note.id)
+        ));
+        return;
+      }
+      if (mod && key === 'l') {
+        event.preventDefault();
+        handleLoopSelection();
         return;
       }
       if (mod && key === 'c') {
@@ -523,6 +614,9 @@ const PianoRollPage = () => {
     handlePaste,
     handleDuplicate,
     handleNudge,
+    handleLoopSelection,
+    handleResizeSelection,
+    activeTrackId,
     selectedIds,
     snapBeats,
     commitPattern
@@ -540,26 +634,31 @@ const PianoRollPage = () => {
 
   const findNoteAt = React.useCallback((beat, midi) => (
     patternRef.current.notes.find((note) => (
-      note.midi === midi && beat >= note.start && beat < note.start + note.duration
+      note.trackId === activeTrackId
+      && note.midi === midi
+      && beat >= note.start
+      && beat < note.start + note.duration
     ))
-  ), []);
+  ), [activeTrackId]);
 
   const notesInMarquee = React.useCallback((rect) => {
     const [left, right] = [Math.min(rect.x0, rect.x1), Math.max(rect.x0, rect.x1)];
     const [top, bottom] = [Math.min(rect.y0, rect.y1), Math.max(rect.y0, rect.y1)];
     return patternRef.current.notes.filter((note) => {
+      if (note.trackId !== activeTrackId) return false;
       const noteLeft = note.start * pxPerBeat;
       const noteRight = noteLeft + note.duration * pxPerBeat;
       const noteTop = rowForMidi(note.midi) * ROW_HEIGHT;
       return noteLeft < right && noteRight > left
         && noteTop < bottom && noteTop + ROW_HEIGHT > top;
     }).map((note) => note.id);
-  }, [pxPerBeat]);
+  }, [activeTrackId, pxPerBeat]);
 
   const beginMove = React.useCallback((anchorNote, beat, midi, selection) => {
     const ids = selection.has(anchorNote.id) ? selection : new Set([anchorNote.id]);
     const origins = new Map();
     patternRef.current.notes.forEach((note) => {
+      if (note.trackId !== activeTrackId) return;
       if (ids.has(note.id)) origins.set(note.id, { start: note.start, midi: note.midi });
     });
     setDrag({
@@ -570,7 +669,7 @@ const PianoRollPage = () => {
       origins,
       lastDeltaMidi: 0
     });
-  }, []);
+  }, [activeTrackId]);
 
   const handleLayerPointerDown = React.useCallback((event) => {
     const { beat, midi, x, y } = pointerToGrid(event);
@@ -630,7 +729,10 @@ const PianoRollPage = () => {
   }, [pointerToGrid, findNoteAt, selectedIds, beginMove, pxPerBeat]);
 
   const handleLayerDoubleClick = React.useCallback((event) => {
-    const { beat, midi } = pointerToGrid(event);
+    const { beat, midi: rawMidi } = pointerToGrid(event);
+    const midi = scaleLock && scaleId
+      ? snapMidiToScale(rawMidi, scaleRoot, scaleId)
+      : rawMidi;
     const noteId = event.target.dataset?.noteId || null;
     const hitNote = noteId
       ? patternRef.current.notes.find((note) => note.id === noteId)
@@ -649,11 +751,27 @@ const PianoRollPage = () => {
     const start = quantizeBeatsFloor(beat, snapBeats);
     const duration = lastLengthRef.current || snapBeats || 0.25;
     pushHistory(patternRef.current);
-    const { pattern: nextPattern, note } = addNote(patternRef.current, { midi, start, duration });
+    const { pattern: nextPattern, note } = addNote(patternRef.current, {
+      midi,
+      start,
+      duration,
+      trackId: activeTrackId
+    });
     setPattern(nextPattern);
     setSelectedIds(new Set([note.id]));
     audition(midi);
-  }, [pointerToGrid, findNoteAt, snapBeats, audition, commitPattern, pushHistory]);
+  }, [
+    activeTrackId,
+    audition,
+    commitPattern,
+    findNoteAt,
+    pointerToGrid,
+    pushHistory,
+    scaleId,
+    scaleLock,
+    scaleRoot,
+    snapBeats
+  ]);
 
   const handleLayerPointerMove = React.useCallback((event) => {
     if (!drag) return;
@@ -712,6 +830,45 @@ const PianoRollPage = () => {
     audition(midi);
   }, [audition]);
 
+  const handleSelectTrack = React.useCallback((trackId) => {
+    const track = patternRef.current.tracks.find((entry) => entry.id === trackId);
+    if (!track) return;
+    setActiveTrackId(trackId);
+    setWaveformType(track.instrument);
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleAddTrack = React.useCallback(() => {
+    pushHistory(patternRef.current);
+    const { pattern: next, track } = addTrack(patternRef.current);
+    setPattern(next);
+    setActiveTrackId(track.id);
+    setWaveformType(track.instrument);
+    setSelectedIds(new Set());
+  }, [pushHistory]);
+
+  const handleDeleteTrack = React.useCallback((trackId) => {
+    if (patternRef.current.tracks.length <= 1) return;
+    const next = deleteTrack(patternRef.current, trackId);
+    pushHistory(patternRef.current);
+    setPattern(next);
+    if (trackId === activeTrackId) {
+      const fallback = next.tracks[0];
+      setActiveTrackId(fallback.id);
+      setWaveformType(fallback.instrument);
+      setSelectedIds(new Set());
+    }
+  }, [activeTrackId, pushHistory]);
+
+  const handleTrackPatch = React.useCallback((trackId, patch) => {
+    setPattern((prev) => updateTrack(prev, trackId, patch));
+  }, []);
+
+  const handleTrackInstrumentChange = React.useCallback((trackId, instrument) => {
+    handleTrackPatch(trackId, { instrument });
+    if (trackId === activeTrackId) setWaveformType(instrument);
+  }, [activeTrackId, handleTrackPatch]);
+
   const handleSave = React.useCallback(() => {
     saveSavedPattern(patternRef.current);
     setSavedPatterns(loadSavedPatterns());
@@ -720,7 +877,10 @@ const PianoRollPage = () => {
   const handleLoad = React.useCallback((entry) => {
     playback.stop();
     pushHistory(patternRef.current);
-    setPattern({ ...entry.pattern, name: entry.name });
+    const next = normalizePattern({ ...entry.pattern, name: entry.name });
+    setPattern(next);
+    setActiveTrackId(next.tracks[0].id);
+    setWaveformType(next.tracks[0].instrument);
     setSelectedIds(new Set());
   }, [playback.stop, pushHistory]);
 
@@ -730,12 +890,19 @@ const PianoRollPage = () => {
 
   const handleClear = React.useCallback(() => {
     playback.stop();
-    commitPattern((prev) => ({ ...prev, notes: [] }));
+    commitPattern((prev) => ({
+      ...prev,
+      notes: prev.notes.filter((note) => note.trackId !== activeTrackId)
+    }));
     setSelectedIds(new Set());
-  }, [playback.stop, commitPattern]);
+  }, [activeTrackId, playback.stop, commitPattern]);
 
   const handleBarsChange = React.useCallback((bars) => {
-    commitPattern((prev) => setPatternBars(prev, bars));
+    const chunked = Math.round(bars / BAR_CHUNK) * BAR_CHUNK;
+    commitPattern((prev) => setPatternBars(
+      prev,
+      Math.min(MAX_PATTERN_BARS, Math.max(BAR_CHUNK, chunked))
+    ));
   }, [commitPattern]);
 
   const handleOpenInPlayer = React.useCallback(() => {
@@ -755,14 +922,18 @@ const PianoRollPage = () => {
     const midi = new Midi();
     midi.header.setTempo(source.bpm);
     midi.header.name = midiData.name;
-    const track = midi.addTrack();
-    track.name = midiData.name;
-    midiData.notes.forEach((note) => {
-      track.addNote({
-        midi: note.midi,
-        time: note.time,
-        duration: note.duration,
-        velocity: note.velocity
+    source.tracks.forEach((sourceTrack) => {
+      const notes = midiData.notes.filter((note) => note.trackId === sourceTrack.id);
+      if (notes.length === 0) return;
+      const track = midi.addTrack();
+      track.name = sourceTrack.name;
+      notes.forEach((note) => {
+        track.addNote({
+          midi: note.midi,
+          time: note.time,
+          duration: note.duration,
+          velocity: note.velocity
+        });
       });
     });
 
@@ -788,6 +959,11 @@ const PianoRollPage = () => {
     setActivePresetName(presetName || null);
   }, []);
 
+  const handleWaveformChange = React.useCallback((instrument) => {
+    setWaveformType(instrument);
+    setPattern((prev) => updateTrack(prev, activeTrackId, { instrument }));
+  }, [activeTrackId]);
+
   const handleControlSectionToggle = React.useCallback((section) => {
     setControlSections((prev) => (
       Object.prototype.hasOwnProperty.call(prev, section)
@@ -801,7 +977,7 @@ const PianoRollPage = () => {
 
   const soundControlsValue = React.useMemo(() => ({
     waveformType,
-    onWaveformChange: setWaveformType,
+    onWaveformChange: handleWaveformChange,
     audioParams,
     onParamChange: handleParamChange,
     onParamsChange: handleParamsChange,
@@ -812,6 +988,7 @@ const PianoRollPage = () => {
     onPresetApplied: handlePresetApplied
   }), [
     waveformType,
+    handleWaveformChange,
     audioParams,
     pattern.bpm,
     controlSections,
@@ -892,10 +1069,30 @@ const PianoRollPage = () => {
   ), [pattern.bars]);
 
   const outOfScaleCount = React.useMemo(() => (
-    activeScale ? pattern.notes.filter((note) => !isScaleMidi(note.midi)).length : 0
-  ), [activeScale, isScaleMidi, pattern.notes]);
+    activeScale ? activeTrackNotes.filter((note) => !isScaleMidi(note.midi)).length : 0
+  ), [activeScale, activeTrackNotes, isScaleMidi]);
 
-  const noteElements = React.useMemo(() => pattern.notes.map((note) => {
+  const ghostNoteElements = React.useMemo(() => pattern.notes
+    .filter((note) => note.trackId !== activeTrack?.id)
+    .map((note) => {
+      const track = pattern.tracks.find((entry) => entry.id === note.trackId);
+      return (
+        <div
+          key={`ghost-${note.id}`}
+          className="piano-roll__ghost-note"
+          title={`${track?.name || 'Layer'} · ${midiNoteToName(note.midi).noteId}`}
+          style={{
+            '--track-color': track?.color,
+            left: note.start * pxPerBeat,
+            top: rowForMidi(note.midi) * ROW_HEIGHT + 2,
+            width: Math.max(note.duration * pxPerBeat - 1, 3),
+            height: ROW_HEIGHT - 4
+          }}
+        />
+      );
+    }), [activeTrack?.id, pattern.notes, pattern.tracks, pxPerBeat]);
+
+  const noteElements = React.useMemo(() => activeTrackNotes.map((note) => {
     const outOfScale = Boolean(activeScale) && !isScaleMidi(note.midi);
     const classNames = [
       'piano-roll__note',
@@ -909,6 +1106,7 @@ const PianoRollPage = () => {
         className={classNames}
         title={outOfScale ? `${midiNoteToName(note.midi).noteId} is outside ${SCALE_ROOTS[scaleRoot]} ${activeScale.label}` : undefined}
         style={{
+          '--track-color': activeTrack?.color,
           left: note.start * pxPerBeat,
           top: rowForMidi(note.midi) * ROW_HEIGHT + 1,
           width: Math.max(note.duration * pxPerBeat - 1, 4),
@@ -916,7 +1114,7 @@ const PianoRollPage = () => {
         }}
       />
     );
-  }), [activeScale, isScaleMidi, pattern.notes, pxPerBeat, scaleRoot, selectedIds]);
+  }), [activeScale, activeTrack?.color, activeTrackNotes, isScaleMidi, pxPerBeat, scaleRoot, selectedIds]);
 
   return (
     <div className="piano-roll-page">
@@ -984,6 +1182,7 @@ const PianoRollPage = () => {
               <dt>⌘Z · ⇧⌘Z</dt><dd>Undo · redo</dd>
               <dt>⌘C ⌘X ⌘V</dt><dd>Copy · cut · paste</dd>
               <dt>⌘D</dt><dd>Duplicate right</dd>
+              <dt>⌘L</dt><dd>Loop selected bars</dd>
               <dt>⌘A · Esc</dt><dd>Select all · none</dd>
               <dt>Del</dt><dd>Delete selection</dd>
               <dt>Right-click</dt><dd>Erase</dd>
@@ -1021,17 +1220,28 @@ const PianoRollPage = () => {
               />
             </label>
 
-            <label className="piano-roll-tray__field">
-              <span>Bars</span>
-              <select
-                value={pattern.bars}
-                onChange={(event) => handleBarsChange(Number(event.target.value))}
-              >
-                {BAR_OPTIONS.map((bars) => (
-                  <option key={bars} value={bars}>{bars}</option>
-                ))}
-              </select>
-            </label>
+            <div className="piano-roll-tray__field">
+              <span>Timeline</span>
+              <div className="piano-roll-bar-stepper" role="group" aria-label="Timeline bars">
+                <button
+                  type="button"
+                  onClick={() => handleBarsChange(pattern.bars - BAR_CHUNK)}
+                  disabled={pattern.bars <= BAR_CHUNK}
+                  aria-label={`Remove ${BAR_CHUNK} bars`}
+                >
+                  −
+                </button>
+                <output>{pattern.bars} / {MAX_PATTERN_BARS}</output>
+                <button
+                  type="button"
+                  onClick={() => handleBarsChange(pattern.bars + BAR_CHUNK)}
+                  disabled={pattern.bars >= MAX_PATTERN_BARS}
+                  aria-label={`Add ${BAR_CHUNK} bars`}
+                >
+                  +
+                </button>
+              </div>
+            </div>
 
             <label className="piano-roll-tray__field">
               <span>Snap</span>
@@ -1065,6 +1275,30 @@ const PianoRollPage = () => {
               </select>
             </label>
 
+            <label className="piano-roll-tray__field piano-roll-tray__field--toggle">
+              <span>Scale lock</span>
+              <input
+                type="checkbox"
+                checked={scaleLock}
+                onChange={(event) => setScaleLock(event.target.checked)}
+                disabled={!scaleId}
+              />
+            </label>
+
+            <label className="piano-roll-tray__field">
+              <span>Chord</span>
+              <span className="piano-roll-chord-tool">
+                <select value={chordTypeId} onChange={(event) => setChordTypeId(event.target.value)}>
+                  {CHORD_TYPES.map((chord) => (
+                    <option key={chord.id} value={chord.id}>{chord.label}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={handleBuildChord} disabled={selectedIds.size === 0}>
+                  Build
+                </button>
+              </span>
+            </label>
+
             {activeScale && (
               <div className="piano-roll-scale-guide" aria-live="polite">
                 <strong>{SCALE_ROOTS[scaleRoot]} {activeScale.label}</strong>
@@ -1081,14 +1315,100 @@ const PianoRollPage = () => {
                     {outOfScaleCount} outside
                   </span>
                 )}
+                <button
+                  type="button"
+                  onClick={handleSnapSelectionToScale}
+                  disabled={selectedIds.size === 0}
+                >
+                  Snap selected
+                </button>
               </div>
             )}
 
             <div className="piano-roll-tray__actions">
               <button type="button" onClick={handleSave}>Save</button>
-              <button type="button" onClick={handleClear}>Clear</button>
+              <button type="button" onClick={handleLoopSelection} disabled={selectedIds.size === 0 && !loopRange}>
+                {loopRange ? 'Unloop ⌘L' : 'Loop selection ⌘L'}
+              </button>
+              <button type="button" onClick={handleClear}>Clear layer</button>
               <button type="button" onClick={handleExportMidi}>Export .mid</button>
               <button type="button" onClick={handleOpenInPlayer}>Open in player</button>
+            </div>
+          </div>
+
+          <div className="piano-roll-tracks" aria-label="Instrument layers">
+            <div className="piano-roll-tracks__heading">
+              <strong>Layers</strong>
+              <span>Other layers appear as ghost notes</span>
+            </div>
+            <div className="piano-roll-tracks__list">
+              {pattern.tracks.map((track) => {
+                const isActive = track.id === activeTrack?.id;
+                const noteCount = pattern.notes.filter((note) => note.trackId === track.id).length;
+                return (
+                  <div
+                    key={track.id}
+                    className={`piano-roll-track ${isActive ? 'is-active' : ''}`}
+                    style={{ '--track-color': track.color }}
+                  >
+                    <button
+                      type="button"
+                      className="piano-roll-track__select"
+                      onClick={() => handleSelectTrack(track.id)}
+                      aria-pressed={isActive}
+                    >
+                      <i aria-hidden="true" />
+                      <span>{noteCount}</span>
+                    </button>
+                    <input
+                      value={track.name}
+                      onFocus={() => handleSelectTrack(track.id)}
+                      onChange={(event) => handleTrackPatch(track.id, { name: event.target.value.slice(0, 32) })}
+                      aria-label={`Layer name: ${track.name}`}
+                    />
+                    <select
+                      value={track.instrument}
+                      onFocus={() => handleSelectTrack(track.id)}
+                      onChange={(event) => handleTrackInstrumentChange(track.id, event.target.value)}
+                      aria-label={`Instrument for ${track.name}`}
+                    >
+                      {TRACK_INSTRUMENTS.map((instrument) => (
+                        <option key={instrument} value={instrument}>{instrument}</option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      className={track.muted ? 'is-on' : ''}
+                      onClick={() => handleTrackPatch(track.id, { muted: !track.muted })}
+                      aria-pressed={track.muted}
+                      aria-label={`${track.muted ? 'Unmute' : 'Mute'} ${track.name}`}
+                    >
+                      M
+                    </button>
+                    <button
+                      type="button"
+                      className={track.solo ? 'is-on' : ''}
+                      onClick={() => handleTrackPatch(track.id, { solo: !track.solo })}
+                      aria-pressed={track.solo}
+                      aria-label={`${track.solo ? 'Unsolo' : 'Solo'} ${track.name}`}
+                    >
+                      S
+                    </button>
+                    <button
+                      type="button"
+                      className="piano-roll-track__delete"
+                      onClick={() => handleDeleteTrack(track.id)}
+                      disabled={pattern.tracks.length <= 1}
+                      aria-label={`Delete ${track.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+              <button type="button" className="piano-roll-tracks__add" onClick={handleAddTrack}>
+                + Add layer
+              </button>
             </div>
           </div>
 
@@ -1124,6 +1444,7 @@ const PianoRollPage = () => {
       <div
         className="piano-roll"
         ref={scrollRef}
+        onScroll={handleTimelineScroll}
         onContextMenu={(event) => event.preventDefault()}
       >
         <div
@@ -1180,6 +1501,18 @@ const PianoRollPage = () => {
               onPointerCancel={handleLayerPointerUp}
               onDoubleClick={handleLayerDoubleClick}
             >
+              {loopRange && (
+                <div
+                  className="piano-roll__loop-region"
+                  style={{
+                    left: loopRange.start * pxPerBeat,
+                    width: (loopRange.end - loopRange.start) * pxPerBeat
+                  }}
+                >
+                  <span>Loop · bars {Math.floor(loopRange.start / BEATS_PER_BAR) + 1}–{Math.ceil(loopRange.end / BEATS_PER_BAR)}</span>
+                </div>
+              )}
+              {ghostNoteElements}
               {noteElements}
               {drag?.mode === 'marquee' && (
                 <div
@@ -1195,7 +1528,8 @@ const PianoRollPage = () => {
               {isRolling && (
                 <PianoRollPlayhead
                   getProgress={playback.getPlaybackProgress}
-                  gridWidth={gridWidth}
+                  offsetX={playheadOffsetX}
+                  travelWidth={playheadTravelWidth}
                 />
               )}
             </div>
