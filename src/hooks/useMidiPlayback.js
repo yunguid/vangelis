@@ -222,7 +222,7 @@ export function useMidiPlayback({
    */
   const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, noteOptions = {}) => {
     const startedVoiceIds = [];
-    const params = audioParamsRef.current;
+    const params = noteOptions.audioParams || audioParamsRef.current;
 
     const started = audioEngine.playFrequency({
       noteId: voiceId,

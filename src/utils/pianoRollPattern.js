@@ -507,7 +507,8 @@ export const patternToMidiData = (pattern, { useLoopRange = false } = {}) => {
           velocity: note.velocity,
           trackId: note.trackId,
           trackName: track?.name,
-          waveformType: track?.instrument
+          waveformType: track?.instrument,
+          audioParams: track?.audioParams
         };
       })
   };

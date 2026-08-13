@@ -283,15 +283,19 @@ describe('instrument layers', () => {
     expect(pattern.notes).toHaveLength(2);
   });
 
-  it('filters muted tracks and carries each instrument into playback data', () => {
+  it('filters muted tracks and carries each layer sound into playback data', () => {
     let pattern = createPattern({ bars: 1 });
     const added = addTrack(pattern, { instrument: 'Square', muted: true });
-    pattern = added.pattern;
+    pattern = updateTrack(added.pattern, 'track-1', {
+      soundName: 'Soft lead',
+      audioParams: { attack: 0.42, release: 1.2 }
+    });
     ({ pattern } = addNote(pattern, { midi: 60, start: 0, duration: 1, trackId: 'track-1' }));
     ({ pattern } = addNote(pattern, { midi: 48, start: 0, duration: 1, trackId: added.track.id }));
     const midiData = patternToMidiData(pattern);
     expect(midiData.notes).toHaveLength(1);
     expect(midiData.notes[0].waveformType).toBe('Sine');
+    expect(midiData.notes[0].audioParams).toEqual({ attack: 0.42, release: 1.2 });
   });
 });
 

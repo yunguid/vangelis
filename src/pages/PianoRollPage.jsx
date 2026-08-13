@@ -1,4 +1,5 @@
 import React from 'react';
+import LayerSoundBrowser from '../components/LayerSoundBrowser.jsx';
 import Sidebar from '../components/Sidebar';
 import {
   MidiTransportContext,
@@ -27,7 +28,6 @@ import {
   SCALES,
   SCALE_ROOTS,
   SNAP_OPTIONS,
-  TRACK_INSTRUMENTS,
   addNote,
   addTrack,
   applyNoteDelta,
@@ -215,6 +215,7 @@ const PianoRollPage = () => {
   const [controlSections, setControlSections] = React.useState(DEFAULT_CONTROL_SECTIONS);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState('sound');
+  const [soundBrowserTrackId, setSoundBrowserTrackId] = React.useState(null);
 
   const playback = useMidiPlayback({
     waveformType,
@@ -245,6 +246,8 @@ const PianoRollPage = () => {
   const gridWidth = totalBeats * pxPerBeat;
   const activeTrack = pattern.tracks.find((track) => track.id === activeTrackId)
     || pattern.tracks[0];
+  const soundBrowserTrack = pattern.tracks.find((track) => track.id === soundBrowserTrackId)
+    || null;
   const activeTrackNotes = pattern.notes.filter((note) => note.trackId === activeTrack?.id);
   const loopRange = pattern.loopRange?.enabled ? pattern.loopRange : null;
   const playheadOffsetX = (loopRange?.start || 0) * pxPerBeat;
@@ -288,6 +291,8 @@ const PianoRollPage = () => {
     if (fallback) {
       setActiveTrackId(fallback.id);
       setWaveformType(fallback.instrument);
+      setAudioParams(sanitizeAudioParams(fallback.audioParams || AUDIO_PARAM_DEFAULTS));
+      setActivePresetName(fallback.soundName || null);
     }
   }, [activeTrackId, pattern.tracks]);
 
@@ -906,6 +911,8 @@ const PianoRollPage = () => {
     if (!track) return;
     setActiveTrackId(trackId);
     setWaveformType(track.instrument);
+    setAudioParams(sanitizeAudioParams(track.audioParams || AUDIO_PARAM_DEFAULTS));
+    setActivePresetName(track.soundName || null);
     setSelectedIds(new Set());
   }, []);
 
@@ -915,6 +922,8 @@ const PianoRollPage = () => {
     setPattern(next);
     setActiveTrackId(track.id);
     setWaveformType(track.instrument);
+    setAudioParams(sanitizeAudioParams(track.audioParams || AUDIO_PARAM_DEFAULTS));
+    setActivePresetName(track.soundName || null);
     setSelectedIds(new Set());
   }, [pushHistory]);
 
@@ -927,18 +936,43 @@ const PianoRollPage = () => {
       const fallback = next.tracks[0];
       setActiveTrackId(fallback.id);
       setWaveformType(fallback.instrument);
+      setAudioParams(sanitizeAudioParams(fallback.audioParams || AUDIO_PARAM_DEFAULTS));
+      setActivePresetName(fallback.soundName || null);
       setSelectedIds(new Set());
     }
+    setSoundBrowserTrackId((current) => (current === trackId ? null : current));
   }, [activeTrackId, pushHistory]);
 
   const handleTrackPatch = React.useCallback((trackId, patch) => {
     setPattern((prev) => updateTrack(prev, trackId, patch));
   }, []);
 
-  const handleTrackInstrumentChange = React.useCallback((trackId, instrument) => {
-    handleTrackPatch(trackId, { instrument });
-    if (trackId === activeTrackId) setWaveformType(instrument);
+  const handleSoundBrowserToggle = React.useCallback((trackId) => {
+    handleSelectTrack(trackId);
+    setSoundBrowserTrackId((current) => (current === trackId ? null : trackId));
+  }, [handleSelectTrack]);
+
+  const handleSoundChoose = React.useCallback((trackId, sound) => {
+    const nextParams = sanitizeAudioParams(sound.audioParams || AUDIO_PARAM_DEFAULTS);
+    handleTrackPatch(trackId, {
+      instrument: sound.waveformType,
+      soundId: sound.id,
+      soundName: sound.name,
+      soundCategory: sound.category,
+      soundBank: sound.bank,
+      audioParams: nextParams
+    });
+    if (trackId === activeTrackId) {
+      setWaveformType(sound.waveformType);
+      setAudioParams(nextParams);
+      setActivePresetName(sound.name);
+    }
+    setSoundBrowserTrackId(null);
   }, [activeTrackId, handleTrackPatch]);
+
+  const handleSoundBrowserClose = React.useCallback(() => {
+    setSoundBrowserTrackId(null);
+  }, []);
 
   const handleSave = React.useCallback(() => {
     saveSavedPattern(patternRef.current);
@@ -958,6 +992,9 @@ const PianoRollPage = () => {
     setHasUnsavedChanges(false);
     setActiveTrackId(next.tracks[0].id);
     setWaveformType(next.tracks[0].instrument);
+    setAudioParams(sanitizeAudioParams(next.tracks[0].audioParams || AUDIO_PARAM_DEFAULTS));
+    setActivePresetName(next.tracks[0].soundName || null);
+    setSoundBrowserTrackId(null);
     setSelectedIds(new Set());
   }, [playback.stop, pushHistory]);
 
@@ -1015,20 +1052,44 @@ const PianoRollPage = () => {
   }, [isRecordingLoop, playback.play, playback.stop]);
 
   const handleParamChange = React.useCallback((paramName, value) => {
-    setAudioParams((prev) => sanitizeAudioParams({ ...prev, [paramName]: value }));
-  }, []);
+    const nextParams = sanitizeAudioParams({ ...audioParams, [paramName]: value });
+    setAudioParams(nextParams);
+    setPattern((prev) => updateTrack(prev, activeTrackId, {
+      audioParams: nextParams,
+      soundId: null
+    }));
+  }, [activeTrackId, audioParams]);
 
   const handleParamsChange = React.useCallback((nextParams) => {
-    setAudioParams((prev) => sanitizeAudioParams({ ...prev, ...nextParams }));
-  }, []);
+    const mergedParams = sanitizeAudioParams({ ...audioParams, ...nextParams });
+    setAudioParams(mergedParams);
+    setPattern((prev) => updateTrack(prev, activeTrackId, {
+      audioParams: mergedParams,
+      soundId: null
+    }));
+  }, [activeTrackId, audioParams]);
 
   const handlePresetApplied = React.useCallback((presetName) => {
-    setActivePresetName(presetName || null);
-  }, []);
+    const soundName = presetName || null;
+    setActivePresetName(soundName);
+    setPattern((prev) => updateTrack(prev, activeTrackId, {
+      soundId: null,
+      soundName,
+      soundCategory: null,
+      soundBank: soundName ? 'Sound workspace' : null
+    }));
+  }, [activeTrackId]);
 
   const handleWaveformChange = React.useCallback((instrument) => {
     setWaveformType(instrument);
-    setPattern((prev) => updateTrack(prev, activeTrackId, { instrument }));
+    setPattern((prev) => updateTrack(prev, activeTrackId, {
+      instrument,
+      soundId: null,
+      soundName: instrument,
+      soundCategory: 'Basic waveforms',
+      soundBank: 'Waveforms'
+    }));
+    setActivePresetName(instrument);
   }, [activeTrackId]);
 
   const handleControlSectionToggle = React.useCallback((section) => {
@@ -1281,111 +1342,91 @@ const PianoRollPage = () => {
 
       {trayOpen && (
         <div className="piano-roll-tray">
-          <div className="piano-roll-tray__fields">
-            <label className="piano-roll-tray__field">
-              <span>BPM</span>
-              <input
-                type="number"
-                min={BPM_MIN}
-                max={BPM_MAX}
-                value={pattern.bpm}
-                onChange={(event) => {
-                  const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
-                  setPattern((prev) => ({ ...prev, bpm }));
-                }}
-              />
-            </label>
+          <div className="piano-roll-tray__control-row">
+            <div className="piano-roll-tray__fields">
+              <label className="piano-roll-tray__field">
+                <span>BPM</span>
+                <input
+                  type="number"
+                  min={BPM_MIN}
+                  max={BPM_MAX}
+                  value={pattern.bpm}
+                  onChange={(event) => {
+                    const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
+                    setPattern((prev) => ({ ...prev, bpm }));
+                  }}
+                />
+              </label>
 
-            <div className="piano-roll-tray__field">
-              <span>Timeline</span>
-              <div className="piano-roll-bar-stepper" role="group" aria-label="Timeline bars">
-                <button
-                  type="button"
-                  onClick={() => handleBarsChange(pattern.bars - BAR_CHUNK)}
-                  disabled={pattern.bars <= BAR_CHUNK}
-                  aria-label={`Remove ${BAR_CHUNK} bars`}
-                >
-                  −
-                </button>
-                <output>{pattern.bars} / {MAX_PATTERN_BARS}</output>
-                <button
-                  type="button"
-                  onClick={() => handleBarsChange(pattern.bars + BAR_CHUNK)}
-                  disabled={pattern.bars >= MAX_PATTERN_BARS}
-                  aria-label={`Add ${BAR_CHUNK} bars`}
-                >
-                  +
-                </button>
+              <div className="piano-roll-tray__field">
+                <span>Timeline</span>
+                <div className="piano-roll-bar-stepper" role="group" aria-label="Timeline bars">
+                  <button
+                    type="button"
+                    onClick={() => handleBarsChange(pattern.bars - BAR_CHUNK)}
+                    disabled={pattern.bars <= BAR_CHUNK}
+                    aria-label={`Remove ${BAR_CHUNK} bars`}
+                  >
+                    −
+                  </button>
+                  <output>{pattern.bars} / {MAX_PATTERN_BARS}</output>
+                  <button
+                    type="button"
+                    onClick={() => handleBarsChange(pattern.bars + BAR_CHUNK)}
+                    disabled={pattern.bars >= MAX_PATTERN_BARS}
+                    aria-label={`Add ${BAR_CHUNK} bars`}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <label className="piano-roll-tray__field">
-              <span>Snap</span>
-              <select value={snapId} onChange={(event) => setSnapId(event.target.value)}>
-                {SNAP_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="piano-roll-tray__field">
-              <span>Key</span>
-              <select
-                value={scaleRoot}
-                onChange={(event) => setScaleRoot(Number(event.target.value))}
-                disabled={!scaleId}
-              >
-                {SCALE_ROOTS.map((root, index) => (
-                  <option key={root} value={index}>{root}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="piano-roll-tray__field">
-              <span>Scale</span>
-              <select value={scaleId} onChange={(event) => setScaleId(event.target.value)}>
-                <option value="">Off</option>
-                {SCALES.map((scale) => (
-                  <option key={scale.id} value={scale.id}>{scale.label}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="piano-roll-tray__field">
-              <span>Chord</span>
-              <span className="piano-roll-chord-tool">
-                <select value={chordTypeId} onChange={(event) => setChordTypeId(event.target.value)}>
-                  {CHORD_TYPES.map((chord) => (
-                    <option key={chord.id} value={chord.id}>{chord.label}</option>
+              <label className="piano-roll-tray__field">
+                <span>Snap</span>
+                <select value={snapId} onChange={(event) => setSnapId(event.target.value)}>
+                  {SNAP_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label}</option>
                   ))}
                 </select>
-                <button type="button" onClick={handleBuildChord} disabled={selectedIds.size === 0}>
-                  Build
-                </button>
-              </span>
-            </label>
+              </label>
 
-            {activeScale && (
-              <div className="piano-roll-scale-guide" aria-live="polite">
-                <strong>{SCALE_ROOTS[scaleRoot]} {activeScale.label} · {activeChord.label} chord</strong>
-                <span className="piano-roll-scale-guide__item">
-                  <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--tone" />
-                  Highlighted notes
-                </span>
-                {outOfScaleCount > 0 && (
-                  <span className="piano-roll-scale-guide__warning">
-                    {outOfScaleCount} outside
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={handleSnapSelectionToScale}
-                  disabled={selectedIds.size === 0}
+              <label className="piano-roll-tray__field">
+                <span>Key</span>
+                <select
+                  value={scaleRoot}
+                  onChange={(event) => setScaleRoot(Number(event.target.value))}
+                  disabled={!scaleId}
                 >
-                  Snap selected
-                </button>
-              </div>
-            )}
+                  {SCALE_ROOTS.map((root, index) => (
+                    <option key={root} value={index}>{root}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="piano-roll-tray__field">
+                <span>Scale</span>
+                <select value={scaleId} onChange={(event) => setScaleId(event.target.value)}>
+                  <option value="">Off</option>
+                  {SCALES.map((scale) => (
+                    <option key={scale.id} value={scale.id}>{scale.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="piano-roll-tray__field">
+                <span>Chord</span>
+                <span className="piano-roll-chord-tool">
+                  <select value={chordTypeId} onChange={(event) => setChordTypeId(event.target.value)}>
+                    {CHORD_TYPES.map((chord) => (
+                      <option key={chord.id} value={chord.id}>{chord.label}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={handleBuildChord} disabled={selectedIds.size === 0}>
+                    Build
+                  </button>
+                </span>
+              </label>
+            </div>
 
             <div className="piano-roll-tray__actions">
               <button type="button" onClick={handleSave}>Save</button>
@@ -1404,6 +1445,28 @@ const PianoRollPage = () => {
               <button type="button" onClick={handleOpenInPlayer}>Open in player</button>
             </div>
           </div>
+
+          {activeScale && (
+            <div className="piano-roll-scale-guide" aria-live="polite">
+              <strong>{SCALE_ROOTS[scaleRoot]} {activeScale.label} · {activeChord.label} chord</strong>
+              <span className="piano-roll-scale-guide__item">
+                <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--tone" />
+                Highlighted notes
+              </span>
+              {outOfScaleCount > 0 && (
+                <span className="piano-roll-scale-guide__warning">
+                  {outOfScaleCount} outside
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleSnapSelectionToScale}
+                disabled={selectedIds.size === 0}
+              >
+                Snap selected
+              </button>
+            </div>
+          )}
 
           <div className="piano-roll-tracks" aria-label="Instrument layers">
             <div className="piano-roll-tracks__heading">
@@ -1434,16 +1497,16 @@ const PianoRollPage = () => {
                       onChange={(event) => handleTrackPatch(track.id, { name: event.target.value.slice(0, 32) })}
                       aria-label={`Layer name: ${track.name}`}
                     />
-                    <select
-                      value={track.instrument}
-                      onFocus={() => handleSelectTrack(track.id)}
-                      onChange={(event) => handleTrackInstrumentChange(track.id, event.target.value)}
-                      aria-label={`Instrument for ${track.name}`}
+                    <button
+                      type="button"
+                      className="piano-roll-track__sound"
+                      onClick={() => handleSoundBrowserToggle(track.id)}
+                      aria-expanded={soundBrowserTrackId === track.id}
+                      aria-label={`Choose sound for ${track.name}. Current sound: ${track.soundName || track.instrument}`}
                     >
-                      {TRACK_INSTRUMENTS.map((instrument) => (
-                        <option key={instrument} value={instrument}>{instrument}</option>
-                      ))}
-                    </select>
+                      <span>{track.soundName || track.instrument}</span>
+                      <i aria-hidden="true">⌄</i>
+                    </button>
                     <button
                       type="button"
                       className={track.muted ? 'is-on' : ''}
@@ -1479,6 +1542,14 @@ const PianoRollPage = () => {
               </button>
             </div>
           </div>
+
+          {soundBrowserTrack && (
+            <LayerSoundBrowser
+              track={soundBrowserTrack}
+              onChoose={handleSoundChoose}
+              onClose={handleSoundBrowserClose}
+            />
+          )}
 
           {savedPatterns.length > 0 && (
             <details className="piano-roll-tray__library">

@@ -189,17 +189,27 @@
   backdrop-filter: blur(16px);
 }
 
-.piano-roll-tray__fields {
+.piano-roll-tray__control-row {
   display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.piano-roll-tray__fields {
+  display: grid;
+  grid-template-columns: 76px 128px 74px 74px 122px 158px;
   align-items: end;
-  flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .piano-roll-tray__field {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
   font-size: 0.66rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -208,8 +218,10 @@
 
 .piano-roll-tray__field input,
 .piano-roll-tray__field select {
-  min-width: 60px;
-  padding: 5px 8px;
+  width: 100%;
+  height: 30px;
+  min-width: 0;
+  padding: 0 8px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 2px;
   background: rgba(8, 12, 19, 0.85);
@@ -226,7 +238,8 @@
 .piano-roll-chord-tool {
   display: flex;
   align-items: center;
-  height: 27px;
+  height: 30px;
+  min-width: 0;
 }
 
 .piano-roll-bar-stepper {
@@ -264,7 +277,8 @@
 }
 
 .piano-roll-bar-stepper output {
-  min-width: 68px;
+  min-width: 0;
+  flex: 1;
   color: var(--color-text-primary);
   font-size: 0.7rem;
   text-align: center;
@@ -272,8 +286,8 @@
 }
 
 .piano-roll-chord-tool select {
-  min-width: 86px;
-  height: 27px;
+  min-width: 0;
+  height: 30px;
 }
 
 .piano-roll-chord-tool button,
@@ -287,14 +301,15 @@
 
 .piano-roll-tray__actions {
   display: flex;
+  align-items: center;
+  flex: none;
   gap: 8px;
-  margin-left: auto;
 }
 
 .piano-roll-scale-guide {
   display: flex;
   align-items: center;
-  align-self: flex-end;
+  align-self: flex-start;
   gap: 10px;
   min-height: 27px;
   padding: 0 10px;
@@ -371,7 +386,7 @@
 
 .piano-roll-track {
   display: grid;
-  grid-template-columns: 34px 88px 86px repeat(3, 26px);
+  grid-template-columns: 34px 100px 160px repeat(3, 26px);
   align-items: center;
   flex: none;
   height: 30px;
@@ -404,8 +419,26 @@
   padding: 0 7px;
 }
 
-.piano-roll-track select {
-  padding: 0 4px;
+.piano-roll-track__sound {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px;
+  text-align: left;
+}
+
+.piano-roll-track__sound span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.piano-roll-track__sound i {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  font-style: normal;
 }
 
 .piano-roll-track button,
@@ -459,7 +492,8 @@
 }
 
 .piano-roll-tray__actions button {
-  padding: 6px 11px;
+  height: 30px;
+  padding: 0 10px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 2px;
   background: transparent;
@@ -817,12 +851,33 @@
   border-top: 7px solid rgba(255, 210, 176, 0.95);
 }
 
+@media (max-width: 1280px) {
+  .piano-roll-tray__control-row {
+    flex-wrap: wrap;
+  }
+
+  .piano-roll-tray__actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 920px) {
+  .piano-roll-tray__fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .piano-roll-tray__actions {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 760px) {
   .piano-roll-page {
     padding-left: 0;
   }
 
-  .piano-roll-tray__actions {
-    margin-left: 0;
+  .piano-roll-tray__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
