@@ -37,6 +37,7 @@ import {
   nudgeNotes,
   pasteNotesPayload,
   patternBeats,
+  resizeNotes,
   patternToMidiData,
   quantizeBeats,
   quantizeBeatsFloor,
@@ -323,6 +324,19 @@ const PianoRollPage = () => {
     commitPattern((prev) => nudgeNotes(prev, selectedIds, deltaBeats, deltaMidi));
   }, [selectedIds, commitPattern]);
 
+  const handleResizeSelection = React.useCallback((deltaBeats, edge) => {
+    if (selectedIds.size === 0) return;
+    commitPattern((prev) => {
+      const next = resizeNotes(prev, selectedIds, deltaBeats, edge);
+      if (edge === 'right' && selectedIds.size === 1) {
+        const [onlyId] = selectedIds;
+        const note = next.notes.find((entry) => entry.id === onlyId);
+        if (note) lastLengthRef.current = note.duration;
+      }
+      return next;
+    });
+  }, [selectedIds, commitPattern]);
+
   const zoomTouchedRef = React.useRef(false);
 
   const applyZoom = React.useCallback((factor, anchorClientX = null) => {
@@ -438,9 +452,16 @@ const PianoRollPage = () => {
       if (event.key.startsWith('Arrow') && selectedIds.size > 0) {
         event.preventDefault();
         const step = snapBeats || MIN_NOTE_BEATS;
-        if (event.key === 'ArrowLeft') handleNudge(-step, 0);
-        else if (event.key === 'ArrowRight') handleNudge(step, 0);
-        else if (event.key === 'ArrowUp') handleNudge(0, event.shiftKey ? 12 : 1);
+        const horizontal = event.key === 'ArrowRight' ? step
+          : event.key === 'ArrowLeft' ? -step
+            : 0;
+        if (horizontal !== 0) {
+          if (event.altKey) handleResizeSelection(horizontal, 'left');
+          else if (event.shiftKey) handleResizeSelection(horizontal, 'right');
+          else handleNudge(horizontal, 0);
+          return;
+        }
+        if (event.key === 'ArrowUp') handleNudge(0, event.shiftKey ? 12 : 1);
         else if (event.key === 'ArrowDown') handleNudge(0, event.shiftKey ? -12 : -1);
         return;
       }
@@ -875,6 +896,8 @@ const PianoRollPage = () => {
               <dt>Drag note</dt><dd>Move selection</dd>
               <dt>Drag right edge</dt><dd>Resize</dd>
               <dt>Arrows · ⇧↑↓</dt><dd>Nudge · octave</dd>
+              <dt>⇧← ⇧→</dt><dd>Shrink · grow (right edge)</dd>
+              <dt>⌥← ⌥→</dt><dd>Trim start (left edge)</dd>
               <dt>⌘Z · ⇧⌘Z</dt><dd>Undo · redo</dd>
               <dt>⌘C ⌘X ⌘V</dt><dd>Copy · cut · paste</dd>
               <dt>⌘D</dt><dd>Duplicate right</dd>

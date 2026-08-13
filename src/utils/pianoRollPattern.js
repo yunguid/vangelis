@@ -189,6 +189,32 @@ export const duplicateNotes = (pattern, noteIds, snapBeats = null) => {
   return pasteNotesPayload(pattern, payload, span);
 };
 
+/**
+ * Resize a selection by a beat delta. edge 'right' grows/shrinks the tail
+ * (start fixed); edge 'left' trims the head (end fixed). Each note clamps
+ * independently to MIN_NOTE_BEATS and the pattern bounds.
+ */
+export const resizeNotes = (pattern, noteIds, deltaBeats, edge = 'right') => {
+  const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
+  const total = patternBeats(pattern);
+  return {
+    ...pattern,
+    notes: pattern.notes.map((note) => {
+      if (!ids.has(note.id)) return note;
+      if (edge === 'left') {
+        const end = note.start + note.duration;
+        const start = Math.min(Math.max(note.start + deltaBeats, 0), end - MIN_NOTE_BEATS);
+        return { ...note, start, duration: end - start };
+      }
+      const duration = Math.min(
+        Math.max(note.duration + deltaBeats, MIN_NOTE_BEATS),
+        total - note.start
+      );
+      return { ...note, duration };
+    })
+  };
+};
+
 /** Translate a selection in place; origins are taken from current positions. */
 export const nudgeNotes = (pattern, noteIds, deltaBeats, deltaMidi) => {
   const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);

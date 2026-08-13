@@ -14,6 +14,7 @@ import {
   duplicateNotes,
   nudgeNotes,
   pasteNotesPayload,
+  resizeNotes,
   getSnapBeats,
   isInScale,
   patternBeats,
@@ -168,6 +169,36 @@ describe('clipboard: copy / paste / duplicate / nudge', () => {
     const copies = next.notes.filter((note) => noteIds.includes(note.id));
     expect(copies.map((note) => note.start).sort((a, b) => a - b)).toEqual([1.5, 2.5]);
     expect(next.notes).toHaveLength(4);
+  });
+
+  it('resizes from the right edge with clamps at both extremes', () => {
+    const { pattern, ids } = buildSelection(); // notes: (60, 0..1), (64, 1..1.5)
+    const grown = resizeNotes(pattern, ids, 0.5, 'right');
+    expect(grown.notes[0].duration).toBe(1.5);
+    expect(grown.notes[1].duration).toBe(1);
+
+    const shrunk = resizeNotes(pattern, ids, -0.75, 'right');
+    expect(shrunk.notes[0].duration).toBe(0.25);
+    expect(shrunk.notes[1].duration).toBe(MIN_NOTE_BEATS); // 0.5 - 0.75 clamps
+
+    const [first] = pattern.notes;
+    const maxed = resizeNotes(pattern, new Set([first.id]), 99, 'right');
+    expect(maxed.notes[0].start + maxed.notes[0].duration).toBe(2 * BEATS_PER_BAR);
+  });
+
+  it('trims from the left edge keeping the end fixed', () => {
+    const { pattern, ids } = buildSelection();
+    const trimmed = resizeNotes(pattern, ids, 0.5, 'left');
+    expect(trimmed.notes[0].start).toBe(0.5);
+    expect(trimmed.notes[0].start + trimmed.notes[0].duration).toBe(1);
+    // second note (1..1.5): +0.5 would erase it; clamps to min length.
+    expect(trimmed.notes[1].duration).toBe(MIN_NOTE_BEATS);
+    expect(trimmed.notes[1].start + trimmed.notes[1].duration).toBe(1.5);
+
+    const extended = resizeNotes(pattern, ids, -0.5, 'left');
+    expect(extended.notes[0].start).toBe(0); // clamped at pattern start
+    expect(extended.notes[1].start).toBe(0.5);
+    expect(extended.notes[1].start + extended.notes[1].duration).toBe(1.5);
   });
 
   it('nudges a selection and clamps at pattern edges', () => {
