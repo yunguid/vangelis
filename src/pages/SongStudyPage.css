@@ -113,8 +113,7 @@
 }
 
 .song-study__eyebrow,
-.song-study__metric span,
-.song-study__status {
+.song-study__metric span {
   font-size: 0.74rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -129,24 +128,6 @@
   line-height: 0.94;
   letter-spacing: 0.05em;
   white-space: nowrap;
-}
-
-.song-study__status {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  white-space: nowrap;
-}
-
-.song-study__status-marker {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 164, 112, 0.7);
-}
-
-.song-study__status-marker.is-ready {
-  background: rgba(116, 210, 168, 0.92);
 }
 
 .song-study__transport,
@@ -371,10 +352,6 @@
   .song-study__transport-row {
     grid-template-columns: 1fr;
     align-items: start;
-  }
-
-  .song-study__status {
-    white-space: normal;
   }
 
   .song-study__seek-tools {

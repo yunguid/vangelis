@@ -59,7 +59,7 @@ describe('MidiTab', () => {
     const onPlay = vi.fn();
     render(<MidiTab {...defaultProps({ onPlay })} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /^\d{6} sergei rachmaninoff$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /piano concerto no\. 2.*sergei rachmaninoff$/i }));
 
     await waitFor(() => {
       expect(onPlay).toHaveBeenCalledTimes(1);
@@ -67,7 +67,7 @@ describe('MidiTab', () => {
 
     expect(parseMidiFile).toHaveBeenCalledWith('/midi/rachmaninoff-concerto2-mov1.mid');
     expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({
-      name: expect.stringMatching(/^\d{6}$/),
+      name: 'Piano Concerto No. 2 - I. Moderato',
       sourceFileId: 'rachmaninoff-concerto2-mov1',
       composer: 'Sergei Rachmaninoff'
     }));
@@ -82,7 +82,7 @@ describe('MidiTab', () => {
     window.cancelIdleCallback = vi.fn();
 
     render(<MidiTab {...defaultProps()} active />);
-    const fileButton = screen.getByRole('button', { name: /^\d{6} sergei rachmaninoff$/i });
+    const fileButton = screen.getByRole('button', { name: /piano concerto no\. 2.*sergei rachmaninoff$/i });
     fireEvent.pointerEnter(fileButton);
 
     expect(requestIdleCallback).toHaveBeenCalledWith(expect.any(Function), { timeout: 1500 });
@@ -108,7 +108,7 @@ describe('MidiTab', () => {
     }));
   });
 
-  it('renders original cues with a numeric title, no tag badge, and no composer byline', () => {
+  it('renders original cues with their code name, no tag badge, and no composer byline', () => {
     getBuiltInMidiFiles.mockReturnValue([
       {
         id: 'original-neon-rain',
@@ -119,7 +119,7 @@ describe('MidiTab', () => {
 
     render(<MidiTab {...defaultProps()} />);
 
-    expect(screen.getByText(/^\d{6}$/)).toBeInTheDocument();
+    expect(screen.getByText('dial_51')).toBeInTheDocument();
     expect(screen.queryByText('Originals')).not.toBeInTheDocument();
     expect(document.querySelector('.midi-tab__badge')).not.toBeInTheDocument();
     expect(document.querySelector('.midi-tab__file-composer')).not.toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('MidiTab', () => {
 
     view.rerender(<MidiTab {...props} active={false} />);
     expect(screen.queryByRole('searchbox', { name: /filter midi files/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^\d{6} sergei rachmaninoff$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /piano concerto no\. 2.*sergei rachmaninoff$/i })).not.toBeInTheDocument();
 
     view.rerender(<MidiTab {...props} active />);
     expect(screen.getByRole('searchbox', { name: /filter midi files/i })).toHaveValue('rachmaninoff');

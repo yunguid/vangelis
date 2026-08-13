@@ -2,6 +2,11 @@ import React from 'react';
 import { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import PresetShelf from '../components/PresetShelf.jsx';
 import Sidebar from '../components/Sidebar';
+import {
+  MidiTransportContext,
+  SoundControlsContext
+} from '../context/SynthContexts.jsx';
+import { setPendingMidi } from '../utils/pendingMidiHandoff.js';
 import SynthKeyboard from '../components/SynthKeyboard';
 import { useAudioEngineWarmup } from '../hooks/useAudioEngineWarmup.js';
 import {
@@ -181,6 +186,66 @@ const SoundDesignerPage = () => {
     hideSave: true
   }), [activePresetName, handlePresetApplied]);
 
+  const [controlSections, setControlSections] = React.useState(() => ({
+    essentials: true,
+    delay: false,
+    reverb: false,
+    color: false,
+    modulation: false
+  }));
+
+  const handleControlSectionToggle = React.useCallback((section) => {
+    setControlSections((prev) => (
+      Object.prototype.hasOwnProperty.call(prev, section)
+        ? { ...prev, [section]: !prev[section] }
+        : prev
+    ));
+  }, []);
+
+  const handleSidebarPresetApplied = React.useCallback((presetName) => {
+    setActivePresetName(presetName || null);
+  }, []);
+
+  const handleMidiHandoff = React.useCallback((midiData) => {
+    setPendingMidi(midiData);
+    window.location.hash = '#/';
+  }, []);
+
+  const soundControlsValue = React.useMemo(() => ({
+    waveformType,
+    onWaveformChange: setWaveformType,
+    audioParams,
+    onParamChange: handleAudioParamChange,
+    onParamsChange: handleAudioParamsChange,
+    transportBpm: 120,
+    controlSections,
+    onControlSectionToggle: handleControlSectionToggle,
+    activePresetName,
+    onPresetApplied: handleSidebarPresetApplied
+  }), [
+    waveformType,
+    audioParams,
+    controlSections,
+    handleAudioParamChange,
+    handleAudioParamsChange,
+    handleControlSectionToggle,
+    activePresetName,
+    handleSidebarPresetApplied
+  ]);
+
+  const midiTransportValue = React.useMemo(() => ({
+    isPlaying: false,
+    isPaused: false,
+    progress: 0,
+    currentMidi: null,
+    tempoFactor: 1,
+    onPlay: handleMidiHandoff,
+    onPause: () => {},
+    onResume: () => {},
+    onStop: () => {},
+    onTempoChange: () => {}
+  }), [handleMidiHandoff]);
+
   return (
     <div className="sound-designer-page">
       <main className="sound-designer-page__shell">
@@ -268,15 +333,19 @@ const SoundDesignerPage = () => {
 
         </div>
       </main>
-      <Sidebar
-        isOpen={sidebarOpen}
-        onOpen={handleSidebarOpen}
-        onClose={handleSidebarClose}
-        activeTab={sidebarTab}
-        onTabChange={setSidebarTab}
-        currentView="design"
-        soundLabel={activePresetName || waveformType}
-      />
+      <SoundControlsContext.Provider value={soundControlsValue}>
+        <MidiTransportContext.Provider value={midiTransportValue}>
+          <Sidebar
+            isOpen={sidebarOpen}
+            onOpen={handleSidebarOpen}
+            onClose={handleSidebarClose}
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+            currentView="design"
+            soundLabel={activePresetName || waveformType}
+          />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
     </div>
   );
 };

@@ -118,13 +118,11 @@
   background: rgba(8, 12, 19, 0.82);
 }
 
-.sidebar-container--disabled .sidebar-rail__btn,
 .sidebar-rail__btn:disabled {
   cursor: default;
   opacity: 0.36;
 }
 
-.sidebar-container--disabled .sidebar-rail__btn:hover,
 .sidebar-rail__btn:disabled:hover {
   transform: none;
   background: transparent;

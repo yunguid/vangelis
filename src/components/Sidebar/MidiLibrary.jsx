@@ -6,14 +6,6 @@ import {
   preloadMidiParser
 } from '../../utils/midiParser.js';
 
-const numericPatchName = (id) => {
-  let hash = 2166136261;
-  for (let index = 0; index < id.length; index += 1) {
-    hash ^= id.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return String(100000 + ((hash >>> 0) % 900000));
-};
 
 const MidiLibrary = ({ active = true, onPlay }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,7 +18,7 @@ const MidiLibrary = ({ active = true, onPlay }) => {
   // featured-first so the flagship study is always the first classical row.
   const builtInFiles = useMemo(() => getBuiltInMidiFiles().map((file) => ({
     ...file,
-    displayName: file.displayTitle || numericPatchName(file.id)
+    displayName: file.displayTitle || file.name
   })), []);
   const filteredFiles = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

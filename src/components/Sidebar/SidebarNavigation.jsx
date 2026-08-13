@@ -15,9 +15,9 @@ export const BrandHeader = React.memo(({ className = '' }) => {
   );
 });
 
-const SidebarNavigation = () => (
+const SidebarNavigation = ({ currentView = 'keyboard' }) => (
   <div className="sidebar-container sidebar-container--disabled">
-    <SidebarRail disabled />
+    <SidebarRail disabled currentView={currentView} />
   </div>
 );
 

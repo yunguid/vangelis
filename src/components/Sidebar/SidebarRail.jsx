@@ -75,6 +75,19 @@ const SidebarRail = ({
           </button>
         ))}
         <a
+          className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'keyboard' ? 'sidebar-rail__btn--current' : ''}`}
+          href="#/"
+          aria-label="Open the keyboard player"
+          aria-current={currentView === 'keyboard' ? 'page' : undefined}
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="6" width="18" height="12" rx="1.5" />
+            <line x1="8.5" y1="6" x2="8.5" y2="13.5" />
+            <line x1="15.5" y1="6" x2="15.5" y2="13.5" />
+          </svg>
+          <span className="sidebar-rail__label">Play</span>
+        </a>
+        <a
           className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'design' ? 'sidebar-rail__btn--current' : ''}`}
           href={SOUND_DESIGNER_HREF}
           aria-label="Open the sound design workspace"

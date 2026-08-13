@@ -13,17 +13,18 @@ Vangelis is an expressive, playable web synthesizer that feels responsive and mu
 
 ## Architecture
 
-### Sound Engine (`/sound-engine`)
-- **Frontend** (`frontend/`) - React app with Web Audio API integration
-- **DSP core** - Pure-JS AudioWorklet processors in `frontend/src/audio/` (synth, delay,
+The repo is a single Vite + React app at the root (`src/`, `public/`, `scripts/`,
+`golden/`, `docs/`).
+
+- **DSP core** - Pure-JS AudioWorklet processors in `src/audio/` (synth, delay,
   reverb, recorder) running on the audio thread. The synth worklet is a thin shell over
-  pure-DSP ES modules in `frontend/src/audio/dsp/` (oscillator, envelope, LFO, SVF,
+  pure-DSP ES modules in `src/audio/dsp/` (oscillator, envelope, LFO, SVF,
   voice, mod-routes, DC blocker), each unit-tested directly. There is no Rust/WASM in
   the audio path; a worst-case polyphonic benchmark
-  (`frontend/scripts/bench_synth_worklet.mjs`) showed ample realtime headroom in plain
+  (`scripts/bench_synth_worklet.mjs`) showed ample realtime headroom in plain
   JS, so the DSP stays in hot-reloadable JS.
 - **Audio quality gates** - `npm run audit:audio` renders every factory preset (and the
-  delay/reverb worklets) against golden masters in `frontend/golden/` — stereo
+  delay/reverb worklets) against golden masters in `golden/` — stereo
   per-channel fingerprints, aliasing, DC, heap-drift metrics. See `docs/ENGINE_DESCENT.md`
   and `docs/ENGINE_LEDGER.md` for the improvement loop and its history.
 
@@ -50,7 +51,7 @@ AudioBufferSource (pitch-shifted sample)
 ## Frontend Structure
 
 ```
-frontend/src/
+src/
 ├── App.jsx                    # Main app component, state management
 ├── style.css                  # Global styles
 │
@@ -181,14 +182,12 @@ frontend/src/
 ## Development
 
 ```bash
-cd sound-engine/frontend
 npm install
 npm run dev
 ```
 
 Benchmark the synth worklet's DSP hot loop:
 ```bash
-cd sound-engine/frontend
 node scripts/bench_synth_worklet.mjs
 ```
 

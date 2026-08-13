@@ -1,25 +1,33 @@
 {
-  "name": "vangelis-synth-root",
-  "version": "1.0.0",
-  "description": "Vangelis Synthesizer Project",
-  "scripts": {
-    "dev": "cd sound-engine/frontend && npm run dev",
-    "build": "cd sound-engine/frontend && npm run build",
-    "vercel-build": "bash scripts/vercel-build.sh",
-    "preview": "cd sound-engine/frontend && npm run preview",
-    "test": "cd sound-engine/frontend && npm test",
-    "test:watch": "cd sound-engine/frontend && npm run test:watch"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/yourusername/vangelis.git"
-  },
-  "keywords": [
-    "synthesizer",
-    "audio",
-    "visualization",
-    "web-audio"
-  ],
-  "author": "",
-  "license": "MIT"
-} 
+    "name": "vangelis",
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "audit:audio": "node --expose-gc scripts/audit_audio.mjs",
+        "audit:audio:bless": "node --expose-gc scripts/audit_audio.mjs --bless",
+        "audit:ui": "node scripts/audit_ui_tells.mjs",
+        "perf:site": "vite build && node scripts/perf_site_metrics.mjs",
+        "perf:visual": "node scripts/perf_visual_workload.mjs",
+        "sync:midis": "node scripts/sync_classical_midis.mjs",
+        "preview": "vite preview",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
+    },
+    "dependencies": {
+        "@tonejs/midi": "^2.0.28",
+        "preact": "10.29.7"
+    },
+    "devDependencies": {
+        "@testing-library/jest-dom": "^6.4.0",
+        "@testing-library/react": "^14.2.0",
+        "@vitejs/plugin-react": "^4.2.1",
+        "jsdom": "^24.0.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "vite": "^5.0.0",
+        "vitest": "^1.3.0"
+    }
+}

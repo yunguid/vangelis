@@ -2,10 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "vangelis-frontend",
+      "name": "vangelis",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "sound-engine/frontend",
       "port": 5173
     }
   ]

@@ -1865,7 +1865,6 @@ if (!fullSidebarChunk) {
   failures.push({ name: 'Guard isolated full sidebar chunk', actual: 0, minimum: 1 });
 }
 const navigationOnlyRouteNames = new Set([
-  'song-study',
   'study-songs'
 ]);
 const navigationRoutesWithFullSidebar = routeClosures

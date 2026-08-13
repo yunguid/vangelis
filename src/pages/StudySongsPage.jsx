@@ -83,7 +83,7 @@ const StudySongsPage = () => {
           </div>
         </section>
       </main>
-      <SidebarNavigation />
+      <SidebarNavigation currentView="studies" />
     </div>
   );
 };

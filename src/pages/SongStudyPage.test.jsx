@@ -29,7 +29,8 @@ vi.mock('../utils/audioEngine.js', () => ({
   audioEngine: {
     getStatus: () => ({ wasmReady: true, graphWarmed: true }),
     subscribe: vi.fn(() => () => {}),
-    setTransportTempo: vi.fn()
+    setTransportTempo: vi.fn(),
+    setSanitizedGlobalParams: vi.fn()
   }
 }));
 

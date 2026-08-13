@@ -385,7 +385,7 @@ function printListing() {
   }
 }
 
-console.log('UI TELL CENSUS — sound-engine/frontend/src (skipping *.test.*, src/audio/, src/utils/audioEngine/)');
+console.log('UI TELL CENSUS — src (skipping *.test.*, src/audio/, src/utils/audioEngine/)');
 console.log('');
 const total = printTable();
 printListing();

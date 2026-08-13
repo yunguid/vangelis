@@ -23,6 +23,7 @@ import {
   SoundControlsContext
 } from './context/SynthContexts.jsx';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
+import { consumePendingMidi } from './utils/pendingMidiHandoff.js';
 import { createTrailingDeadlineScheduler } from './utils/trailingDeadlineScheduler.js';
 import './styles/overlays.css';
 
@@ -60,13 +61,14 @@ const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sampleInfo, setSampleInfo] = useState(null);
   const [sampleLoading, setSampleLoading] = useState(false);
-  // On phones the sidebar is a full-screen sheet; never restore it open there,
-  // or the app boots with the synth hidden behind a modal.
+  // On phones the sidebar is a full-screen sheet; never boot with it open
+  // there, or the synth hides behind a modal. On desktop it starts open so
+  // the sound controls are immediately at hand.
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined'
       && typeof window.matchMedia === 'function'
       && window.matchMedia('(max-width: 900px)').matches) return false;
-    return initialSession.sidebarOpen || false;
+    return true;
   });
   const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'sound');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
@@ -94,6 +96,15 @@ const App = () => {
   // MIDI playback hook
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
   const transportBpm = (midiPlayback.currentMidi?.bpm || 120) * midiPlayback.tempoFactor;
+
+  // A MIDI file picked on another page (Design, a study) lands here to play.
+  useEffect(() => {
+    const pending = consumePendingMidi();
+    if (!pending) return;
+    midiPlayback.play(pending);
+    setSidebarTab('midi');
+    setSidebarOpen(true);
+  }, [midiPlayback.play]);
 
   // Hardware MIDI input (notes + pitch bend + mod wheel)
   const webMidi = useWebMidiInput({ waveformType, audioParams });
@@ -346,7 +357,6 @@ const App = () => {
       audioParams,
       controlSections,
       sidebarTab,
-      sidebarOpen,
       activeSampleId,
       sampleSelection,
       showShortcuts,
@@ -361,7 +371,6 @@ const App = () => {
     midiPlayback.tempoFactor,
     sampleSelection,
     showShortcuts,
-    sidebarOpen,
     sidebarTab,
     waveformType
   ]);

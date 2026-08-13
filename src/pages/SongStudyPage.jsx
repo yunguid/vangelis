@@ -1,6 +1,11 @@
 import React from 'react';
-import SidebarNavigation, { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
+import Sidebar from '../components/Sidebar';
+import { BrandHeader } from '../components/Sidebar/SidebarNavigation.jsx';
 import SynthKeyboard from '../components/SynthKeyboard';
+import {
+  MidiTransportContext,
+  SoundControlsContext
+} from '../context/SynthContexts.jsx';
 import {
   DEFAULT_STUDY_AUDIO_PARAMS,
   DEFAULT_STUDY_WAVEFORM,
@@ -9,12 +14,22 @@ import {
 import { useMidiPlayback } from '../hooks/useMidiPlayback.js';
 import { useAudioEngineWarmup } from '../hooks/useAudioEngineWarmup.js';
 import { audioEngine } from '../utils/audioEngine.js';
+import { sanitizeAudioParams } from '../utils/audioParams.js';
 import { midiNoteToName } from '../utils/math.js';
+import { setPendingMidi } from '../utils/pendingMidiHandoff.js';
 import { buildNoteRenderWindow } from '../components/midiBirdsEyeMath.js';
 import { getStudyNotesAroundTime } from '../utils/songStudyNotes.js';
 import './SongStudyPage.css';
 
 const BirdsEyeRadar = React.lazy(() => import('../components/BirdsEyeRadar.jsx'));
+
+const DEFAULT_STUDY_CONTROL_SECTIONS = Object.freeze({
+  essentials: true,
+  delay: false,
+  reverb: false,
+  color: false,
+  modulation: false
+});
 
 const TEMPO_OPTIONS = [
   { label: '0.75x', value: 0.75 },
@@ -273,8 +288,16 @@ const TransportIcon = ({ kind }) => {
 
 const SongStudyPageContent = ({ study }) => {
   useAudioEngineWarmup();
-  const waveformType = study?.waveformType || DEFAULT_STUDY_WAVEFORM;
-  const audioParams = study?.audioParams || DEFAULT_STUDY_AUDIO_PARAMS;
+  const [waveformType, setWaveformType] = React.useState(() => (
+    study?.waveformType || DEFAULT_STUDY_WAVEFORM
+  ));
+  const [audioParams, setAudioParams] = React.useState(() => (
+    sanitizeAudioParams(study?.audioParams || DEFAULT_STUDY_AUDIO_PARAMS)
+  ));
+  const [activePresetName, setActivePresetName] = React.useState(null);
+  const [controlSections, setControlSections] = React.useState(DEFAULT_STUDY_CONTROL_SECTIONS);
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [sidebarTab, setSidebarTab] = React.useState('sound');
   const titleRef = useSingleLineTitle(study?.title || '');
   const [engineStatus, setEngineStatus] = React.useState(() => audioEngine.getStatus());
   const [loadedMidi, setLoadedMidi] = React.useState(null);
@@ -319,6 +342,44 @@ const SongStudyPageContent = ({ study }) => {
       unsubscribe();
     };
   }, [playback.stop]);
+
+  React.useEffect(() => {
+    audioEngine.setSanitizedGlobalParams(audioParams);
+  }, [audioParams]);
+
+  const handleParamChange = React.useCallback((paramName, value) => {
+    setAudioParams((prev) => sanitizeAudioParams({
+      ...prev,
+      [paramName]: value
+    }));
+  }, []);
+
+  const handleParamsChange = React.useCallback((nextParams) => {
+    setAudioParams((prev) => sanitizeAudioParams({
+      ...prev,
+      ...nextParams
+    }));
+  }, []);
+
+  const handlePresetApplied = React.useCallback((presetName) => {
+    setActivePresetName(presetName || null);
+  }, []);
+
+  const handleControlSectionToggle = React.useCallback((section) => {
+    if (!Object.prototype.hasOwnProperty.call(DEFAULT_STUDY_CONTROL_SECTIONS, section)) return;
+    setControlSections((prev) => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
+
+  const handleSidebarOpen = React.useCallback(() => setSidebarOpen(true), []);
+  const handleSidebarClose = React.useCallback(() => setSidebarOpen(false), []);
+
+  const handleMidiHandoff = React.useCallback((midiData) => {
+    setPendingMidi(midiData);
+    window.location.hash = '#/';
+  }, []);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -397,6 +458,54 @@ const SongStudyPageContent = ({ study }) => {
     () => buildNoteRenderWindow(displayMidi?.notes || []),
     [displayMidi]
   );
+
+  const soundControlsValue = React.useMemo(() => ({
+    waveformType,
+    onWaveformChange: setWaveformType,
+    audioParams,
+    onParamChange: handleParamChange,
+    onParamsChange: handleParamsChange,
+    transportBpm: (displayMidi?.bpm || 120) * playback.tempoFactor,
+    controlSections,
+    onControlSectionToggle: handleControlSectionToggle,
+    activePresetName,
+    onPresetApplied: handlePresetApplied
+  }), [
+    waveformType,
+    audioParams,
+    displayMidi,
+    playback.tempoFactor,
+    controlSections,
+    handleParamChange,
+    handleParamsChange,
+    handleControlSectionToggle,
+    activePresetName,
+    handlePresetApplied
+  ]);
+
+  const midiTransportValue = React.useMemo(() => ({
+    isPlaying: playback.isPlaying,
+    isPaused: playback.isPaused,
+    progress: playback.progress,
+    currentMidi: displayMidi,
+    tempoFactor: playback.tempoFactor,
+    onPlay: handleMidiHandoff,
+    onPause: playback.pause,
+    onResume: playback.resume,
+    onStop: playback.stop,
+    onTempoChange: playback.setTempo
+  }), [
+    playback.isPlaying,
+    playback.isPaused,
+    playback.progress,
+    displayMidi,
+    playback.tempoFactor,
+    handleMidiHandoff,
+    playback.pause,
+    playback.resume,
+    playback.stop,
+    playback.setTempo
+  ]);
 
   const visibleNotes = React.useMemo(
     () => getStudyNotesAroundTime(studyNoteWindow, previewTime),
@@ -527,13 +636,6 @@ const SongStudyPageContent = ({ study }) => {
             )}
           </div>
 
-          <div className="song-study__status">
-            <span
-              className={`song-study__status-marker ${engineStatus.graphWarmed ? 'is-ready' : ''}`}
-              aria-hidden="true"
-            />
-            <span>{engineStatus.graphWarmed ? 'Audio ready' : 'Warming audio'}</span>
-          </div>
         </header>
 
         <section className="song-study__transport" aria-label="MIDI transport">
@@ -755,7 +857,21 @@ const SongStudyPageContent = ({ study }) => {
           </footer>
         )}
       </main>
-      <SidebarNavigation />
+      <SoundControlsContext.Provider value={soundControlsValue}>
+        <MidiTransportContext.Provider value={midiTransportValue}>
+          <Sidebar
+            isOpen={sidebarOpen}
+            onOpen={handleSidebarOpen}
+            onClose={handleSidebarClose}
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+            currentView="studies"
+            isMidiPlaying={playback.isPlaying}
+            midiName={displayMidi?.name || study.title}
+            soundLabel={activePresetName || waveformType}
+          />
+        </MidiTransportContext.Provider>
+      </SoundControlsContext.Provider>
     </div>
   );
 };
@@ -769,7 +885,7 @@ const SongStudyPage = ({ study, studySlug }) => {
       </div>
     );
   }
-  return <SongStudyPageContent study={resolvedStudy} />;
+  return <SongStudyPageContent key={resolvedStudy.slug || resolvedStudy.title} study={resolvedStudy} />;
 };
 
 export default SongStudyPage;
