@@ -571,6 +571,74 @@
   color: rgba(255, 164, 112, 0.9);
 }
 
+.piano-roll-cloud,
+.piano-roll-cloud__form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.piano-roll-cloud {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-cloud input {
+  height: 28px;
+  min-width: 190px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  background: rgba(8, 12, 19, 0.85);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.74rem;
+}
+
+.piano-roll-cloud button {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.piano-roll-cloud button:hover:not(:disabled) {
+  border-color: rgba(255, 164, 112, 0.7);
+  background: rgba(214, 93, 14, 0.12);
+}
+
+.piano-roll-cloud button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.piano-roll-cloud__status,
+.piano-roll-cloud__note {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.piano-roll-cloud__note {
+  color: rgba(255, 164, 112, 0.9);
+}
+
+.piano-roll-cloud__pending {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 164, 112, 0.9);
+}
+
 .piano-roll-topbar__help {
   position: relative;
 }

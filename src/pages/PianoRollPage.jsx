@@ -13,6 +13,17 @@ import {
   DEFAULT_WAVEFORM,
   sanitizeAudioParams
 } from '../utils/audioParams.js';
+import { loadCloudPatternId, saveCloudPatternId } from '../utils/cloudPatternLink.js';
+import {
+  deleteCloudPattern,
+  getSession,
+  isCloudConfigured,
+  listCloudPatterns,
+  onAuthChange,
+  signInWithEmail,
+  signOut,
+  upsertCloudPattern
+} from '../utils/cloudPatternStore.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
 import {
   BAR_CHUNK,
@@ -56,6 +67,7 @@ import {
   updateTrack,
   updateNote
 } from '../utils/pianoRollPattern.js';
+import { loadEditorDraft, saveEditorDraft } from '../utils/patternDraft.js';
 import {
   deleteSavedPattern,
   loadSavedPatterns,
@@ -76,14 +88,20 @@ const AUDITION_MS = 260;
 const ROW_COUNT = PITCH_MAX - PITCH_MIN + 1;
 const GRID_HEIGHT = ROW_COUNT * ROW_HEIGHT;
 const EDIT_RESCHEDULE_DEBOUNCE_MS = 120;
+const DRAFT_SAVE_DEBOUNCE_MS = 400;
+const CLOUD_SYNC_DEBOUNCE_MS = 2000;
 const HISTORY_LIMIT = 100;
 const ZOOM_MIN = 24;
 const ZOOM_MAX = 336;
 const ZOOM_STEP = 1.15;
 const ZOOM_WHEEL_STEP = 1.08;
 const MAX_GRID_BACKING_WIDTH = 16384;
-const UNSAVED_WARNING = 'You have unsaved MIDI edits. Leave the editor and discard them?';
+const UNSAVED_WARNING = 'These edits are not in your saved patterns yet. They stay in the editor draft — leave anyway?';
 const RECORDING_TAIL_MS = 160;
+
+// Without Supabase env the editor never mentions the cloud at all.
+const CLOUD_ENABLED = isCloudConfigured();
+const NO_CLOUD_PATTERNS = Object.freeze([]);
 
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
@@ -193,25 +211,57 @@ const drawGrid = (canvas, {
 const PianoRollPage = () => {
   useAudioEngineWarmup();
 
-  const [pattern, setPattern] = React.useState(() => createPattern());
-  const [snapId, setSnapId] = React.useState('1/16');
-  const [scaleId, setScaleId] = React.useState('');
-  const [scaleRoot, setScaleRoot] = React.useState(0);
-  const [chordTypeId, setChordTypeId] = React.useState('major');
-  const [pxPerBeat, setPxPerBeat] = React.useState(56);
+  // The draft is the working document: whatever was on screen when the editor
+  // was last left comes back, so navigating away never costs a pattern.
+  const [draft] = React.useState(loadEditorDraft);
+
+  const [pattern, setPattern] = React.useState(() => (
+    draft ? normalizePattern(draft.pattern) : createPattern()
+  ));
+  const [snapId, setSnapId] = React.useState(() => (
+    SNAP_OPTIONS.some((option) => option.id === draft?.snapId) ? draft.snapId : '1/16'
+  ));
+  const [scaleId, setScaleId] = React.useState(() => (
+    SCALES.some((scale) => scale.id === draft?.scaleId) ? draft.scaleId : ''
+  ));
+  const [scaleRoot, setScaleRoot] = React.useState(() => (
+    SCALE_ROOTS[draft?.scaleRoot] ? draft.scaleRoot : 0
+  ));
+  const [chordTypeId, setChordTypeId] = React.useState(() => (
+    CHORD_TYPES.some((chord) => chord.id === draft?.chordTypeId) ? draft.chordTypeId : 'major'
+  ));
+  const [pxPerBeat, setPxPerBeat] = React.useState(() => (
+    Number.isFinite(draft?.pxPerBeat)
+      ? Math.min(Math.max(draft.pxPerBeat, ZOOM_MIN), ZOOM_MAX)
+      : 56
+  ));
   const [trayOpen, setTrayOpen] = React.useState(true);
   const [savedPatterns, setSavedPatterns] = React.useState(() => loadSavedPatterns());
   const [drag, setDrag] = React.useState(null);
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
-  const [activeTrackId, setActiveTrackId] = React.useState('track-1');
+  const [activeTrackId, setActiveTrackId] = React.useState(() => (
+    draft?.activeTrackId || 'track-1'
+  ));
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
   const [isRecordingLoop, setIsRecordingLoop] = React.useState(false);
+  const [cloudSession, setCloudSession] = React.useState(null);
+  const [cloudPatterns, setCloudPatterns] = React.useState(NO_CLOUD_PATTERNS);
+  const [cloudEmail, setCloudEmail] = React.useState('');
+  const [cloudAuthStatus, setCloudAuthStatus] = React.useState('idle');
+  const [cloudSyncPending, setCloudSyncPending] = React.useState(false);
 
-  const [waveformType, setWaveformType] = React.useState(() => DEFAULT_WAVEFORM);
-  const [audioParams, setAudioParams] = React.useState(() => (
-    sanitizeAudioParams(AUDIO_PARAM_DEFAULTS)
+  const activeTrack = pattern.tracks.find((track) => track.id === activeTrackId)
+    || pattern.tracks[0];
+
+  const [waveformType, setWaveformType] = React.useState(() => (
+    activeTrack?.instrument || DEFAULT_WAVEFORM
   ));
-  const [activePresetName, setActivePresetName] = React.useState(null);
+  const [audioParams, setAudioParams] = React.useState(() => (
+    sanitizeAudioParams(activeTrack?.audioParams || AUDIO_PARAM_DEFAULTS)
+  ));
+  const [activePresetName, setActivePresetName] = React.useState(() => (
+    activeTrack?.soundName || null
+  ));
   const [controlSections, setControlSections] = React.useState(DEFAULT_CONTROL_SECTIONS);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState('sound');
@@ -233,10 +283,16 @@ const PianoRollPage = () => {
   const editRestartTimeoutRef = React.useRef(null);
   const recordingTimeoutRef = React.useRef(null);
   const recordingActiveRef = React.useRef(false);
+  const draftRef = React.useRef(null);
+  const draftSaveTimeoutRef = React.useRef(null);
+  const cloudSyncTimeoutRef = React.useRef(null);
+  const cloudPatternIdRef = React.useRef(null);
   const patternRef = React.useRef(pattern);
   const cleanPatternRef = React.useRef(pattern);
+  const cloudSyncedPatternRef = React.useRef(pattern);
   const hasUnsavedChangesRef = React.useRef(false);
-  const historyRef = React.useRef({ undo: [], redo: [] });
+  const historyRef = React.useRef(null);
+  if (!historyRef.current) historyRef.current = { undo: [], redo: [] };
   const gestureSnapshotRef = React.useRef(null);
   const clipboardRef = React.useRef(null);
   const timelinePrimedRef = React.useRef(false);
@@ -244,8 +300,6 @@ const PianoRollPage = () => {
   const snapBeats = getSnapBeats(snapId);
   const totalBeats = patternBeats(pattern);
   const gridWidth = totalBeats * pxPerBeat;
-  const activeTrack = pattern.tracks.find((track) => track.id === activeTrackId)
-    || pattern.tracks[0];
   const soundBrowserTrack = pattern.tracks.find((track) => track.id === soundBrowserTrackId)
     || null;
   const activeTrackNotes = pattern.notes.filter((note) => note.trackId === activeTrack?.id);
@@ -261,6 +315,40 @@ const PianoRollPage = () => {
     hasUnsavedChangesRef.current = isDirty;
     setHasUnsavedChanges(isDirty);
   }, [pattern]);
+
+  const flushDraft = React.useCallback(() => {
+    if (draftSaveTimeoutRef.current) {
+      clearTimeout(draftSaveTimeoutRef.current);
+      draftSaveTimeoutRef.current = null;
+    }
+    if (draftRef.current) saveEditorDraft(draftRef.current);
+  }, []);
+
+  React.useEffect(() => {
+    draftRef.current = {
+      pattern,
+      snapId,
+      scaleId,
+      scaleRoot,
+      chordTypeId,
+      activeTrackId,
+      pxPerBeat
+    };
+    if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current);
+    draftSaveTimeoutRef.current = setTimeout(() => {
+      draftSaveTimeoutRef.current = null;
+      saveEditorDraft(draftRef.current);
+    }, DRAFT_SAVE_DEBOUNCE_MS);
+  }, [pattern, snapId, scaleId, scaleRoot, chordTypeId, activeTrackId, pxPerBeat]);
+
+  // The draft outlives the page on purpose: leaving flushes it, nothing clears it.
+  React.useEffect(() => {
+    window.addEventListener('pagehide', flushDraft);
+    return () => {
+      window.removeEventListener('pagehide', flushDraft);
+      flushDraft();
+    };
+  }, [flushDraft]);
 
   React.useEffect(() => {
     if (!hasUnsavedChanges) return undefined;
@@ -329,6 +417,7 @@ const PianoRollPage = () => {
     if (auditionTimeoutRef.current) clearTimeout(auditionTimeoutRef.current);
     if (auditionRef.current) audioEngine.stopNote(auditionRef.current);
     if (editRestartTimeoutRef.current) clearTimeout(editRestartTimeoutRef.current);
+    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
     if (recordingTimeoutRef.current) clearTimeout(recordingTimeoutRef.current);
     if (recordingActiveRef.current) audioEngine.stopRecording();
   }, []);
@@ -974,18 +1063,117 @@ const PianoRollPage = () => {
     setSoundBrowserTrackId(null);
   }, []);
 
+  React.useEffect(() => {
+    if (!CLOUD_ENABLED) return undefined;
+    let active = true;
+    getSession().then((session) => {
+      if (active) setCloudSession(session);
+    });
+    const unsubscribe = onAuthChange((session) => {
+      if (active) setCloudSession(session);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!cloudSession) return undefined;
+    if (!cloudPatternIdRef.current) cloudPatternIdRef.current = loadCloudPatternId();
+    let active = true;
+    listCloudPatterns().then((entries) => {
+      if (!active) return;
+      setCloudPatterns(entries);
+      // An empty list also means "the query failed", so only a populated
+      // library is allowed to retire a link to a row that is really gone.
+      const linkedId = cloudPatternIdRef.current;
+      if (entries.length > 0 && linkedId && !entries.some((entry) => entry.id === linkedId)) {
+        cloudPatternIdRef.current = null;
+        saveCloudPatternId(null);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [cloudSession]);
+
+  const pushPatternToCloud = React.useCallback(async (target) => {
+    const saved = await upsertCloudPattern({
+      id: cloudPatternIdRef.current,
+      name: target.name.trim().slice(0, 48) || 'Untitled loop',
+      pattern: target
+    });
+    if (!saved) {
+      setCloudSyncPending(true);
+      return;
+    }
+    cloudPatternIdRef.current = saved.id;
+    saveCloudPatternId(saved.id);
+    cloudSyncedPatternRef.current = target;
+    setCloudSyncPending(false);
+    setCloudPatterns((prev) => [saved, ...prev.filter((entry) => entry.id !== saved.id)]);
+  }, []);
+
+  // Once a pattern has a cloud row, later edits follow it there quietly. A
+  // failed push only leaves the row behind the local draft, which still holds
+  // every edit, so the next edit simply tries again.
+  React.useEffect(() => {
+    if (!cloudSession || !cloudPatternIdRef.current) return undefined;
+    if (pattern === cloudSyncedPatternRef.current) return undefined;
+    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+    cloudSyncTimeoutRef.current = setTimeout(() => {
+      cloudSyncTimeoutRef.current = null;
+      pushPatternToCloud(patternRef.current);
+    }, CLOUD_SYNC_DEBOUNCE_MS);
+    return undefined;
+  }, [cloudSession, pattern, pushPatternToCloud]);
+
+  const handleCloudEmailChange = React.useCallback((event) => {
+    setCloudEmail(event.target.value);
+    setCloudAuthStatus('idle');
+  }, []);
+
+  const handleSendSignInLink = React.useCallback(async (event) => {
+    event.preventDefault();
+    const email = cloudEmail.trim();
+    if (!email) return;
+    setCloudAuthStatus('sending');
+    const { error } = await signInWithEmail(email);
+    setCloudAuthStatus(error ? 'error' : 'sent');
+  }, [cloudEmail]);
+
+  const handleSignOut = React.useCallback(async () => {
+    if (cloudSyncTimeoutRef.current) {
+      clearTimeout(cloudSyncTimeoutRef.current);
+      cloudSyncTimeoutRef.current = null;
+    }
+    cloudPatternIdRef.current = null;
+    saveCloudPatternId(null);
+    await signOut();
+    setCloudSession(null);
+    setCloudPatterns(NO_CLOUD_PATTERNS);
+    setCloudSyncPending(false);
+    setCloudAuthStatus('idle');
+  }, []);
+
   const handleSave = React.useCallback(() => {
     saveSavedPattern(patternRef.current);
     cleanPatternRef.current = patternRef.current;
     hasUnsavedChangesRef.current = false;
     setHasUnsavedChanges(false);
     setSavedPatterns(loadSavedPatterns());
-  }, []);
+    if (cloudSession) pushPatternToCloud(patternRef.current);
+  }, [cloudSession, pushPatternToCloud]);
 
   const handleLoad = React.useCallback((entry) => {
     playback.stop();
     pushHistory(patternRef.current);
     const next = normalizePattern({ ...entry.pattern, name: entry.name });
+    const cloudId = entry.source === 'cloud' ? entry.id : null;
+    cloudPatternIdRef.current = cloudId;
+    saveCloudPatternId(cloudId);
+    cloudSyncedPatternRef.current = next;
     cleanPatternRef.current = next;
     hasUnsavedChangesRef.current = false;
     setPattern(next);
@@ -998,9 +1186,29 @@ const PianoRollPage = () => {
     setSelectedIds(new Set());
   }, [playback.stop, pushHistory]);
 
-  const handleDeleteSaved = React.useCallback((id) => {
-    setSavedPatterns(deleteSavedPattern(id));
+  const handleDeleteSaved = React.useCallback((entry) => {
+    if (entry.source !== 'cloud') {
+      setSavedPatterns(deleteSavedPattern(entry.id));
+      return;
+    }
+    if (entry.id === cloudPatternIdRef.current) {
+      cloudPatternIdRef.current = null;
+      saveCloudPatternId(null);
+    }
+    setCloudPatterns((prev) => prev.filter((item) => item.id !== entry.id));
+    deleteCloudPattern(entry.id);
   }, []);
+
+  const libraryEntries = React.useMemo(() => {
+    const local = savedPatterns.map((entry) => ({ ...entry, source: 'local' }));
+    if (cloudPatterns.length === 0) return local;
+    return [
+      ...cloudPatterns
+        .filter((entry) => Array.isArray(entry.pattern?.notes))
+        .map((entry) => ({ ...entry, source: 'cloud' })),
+      ...local
+    ];
+  }, [cloudPatterns, savedPatterns]);
 
   const handleClear = React.useCallback(() => {
     playback.stop();
@@ -1551,22 +1759,23 @@ const PianoRollPage = () => {
             />
           )}
 
-          {savedPatterns.length > 0 && (
+          {libraryEntries.length > 0 && (
             <details className="piano-roll-tray__library">
-              <summary>Saved patterns ({savedPatterns.length})</summary>
+              <summary>Saved patterns ({libraryEntries.length})</summary>
               <ul>
-                {savedPatterns.map((entry) => (
-                  <li key={entry.id}>
+                {libraryEntries.map((entry) => (
+                  <li key={`${entry.source}-${entry.id}`}>
                     <button type="button" className="piano-roll-tray__load" onClick={() => handleLoad(entry)}>
                       {entry.name}
                     </button>
                     <span className="piano-roll-tray__library-meta">
+                      {entry.source === 'cloud' ? 'Cloud · ' : ''}
                       {entry.pattern.bars} bars · {entry.pattern.bpm} BPM · {entry.pattern.notes.length} notes
                     </span>
                     <button
                       type="button"
                       className="piano-roll-tray__delete"
-                      onClick={() => handleDeleteSaved(entry.id)}
+                      onClick={() => handleDeleteSaved(entry)}
                       aria-label={`Delete saved pattern ${entry.name}`}
                     >
                       Delete
@@ -1575,6 +1784,45 @@ const PianoRollPage = () => {
                 ))}
               </ul>
             </details>
+          )}
+
+          {CLOUD_ENABLED && (
+            <div className="piano-roll-cloud">
+              {cloudSession ? (
+                <>
+                  <span className="piano-roll-cloud__status">
+                    Signed in · {cloudSession.user?.email}
+                  </span>
+                  {cloudSyncPending && (
+                    <i className="piano-roll-cloud__pending" title="Cloud sync pending" />
+                  )}
+                  <button type="button" onClick={handleSignOut}>Sign out</button>
+                </>
+              ) : (
+                <form className="piano-roll-cloud__form" onSubmit={handleSendSignInLink}>
+                  <input
+                    type="email"
+                    value={cloudEmail}
+                    onChange={handleCloudEmailChange}
+                    placeholder="you@email.com"
+                    aria-label="Email address for the sign-in link"
+                  />
+                  <button type="submit" disabled={!cloudEmail.trim() || cloudAuthStatus === 'sending'}>
+                    {cloudAuthStatus === 'sending' ? 'Sending…' : 'Send sign-in link'}
+                  </button>
+                  {cloudAuthStatus === 'sent' && (
+                    <span className="piano-roll-cloud__note" role="status">
+                      Link sent — check your email
+                    </span>
+                  )}
+                  {cloudAuthStatus === 'error' && (
+                    <span className="piano-roll-cloud__note" role="status">
+                      Could not send the link
+                    </span>
+                  )}
+                </form>
+              )}
+            </div>
           )}
 
         </div>

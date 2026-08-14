@@ -1382,7 +1382,10 @@ const report = {
 };
 
 const budgetChecks = [
-  ['D00 deployment raw', deploymentBytes, 1.65 * 1024 * 1024],
+  // Raised from 1.65 MiB on 2026-08-14: the piano roll's cloud pattern saves
+  // add @supabase/supabase-js as a dynamically imported vendor chunk (~218 KiB
+  // raw), which ships in dist but is only fetched when Supabase env is set.
+  ['D00 deployment raw', deploymentBytes, 1.75 * 1024 * 1024],
   // Raised from 0.95 MiB on 2026-07-19: non-catalog public assets stay at
   // their prior ~0.8 MiB level while the classical learning catalog gets its
   // own bounded D00b allowance (see docs/CATALOG_LEDGER.md).
@@ -1750,7 +1753,9 @@ const countBudgetChecks = [
   ['Guard raw interval sites', report.staticSignals.setIntervalCalls, 0],
   ['Guard nested external CSS imports', report.staticSignals.externalCssImportCalls, 0],
   ['D11 direct runtime dependencies', directRuntimeDependencies.length, 6],
-  ['D11 production lock packages', productionLockPackages.length, 11]
+  // Raised from 11 on 2026-08-14: @supabase/supabase-js brings six scoped
+  // runtime packages of its own for the editor's cloud pattern saves.
+  ['D11 production lock packages', productionLockPackages.length, 13]
 ];
 failures.push(...countBudgetChecks
   .filter(([, actual, maximum]) => actual > maximum)
