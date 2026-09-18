@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import OpeningPerformance from './components/OpeningPerformance.jsx';
 import { useOpeningPerformance } from './hooks/useOpeningPerformance.js';
 import AppHeader from './components/AppHeader.jsx';
 import SynthKeyboard from './components/SynthKeyboard';
@@ -61,8 +60,6 @@ const App = () => {
   ));
   const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
   const [isRecording, setIsRecording] = useState(false);
-  const [sampleInfo, setSampleInfo] = useState(null);
-  const [sampleLoading, setSampleLoading] = useState(false);
   // On phones the sidebar is a full-screen sheet; never boot with it open
   // there, or the synth hides behind a modal. On desktop it starts open so
   // the sound controls are immediately at hand.
@@ -171,31 +168,15 @@ const App = () => {
   const handleAudioFileImport = useCallback(async (file, selection = null) => {
     if (!file) return;
 
-    setSampleLoading(true);
     try {
-      const info = await audioEngine.loadCustomSample(file);
-      setSampleInfo({
-        name: file.name,
-        duration: info.duration.toFixed(2),
-        channels: info.channels
-      });
+      await audioEngine.loadCustomSample(file);
       setActiveSampleId(selection?.id || null);
       setSampleSelection(selection);
       pushNotice('Sample is ready.');
     } catch (err) {
       console.error('Failed to load sample:', err);
       pushNotice('Sample load failed.');
-    } finally {
-      setSampleLoading(false);
     }
-  }, [pushNotice]);
-
-  const handleClearSample = useCallback(() => {
-    audioEngine.clearCustomSample();
-    setSampleInfo(null);
-    setActiveSampleId(null);
-    setSampleSelection(null);
-    pushNotice('Sample cleared.');
   }, [pushNotice]);
 
   const handleRecordToggle = useCallback(() => {
@@ -411,16 +392,6 @@ const App = () => {
     }));
   }, []);
 
-  const handleResetSound = useCallback(() => {
-    setAudioParams(sanitizeAudioParams(AUDIO_PARAM_DEFAULTS));
-    setActivePresetName(null);
-    pushNotice('Sound reset to dry defaults.');
-  }, [pushNotice]);
-
-  const handleShowShortcuts = useCallback(() => {
-    setShowShortcuts(true);
-  }, []);
-
   const handleSidebarOpen = useCallback(() => setSidebarOpen(true), []);
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), []);
 
@@ -494,18 +465,7 @@ const App = () => {
         )}
         
         <div className="app-shell">
-          <AppHeader
-            activeSection="studio"
-            onResetSound={handleResetSound}
-            onUploadSample={handleAudioFileImport}
-            onClearSample={handleClearSample}
-            onToggleRecording={handleRecordToggle}
-            onShowShortcuts={handleShowShortcuts}
-            hasCustomSample={engineStatus.hasCustomSample}
-            isRecording={isRecording}
-            sampleLabel={sampleInfo?.name || sampleSelection?.name || ''}
-            sampleLoading={sampleLoading}
-          />
+          <AppHeader onToggleRecording={handleRecordToggle} isRecording={isRecording} />
 
           <main className="zone-center content-primary" aria-label="Keyboard area">
             {showPrimaryVisual ? (
@@ -527,7 +487,6 @@ const App = () => {
                     />
                   </React.Suspense>
                 )}
-                <OpeningPerformance status={opening.status} onListen={opening.listen} onStop={opening.stop} />
                 <SynthKeyboard
                   onUserPlay={opening.stop}
                   waveformType={waveformType}

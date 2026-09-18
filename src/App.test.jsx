@@ -77,7 +77,7 @@ describe('App', () => {
       render(<App />);
       expect(getItemSpy).toHaveBeenCalledTimes(1);
 
-      fireEvent.click(screen.getByLabelText('View keyboard shortcuts'));
+      fireEvent.keyDown(window, { key: '?' });
       fireEvent.click(screen.getByLabelText('Close shortcuts'));
 
       expect(getItemSpy).toHaveBeenCalledTimes(1);
@@ -102,16 +102,16 @@ describe('App', () => {
     expect(screen.queryByText(/Waveform:/)).not.toBeInTheDocument();
   });
 
-  it('has keyboard shortcuts button', () => {
+  it('keeps only Record in the header', () => {
     render(<App />);
-    const helpButton = screen.getByLabelText('View keyboard shortcuts');
-    expect(helpButton).toBeInTheDocument();
+    expect(screen.queryByLabelText('View keyboard shortcuts')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('header button')).toHaveLength(1);
+    expect(screen.getByLabelText('Start recording')).toBeInTheDocument();
   });
 
-  it('opens shortcuts overlay when button clicked', () => {
+  it('opens shortcuts overlay with the keyboard shortcut', () => {
     render(<App />);
-    const helpButton = screen.getByLabelText('View keyboard shortcuts');
-    fireEvent.click(helpButton);
+    fireEvent.keyDown(window, { key: '?' });
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument();
@@ -119,8 +119,7 @@ describe('App', () => {
 
   it('closes shortcuts overlay when close button clicked', () => {
     render(<App />);
-    const helpButton = screen.getByLabelText('View keyboard shortcuts');
-    fireEvent.click(helpButton);
+    fireEvent.keyDown(window, { key: '?' });
 
     const closeButton = screen.getByLabelText('Close shortcuts');
     fireEvent.click(closeButton);
@@ -161,7 +160,7 @@ describe('App', () => {
     const setItemSpy = vi.spyOn(window.localStorage, 'setItem');
     const { unmount } = render(<App />);
 
-    fireEvent.click(screen.getByLabelText('View keyboard shortcuts'));
+    fireEvent.keyDown(window, { key: '?' });
     fireEvent.click(screen.getByLabelText('Close shortcuts'));
     expect(setItemSpy).not.toHaveBeenCalled();
 

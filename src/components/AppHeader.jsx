@@ -1,60 +1,6 @@
 import React from 'react';
 
-// The app is keyboard-first now: the voice-loop / MIDI-pipeline / library
-// pages are hidden from navigation (routes still exist if linked directly).
-const NAV_ITEMS = [];
-
-const AppHeader = ({
-  activeSection,
-  className = '',
-  onResetSound,
-  onUploadSample,
-  onClearSample,
-  onToggleRecording,
-  onShowShortcuts,
-  hasCustomSample,
-  isRecording,
-  sampleLabel = '',
-  sampleLoading = false
-}) => {
-  const uploadInputId = React.useId();
-  const resolvedHasCustomSample = !!hasCustomSample;
-  const resolvedIsRecording = !!isRecording;
-  const resolvedSampleLoading = !!sampleLoading;
-  const resolvedSampleLabel = sampleLabel;
-  const showHeaderActions = Boolean(
-    onResetSound
-    || onUploadSample
-    || onClearSample
-    || onToggleRecording
-    || onShowShortcuts
-  );
-  const canResetSound = typeof onResetSound === 'function';
-  const canUploadSample = typeof onUploadSample === 'function';
-  const canClearSample = resolvedHasCustomSample && typeof onClearSample === 'function';
-  const canToggleRecording = typeof onToggleRecording === 'function';
-  const canShowShortcuts = typeof onShowShortcuts === 'function';
-
-  const handleUploadSample = React.useCallback(async (file) => {
-    if (!file || typeof onUploadSample !== 'function') return;
-    await onUploadSample(file);
-  }, [onUploadSample]);
-
-  const handleFileChange = async (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    await handleUploadSample(file);
-  };
-
-  const handleClearSample = () => {
-    onClearSample?.();
-  };
-
-  const handleRecordToggle = () => {
-    onToggleRecording?.();
-  };
-
+const AppHeader = ({ className = '', onToggleRecording, isRecording }) => {
   const headerClassName = ['zone-top', 'tier-subtle', 'content-tertiary', className]
     .filter(Boolean)
     .join(' ');
@@ -64,93 +10,21 @@ const AppHeader = ({
       <div className="brand-block">
         <div className="brand-title">Vangelis</div>
       </div>
-
-      <div className="header-controls">
-        {NAV_ITEMS.length > 0 && (
-          <nav className="header-nav" aria-label="Primary">
-            {NAV_ITEMS.map((item) => {
-              const isActive = item.id === activeSection;
-              return (
-                <a
-                  key={item.id}
-                  className={`button-link button-link--nav ${isActive ? 'is-active' : ''}`}
-                  href={item.href}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  {item.label}
-                </a>
-              );
-            })}
-          </nav>
-        )}
-
-        {showHeaderActions && (
+      {onToggleRecording && (
+        <div className="header-controls">
           <div className="header-actions">
             <button
               type="button"
-              className="button-link button-link--quiet"
-              onClick={canResetSound ? onResetSound : undefined}
-              disabled={!canResetSound}
-              title={canResetSound ? 'Restore the default dry sound' : 'Available on Keyboard'}
+              className={`button-icon record-button ${isRecording ? 'recording' : ''}`}
+              onClick={onToggleRecording}
+              aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+              title="Record output"
             >
-              Reset sound
-            </button>
-
-            <input
-              id={uploadInputId}
-              type="file"
-              accept="audio/*"
-              onChange={handleFileChange}
-              disabled={!canUploadSample || resolvedSampleLoading}
-              style={{ display: 'none' }}
-            />
-            <label
-              htmlFor={canUploadSample ? uploadInputId : undefined}
-              className={`button-icon ${resolvedSampleLoading ? 'loading' : ''} ${canUploadSample ? '' : 'is-disabled'}`}
-              aria-label={resolvedSampleLabel ? `Loaded sample ${resolvedSampleLabel}` : 'Upload sample'}
-              aria-disabled={!canUploadSample}
-              title={canUploadSample ? 'Upload sample' : 'Available on Keyboard'}
-            >
-              <span aria-hidden="true">{resolvedHasCustomSample ? '!' : '+'}</span>
-            </label>
-
-            {resolvedHasCustomSample && (
-              <button
-                type="button"
-                className="button-icon"
-                onClick={canClearSample ? handleClearSample : undefined}
-                disabled={!canClearSample}
-                aria-label="Clear custom sample"
-                title={canClearSample ? 'Clear custom sample' : 'Available on Keyboard'}
-              >
-                <span aria-hidden="true">x</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              className={`button-icon record-button ${resolvedIsRecording ? 'recording' : ''}`}
-              onClick={canToggleRecording ? handleRecordToggle : undefined}
-              disabled={!canToggleRecording}
-              aria-label={resolvedIsRecording ? 'Stop recording' : 'Start recording'}
-              title={canToggleRecording ? 'Record output' : 'Available on Keyboard'}
-            >
-              <span aria-hidden="true">{resolvedIsRecording ? '||' : 'O'}</span>
-            </button>
-
-            <button
-              type="button"
-              className="button-icon"
-              onClick={canShowShortcuts ? onShowShortcuts : undefined}
-              disabled={!canShowShortcuts}
-              aria-label="View keyboard shortcuts"
-              title={canShowShortcuts ? 'View keyboard shortcuts' : 'Available on Keyboard'}
-            >
-              <span aria-hidden="true">?</span>
+              <span aria-hidden="true">{isRecording ? '||' : 'O'}</span>
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </header>
   );
 };

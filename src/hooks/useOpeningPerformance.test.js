@@ -55,18 +55,20 @@ describe('opening performance with the real MIDI scheduler', () => {
     expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
     unmount();
     const again = renderHook(() => useOpeningPerformance({ audioParams: {} }));
-    expect(again.result.current.status).toBe('done');
+    await flush();
+    expect(again.result.current.activeNotes.size).toBe(0);
+    expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
   });
 
   it('waits for browser activation without advancing the score', async () => {
     fixture.context.state = 'suspended';
     const { result } = renderHook(() => useOpeningPerformance({ audioParams: {} }));
     await flush();
-    expect(result.current.status).toBe('ready');
+    expect(result.current.activeNotes.size).toBe(0);
     expect(fixture.engine.playBufferedSample).not.toHaveBeenCalled();
-    act(() => result.current.listen());
+    await act(async () => fixture.context.resume());
     await flush();
-    expect(result.current.status).toBe('playing');
+    expect(result.current.activeNotes.has('C4')).toBe(true);
     expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
   });
 
@@ -79,7 +81,7 @@ describe('opening performance with the real MIDI scheduler', () => {
     await act(async () => resolve(score()));
     await flush();
     expect(fixture.engine.playBufferedSample).not.toHaveBeenCalled();
-    expect(result.current.status).toBe('done');
+    expect(result.current.activeNotes.size).toBe(0);
   });
 
   it('hardware MIDI interrupts before sounding the user note', async () => {
@@ -97,7 +99,7 @@ describe('opening performance with the real MIDI scheduler', () => {
     });
     await flush();
     act(() => input.onmidimessage({ data: [0x90, 67, 90] }));
-    expect(result.current.status).toBe('done');
+    expect(result.current.activeNotes.size).toBe(0);
     expect(fixture.engine.playFrequency).toHaveBeenCalledWith(expect.objectContaining({ noteId: 'webmidi-67' }));
     expect(fixture.engine.stopNote.mock.invocationCallOrder[0])
       .toBeLessThan(fixture.engine.playFrequency.mock.invocationCallOrder[0]);

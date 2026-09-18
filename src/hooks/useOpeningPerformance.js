@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { useMidiPlayback } from './useMidiPlayback.js';
 import { OPENING_PARAMS } from '../data/openingPerformance.js';
@@ -13,7 +13,6 @@ export function useOpeningPerformance({ audioParams }) {
     pan: audioParams.pan ?? 0
   }), [audioParams.volume, audioParams.pan]);
   const playback = useMidiPlayback({ waveformType: 'Sine', audioParams: pianoParams });
-  const [status, setStatus] = useState(() => openingClaimed ? 'done' : 'loading');
   const cancelled = useRef(openingClaimed);
   const started = useRef(false);
   const userParams = useRef(audioParams);
@@ -25,7 +24,6 @@ export function useOpeningPerformance({ audioParams }) {
     openingClaimed = true;
     playback.stop(); // Also invalidates a start waiting on the audio worklet.
     if (started.current) audioEngine.setGlobalParams(userParams.current);
-    setStatus('done');
   }, [playback.stop]);
 
   useEffect(() => {
@@ -36,12 +34,10 @@ export function useOpeningPerformance({ audioParams }) {
     const tryStart = () => {
       if (disposed || cancelled.current || started.current || !score) return;
       if (context.state !== 'running') {
-        setStatus('ready');
         return;
       }
       openingClaimed = true;
       started.current = true;
-      setStatus('playing');
       playback.play(score);
     };
     (async () => {
@@ -58,7 +54,6 @@ export function useOpeningPerformance({ audioParams }) {
       } catch (error) {
         if (disposed || cancelled.current) return;
         console.error('Opening performance failed:', error);
-        setStatus('error');
       }
     })();
     return () => {
@@ -74,15 +69,5 @@ export function useOpeningPerformance({ audioParams }) {
     else if (wasPlaying.current) stop();
   }, [playback.isPlaying, stop]);
 
-  const listen = useCallback(() => {
-    // Called directly in the click gesture for Safari's audio-unlock policy.
-    const context = audioEngine.context;
-    if (!context || cancelled.current) return;
-    context.resume().catch((error) => {
-      console.error('Opening audio could not be unlocked:', error);
-      setStatus('error');
-    });
-  }, []);
-
-  return { status, activeNotes: playback.activeNotes, stop, listen };
+  return { activeNotes: playback.activeNotes, stop };
 }

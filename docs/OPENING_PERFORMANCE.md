@@ -21,7 +21,8 @@ is rendered live through the existing sample pool, MIDI scheduler and reverb.
 See `public/samples/opening/README.md` for the sample attribution.
 
 The opening plays once per document visit on the home keyboard. If browser
-policy suspends audio, it waits at the beginning with a Listen button. Any
+policy suspends audio, it waits at the beginning until a user gesture unlocks
+the audio engine. There are no opening-performance controls or text. Any
 keyboard, pointer/touch or hardware-MIDI note cancels the opening, including
 pending asset and audio initialization. Selecting/pasting another MIDI or
 arriving with an editor/study handoff also cancels it. Leaving the home route
