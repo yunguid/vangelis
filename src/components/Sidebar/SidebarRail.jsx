@@ -74,7 +74,7 @@ const SidebarRail = ({
             disabled={disabled}
             aria-label={disabled ? `${tab.label} panel unavailable on this page` : isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
             aria-expanded={!disabled && isOpen && activeTab === tab.id}
-            title={disabled ? 'Available on Keyboard' : undefined}
+            title={disabled ? 'Only on the keyboard page' : undefined}
           >
             {tab.icon}
             <span className="sidebar-rail__label">{tab.label}</span>
@@ -137,10 +137,6 @@ const SidebarRail = ({
           </svg>
           <span className="sidebar-rail__label">Studies</span>
         </a>
-      </div>
-      <div className="sidebar-rail__status" aria-label="Audio engine active">
-        <span className="sidebar-rail__status-dot" />
-        DSP
       </div>
     </div>
   );

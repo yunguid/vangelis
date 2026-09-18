@@ -64,33 +64,6 @@
   color: var(--color-text-primary);
 }
 
-.button-link--nav {
-  padding-bottom: 8px;
-  border-bottom-color: transparent;
-}
-
-.button-link--nav:hover,
-.button-link--nav:focus-visible,
-.button-link--nav.is-active {
-  border-bottom-color: rgba(255, 122, 61, 0.32);
-}
-
-.button-link--nav.is-active {
-  color: var(--color-text-primary);
-}
-
-.button-link--quiet {
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 4px;
-  background: rgba(244, 241, 232, 0.05);
-}
-
-.button-link--quiet:hover,
-.button-link--quiet:focus-visible {
-  background: rgba(244, 241, 232, 0.1);
-}
-
 .button-link:disabled,
 .button-link.is-disabled,
 .button-icon:disabled,
@@ -407,20 +380,6 @@ input[type="range"]::-moz-range-thumb:active {
   font-size: clamp(0.78rem, 0.95vw, 0.88rem);
   color: var(--color-text-secondary);
   letter-spacing: 0.02em;
-}
-
-/* Recording Button */
-.record-button {
-  position: relative;
-}
-
-.record-button.recording {
-  background: rgba(255, 122, 61, 0.3);
-  border-color: rgba(255, 122, 61, 0.9);
-}
-
-.record-button.recording span {
-  color: rgba(255, 122, 61, 1);
 }
 
 /* Preset shelf */
@@ -800,4 +759,94 @@ input[type="range"]::-moz-range-thumb:active {
   }
   .mod-route-row .mod-route-depth { grid-area: depth; }
   .mod-route-row .mod-route-depth-value { grid-area: value; }
+}
+
+/* Button system. A control draws a border or a fill, never both. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--control-h);
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-medium);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-body);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--transition-hover), border-color var(--transition-hover), color var(--transition-hover);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+.btn:active:not(:disabled) {
+  background: var(--btn-active-bg);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+}
+
+.btn svg {
+  flex: none;
+}
+
+.btn--secondary {
+  border-color: var(--border-hairline);
+  color: var(--color-text-primary);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  border-color: var(--border-hairline-strong);
+}
+
+.btn--accent {
+  padding: 0 16px;
+  background: var(--color-core-accent);
+  color: var(--color-core-ink);
+  font-weight: 600;
+}
+
+.btn--accent:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-core-accent) 86%, var(--color-core-paper));
+  color: var(--color-core-ink);
+}
+
+.btn--accent:active:not(:disabled) {
+  background: var(--color-core-accent);
+  transform: translateY(1px);
+}
+
+.btn--icon {
+  width: var(--control-h);
+  padding: 0;
+}
+
+.btn--toggle {
+  width: var(--control-h-sm);
+  min-height: var(--control-h-sm);
+  padding: 0;
+}
+
+.btn--toggle[aria-pressed='true'] {
+  border-color: var(--btn-toggle-on-border);
+  background: var(--btn-toggle-on-bg);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 900px) {
+  .btn:not(.btn--toggle) {
+    min-height: var(--control-h-touch);
+  }
+
+  .btn--icon {
+    width: var(--control-h-touch);
+  }
 }

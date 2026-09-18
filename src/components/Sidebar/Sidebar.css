@@ -37,25 +37,6 @@
   gap: 12px;
 }
 
-.sidebar-rail__status {
-  position: absolute;
-  bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: rgba(235, 219, 178, 0.42);
-  font-size: 0.5rem;
-  letter-spacing: 0.12em;
-}
-
-.sidebar-rail__status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #b8bb26;
-  box-shadow: 0 0 8px rgba(184, 187, 38, 0.5);
-}
-
 .sidebar-rail__btn {
   width: 54px;
   min-height: 54px;
@@ -65,53 +46,43 @@
   justify-content: center;
   gap: 4px;
   padding: 8px 0 7px;
-  border-radius: 4px;
+  border-radius: var(--radius-medium);
   background: transparent;
-  border: 1px solid transparent;
-  color: rgba(225, 236, 247, 0.52);
+  color: var(--color-text-tertiary);
   cursor: pointer;
-  transition: transform 130ms ease, color 130ms ease, background 130ms ease,
-    border-color 130ms ease, box-shadow 130ms ease;
+  transition: color var(--transition-hover), background-color var(--transition-hover);
   position: relative;
-  font-size: 0.55rem;
+  font-size: var(--text-label);
   font-weight: 500;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
+/* Active-item edge: inside the button's own box so the rail's padding and the
+   viewport edge cannot clip it. */
 .sidebar-rail__btn::before {
   content: '';
   position: absolute;
-  left: -10px;
-  width: 3px;
+  top: 50%;
+  left: 0;
+  width: 2px;
   height: 22px;
-  border-radius: 0;
-  background: transparent;
+  transform: translateY(-50%);
+  background: var(--color-core-accent);
   opacity: 0;
-  transition: opacity 130ms ease, background 130ms ease;
+  transition: opacity var(--transition-hover);
 }
 
+/* The longest label ("Studies") must clear the 72px rail on one line:
+   7 monospace chars at 11px + 0.03em tracking ~ 49px inside a 54px button. */
 .sidebar-rail__label {
   display: block;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .sidebar-rail__btn:hover {
-  transform: translateY(-2px);
-  background: rgba(244, 241, 232, 0.06);
-  color: rgba(244, 250, 255, 0.9);
-}
-
-.sidebar-rail__btn:focus-visible {
-  outline: 0;
-  background: rgba(244, 241, 232, 0.08);
-  border-color: rgba(255, 122, 61, 0.4);
-  color: rgba(255, 203, 176, 0.98);
-}
-
-.sidebar-rail__btn:focus-visible::before {
-  background: rgba(255, 122, 61, 0.72);
-  opacity: 1;
+  background: var(--btn-hover-bg);
+  color: var(--color-text-primary);
 }
 
 .sidebar-container--disabled .sidebar-rail {
@@ -124,39 +95,28 @@
 }
 
 .sidebar-rail__btn:disabled:hover {
-  transform: none;
   background: transparent;
-  color: rgba(225, 236, 247, 0.58);
+  color: var(--color-text-tertiary);
 }
 
-.sidebar-rail__btn--active {
-  background: rgba(214, 93, 14, 0.14);
-  border-color: rgba(214, 93, 14, 0.34);
-  color: rgba(255, 210, 186, 1);
-}
-
+.sidebar-rail__btn--active,
 .sidebar-rail__btn--current {
-  background: rgba(214, 93, 14, 0.1);
-  border-color: rgba(214, 93, 14, 0.28);
-  color: var(--color-core-paper);
+  background: var(--btn-toggle-on-bg);
+  color: var(--color-text-primary);
 }
 
+.sidebar-rail__btn--active::before,
 .sidebar-rail__btn--current::before {
-  background: var(--color-core-accent);
   opacity: 1;
 }
 
-.sidebar-rail__btn--active::before {
-  background: rgba(255, 122, 61, 0.95);
-  opacity: 1;
-}
-
-.sidebar-rail__btn--active:hover {
-  background: rgba(255, 122, 61, 0.19);
+.sidebar-rail__btn--active:hover,
+.sidebar-rail__btn--current:hover {
+  background: color-mix(in srgb, var(--color-core-accent) 30%, transparent);
 }
 
 .sidebar-rail__btn--playing {
-  color: rgba(255, 188, 160, 0.96);
+  color: color-mix(in srgb, var(--color-core-accent) 70%, var(--color-core-paper));
 }
 
 /* Nav action rail button: an <a>, not a <button>, so it needs its own reset
@@ -173,7 +133,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 107, 53, 1);
+  background: var(--color-core-accent);
 }
 
 /* Expandable Panel */
@@ -220,7 +180,6 @@
   font-size: 1.02rem;
   font-weight: 600;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
   color: rgba(247, 251, 255, 0.94);
   margin: 0;
 }
@@ -230,7 +189,7 @@
   align-self: flex-start;
   max-width: 100%;
   padding: 0;
-  font-size: 0.66rem;
+  font-size: var(--text-label);
   color: rgba(196, 212, 229, 0.6);
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -272,7 +231,7 @@
   display: grid;
   place-items: center;
   color: var(--color-text-secondary);
-  font-size: 0.68rem;
+  font-size: var(--text-label);
   letter-spacing: 0.08em;
 }
 
@@ -310,7 +269,6 @@
   color: var(--color-core-accent);
   font-size: 0.78rem;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -325,7 +283,7 @@
   position: fixed;
   inset: 0;
   left: calc(var(--sidebar-rail-width) + var(--sidebar-panel-width));
-  background: linear-gradient(90deg, rgba(10, 12, 12, 0.24), transparent 42%);
+  background: color-mix(in srgb, var(--color-core-ink) 18%, transparent);
   pointer-events: auto;
   z-index: 0;
 }
@@ -348,10 +306,9 @@
 }
 
 .midi-tab__heading {
-  font-size: 0.62rem;
+  font-size: var(--text-label);
   font-weight: 600;
   letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: rgba(255, 176, 136, 0.62);
   margin: 0;
 }
@@ -377,15 +334,14 @@
 
 .midi-tab__group-title {
   margin: 0;
-  font-size: 0.6rem;
+  font-size: var(--text-label);
   font-weight: 600;
   letter-spacing: 0.12em;
-  text-transform: uppercase;
   color: rgba(196, 212, 229, 0.6);
 }
 
 .midi-tab__group-count {
-  font-size: 0.56rem;
+  font-size: var(--text-label);
   color: rgba(196, 212, 229, 0.38);
   font-variant-numeric: tabular-nums;
 }
@@ -408,7 +364,7 @@
   background: rgba(244, 241, 232, 0.05);
   color: rgba(245, 250, 255, 0.9);
   padding: 10px 14px;
-  font-size: 0.68rem;
+  font-size: var(--text-label);
   letter-spacing: 0.02em;
   transition: border-color 130ms ease, background 130ms ease;
 }
@@ -510,10 +466,9 @@
 }
 
 .midi-tab__file-composer {
-  font-size: 0.58rem;
+  font-size: var(--text-label);
   color: rgba(196, 212, 229, 0.5);
   letter-spacing: 0.03em;
-  text-transform: none;
 }
 
 /* Upload button */
@@ -526,10 +481,9 @@
   background: rgba(244, 241, 232, 0.04);
   border: 0;
   color: rgba(214, 226, 240, 0.62);
-  font-size: 0.64rem;
+  font-size: var(--text-label);
   font-weight: 400;
   letter-spacing: 0.03em;
-  text-transform: none;
   text-align: center;
   cursor: pointer;
   transition: all 100ms ease;
@@ -558,11 +512,11 @@
   background: rgba(255, 122, 61, 0.1);
   border-left: 2px solid rgba(255, 122, 61, 0.5);
   color: rgba(244, 241, 232, 0.95);
-  font-size: 0.68rem;
+  font-size: var(--text-label);
 }
 
 .midi-tab__empty {
-  font-size: 0.66rem;
+  font-size: var(--text-label);
   color: rgba(190, 208, 226, 0.56);
   text-align: center;
   padding: 8px 6px;
@@ -596,7 +550,7 @@
 .midi-player__time {
   display: flex;
   justify-content: space-between;
-  font-size: 0.6rem;
+  font-size: var(--text-label);
   color: rgba(255, 255, 255, 0.4);
   font-variant-numeric: tabular-nums;
 }
@@ -667,9 +621,8 @@
 }
 
 .midi-player__meta {
-  font-size: 0.58rem;
+  font-size: var(--text-label);
   color: rgba(255, 255, 255, 0.4);
-  text-transform: none;
   letter-spacing: 0.03em;
 }
 
@@ -686,9 +639,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.6rem;
+  font-size: var(--text-label);
   color: rgba(255, 255, 255, 0.5);
-  text-transform: none;
   letter-spacing: 0.03em;
 }
 
@@ -761,10 +713,6 @@
     backdrop-filter: blur(18px);
   }
 
-  .sidebar-rail__status {
-    display: none;
-  }
-
   .sidebar-rail__nav {
     width: 100%;
     flex-direction: row;
@@ -778,7 +726,7 @@
     min-height: 40px;
     max-width: 200px;
     padding: 8px 10px;
-    border-radius: 4px;
+    border-radius: var(--radius-medium);
   }
 
   .sidebar-rail__label {
@@ -861,9 +809,8 @@
   .sidebar-rail__btn {
     max-width: none;
     min-height: 38px;
-    padding: 8px;
-    font-size: 0.6rem;
-    letter-spacing: 0.06em;
+    padding: 8px 2px;
+    letter-spacing: 0.02em;
   }
 
   .sidebar-panel {

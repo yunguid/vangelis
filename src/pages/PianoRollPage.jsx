@@ -115,6 +115,52 @@ const rowForMidi = (midi) => PITCH_MAX - midi;
 const midiForRow = (row) => PITCH_MAX - row;
 const isBlackKey = (midi) => [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 
+const ICON_PLAY = (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M8 5.5 18.5 12 8 18.5Z" />
+  </svg>
+);
+
+const ICON_STOP = (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="6.5" y="6.5" width="11" height="11" rx="1" />
+  </svg>
+);
+
+const ICON_RECORD = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="5.5" />
+  </svg>
+);
+
+const ICON_HELP = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M9.6 9.3a2.5 2.5 0 1 1 3.3 2.4c-.7.3-1 .9-1 1.6v.3" />
+    <path d="M12 17.1h.01" />
+  </svg>
+);
+
+const ICON_MORE = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+    <circle cx="5.6" cy="12" r="1.5" />
+    <circle cx="12" cy="12" r="1.5" />
+    <circle cx="18.4" cy="12" r="1.5" />
+  </svg>
+);
+
+const ICON_CHEVRON = (
+  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6.5 9.5 12 15l5.5-5.5" />
+  </svg>
+);
+
+const ICON_PLUS = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 5.5v13M5.5 12h13" />
+  </svg>
+);
+
 const PianoRollPlayhead = React.memo(({ getProgress, offsetX = 0, travelWidth }) => {
   const playheadRef = React.useRef(null);
 
@@ -235,7 +281,6 @@ const PianoRollPage = () => {
       ? Math.min(Math.max(draft.pxPerBeat, ZOOM_MIN), ZOOM_MAX)
       : 56
   ));
-  const [trayOpen, setTrayOpen] = React.useState(true);
   const [savedPatterns, setSavedPatterns] = React.useState(() => loadSavedPatterns());
   const [drag, setDrag] = React.useState(null);
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
@@ -453,15 +498,17 @@ const PianoRollPage = () => {
     setSelectedIds(new Set());
   }, []);
 
-  const audition = React.useCallback((midi) => {
+  // `sound` lets a caller audition a patch it is about to apply, before the
+  // state holding that patch has been committed.
+  const audition = React.useCallback((midi, sound) => {
     if (auditionTimeoutRef.current) clearTimeout(auditionTimeoutRef.current);
     if (auditionRef.current) audioEngine.stopNote(auditionRef.current);
 
     const started = audioEngine.playFrequency({
       noteId: `roll-audition-${midi}`,
       frequency: midiNoteToFrequency(midi),
-      waveformType,
-      params: audioParams,
+      waveformType: sound?.waveformType || waveformType,
+      params: sound?.params || audioParams,
       velocity: DEFAULT_VELOCITY
     });
     if (!started?.voiceId) return;
@@ -685,8 +732,8 @@ const PianoRollPage = () => {
 
   React.useEffect(() => {
     const onKeyDown = (event) => {
-      const tag = event.target?.tagName;
-      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      const nodeName = event.target?.tagName;
+      if (nodeName === 'INPUT' || nodeName === 'SELECT' || nodeName === 'TEXTAREA') return;
       const mod = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();
 
@@ -1056,8 +1103,9 @@ const PianoRollPage = () => {
       setAudioParams(nextParams);
       setActivePresetName(sound.name);
     }
-    setSoundBrowserTrackId(null);
-  }, [activeTrackId, handleTrackPatch]);
+    // The browser stays open so sounds can be compared; each pick plays itself.
+    audition(60, { waveformType: sound.waveformType, params: nextParams });
+  }, [activeTrackId, audition, handleTrackPatch]);
 
   const handleSoundBrowserClose = React.useCallback(() => {
     setSoundBrowserTrackId(null);
@@ -1381,11 +1429,6 @@ const PianoRollPage = () => {
   const isChordMidi = React.useCallback((midi) => (
     Boolean(activeScale) && isInChord(midi, scaleRoot, chordTypeId)
   ), [activeScale, chordTypeId, scaleRoot]);
-  const activeChord = React.useMemo(
-    () => CHORD_TYPES.find((chord) => chord.id === chordTypeId) || CHORD_TYPES[0],
-    [chordTypeId]
-  );
-
   const keyRows = React.useMemo(() => {
     const rows = [];
     for (let row = 0; row < ROW_COUNT; row += 1) {
@@ -1460,19 +1503,26 @@ const PianoRollPage = () => {
   return (
     <div className="piano-roll-page">
       <div className="piano-roll-topbar">
-        <div className="piano-roll-topbar__cluster">
-          <button
-            type="button"
-            className="piano-roll-topbar__collapse"
-            onClick={() => setTrayOpen((open) => !open)}
-            aria-expanded={trayOpen}
-            aria-label={trayOpen ? 'Collapse editor controls' : 'Expand editor controls'}
-          >
-            <span aria-hidden="true">{trayOpen ? '▾' : '▸'}</span>
-          </button>
-          <span className="piano-roll-topbar__brand">Vangelis</span>
-        </div>
-        <span className="piano-roll-topbar__divider" aria-hidden="true" />
+        <button
+          type="button"
+          className="btn btn--accent piano-roll-topbar__play"
+          onClick={handlePlayToggle}
+          aria-label={isRolling ? 'Stop the loop' : 'Play the loop'}
+          title={isRolling ? 'Stop the loop (Space)' : 'Play the loop (Space)'}
+        >
+          {isRolling ? ICON_STOP : ICON_PLAY}
+          <span>{isRolling ? 'Stop' : 'Play'}</span>
+        </button>
+        <button
+          type="button"
+          className={`btn btn--icon piano-roll-topbar__record ${isRecordingLoop ? 'is-recording' : ''}`}
+          onClick={handleRecordLoop}
+          disabled={!isRecordingLoop && pattern.notes.length === 0}
+          aria-label={isRecordingLoop ? 'Stop recording' : 'Record loop'}
+          title={isRecordingLoop ? 'Stop recording' : 'Record the loop to a WAV file'}
+        >
+          {ICON_RECORD}
+        </button>
         <input
           className="piano-roll-topbar__name"
           value={pattern.name}
@@ -1480,39 +1530,50 @@ const PianoRollPage = () => {
           aria-label="Pattern name"
         />
         {hasUnsavedChanges && (
-          <span className="piano-roll-topbar__dirty" role="status">Unsaved</span>
+          <span
+            className="piano-roll-topbar__dirty"
+            role="status"
+            aria-label="Unsaved changes"
+            title="Unsaved changes"
+          />
         )}
-        <div className="piano-roll-topbar__cluster piano-roll-topbar__cluster--right">
-          <div className="piano-roll-topbar__zoom" role="group" aria-label="Zoom">
-            <button
-              type="button"
-              onClick={() => applyZoom(1 / ZOOM_STEP)}
-              disabled={pxPerBeat <= ZOOM_MIN + 0.01}
-              aria-label="Zoom out"
-            >
-              −
-            </button>
-            <span aria-hidden="true">{Math.round((pxPerBeat / 56) * 100)}%</span>
-            <button
-              type="button"
-              onClick={() => applyZoom(ZOOM_STEP)}
-              disabled={pxPerBeat >= ZOOM_MAX - 0.01}
-              aria-label="Zoom in"
-            >
-              +
-            </button>
-            <button
-              type="button"
-              className="piano-roll-topbar__fit"
-              onClick={fitZoom}
-              aria-label="Fit pattern to view"
-            >
-              Fit
-            </button>
-          </div>
-          <span className="piano-roll-topbar__divider" aria-hidden="true" />
-          <details className="piano-roll-topbar__help">
-          <summary aria-label="Keyboard shortcuts">?</summary>
+        <div className="piano-roll-topbar__zoom" role="group" aria-label="Zoom">
+          <button
+            type="button"
+            onClick={() => applyZoom(1 / ZOOM_STEP)}
+            disabled={pxPerBeat <= ZOOM_MIN + 0.01}
+            aria-label="Zoom out"
+            title="Zoom out"
+          >
+            −
+          </button>
+          <button
+            type="button"
+            className="piano-roll-topbar__zoom-fit"
+            onClick={fitZoom}
+            aria-label="Fit pattern to view"
+            title="Fit pattern to view"
+          >
+            {Math.round((pxPerBeat / 56) * 100)}%
+          </button>
+          <button
+            type="button"
+            onClick={() => applyZoom(ZOOM_STEP)}
+            disabled={pxPerBeat >= ZOOM_MAX - 0.01}
+            aria-label="Zoom in"
+            title="Zoom in"
+          >
+            +
+          </button>
+        </div>
+        <details className="piano-roll-topbar__help">
+          <summary
+            className="btn btn--icon"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts"
+          >
+            {ICON_HELP}
+          </summary>
           <div className="piano-roll-topbar__help-panel">
             <h2>Shortcuts</h2>
             <dl>
@@ -1535,298 +1596,329 @@ const PianoRollPage = () => {
               <dt>Space</dt><dd>Play / stop</dd>
             </dl>
           </div>
-          </details>
-          <span className="piano-roll-topbar__divider" aria-hidden="true" />
-          <button
-            type="button"
-            className={`piano-roll-topbar__play ${isRolling ? 'is-playing' : ''}`}
-            onClick={handlePlayToggle}
-            aria-label={isRolling ? 'Stop the loop' : 'Play the loop'}
+        </details>
+        <button
+          type="button"
+          className="btn btn--secondary"
+          onClick={handleSave}
+          title="Save this pattern"
+        >
+          Save
+        </button>
+        <details className="piano-roll-topbar__more">
+          <summary
+            className="btn btn--icon"
+            aria-label="More editor actions"
+            title="More editor actions"
           >
-            {isRolling ? '■ Stop' : '▶ Play'}
-          </button>
-        </div>
-      </div>
-
-      {trayOpen && (
-        <div className="piano-roll-tray">
-          <div className="piano-roll-tray__control-row">
-            <div className="piano-roll-tray__fields">
-              <label className="piano-roll-tray__field">
-                <span>BPM</span>
-                <input
-                  type="number"
-                  min={BPM_MIN}
-                  max={BPM_MAX}
-                  value={pattern.bpm}
-                  onChange={(event) => {
-                    const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
-                    setPattern((prev) => ({ ...prev, bpm }));
-                  }}
-                />
-              </label>
-
-              <div className="piano-roll-tray__field">
-                <span>Timeline</span>
-                <div className="piano-roll-bar-stepper" role="group" aria-label="Timeline bars">
-                  <button
-                    type="button"
-                    onClick={() => handleBarsChange(pattern.bars - BAR_CHUNK)}
-                    disabled={pattern.bars <= BAR_CHUNK}
-                    aria-label={`Remove ${BAR_CHUNK} bars`}
-                  >
-                    −
-                  </button>
-                  <output>{pattern.bars} / {MAX_PATTERN_BARS}</output>
-                  <button
-                    type="button"
-                    onClick={() => handleBarsChange(pattern.bars + BAR_CHUNK)}
-                    disabled={pattern.bars >= MAX_PATTERN_BARS}
-                    aria-label={`Add ${BAR_CHUNK} bars`}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <label className="piano-roll-tray__field">
-                <span>Snap</span>
-                <select value={snapId} onChange={(event) => setSnapId(event.target.value)}>
-                  {SNAP_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
+            {ICON_MORE}
+          </summary>
+          <div className="piano-roll-menu">
+            {libraryEntries.length > 0 && (
+              <>
+                <h2 className="piano-roll-menu__heading">Open pattern</h2>
+                <ul className="piano-roll-menu__list">
+                  {libraryEntries.map((entry) => (
+                    <li key={`${entry.source}-${entry.id}`} className="piano-roll-menu__entry">
+                      <button
+                        type="button"
+                        className="btn piano-roll-menu__load"
+                        onClick={() => handleLoad(entry)}
+                      >
+                        {entry.name}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn piano-roll-menu__delete"
+                        onClick={() => handleDeleteSaved(entry)}
+                        aria-label={`Delete saved pattern ${entry.name}`}
+                      >
+                        Delete
+                      </button>
+                      <span className="piano-roll-menu__meta">
+                        {entry.source === 'cloud' ? 'Cloud · ' : ''}
+                        {entry.pattern.bars} bars · {entry.pattern.bpm} BPM · {entry.pattern.notes.length} notes
+                      </span>
+                    </li>
                   ))}
-                </select>
-              </label>
+                </ul>
+              </>
+            )}
+            <button type="button" className="btn piano-roll-menu__item" onClick={handleClear}>
+              Clear layer
+            </button>
+            <button
+              type="button"
+              className="btn piano-roll-menu__item"
+              onClick={() => handleDeleteTrack(activeTrack?.id)}
+              disabled={pattern.tracks.length <= 1}
+            >
+              Delete layer
+            </button>
+            <button
+              type="button"
+              className="btn piano-roll-menu__item"
+              onClick={handleOpenInPlayer}
+            >
+              Send to player
+            </button>
 
-              <label className="piano-roll-tray__field">
-                <span>Key</span>
-                <select
-                  value={scaleRoot}
-                  onChange={(event) => setScaleRoot(Number(event.target.value))}
-                  disabled={!scaleId}
-                >
-                  {SCALE_ROOTS.map((root, index) => (
-                    <option key={root} value={index}>{root}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="piano-roll-tray__field">
-                <span>Scale</span>
-                <select value={scaleId} onChange={(event) => setScaleId(event.target.value)}>
-                  <option value="">Off</option>
-                  {SCALES.map((scale) => (
-                    <option key={scale.id} value={scale.id}>{scale.label}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="piano-roll-tray__field">
-                <span>Chord</span>
-                <span className="piano-roll-chord-tool">
-                  <select value={chordTypeId} onChange={(event) => setChordTypeId(event.target.value)}>
-                    {CHORD_TYPES.map((chord) => (
-                      <option key={chord.id} value={chord.id}>{chord.label}</option>
-                    ))}
-                  </select>
-                  <button type="button" onClick={handleBuildChord} disabled={selectedIds.size === 0}>
-                    Build
-                  </button>
-                </span>
-              </label>
-            </div>
-
-            <div className="piano-roll-tray__actions">
-              <button type="button" onClick={handleSave}>Save</button>
-              <button type="button" onClick={handleLoopSelection} disabled={selectedIds.size === 0 && !loopRange}>
-                {loopRange ? 'Unloop ⇧⌘L' : 'Loop selection ⇧⌘L'}
-              </button>
-              <button type="button" onClick={handleClear}>Clear layer</button>
-              <button
-                type="button"
-                className={isRecordingLoop ? 'is-recording' : ''}
-                onClick={handleRecordLoop}
-                disabled={!isRecordingLoop && pattern.notes.length === 0}
-              >
-                {isRecordingLoop ? '■ Stop recording' : '● Record loop'}
-              </button>
-              <button type="button" onClick={handleOpenInPlayer}>Open in player</button>
-            </div>
-          </div>
-
-          {activeScale && (
-            <div className="piano-roll-scale-guide" aria-live="polite">
-              <strong>{SCALE_ROOTS[scaleRoot]} {activeScale.label} · {activeChord.label} chord</strong>
-              <span className="piano-roll-scale-guide__item">
-                <i className="piano-roll-scale-guide__swatch piano-roll-scale-guide__swatch--tone" />
-                Highlighted notes
-              </span>
-              {outOfScaleCount > 0 && (
-                <span className="piano-roll-scale-guide__warning">
-                  {outOfScaleCount} outside
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={handleSnapSelectionToScale}
-                disabled={selectedIds.size === 0}
-              >
-                Snap selected
-              </button>
-            </div>
-          )}
-
-          <div className="piano-roll-tracks" aria-label="Instrument layers">
-            <div className="piano-roll-tracks__heading">
-              <strong>Layers</strong>
-            </div>
-            <div className="piano-roll-tracks__list">
-              {pattern.tracks.map((track) => {
-                const isActive = track.id === activeTrack?.id;
-                const noteCount = pattern.notes.filter((note) => note.trackId === track.id).length;
-                return (
-                  <div
-                    key={track.id}
-                    className={`piano-roll-track ${isActive ? 'is-active' : ''}`}
-                    style={{ '--track-color': track.color }}
-                  >
-                    <button
-                      type="button"
-                      className="piano-roll-track__select"
-                      onClick={() => handleSelectTrack(track.id)}
-                      aria-pressed={isActive}
-                    >
-                      <i aria-hidden="true" />
-                      <span>{noteCount}</span>
+            {CLOUD_ENABLED && (
+              <div className="piano-roll-cloud">
+                {cloudSession ? (
+                  <>
+                    <span className="piano-roll-cloud__status">
+                      Signed in · {cloudSession.user?.email}
+                    </span>
+                    {cloudSyncPending && (
+                      <i className="piano-roll-cloud__pending" title="Cloud sync pending" />
+                    )}
+                    <button type="button" className="btn btn--secondary" onClick={handleSignOut}>
+                      Sign out
                     </button>
+                  </>
+                ) : (
+                  <form className="piano-roll-cloud__form" onSubmit={handleSendSignInLink}>
                     <input
-                      value={track.name}
-                      onFocus={() => handleSelectTrack(track.id)}
-                      onChange={(event) => handleTrackPatch(track.id, { name: event.target.value.slice(0, 32) })}
-                      aria-label={`Layer name: ${track.name}`}
+                      type="email"
+                      value={cloudEmail}
+                      onChange={handleCloudEmailChange}
+                      placeholder="you@email.com"
+                      aria-label="Email address for the sign-in link"
                     />
                     <button
-                      type="button"
-                      className="piano-roll-track__sound"
-                      onClick={() => handleSoundBrowserToggle(track.id)}
-                      aria-expanded={soundBrowserTrackId === track.id}
-                      aria-label={`Choose sound for ${track.name}. Current sound: ${track.soundName || track.instrument}`}
+                      type="submit"
+                      className="btn btn--secondary"
+                      disabled={!cloudEmail.trim() || cloudAuthStatus === 'sending'}
                     >
-                      <span>{track.soundName || track.instrument}</span>
-                      <i aria-hidden="true">⌄</i>
+                      {cloudAuthStatus === 'sending' ? 'Sending…' : 'Send sign-in link'}
                     </button>
-                    <button
-                      type="button"
-                      className={track.muted ? 'is-on' : ''}
-                      onClick={() => handleTrackPatch(track.id, { muted: !track.muted })}
-                      aria-pressed={track.muted}
-                      aria-label={`${track.muted ? 'Unmute' : 'Mute'} ${track.name}`}
-                    >
-                      M
-                    </button>
-                    <button
-                      type="button"
-                      className={track.solo ? 'is-on' : ''}
-                      onClick={() => handleTrackPatch(track.id, { solo: !track.solo })}
-                      aria-pressed={track.solo}
-                      aria-label={`${track.solo ? 'Unsolo' : 'Solo'} ${track.name}`}
-                    >
-                      S
-                    </button>
-                    <button
-                      type="button"
-                      className="piano-roll-track__delete"
-                      onClick={() => handleDeleteTrack(track.id)}
-                      disabled={pattern.tracks.length <= 1}
-                      aria-label={`Delete ${track.name}`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                );
-              })}
-              <button type="button" className="piano-roll-tracks__add" onClick={handleAddTrack}>
-                + Add layer
+                    {cloudAuthStatus === 'sent' && (
+                      <span className="piano-roll-cloud__note" role="status">
+                        Link sent — check your email
+                      </span>
+                    )}
+                    {cloudAuthStatus === 'error' && (
+                      <span className="piano-roll-cloud__note" role="status">
+                        Could not send the link
+                      </span>
+                    )}
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
+        </details>
+      </div>
+
+      <div className="piano-roll-tray">
+        <div className="piano-roll-tray__row">
+          <label className="piano-roll-tray__field">
+            <span>BPM</span>
+            <input
+              type="number"
+              min={BPM_MIN}
+              max={BPM_MAX}
+              value={pattern.bpm}
+              onChange={(event) => {
+                const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
+                setPattern((prev) => ({ ...prev, bpm }));
+              }}
+            />
+          </label>
+
+          <div className="piano-roll-tray__field">
+            <span>Timeline</span>
+            <div className="piano-roll-stepper" role="group" aria-label="Timeline bars">
+              <button
+                type="button"
+                onClick={() => handleBarsChange(pattern.bars - BAR_CHUNK)}
+                disabled={pattern.bars <= BAR_CHUNK}
+                aria-label={`Remove ${BAR_CHUNK} bars`}
+                title={`Remove ${BAR_CHUNK} bars`}
+              >
+                −
+              </button>
+              <output>{pattern.bars} bars</output>
+              <button
+                type="button"
+                onClick={() => handleBarsChange(pattern.bars + BAR_CHUNK)}
+                disabled={pattern.bars >= MAX_PATTERN_BARS}
+                aria-label={`Add ${BAR_CHUNK} bars`}
+                title={`Add ${BAR_CHUNK} bars`}
+              >
+                +
               </button>
             </div>
           </div>
 
-          {soundBrowserTrack && (
+          <label className="piano-roll-tray__field">
+            <span>Snap</span>
+            <select value={snapId} onChange={(event) => setSnapId(event.target.value)}>
+              {SNAP_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="piano-roll-tray__field">
+            <span>Scale</span>
+            <select value={scaleId} onChange={(event) => setScaleId(event.target.value)}>
+              <option value="">Off</option>
+              {SCALES.map((scale) => (
+                <option key={scale.id} value={scale.id}>{scale.label}</option>
+              ))}
+            </select>
+          </label>
+
+          {scaleId && (
+            <label className="piano-roll-tray__field">
+              <span>Key</span>
+              <select
+                value={scaleRoot}
+                onChange={(event) => setScaleRoot(Number(event.target.value))}
+              >
+                {SCALE_ROOTS.map((root, index) => (
+                  <option key={root} value={index}>{root}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {activeScale && outOfScaleCount > 0 && (
+            <span className="piano-roll-tray__outside">{outOfScaleCount} outside</span>
+          )}
+        </div>
+
+        {(selectedIds.size > 0 || loopRange) && (
+          <div className="piano-roll-selection" aria-live="polite">
+            {selectedIds.size > 0 && (
+              <span className="piano-roll-selection__count">{selectedIds.size} selected</span>
+            )}
+            <select
+              value={chordTypeId}
+              onChange={(event) => setChordTypeId(event.target.value)}
+              aria-label="Chord type"
+            >
+              {CHORD_TYPES.map((chord) => (
+                <option key={chord.id} value={chord.id}>{chord.label}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={handleBuildChord}
+              disabled={selectedIds.size === 0}
+              title="Add the rest of the chord above each selected note"
+            >
+              Add chord
+            </button>
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={handleLoopSelection}
+              disabled={selectedIds.size === 0 && !loopRange}
+              title={loopRange ? 'Play the whole timeline again (⇧⌘L)' : 'Play only the selected bars (⇧⌘L)'}
+            >
+              {loopRange ? 'Unloop' : 'Loop these bars'}
+            </button>
+            {activeScale && (
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={handleSnapSelectionToScale}
+                disabled={selectedIds.size === 0}
+                title={`Move the selection onto ${SCALE_ROOTS[scaleRoot]} ${activeScale.label}`}
+              >
+                Snap to key
+              </button>
+            )}
+          </div>
+        )}
+
+        <div className="piano-roll-tracks" role="group" aria-label="Instrument layers">
+          {pattern.tracks.map((track) => {
+            const isActive = track.id === activeTrack?.id;
+            const noteCount = pattern.notes.filter((note) => note.trackId === track.id).length;
+            return (
+              <div
+                key={track.id}
+                className={`piano-roll-track ${isActive ? 'is-active' : ''}`}
+                style={{ '--track-color': track.color }}
+              >
+                <button
+                  type="button"
+                  className="piano-roll-track__select"
+                  onClick={() => handleSelectTrack(track.id)}
+                  aria-pressed={isActive}
+                  aria-label={`Edit ${track.name}: ${noteCount} notes`}
+                  title={`Edit ${track.name}: ${noteCount} notes`}
+                >
+                  <i aria-hidden="true" />
+                  <span>{noteCount}</span>
+                </button>
+                <input
+                  className="piano-roll-track__name"
+                  value={track.name}
+                  onFocus={() => handleSelectTrack(track.id)}
+                  onChange={(event) => handleTrackPatch(track.id, { name: event.target.value.slice(0, 32) })}
+                  aria-label={`Layer name: ${track.name}`}
+                />
+                <button
+                  type="button"
+                  className="piano-roll-track__sound"
+                  onClick={() => handleSoundBrowserToggle(track.id)}
+                  aria-expanded={soundBrowserTrackId === track.id}
+                  aria-label={`Choose sound for ${track.name}. Current sound: ${track.soundName || track.instrument}`}
+                  title={`Choose sound for ${track.name}`}
+                >
+                  <span>{track.soundName || track.instrument}</span>
+                  {ICON_CHEVRON}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--toggle"
+                  onClick={() => handleTrackPatch(track.id, { muted: !track.muted })}
+                  aria-pressed={track.muted}
+                  aria-label={`${track.muted ? 'Unmute' : 'Mute'} ${track.name}`}
+                  title={`${track.muted ? 'Unmute' : 'Mute'} ${track.name}`}
+                >
+                  M
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--toggle"
+                  onClick={() => handleTrackPatch(track.id, { solo: !track.solo })}
+                  aria-pressed={track.solo}
+                  aria-label={`${track.solo ? 'Unsolo' : 'Solo'} ${track.name}`}
+                  title={`${track.solo ? 'Unsolo' : 'Solo'} ${track.name}`}
+                >
+                  S
+                </button>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            className="btn btn--icon piano-roll-tracks__add"
+            onClick={handleAddTrack}
+            aria-label="Add layer"
+            title="Add layer"
+          >
+            {ICON_PLUS}
+          </button>
+        </div>
+
+        {soundBrowserTrack && (
+          <div className="piano-roll-sound-popover">
             <LayerSoundBrowser
               track={soundBrowserTrack}
               onChoose={handleSoundChoose}
               onClose={handleSoundBrowserClose}
             />
-          )}
-
-          {libraryEntries.length > 0 && (
-            <details className="piano-roll-tray__library">
-              <summary>Saved patterns ({libraryEntries.length})</summary>
-              <ul>
-                {libraryEntries.map((entry) => (
-                  <li key={`${entry.source}-${entry.id}`}>
-                    <button type="button" className="piano-roll-tray__load" onClick={() => handleLoad(entry)}>
-                      {entry.name}
-                    </button>
-                    <span className="piano-roll-tray__library-meta">
-                      {entry.source === 'cloud' ? 'Cloud · ' : ''}
-                      {entry.pattern.bars} bars · {entry.pattern.bpm} BPM · {entry.pattern.notes.length} notes
-                    </span>
-                    <button
-                      type="button"
-                      className="piano-roll-tray__delete"
-                      onClick={() => handleDeleteSaved(entry)}
-                      aria-label={`Delete saved pattern ${entry.name}`}
-                    >
-                      Delete
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-
-          {CLOUD_ENABLED && (
-            <div className="piano-roll-cloud">
-              {cloudSession ? (
-                <>
-                  <span className="piano-roll-cloud__status">
-                    Signed in · {cloudSession.user?.email}
-                  </span>
-                  {cloudSyncPending && (
-                    <i className="piano-roll-cloud__pending" title="Cloud sync pending" />
-                  )}
-                  <button type="button" onClick={handleSignOut}>Sign out</button>
-                </>
-              ) : (
-                <form className="piano-roll-cloud__form" onSubmit={handleSendSignInLink}>
-                  <input
-                    type="email"
-                    value={cloudEmail}
-                    onChange={handleCloudEmailChange}
-                    placeholder="you@email.com"
-                    aria-label="Email address for the sign-in link"
-                  />
-                  <button type="submit" disabled={!cloudEmail.trim() || cloudAuthStatus === 'sending'}>
-                    {cloudAuthStatus === 'sending' ? 'Sending…' : 'Send sign-in link'}
-                  </button>
-                  {cloudAuthStatus === 'sent' && (
-                    <span className="piano-roll-cloud__note" role="status">
-                      Link sent — check your email
-                    </span>
-                  )}
-                  {cloudAuthStatus === 'error' && (
-                    <span className="piano-roll-cloud__note" role="status">
-                      Could not send the link
-                    </span>
-                  )}
-                </form>
-              )}
-            </div>
-          )}
-
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       <div
         className="piano-roll"

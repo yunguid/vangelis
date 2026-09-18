@@ -69,8 +69,36 @@
 
   /* Radii */
   --radius-large: 6px;
-  --radius-medium: 4px;
-  --radius-small: 4px;
+  --radius-medium: 5px;
+  --radius-small: 3px;
+
+  /* Control sizing */
+  --control-h: 40px;
+  --control-h-sm: 32px;
+  --control-h-touch: 44px;
+
+  /* Type scale */
+  --text-label: 11px;
+  --text-body: 13px;
+  --text-title: 15px;
+
+  /* Spacing between controls and between groups of controls */
+  --gap-control: 8px;
+  --gap-group: 20px;
+
+  /* Surfaces and hairlines: derived from the core tokens so themes stay on-hue */
+  --surface-inset: color-mix(in srgb, var(--color-core-paper) 6%, transparent);
+  --surface-popover: color-mix(in srgb, var(--color-core-ink) 96%, var(--color-core-paper));
+  --border-hairline: color-mix(in srgb, var(--color-core-paper) 14%, transparent);
+  --border-hairline-strong: color-mix(in srgb, var(--color-core-paper) 26%, transparent);
+
+  /* Buttons */
+  --btn-hover-bg: color-mix(in srgb, var(--color-core-paper) 8%, transparent);
+  --btn-active-bg: color-mix(in srgb, var(--color-core-paper) 14%, transparent);
+  --btn-toggle-on-bg: color-mix(in srgb, var(--color-core-accent) 22%, transparent);
+  --btn-toggle-on-border: color-mix(in srgb, var(--color-core-accent) 50%, transparent);
+
+  --focus-ring: 2px solid color-mix(in srgb, var(--color-core-accent) 90%, transparent);
 
   /* Layout */
   --max-shell-width: min(92vw, 1080px);
@@ -204,8 +232,8 @@ h1, h2, h3, h4 {
 
 /* Accessibility */
 :focus-visible {
-  outline: 3px solid var(--color-accent-sheen);
-  outline-offset: 4px;
+  outline: var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* Hide scrollbars, keep scrolling */
