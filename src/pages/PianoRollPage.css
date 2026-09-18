@@ -294,35 +294,64 @@
   border-bottom: 1px solid var(--border-hairline);
 }
 
-.piano-roll-tray__row,
-.piano-roll-selection {
+.piano-roll-tray__row {
   display: flex;
   align-items: flex-end;
   flex-wrap: wrap;
   gap: var(--gap-group);
   min-width: 0;
+  /* Caption (16px) + gap (4px) + control height: the row is pinned to exactly
+     one field's height, so mounting the selection group beside the fields can
+     never move the grid below it. */
+  min-height: calc(var(--control-h) + 20px);
 }
 
+/* The selection group is the only elastic item in the row: it takes whatever
+   the fields leave and scrolls inside itself rather than wrapping to a line of
+   its own. flex-end alignment lines its buttons up with the controls, not the
+   captions. */
 .piano-roll-selection {
+  display: flex;
   align-items: center;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
   gap: var(--gap-control);
+  min-width: 0;
+  margin-left: auto;
+  overflow-x: auto;
 }
 
 .piano-roll-selection__count {
-  min-width: 82px;
+  flex: none;
   color: var(--color-text-secondary);
   font-size: var(--text-label);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .piano-roll-tray__field {
   display: flex;
   flex-direction: column;
+  flex: none;
   gap: 4px;
   min-width: 0;
   font-size: var(--text-label);
   letter-spacing: 0.08em;
   color: var(--color-text-secondary);
+}
+
+/* Pinned so the caption's metrics, not the font, decide the row height. */
+.piano-roll-tray__field > span {
+  line-height: 16px;
+}
+
+/* Above 1100px nothing in the settings row may wrap, so the row is exactly one
+   field tall whether or not anything is selected. Below it, wrapping is the
+   only thing that can change the row's height. */
+@media (min-width: 1100px) {
+  .piano-roll-tray__row {
+    flex-wrap: nowrap;
+  }
 }
 
 .piano-roll-tray__field input,

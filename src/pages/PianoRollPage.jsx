@@ -321,6 +321,7 @@ const PianoRollPage = () => {
   });
 
   const scrollRef = React.useRef(null);
+  const topbarRef = React.useRef(null);
   const canvasRef = React.useRef(null);
   const lastLengthRef = React.useRef(getSnapBeats('1/16'));
   const auditionRef = React.useRef(null);
@@ -687,6 +688,46 @@ const PianoRollPage = () => {
     zoomTouchedRef.current = false;
     setPxPerBeat(Math.min(Math.max(available / beats, ZOOM_MIN), ZOOM_MAX));
   }, []);
+
+  // A native <details> only closes when its own summary is clicked again, so
+  // the two topbar menus need a popover's dismissal manners. Closing means
+  // clearing the `open` attribute — never unmounting — so the menu's contents
+  // stay in the accessibility tree and reachable for assistive tech.
+  const closeTopbarMenus = React.useCallback(() => {
+    const open = topbarRef.current?.querySelectorAll('details[open]');
+    if (!open || open.length === 0) return false;
+    open.forEach((node) => { node.open = false; });
+    return true;
+  }, []);
+
+  const runMenuAction = React.useCallback((action) => () => {
+    closeTopbarMenus();
+    action();
+  }, [closeTopbarMenus]);
+
+  React.useEffect(() => {
+    const onPointerDown = (event) => {
+      const open = topbarRef.current?.querySelectorAll('details[open]');
+      if (!open) return;
+      // Clicks inside a menu keep it open, so the cloud sign-in form can be
+      // filled in and its "Link sent" status read.
+      open.forEach((node) => {
+        if (!node.contains(event.target)) node.open = false;
+      });
+    };
+    // Capture, so an Escape that closes a menu is consumed here and does not
+    // also reach the editor's own Escape (which clears the note selection).
+    const onKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      if (closeTopbarMenus()) event.stopPropagation();
+    };
+    window.addEventListener('pointerdown', onPointerDown, true);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown, true);
+      window.removeEventListener('keydown', onKeyDown, true);
+    };
+  }, [closeTopbarMenus]);
 
   // Prime enough bars for the timeline to scroll on wide screens. Further
   // chunks are appended by handleTimelineScroll as the right edge nears.
@@ -1502,7 +1543,7 @@ const PianoRollPage = () => {
 
   return (
     <div className="piano-roll-page">
-      <div className="piano-roll-topbar">
+      <div className="piano-roll-topbar" ref={topbarRef}>
         <button
           type="button"
           className="btn btn--accent piano-roll-topbar__play"
@@ -1519,7 +1560,11 @@ const PianoRollPage = () => {
           onClick={handleRecordLoop}
           disabled={!isRecordingLoop && pattern.notes.length === 0}
           aria-label={isRecordingLoop ? 'Stop recording' : 'Record loop'}
-          title={isRecordingLoop ? 'Stop recording' : 'Record the loop to a WAV file'}
+          title={isRecordingLoop
+            ? 'Stop recording'
+            : (pattern.notes.length === 0
+              ? 'Add notes first'
+              : 'Record one pass of the loop to a WAV file')}
         >
           {ICON_RECORD}
         </button>
@@ -1552,7 +1597,7 @@ const PianoRollPage = () => {
             className="piano-roll-topbar__zoom-fit"
             onClick={fitZoom}
             aria-label="Fit pattern to view"
-            title="Fit pattern to view"
+            title="Fit the whole pattern on screen"
           >
             {Math.round((pxPerBeat / 56) * 100)}%
           </button>
@@ -1601,7 +1646,7 @@ const PianoRollPage = () => {
           type="button"
           className="btn btn--secondary"
           onClick={handleSave}
-          title="Save this pattern"
+          title="Save this pattern to your library"
         >
           Save
         </button>
@@ -1609,7 +1654,7 @@ const PianoRollPage = () => {
           <summary
             className="btn btn--icon"
             aria-label="More editor actions"
-            title="More editor actions"
+            title="More: open a pattern, layer actions, account"
           >
             {ICON_MORE}
           </summary>
@@ -1623,7 +1668,8 @@ const PianoRollPage = () => {
                       <button
                         type="button"
                         className="btn piano-roll-menu__load"
-                        onClick={() => handleLoad(entry)}
+                        onClick={runMenuAction(() => handleLoad(entry))}
+                        title={`Open ${entry.name} in the editor`}
                       >
                         {entry.name}
                       </button>
@@ -1644,21 +1690,30 @@ const PianoRollPage = () => {
                 </ul>
               </>
             )}
-            <button type="button" className="btn piano-roll-menu__item" onClick={handleClear}>
+            <button
+              type="button"
+              className="btn piano-roll-menu__item"
+              onClick={runMenuAction(handleClear)}
+              title={`Delete every note on ${activeTrack?.name || 'this layer'}`}
+            >
               Clear layer
             </button>
             <button
               type="button"
               className="btn piano-roll-menu__item"
-              onClick={() => handleDeleteTrack(activeTrack?.id)}
+              onClick={runMenuAction(() => handleDeleteTrack(activeTrack?.id))}
               disabled={pattern.tracks.length <= 1}
+              title={pattern.tracks.length <= 1
+                ? 'A pattern needs at least one layer'
+                : `Remove ${activeTrack?.name || 'this layer'} and its notes`}
             >
               Delete layer
             </button>
             <button
               type="button"
               className="btn piano-roll-menu__item"
-              onClick={handleOpenInPlayer}
+              onClick={runMenuAction(handleOpenInPlayer)}
+              title="Load this pattern in the main player"
             >
               Send to player
             </button>
@@ -1788,53 +1843,57 @@ const PianoRollPage = () => {
           {activeScale && outOfScaleCount > 0 && (
             <span className="piano-roll-tray__outside">{outOfScaleCount} outside</span>
           )}
-        </div>
 
-        {(selectedIds.size > 0 || loopRange) && (
-          <div className="piano-roll-selection" aria-live="polite">
-            {selectedIds.size > 0 && (
-              <span className="piano-roll-selection__count">{selectedIds.size} selected</span>
-            )}
-            <select
-              value={chordTypeId}
-              onChange={(event) => setChordTypeId(event.target.value)}
-              aria-label="Chord type"
-            >
-              {CHORD_TYPES.map((chord) => (
-                <option key={chord.id} value={chord.id}>{chord.label}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={handleBuildChord}
-              disabled={selectedIds.size === 0}
-              title="Add the rest of the chord above each selected note"
-            >
-              Add chord
-            </button>
-            <button
-              type="button"
-              className="btn btn--secondary"
-              onClick={handleLoopSelection}
-              disabled={selectedIds.size === 0 && !loopRange}
-              title={loopRange ? 'Play the whole timeline again (⇧⌘L)' : 'Play only the selected bars (⇧⌘L)'}
-            >
-              {loopRange ? 'Unloop' : 'Loop these bars'}
-            </button>
-            {activeScale && (
+          {/* Selection actions ride the right end of this row on purpose: their
+              own row would move the grid down the instant a note is selected. */}
+          {(selectedIds.size > 0 || loopRange) && (
+            <div className="piano-roll-selection" aria-live="polite">
+              {selectedIds.size > 0 && (
+                <span className="piano-roll-selection__count">{selectedIds.size} selected</span>
+              )}
+              <select
+                value={chordTypeId}
+                onChange={(event) => setChordTypeId(event.target.value)}
+                aria-label="Chord type"
+              >
+                {CHORD_TYPES.map((chord) => (
+                  <option key={chord.id} value={chord.id}>{chord.label}</option>
+                ))}
+              </select>
               <button
                 type="button"
                 className="btn btn--secondary"
-                onClick={handleSnapSelectionToScale}
+                onClick={handleBuildChord}
                 disabled={selectedIds.size === 0}
-                title={`Move the selection onto ${SCALE_ROOTS[scaleRoot]} ${activeScale.label}`}
+                title="Turn each selected note into a chord"
               >
-                Snap to key
+                Add chord
               </button>
-            )}
-          </div>
-        )}
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={handleLoopSelection}
+                disabled={selectedIds.size === 0 && !loopRange}
+                title={loopRange
+                  ? 'Go back to playing the whole timeline (⇧⌘L)'
+                  : 'Play only the bars you selected, over and over (⇧⌘L)'}
+              >
+                {loopRange ? 'Unloop' : 'Loop these bars'}
+              </button>
+              {activeScale && (
+                <button
+                  type="button"
+                  className="btn btn--secondary"
+                  onClick={handleSnapSelectionToScale}
+                  disabled={selectedIds.size === 0}
+                  title={`Move the selected notes onto the nearest ${SCALE_ROOTS[scaleRoot]} ${activeScale.label} note`}
+                >
+                  Snap to key
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="piano-roll-tracks" role="group" aria-label="Instrument layers">
           {pattern.tracks.map((track) => {
