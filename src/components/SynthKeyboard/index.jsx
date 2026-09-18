@@ -32,7 +32,7 @@ const TOUCH_VELOCITIES = [
   { label: 'Hard', value: 1 }
 ];
 
-const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = EMPTY_ACTIVE_NOTES }) => {
+const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = EMPTY_ACTIVE_NOTES, onUserPlay }) => {
   const keyboardRef = useRef(null);
   const keyElementsRef = useRef(null);
   if (!keyElementsRef.current) keyElementsRef.current = new Map();
@@ -84,6 +84,7 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
 
   // Audio playback
   const { startNote, stopNote, switchPointerNote, pointerToNoteRef } = useNotePlayback({
+    onUserPlay,
     waveformRef,
     audioParamsRef,
     wasmReadyRef,

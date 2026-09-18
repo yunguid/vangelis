@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import OpeningPerformance from './components/OpeningPerformance.jsx';
+import { useOpeningPerformance } from './hooks/useOpeningPerformance.js';
 import AppHeader from './components/AppHeader.jsx';
 import SynthKeyboard from './components/SynthKeyboard';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -95,25 +97,30 @@ const App = () => {
 
   // MIDI playback hook
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
+  const opening = useOpeningPerformance({ audioParams });
+  const playMidi = useCallback((...args) => {
+    opening.stop();
+    midiPlayback.play(...args);
+  }, [opening.stop, midiPlayback.play]);
   const transportBpm = (midiPlayback.currentMidi?.bpm || 120) * midiPlayback.tempoFactor;
 
   // A MIDI file picked on another page (Design, a study) lands here to play.
   useEffect(() => {
     const pending = consumePendingMidi();
     if (!pending) return;
-    midiPlayback.play(pending);
+    playMidi(pending);
     setSidebarTab('midi');
     setSidebarOpen(true);
-  }, [midiPlayback.play]);
+  }, [playMidi]);
 
   // Hardware MIDI input (notes + pitch bend + mod wheel)
-  const webMidi = useWebMidiInput({ waveformType, audioParams });
+  const webMidi = useWebMidiInput({ waveformType, audioParams, onUserPlay: opening.stop });
   const externalActiveNotes = useMemo(() => {
-    if (webMidi.activeNotes.size === 0) return midiPlayback.activeNotes;
     const merged = new Set(midiPlayback.activeNotes);
+    opening.activeNotes.forEach((noteId) => merged.add(noteId));
     webMidi.activeNotes.forEach((noteId) => merged.add(noteId));
     return merged;
-  }, [midiPlayback.activeNotes, webMidi.activeNotes]);
+  }, [midiPlayback.activeNotes, webMidi.activeNotes, opening.activeNotes]);
 
   const pushNotice = useCallback((message) => {
     setNotice(message);
@@ -300,7 +307,7 @@ const App = () => {
         try {
           const { parseMidiFile } = await import('./utils/midiParser.js');
           const midiData = await parseMidiFile(midiFile);
-          midiPlayback.play(midiData);
+          playMidi(midiData);
           setSidebarTab('midi');
           setSidebarOpen(true);
           pushNotice('MIDI pasted.');
@@ -323,7 +330,7 @@ const App = () => {
 
     window.addEventListener('paste', onPaste);
     return () => window.removeEventListener('paste', onPaste);
-  }, [handleAudioFileImport, midiPlayback.play, pushNotice]);
+  }, [handleAudioFileImport, playMidi, pushNotice]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -459,7 +466,7 @@ const App = () => {
     progress: midiPlayback.progress,
     currentMidi: midiPlayback.currentMidi,
     tempoFactor: midiPlayback.tempoFactor,
-    onPlay: midiPlayback.play,
+    onPlay: playMidi,
     onPause: midiPlayback.pause,
     onResume: midiPlayback.resume,
     onStop: midiPlayback.stop,
@@ -470,7 +477,7 @@ const App = () => {
     midiPlayback.progress,
     midiPlayback.currentMidi,
     midiPlayback.tempoFactor,
-    midiPlayback.play,
+    playMidi,
     midiPlayback.pause,
     midiPlayback.resume,
     midiPlayback.stop,
@@ -520,7 +527,9 @@ const App = () => {
                     />
                   </React.Suspense>
                 )}
+                <OpeningPerformance status={opening.status} onListen={opening.listen} onStop={opening.stop} />
                 <SynthKeyboard
+                  onUserPlay={opening.stop}
                   waveformType={waveformType}
                   audioParams={audioParams}
                   wasmLoaded={wasmLoaded}

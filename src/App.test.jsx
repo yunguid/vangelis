@@ -3,6 +3,11 @@ import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import App from './App';
 import { parseMidiFile } from './utils/midiParser.js';
 
+// Opening lifecycle is exercised with the real MIDI scheduler in its integration tests.
+vi.mock('./hooks/useOpeningPerformance.js', () => ({
+  useOpeningPerformance: () => ({ status: 'done', activeNotes: new Set(), stop: vi.fn(), listen: vi.fn() })
+}));
+
 // Mock the audio engine
 vi.mock('./utils/audioEngine.js', () => ({
   audioEngine: {

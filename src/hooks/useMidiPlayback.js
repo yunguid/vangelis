@@ -224,13 +224,15 @@ export function useMidiPlayback({
     const startedVoiceIds = [];
     const params = noteOptions.audioParams || audioParamsRef.current;
 
-    const started = audioEngine.playFrequency({
-      noteId: voiceId,
-      frequency,
-      waveformType: noteOptions.waveformType || waveformRef.current,
-      params,
-      velocity
-    });
+    const voiceOptions = {
+      noteId: voiceId, frequency, params, velocity
+    };
+    const started = noteOptions.sample
+      ? audioEngine.playBufferedSample({ ...voiceOptions, ...noteOptions.sample })
+      : audioEngine.playFrequency({
+        ...voiceOptions,
+        waveformType: noteOptions.waveformType || waveformRef.current
+      });
     if (started?.voiceId) {
       startedVoiceIds.push(started.voiceId);
       registerActiveVoices(noteId, startedVoiceIds);

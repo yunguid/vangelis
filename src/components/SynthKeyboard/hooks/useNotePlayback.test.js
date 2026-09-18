@@ -56,6 +56,23 @@ describe('useNotePlayback first-note preparation', () => {
     vi.restoreAllMocks();
   });
 
+  it('notifies takeover synchronously even when the first pointer note needs audio initialization', async () => {
+    const deferred = createDeferred();
+    audioEngine.ensureWasm.mockReturnValue(deferred.promise);
+    const onUserPlay = vi.fn();
+    const { result } = renderHook(() => useNotePlayback({
+      onUserPlay,
+      waveformRef: { current: 'Sine' }, audioParamsRef: { current: {} },
+      wasmReadyRef: { current: false }, scheduleVisualUpdate: vi.fn()
+    }));
+    act(() => result.current.startNote(note, { pointerId: 1 }));
+    expect(onUserPlay).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    await act(async () => deferred.resolve());
+    expect(onUserPlay.mock.invocationCallOrder[0])
+      .toBeLessThan(audioEngine.playFrequency.mock.invocationCallOrder[0]);
+  });
+
   it('replays the first requested synth note after worklet preparation', async () => {
     const deferred = createDeferred();
     audioEngine.ensureWasm.mockReturnValue(deferred.promise);

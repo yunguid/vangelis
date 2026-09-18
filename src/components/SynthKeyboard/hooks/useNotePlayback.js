@@ -3,6 +3,7 @@ import { audioEngine } from '../../../utils/audioEngine.js';
 import { clamp } from '../constants';
 
 export function useNotePlayback({
+  onUserPlay,
   waveformRef,
   audioParamsRef,
   wasmReadyRef,
@@ -22,6 +23,7 @@ export function useNotePlayback({
       return false;
     }
 
+    onUserPlay?.();
     const status = audioEngine.getStatus();
     if (
       activeNotesRef.current.has(noteMeta.noteId)
@@ -147,7 +149,7 @@ export function useNotePlayback({
       }
     });
     return true;
-  }, [waveformRef, audioParamsRef, wasmReadyRef, scheduleVisualUpdate]);
+  }, [onUserPlay, waveformRef, audioParamsRef, wasmReadyRef, scheduleVisualUpdate]);
 
   const stopNote = useCallback((noteId, pointerId = null) => {
     if (!noteId) return;

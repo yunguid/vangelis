@@ -14,10 +14,12 @@ import { useVisibleSnapshotPublisher } from './useVisibleSnapshotPublisher.js';
 
 const ACTIVE_NOTES_UPDATE_INTERVAL_MS = 40;
 
-export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
+export function useWebMidiInput({ waveformType, audioParams, enabled = true, onUserPlay }) {
   const [deviceName, setDeviceName] = useState(null);
   const [activeNotes, setActiveNotes] = useState(() => new Set());
 
+  const onUserPlayRef = useRef(onUserPlay);
+  onUserPlayRef.current = onUserPlay;
   const waveformRef = useRef(waveformType);
   const audioParamsRef = useRef(audioParams);
   const heldRef = useRef(null); // midi number -> display noteId
@@ -53,6 +55,7 @@ export function useWebMidiInput({ waveformType, audioParams, enabled = true }) {
           getAudioParams: () => audioParamsRef.current,
           onDeviceName: setDeviceName,
           onNoteOn: (midi, noteId) => {
+            onUserPlayRef.current?.();
             heldRef.current.set(midi, noteId);
             publishActiveNotes();
           },
