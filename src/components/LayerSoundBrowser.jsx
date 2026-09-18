@@ -21,6 +21,12 @@ const WAVEFORM_SOUNDS = TRACK_INSTRUMENTS.map((waveformType) => ({
 }));
 const SOUND_BANKS = ['Waveforms', 'Factory', 'Patch Lab', 'My sounds'];
 
+const ICON_CLOSE = (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+
 const normalizeSearchText = (value) => String(value || '').trim().toLocaleLowerCase();
 
 const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
@@ -29,9 +35,9 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
   const [query, setQuery] = useState('');
   const [bank, setBank] = useState('all');
   const [category, setCategory] = useState('all');
-  const [sort, setSort] = useState('library');
   const mountedRef = useRef(true);
   const searchRef = useRef(null);
+  const listRef = useRef(null);
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
@@ -86,7 +92,7 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
   const sounds = useMemo(() => {
     if (!catalog) return [];
     const searchText = normalizeSearchText(deferredQuery);
-    const filtered = catalog.filter((sound) => {
+    return catalog.filter((sound) => {
       if (bank !== 'all' && sound.bank !== bank) return false;
       if (category !== 'all' && sound.category !== category) return false;
       if (!searchText) return true;
@@ -97,81 +103,81 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
         sound.description
       ].join(' ')).includes(searchText);
     });
-    if (sort === 'name') {
-      return filtered.toSorted((left, right) => left.name.localeCompare(right.name));
-    }
-    if (sort === 'category') {
-      return filtered.toSorted((left, right) => (
-        left.category.localeCompare(right.category) || left.name.localeCompare(right.name)
-      ));
-    }
-    if (sort === 'newest') {
-      return filtered.toSorted((left, right) => (right.createdAt || 0) - (left.createdAt || 0));
-    }
-    return filtered;
-  }, [bank, catalog, category, deferredQuery, sort]);
+  }, [bank, catalog, category, deferredQuery]);
 
   const handleChoose = useCallback((sound) => {
     onChoose?.(track.id, sound);
   }, [onChoose, track.id]);
 
+  const isChosen = useCallback((sound) => (track.soundId
+    ? track.soundId === sound.id
+    : !sound.audioParams && track.instrument === sound.waveformType
+  ), [track.instrument, track.soundId]);
+
+  // Arrow keys scrub the visible list, applying + auditioning each sound as it is
+  // highlighted. stopPropagation keeps the editor's window-level arrow handler
+  // (which nudges selected notes and only skips INPUT/SELECT/TEXTAREA targets)
+  // from also firing when a row button has focus.
+  const handleScrub = useCallback((event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (event.target?.nodeName === 'SELECT' || sounds.length === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const current = sounds.findIndex(isChosen);
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    const next = current < 0
+      ? 0
+      : Math.min(Math.max(current + step, 0), sounds.length - 1);
+    handleChoose(sounds[next]);
+    listRef.current?.children[next]?.scrollIntoView?.({ block: 'nearest' });
+  }, [handleChoose, isChosen, sounds]);
+
   return (
-    <section className="layer-sound-browser" aria-label={`Sound bank for ${track.name}`}>
-      <header className="layer-sound-browser__header">
-        <div>
-          <span className="layer-sound-browser__eyebrow">Layer sound</span>
-          <h3>Choose a sound for {track.name}</h3>
-        </div>
+    <section
+      className="layer-sound-browser"
+      aria-label={`Sound bank for ${track.name}`}
+      onKeyDown={handleScrub}
+    >
+      <div className="layer-sound-browser__bar">
+        <input
+          ref={searchRef}
+          type="search"
+          aria-label="Search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={`Search sounds for ${track.name}`}
+        />
         <button
           type="button"
-          className="layer-sound-browser__close"
+          className="btn btn--icon"
           onClick={onClose}
           aria-label="Close sound bank"
+          title="Close sound bank"
         >
-          ×
+          {ICON_CLOSE}
         </button>
-      </header>
+      </div>
 
       <div className="layer-sound-browser__filters">
-        <label className="layer-sound-browser__search">
-          <span>Search</span>
-          <input
-            ref={searchRef}
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search names, character, categories…"
-          />
-        </label>
-        <label>
-          <span>Bank</span>
-          <select
-            value={bank}
-            onChange={(event) => {
-              setBank(event.target.value);
-              setCategory('all');
-            }}
-          >
-            <option value="all">All banks</option>
-            {SOUND_BANKS.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>Category</span>
-          <select value={category} onChange={(event) => setCategory(event.target.value)}>
-            <option value="all">All categories</option>
-            {categories.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-          </select>
-        </label>
-        <label>
-          <span>Sort</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value)}>
-            <option value="library">Library order</option>
-            <option value="name">Name A–Z</option>
-            <option value="category">Category</option>
-            <option value="newest">Newest first</option>
-          </select>
-        </label>
+        <select
+          aria-label="Bank"
+          value={bank}
+          onChange={(event) => {
+            setBank(event.target.value);
+            setCategory('all');
+          }}
+        >
+          <option value="all">All banks</option>
+          {SOUND_BANKS.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
+        </select>
+        <select
+          aria-label="Category"
+          value={category}
+          onChange={(event) => setCategory(event.target.value)}
+        >
+          <option value="all">All categories</option>
+          {categories.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
+        </select>
       </div>
 
       {!catalog && !catalogError && (
@@ -186,11 +192,9 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
             {sounds.length} {sounds.length === 1 ? 'sound' : 'sounds'}
           </div>
           {sounds.length > 0 ? (
-            <ul className="layer-sound-browser__results">
+            <ul className="layer-sound-browser__results" ref={listRef}>
               {sounds.map((sound) => {
-                const isSelected = track.soundId
-                  ? track.soundId === sound.id
-                  : !sound.audioParams && track.instrument === sound.waveformType;
+                const isSelected = isChosen(sound);
                 return (
                   <li key={`${sound.bank}-${sound.id}`}>
                     <button
@@ -199,14 +203,8 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
                       onClick={() => handleChoose(sound)}
                       aria-pressed={isSelected}
                     >
-                      <span className="layer-sound-browser__item-main">
-                        <strong>{sound.name}</strong>
-                        <small>{sound.description}</small>
-                      </span>
-                      <span className="layer-sound-browser__item-meta">
-                        <em>{sound.bank}</em>
-                        <span>{sound.category}</span>
-                      </span>
+                      <span className="layer-sound-browser__item-name">{sound.name}</span>
+                      <span className="layer-sound-browser__item-bank">{sound.bank}</span>
                     </button>
                   </li>
                 );
