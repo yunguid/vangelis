@@ -87,7 +87,7 @@ const SoundDial = ({ activeSoundName, onChoose }) => {
     return () => (window.cancelIdleCallback ? window.cancelIdleCallback(idle) : window.clearTimeout(idle));
   }, [ensureCatalog]);
 
-  // A sound saved or removed elsewhere (the Sound tab) shows up here at once.
+  // A sound saved or removed while the dial is up shows up here at once.
   useEffect(() => subscribeUserPresets(() => {
     if (!loadingRef.current) return;
     loadingRef.current = null;

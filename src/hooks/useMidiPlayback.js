@@ -4,7 +4,7 @@
  * @module hooks/useMidiPlayback
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
 import { normalizeMidiNotes } from '../utils/midiPlaybackNotes.js';
@@ -44,6 +44,8 @@ function resolveMidiDuration(midiData) {
  * @typedef {Object} MidiPlaybackOptions
  * @property {string} waveformType - Current waveform type (sine, saw, square, etc.)
  * @property {Object} audioParams - Audio parameters (ADSR, filter, effects)
+ * @property {boolean} [revoice=false] - Play every note through this sound, setting aside
+ *   the voice a note brings (its recording, its patch, its room)
  */
 
 /**
@@ -93,6 +95,7 @@ function resolveMidiDuration(midiData) {
 export function useMidiPlayback({
   waveformType,
   audioParams,
+  revoice = false,
   progressUpdateIntervalMs = PROGRESS_UPDATE_INTERVAL_MS
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -106,6 +109,7 @@ export function useMidiPlayback({
   // Use refs to avoid stale closures in setTimeout callbacks
   const waveformRef = useRef(waveformType);
   const audioParamsRef = useRef(audioParams);
+  const revoiceRef = useRef(revoice);
   const tempoFactorRef = useRef(1.0);
   const isPlayingRef = useRef(false);
   const isPausedRef = useRef(false);
@@ -144,6 +148,12 @@ export function useMidiPlayback({
   useEffect(() => {
     audioParamsRef.current = audioParams;
   }, [audioParams]);
+
+  // At commit rather than after paint: a piece chosen while the last one was
+  // revoiced must play its very first notes in its own voice.
+  useLayoutEffect(() => {
+    revoiceRef.current = revoice;
+  }, [revoice]);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;
@@ -224,23 +234,25 @@ export function useMidiPlayback({
    */
   const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, noteOptions = {}) => {
     const startedVoiceIds = [];
+    // Revoiced, the note keeps its pitch, time and touch and leaves its voice behind.
+    const own = revoiceRef.current ? {} : noteOptions;
     // audioParams replaces the player's sound outright (piano-roll layers);
     // audioParamOverrides only brings an envelope and a room, so volume and
     // pan stay on the player's controls.
-    const params = noteOptions.audioParams || (noteOptions.audioParamOverrides
-      ? { ...audioParamsRef.current, ...noteOptions.audioParamOverrides }
+    const params = own.audioParams || (own.audioParamOverrides
+      ? { ...audioParamsRef.current, ...own.audioParamOverrides }
       : audioParamsRef.current);
 
     const voiceOptions = {
       noteId: voiceId, frequency, params, velocity
     };
-    const started = noteOptions.sample
-      ? audioEngine.playBufferedSample({ ...voiceOptions, ...noteOptions.sample, when: noteOptions.when })
+    const started = own.sample
+      ? audioEngine.playBufferedSample({ ...voiceOptions, ...own.sample, when: own.when })
       : audioEngine.playFrequency({
         ...voiceOptions,
-        waveformType: noteOptions.waveformType || waveformRef.current,
+        waveformType: own.waveformType || waveformRef.current,
         // A note that brings its own patch is the synth's, whatever instrument is loaded.
-        voiced: Boolean(noteOptions.audioParams || noteOptions.waveformType)
+        voiced: Boolean(own.audioParams || own.waveformType)
       });
     if (started?.voiceId) {
       startedVoiceIds.push(started.voiceId);
@@ -398,7 +410,7 @@ export function useMidiPlayback({
         const frequency = midiNoteToFrequency(note.midi);
         const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
 
-        const lead = note.sample ? SAMPLE_LEAD_SECONDS : 0;
+        const lead = note.sample && !revoiceRef.current ? SAMPLE_LEAD_SECONDS : 0;
         const startDelay = Math.max(0, (scheduledStart - lead - now) * 1000);
         scheduleTrackedTimeout(() => {
           const startedVoiceIds = triggerNoteOn(

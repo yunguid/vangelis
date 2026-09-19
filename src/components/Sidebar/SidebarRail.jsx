@@ -13,13 +13,14 @@ const SidebarRail = ({
   isOpen = false,
   activeTab = 'sound',
   disabled = false,
+  soundPanel = true,
   currentView = 'keyboard',
   isMidiPlaying = false,
   onTabSelect = () => {},
   onPanelPreload = () => {}
 }) => {
   const tabs = [
-    {
+    soundPanel && {
       id: 'sound',
       label: 'Sound',
       icon: (
@@ -44,7 +45,7 @@ const SidebarRail = ({
       ),
       isActive: !disabled && isMidiPlaying
     }
-  ];
+  ].filter(Boolean);
 
   return (
     <div className="sidebar-rail">

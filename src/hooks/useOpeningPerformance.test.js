@@ -69,6 +69,39 @@ describe('opening performance with the real MIDI scheduler', () => {
     expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps playing in the listener\'s sound once they choose another one', async () => {
+    const theirs = { waveformType: 'Saw', audioParams: { volume: 0.6, release: 1.2 } };
+    const { result, rerender } = renderHook((props) => useOpeningPerformance(props), { initialProps: theirs });
+    await flush();
+    expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
+
+    rerender({ ...theirs, revoice: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+
+    expect(result.current.activeNotes.has('E4')).toBe(true);
+    expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
+    // Their patch and room, at the landing's level; the piano's own release (0.025) is gone.
+    expect(fixture.engine.playFrequency).toHaveBeenCalledWith(expect.objectContaining({
+      waveformType: 'Saw',
+      voiced: false,
+      params: { volume: 0.6 * 0.85, release: 1.2, pan: 0 }
+    }));
+  });
+
+  it('opens silent when the only queued piece was removed from the MIDI library', async () => {
+    localStorage.setItem('vangelis.midiLibrary.v1', JSON.stringify({ liked: [], removed: ['performance-opening-piano'] }));
+    try {
+      const { result } = renderHook(() => useOpeningPerformance({ audioParams: {} }));
+      await flush();
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      expect(fixture.load).not.toHaveBeenCalled();
+      expect(fixture.engine.playBufferedSample).not.toHaveBeenCalled();
+      expect(result.current.sound).toBeNull();
+    } finally {
+      localStorage.removeItem('vangelis.midiLibrary.v1');
+    }
+  });
+
   it('waits for browser activation without advancing the score', async () => {
     fixture.context.state = 'suspended';
     const { result } = renderHook(() => useOpeningPerformance({ audioParams: {} }));

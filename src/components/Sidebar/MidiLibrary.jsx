@@ -12,7 +12,13 @@ import {
   loadLandingSelection,
   saveLandingSelection
 } from '../../data/landingQueue.js';
+import { loadMidiLibraryPrefs, saveMidiLibraryPrefs } from '../../utils/midiLibraryPrefs.js';
 
+const HEART_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+  </svg>
+);
 
 const MidiLibrary = ({ active = true, onPlay }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -39,38 +45,71 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     });
   }, []);
 
+  // Liked pieces lead the list; removed ones leave it until they are restored.
+  const [prefs, setPrefs] = useState(loadMidiLibraryPrefs);
+  const updatePrefs = useCallback((change) => {
+    setPrefs((current) => {
+      const next = change(current);
+      saveMidiLibraryPrefs(next);
+      return next;
+    });
+  }, []);
+  const handleLikeToggle = useCallback((fileId) => updatePrefs(({ liked, removed }) => {
+    const next = new Set(liked);
+    if (!next.delete(fileId)) next.add(fileId);
+    return { liked: next, removed };
+  }), [updatePrefs]);
+  const handleRemove = useCallback((fileId) => updatePrefs(({ liked, removed }) => (
+    { liked, removed: new Set(removed).add(fileId) }
+  )), [updatePrefs]);
+  const handleRestore = useCallback(() => updatePrefs(({ liked }) => (
+    { liked, removed: new Set() }
+  )), [updatePrefs]);
+
+  const removedCount = useMemo(() => (
+    builtInFiles.filter((file) => prefs.removed.has(file.id)).length
+  ), [builtInFiles, prefs.removed]);
   const filteredFiles = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return builtInFiles;
-    return builtInFiles.filter((file) => (
+    const kept = builtInFiles.filter((file) => !prefs.removed.has(file.id));
+    if (!query) return kept;
+    return kept.filter((file) => (
       `${file.displayName} ${file.name} ${file.composer || ''}`.toLowerCase().includes(query)
     ));
-  }, [builtInFiles, searchQuery]);
-  const groups = useMemo(() => [
-    {
-      key: 'performances',
-      title: 'Performances',
-      files: filteredFiles.filter((file) => file.instrument)
-    },
-    {
-      key: 'originals',
-      title: 'Originals',
-      // Pieces with a landing switch lead the group, so the whole queue can be
-      // seen without scrolling through every original.
-      files: filteredFiles
-        .filter((file) => file.id.startsWith('original-'))
-        .sort((left, right) => Number(isLandingEligible(right)) - Number(isLandingEligible(left)))
-    },
-    {
-      key: 'classics',
-      title: 'Classics',
-      files: filteredFiles
-        .filter((file) => !file.id.startsWith('original-') && !file.instrument)
-        .sort((left, right) => (
-          (left.featuredRank ?? Infinity) - (right.featuredRank ?? Infinity)
-        ))
-    }
-  ].filter((group) => group.files.length > 0), [filteredFiles]);
+  }, [builtInFiles, prefs.removed, searchQuery]);
+  const groups = useMemo(() => {
+    const rest = filteredFiles.filter((file) => !prefs.liked.has(file.id));
+    return [
+      {
+        key: 'favorites',
+        title: 'Favorites',
+        files: filteredFiles.filter((file) => prefs.liked.has(file.id))
+      },
+      {
+        key: 'performances',
+        title: 'Performances',
+        files: rest.filter((file) => file.instrument)
+      },
+      {
+        key: 'originals',
+        title: 'Originals',
+        // Pieces with a landing switch lead the group, so the whole queue can be
+        // seen without scrolling through every original.
+        files: rest
+          .filter((file) => file.id.startsWith('original-'))
+          .sort((left, right) => Number(isLandingEligible(right)) - Number(isLandingEligible(left)))
+      },
+      {
+        key: 'classics',
+        title: 'Classics',
+        files: rest
+          .filter((file) => !file.id.startsWith('original-') && !file.instrument)
+          .sort((left, right) => (
+            (left.featuredRank ?? Infinity) - (right.featuredRank ?? Infinity)
+          ))
+      }
+    ].filter((group) => group.files.length > 0);
+  }, [filteredFiles, prefs.liked]);
 
   useEffect(() => {
     if (!active) return undefined;
@@ -111,19 +150,22 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     setSelectedFile(file);
 
     try {
-      // Performances bring their own sampled instrument; everything else
+      // A performance brings its own sampled instrument and puts it on the
+      // sound dial, where the listener can turn to another; everything else
       // plays through whatever sound is loaded.
-      const midiData = file.instrument
-        ? (await arrangeBuiltInPiece(await audioEngine.ensureAudioContext(), file)).score
-        : await loadMidiWithFallback(file);
-      onPlay({
-        ...midiData,
+      const arranged = file.instrument
+        ? await arrangeBuiltInPiece(await audioEngine.ensureAudioContext(), file)
+        : { score: await loadMidiWithFallback(file) };
+      const midiData = {
+        ...arranged.score,
         name: file.displayName,
         sourceFileId: file.id,
         sourcePath: file.path,
         sourceUrl: file.sourceUrl || null,
         composer: file.composer
-      });
+      };
+      if (arranged.sound) onPlay(midiData, { sound: arranged.sound });
+      else onPlay(midiData);
       if (loadStart !== null) {
         performanceProbe?.recordInteraction?.(
           'midi.file.parse-and-dispatch',
@@ -212,30 +254,51 @@ const MidiLibrary = ({ active = true, onPlay }) => {
             )}
             <ul className="midi-tab__list">
               {group.files.map((file) => (
-                <li
-                  key={file.id}
-                  className={`midi-tab__item ${isLandingEligible(file) ? 'midi-tab__item--landing' : ''}`}
-                >
-                  <button
-                    type="button"
-                    className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
-                    onClick={() => handleLoadBuiltIn(file)}
-                    onPointerEnter={handleFileIntent}
-                    onFocus={handleFileIntent}
-                    data-midi-path={file.path}
-                    disabled={isLoading}
-                  >
-                    <span className="midi-tab__file-title-row">
-                      <span className="midi-tab__file-name">{file.displayName}</span>
-                    </span>
-                    {(file.composer || file.instrumentLabel) && (
-                      <span className="midi-tab__file-composer">
-                        {file.catalogLabel
-                          ? `${file.composer} · ${file.catalogLabel}`
-                          : file.composer || file.instrumentLabel}
+                <li key={file.id} className="midi-tab__item">
+                  {/* Like and remove lie over the row's own end, so rows keep their full width. */}
+                  <div className="midi-tab__piece">
+                    <button
+                      type="button"
+                      className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
+                      onClick={() => handleLoadBuiltIn(file)}
+                      onPointerEnter={handleFileIntent}
+                      onFocus={handleFileIntent}
+                      data-midi-path={file.path}
+                      disabled={isLoading}
+                    >
+                      <span className="midi-tab__file-title-row">
+                        <span className="midi-tab__file-name">{file.displayName}</span>
                       </span>
-                    )}
-                  </button>
+                      {(file.composer || file.instrumentLabel) && (
+                        <span className="midi-tab__file-composer">
+                          {file.catalogLabel
+                            ? `${file.composer} · ${file.catalogLabel}`
+                            : file.composer || file.instrumentLabel}
+                        </span>
+                      )}
+                    </button>
+                    <div className="midi-tab__row-actions">
+                      <button
+                        type="button"
+                        className="midi-tab__row-action"
+                        aria-pressed={prefs.liked.has(file.id)}
+                        aria-label={`Like ${file.displayName}`}
+                        title="Liked pieces lead the list, under Favorites"
+                        onClick={() => handleLikeToggle(file.id)}
+                      >
+                        {HEART_ICON}
+                      </button>
+                      <button
+                        type="button"
+                        className="midi-tab__row-action"
+                        aria-label={`Remove ${file.displayName} from the library`}
+                        title="Remove from the library"
+                        onClick={() => handleRemove(file.id)}
+                      >
+                        <span aria-hidden="true">×</span>
+                      </button>
+                    </div>
+                  </div>
                   {isLandingEligible(file) && (
                     <button
                       type="button"
@@ -253,10 +316,18 @@ const MidiLibrary = ({ active = true, onPlay }) => {
             </ul>
           </div>
         ))}
-        {filteredFiles.length === 0 && !isLoading && (
+        {filteredFiles.length === 0 && searchQuery.trim() && !isLoading && (
           <div className="midi-tab__empty">
             No matches for “{searchQuery.trim()}”.
           </div>
+        )}
+        {removedCount > 0 && !isLoading && (
+          <p className="midi-tab__removed">
+            {removedCount} removed
+            <button type="button" className="midi-tab__restore" onClick={handleRestore}>
+              Restore
+            </button>
+          </p>
         )}
       </div>
 

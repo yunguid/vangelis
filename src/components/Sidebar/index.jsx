@@ -98,15 +98,17 @@ const SoundPanelBridge = ({ active }) => (
 
 /**
  * Collapsed sidebar rail with expandable panel
- * Supports multiple tabs: MIDI, Voice, Sound
- * MIDI transport, voice phrase, and sound-control state come from contexts.
+ * Two panels, MIDI and Sound; a page that chooses its sound elsewhere (the home
+ * page's dial) passes `soundPanel={false}` and keeps only MIDI.
+ * MIDI transport and sound-control state come from contexts.
  */
 const Sidebar = ({
   isOpen,
   onClose = () => {},
   onOpen = () => {},
-  activeTab,
+  activeTab: requestedTab,
   onTabChange = () => {},
+  soundPanel = true,
   disabled = false,
   currentView = 'keyboard',
   isMidiPlaying = false,
@@ -114,6 +116,7 @@ const Sidebar = ({
   soundLabel = ''
 }) => {
   const [hasOpened, setHasOpened] = React.useState(isOpen);
+  const activeTab = soundPanel ? requestedTab : 'midi';
   // Close on escape key
   useEffect(() => {
     if (disabled || !isOpen) return undefined;
@@ -192,6 +195,7 @@ const Sidebar = ({
         isOpen={isOpen}
         activeTab={activeTab}
         disabled={disabled}
+        soundPanel={soundPanel}
         currentView={currentView}
         isMidiPlaying={isMidiPlaying}
         onTabSelect={handleRailClick}

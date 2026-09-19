@@ -274,7 +274,8 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   }));
 
   // Performances bring their own sampled instrument (see
-  // ../data/nylonGuitar.js) instead of playing through the loaded preset.
+  // ../data/nylonGuitar.js) and put it on the sound dial, where the listener
+  // may turn to another.
   const performanceFiles = landingFiles.filter((file) => file.instrument);
 
   return [

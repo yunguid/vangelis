@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import MidiTab from './MidiTab.jsx';
+import { arrangeBuiltInPiece } from '../../data/landingQueue.js';
 import {
   parseMidiFile,
   getBuiltInMidiFiles,
@@ -14,6 +15,24 @@ vi.mock('../../utils/midiParser.js', () => ({
   preloadMidiFile: vi.fn(() => Promise.resolve()),
   preloadMidiParser: vi.fn(() => Promise.resolve())
 }));
+
+// A performance decodes its recordings on the engine's audio context.
+vi.mock('../../utils/audioEngine.js', () => ({
+  audioEngine: { ensureAudioContext: vi.fn(() => Promise.resolve({})) }
+}));
+vi.mock('../../data/landingQueue.js', async (importOriginal) => ({
+  ...(await importOriginal()),
+  arrangeBuiltInPiece: vi.fn()
+}));
+
+const CONCERTO = {
+  id: 'rachmaninoff-concerto2-mov1',
+  name: 'Piano Concerto No. 2 - I. Moderato',
+  path: '/midi/rachmaninoff-concerto2-mov1.mid',
+  composer: 'Sergei Rachmaninoff'
+};
+const CLAIR = { id: 'debussy-clair-de-lune', name: 'Clair de lune', path: '/midi/clair.mid', composer: 'Claude Debussy' };
+const titlesInOrder = () => [...document.querySelectorAll('.midi-tab__file-name')].map((node) => node.textContent);
 
 const defaultProps = (overrides = {}) => ({
   isPlaying: false,
@@ -32,14 +51,8 @@ const defaultProps = (overrides = {}) => ({
 describe('MidiTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getBuiltInMidiFiles.mockReturnValue([
-      {
-        id: 'rachmaninoff-concerto2-mov1',
-        name: 'Piano Concerto No. 2 - I. Moderato',
-        path: '/midi/rachmaninoff-concerto2-mov1.mid',
-        composer: 'Sergei Rachmaninoff'
-      }
-    ]);
+    window.localStorage.clear();
+    getBuiltInMidiFiles.mockReturnValue([CONCERTO]);
     parseMidiFile.mockResolvedValue({
       name: 'Embedded MIDI Name',
       duration: 1.2,
@@ -106,6 +119,71 @@ describe('MidiTab', () => {
     expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Embedded MIDI Name'
     }));
+  });
+
+  it('puts a performance\'s own sound in the player\'s hands, and nothing for an ordinary file', async () => {
+    const lullaby = {
+      id: 'performance-opening-piano', name: 'Subwoofer Lullaby', path: '/midi/subwoofer-lullaby.mid',
+      instrument: 'opening-piano', instrumentLabel: 'Grand piano', landing: {}
+    };
+    const grandPiano = { name: 'Grand Piano', instrument: 'opening-piano' };
+    getBuiltInMidiFiles.mockReturnValue([lullaby, CONCERTO]);
+    arrangeBuiltInPiece.mockResolvedValue({ score: { duration: 2, notes: [{ midi: 60, time: 0, duration: 1 }] }, sound: grandPiano });
+    const onPlay = vi.fn();
+    render(<MidiTab {...defaultProps({ onPlay })} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /^subwoofer lullaby/i }));
+    await waitFor(() => expect(onPlay).toHaveBeenCalledTimes(1));
+    expect(onPlay).toHaveBeenLastCalledWith(
+      expect.objectContaining({ name: 'Subwoofer Lullaby', sourceFileId: lullaby.id }),
+      { sound: grandPiano }
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /piano concerto no\. 2.*sergei rachmaninoff$/i }));
+    await waitFor(() => expect(onPlay).toHaveBeenCalledTimes(2));
+    expect(onPlay.mock.lastCall).toHaveLength(1);
+  });
+
+  it('leads the list with liked pieces, under Favorites, and remembers them', () => {
+    getBuiltInMidiFiles.mockReturnValue([CONCERTO, CLAIR]);
+    const view = render(<MidiTab {...defaultProps()} />);
+    expect(screen.queryByText('Favorites')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Like Clair de lune' }));
+
+    expect(titlesInOrder()).toEqual(['Clair de lune', 'Piano Concerto No. 2 - I. Moderato']);
+    const favorites = screen.getByText('Favorites').closest('.midi-tab__group');
+    expect(within(favorites).getByRole('button', { name: 'Like Clair de lune' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(favorites).queryByText(/piano concerto/i)).not.toBeInTheDocument();
+
+    view.unmount();
+    render(<MidiTab {...defaultProps()} />);
+    expect(titlesInOrder()[0]).toBe('Clair de lune');
+
+    // Unliking sends it back to its own group.
+    fireEvent.click(screen.getByRole('button', { name: 'Like Clair de lune' }));
+    expect(screen.queryByText('Favorites')).not.toBeInTheDocument();
+    expect(titlesInOrder()).toEqual(['Piano Concerto No. 2 - I. Moderato', 'Clair de lune']);
+  });
+
+  it('removes a piece from the library until it is restored', () => {
+    getBuiltInMidiFiles.mockReturnValue([CONCERTO, CLAIR]);
+    const view = render(<MidiTab {...defaultProps()} />);
+    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Clair de lune from the library' }));
+    expect(titlesInOrder()).toEqual(['Piano Concerto No. 2 - I. Moderato']);
+
+    // Still gone on the next visit, and not found by a search either.
+    view.unmount();
+    render(<MidiTab {...defaultProps()} />);
+    fireEvent.change(screen.getByRole('searchbox', { name: /filter midi files/i }), { target: { value: 'clair' } });
+    expect(titlesInOrder()).toEqual([]);
+    expect(screen.getByText(/1 removed/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    expect(titlesInOrder()).toEqual(['Clair de lune']);
+    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
   });
 
   it('renders original cues with their code name, no tag badge, and no composer byline', () => {

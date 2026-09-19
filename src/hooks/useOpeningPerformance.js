@@ -9,22 +9,26 @@ import {
   pickLandingPiece,
   saveLastLandingId
 } from '../data/landingQueue.js';
+import { loadMidiLibraryPrefs } from '../utils/midiLibraryPrefs.js';
 
 // Once per document visit, including hash-route navigation back to the keyboard.
 let openingClaimed = false;
 
-export function useOpeningPerformance({ audioParams }) {
+export function useOpeningPerformance({ audioParams, waveformType = 'Sine', revoice = false }) {
   // The sound of whichever piece the landing queue picked; null until it has
   // loaded, and for pieces that only override part of the listener's sound.
   const [pieceSound, setPieceSound] = useState(null);
+  // Revoiced (the listener chose another sound), the piece plays through theirs.
+  const ownSound = revoice ? null : pieceSound;
   const pieceParams = useMemo(() => ({
-    ...(pieceSound?.params || audioParams),
+    ...(ownSound?.params || audioParams),
     volume: (audioParams.volume ?? 0.68) * 0.85,
     pan: audioParams.pan ?? 0
-  }), [pieceSound, audioParams]);
+  }), [ownSound, audioParams]);
   const playback = useMidiPlayback({
-    waveformType: pieceSound?.waveformType || 'Sine',
-    audioParams: pieceParams
+    waveformType: ownSound?.waveformType || waveformType,
+    audioParams: pieceParams,
+    revoice
   });
   const cancelled = useRef(openingClaimed);
   const started = useRef(false);
@@ -58,7 +62,9 @@ export function useOpeningPerformance({ audioParams }) {
         context = await audioEngine.ensureAudioContext();
         if (disposed || cancelled.current) return;
         context.addEventListener('statechange', tryStart);
-        const files = getLandingFiles();
+        // A piece removed from the MIDI library does not open the page either.
+        const { removed } = loadMidiLibraryPrefs();
+        const files = getLandingFiles().filter((file) => !removed.has(file.id));
         const piece = pickLandingPiece(files, loadLandingSelection(files), loadLastLandingId());
         // Every piece switched off in the MIDI tab: the page opens silent.
         if (!piece) return;

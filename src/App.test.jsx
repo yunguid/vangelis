@@ -4,10 +4,41 @@ import App from './App';
 import { parseMidiFile } from './utils/midiParser.js';
 
 // Opening lifecycle is exercised with the real MIDI scheduler in its integration tests.
-// `opening.sound` stands in for the sound of whichever landing piece was picked.
-const opening = vi.hoisted(() => ({ sound: null }));
+// `opening.sound` stands in for the sound of whichever landing piece was picked;
+// `opening.props` is what the page last asked the landing piece to play with.
+const opening = vi.hoisted(() => ({ sound: null, props: null, stop: null }));
 vi.mock('./hooks/useOpeningPerformance.js', () => ({
-  useOpeningPerformance: () => ({ activeNotes: new Set(), stop: vi.fn(), sound: opening.sound })
+  useOpeningPerformance: (props) => {
+    opening.props = props;
+    return { activeNotes: new Set(), stop: opening.stop, sound: opening.sound };
+  }
+}));
+
+// Stand-ins for the dial and the MIDI library, reporting choices the way the real ones do.
+const sounds = vi.hoisted(() => ({
+  pad: { name: 'Glass Pad', waveformType: 'Saw', audioParams: { release: 1.2 } },
+  grandPiano: { name: 'Grand Piano', instrument: 'opening-piano', audioParams: { release: 0.45 } },
+  // The one note is far enough in that the scheduler never reaches the engine.
+  lullaby: { name: 'Subwoofer Lullaby', duration: 12, notes: [{ midi: 60, time: 10, duration: 1, velocity: 0.7 }] }
+}));
+vi.mock('./components/SoundDial.jsx', () => ({
+  default: ({ activeSoundName, onChoose }) => (
+    <div>
+      <output aria-label="Sound on the dial">{activeSoundName}</output>
+      <button type="button" onClick={() => onChoose(sounds.pad)}>Dial: Glass Pad</button>
+      <button type="button" onClick={() => onChoose(sounds.grandPiano)}>Dial: Grand Piano</button>
+    </div>
+  )
+}));
+vi.mock('./components/Sidebar/MidiTab.jsx', () => ({
+  default: ({ onPlay, currentMidi }) => (
+    <div>
+      <button type="button" onClick={() => onPlay(sounds.lullaby, { sound: sounds.grandPiano })}>
+        Library: Subwoofer Lullaby
+      </button>
+      <button type="button" onClick={() => onPlay(currentMidi)}>Player: play again</button>
+    </div>
+  )
 }));
 
 const recordings = vi.hoisted(() => ({ load: null }));
@@ -67,6 +98,7 @@ describe('App', () => {
     window.localStorage.clear();
     engineStatus.current = { wasmReady: false, graphWarmed: false };
     opening.sound = null;
+    opening.stop = vi.fn();
     recordings.load = vi.fn();
   });
 
@@ -155,6 +187,42 @@ describe('App', () => {
     expect(audioEngine.setInstrument).toHaveBeenLastCalledWith(null);
     const saved = JSON.parse(window.localStorage.getItem('vangelis-ui-session-v2'));
     expect(saved).toMatchObject({ instrument: 'opening-piano', activePresetName: 'Grand Piano' });
+  });
+
+  it('revoices the landing piece when the dial turns to another sound, instead of stopping it', async () => {
+    opening.sound = sounds.grandPiano;
+    render(<App />);
+    const dial = await screen.findByLabelText('Sound on the dial');
+    expect(dial).toHaveTextContent('Grand Piano');
+    expect(opening.props.revoice).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dial: Glass Pad' }));
+    expect(dial).toHaveTextContent('Glass Pad');
+    expect(opening.props).toMatchObject({ revoice: true, waveformType: 'Saw' });
+    expect(opening.stop).not.toHaveBeenCalled();
+
+    // Back on the piece's own sound, it plays in its own voice again.
+    fireEvent.click(screen.getByRole('button', { name: 'Dial: Grand Piano' }));
+    expect(opening.props.revoice).toBe(false);
+  });
+
+  it('puts a library performance\'s sound on the dial, and leaves the dial alone when it is played again', async () => {
+    render(<App />);
+    // Sounds are chosen on the dial, so this sidebar is the MIDI browser alone.
+    expect(screen.queryByRole('button', { name: /sound controls/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /open midi browser/i }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Library: Subwoofer Lullaby' }));
+    const dial = await screen.findByLabelText('Sound on the dial');
+    expect(dial).toHaveTextContent('Grand Piano');
+    expect(opening.props.revoice).toBe(false);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dial: Glass Pad' }));
+    expect(opening.props.revoice).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Player: play again' }));
+    expect(dial).toHaveTextContent('Glass Pad');
+    expect(opening.props.revoice).toBe(true);
   });
 
   it('says so and returns to the synth when an instrument cannot be loaded', async () => {

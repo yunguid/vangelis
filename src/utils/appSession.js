@@ -1,16 +1,6 @@
 import { sanitizeAudioParams, upgradeLegacyAudioParams } from './audioParams.js';
 
 const STORAGE_KEY = 'vangelis-ui-session-v2';
-const DEFAULT_CONTROL_SECTIONS = Object.freeze({
-  essentials: true,
-  delay: false,
-  reverb: false,
-  color: false,
-  modulation: false
-});
-
-const VALID_SIDEBAR_TABS = new Set(['midi', 'sound']);
-const coerceSidebarTab = (value) => (VALID_SIDEBAR_TABS.has(value) ? value : 'sound');
 
 const coerceSampleSelection = (value) => {
   if (!value || typeof value !== 'object') return null;
@@ -27,25 +17,9 @@ const coerceSampleSelection = (value) => {
   return normalized;
 };
 
-const coerceControlSections = (value) => {
-  if (!value || typeof value !== 'object') {
-    return DEFAULT_CONTROL_SECTIONS;
-  }
-
-  return {
-    essentials: value.essentials !== false,
-    delay: !!value.delay,
-    reverb: !!value.reverb,
-    color: !!value.color,
-    modulation: !!value.modulation
-  };
-};
-
 export const getDefaultSessionState = () => ({
   waveformType: null,
   audioParams: null,
-  controlSections: DEFAULT_CONTROL_SECTIONS,
-  sidebarTab: 'sound',
   activePresetName: null,
   instrument: null,
   activeSampleId: null,
@@ -74,8 +48,6 @@ export function loadAppSession() {
       ...fallback,
       waveformType: typeof parsed.waveformType === 'string' ? parsed.waveformType : null,
       audioParams,
-      controlSections: coerceControlSections(parsed.controlSections),
-      sidebarTab: coerceSidebarTab(parsed.sidebarTab),
       activePresetName: typeof parsed.activePresetName === 'string' ? parsed.activePresetName : null,
       instrument: typeof parsed.instrument === 'string' ? parsed.instrument : null,
       activeSampleId: typeof parsed.activeSampleId === 'string' ? parsed.activeSampleId : null,

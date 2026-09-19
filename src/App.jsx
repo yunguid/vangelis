@@ -19,10 +19,7 @@ import {
   PRIMARY_VISUAL_DELAY_MS,
   useDeferredVisualMount
 } from './hooks/useDeferredVisualMount.js';
-import {
-  MidiTransportContext,
-  SoundControlsContext
-} from './context/SynthContexts.jsx';
+import { MidiTransportContext } from './context/SynthContexts.jsx';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { consumePendingMidi } from './utils/pendingMidiHandoff.js';
 import { createTrailingDeadlineScheduler } from './utils/trailingDeadlineScheduler.js';
@@ -34,13 +31,6 @@ const BirdsEyeRadar = React.lazy(() => import('./components/BirdsEyeRadar'));
 
 const NOTICE_TIMEOUT_MS = 2200;
 const SESSION_SAVE_DELAY_MS = 200;
-const DEFAULT_CONTROL_SECTIONS = Object.freeze({
-  essentials: true,
-  delay: false,
-  reverb: false,
-  color: false,
-  modulation: false
-});
 
 const isTextInputTarget = (target) => {
   const tagName = target?.tagName;
@@ -71,16 +61,17 @@ const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   // Arrival is just the keyboard playing the opening; the sidebar opens on request.
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'sound');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
   const [notice, setNotice] = useState('');
   const [activePresetName, setActivePresetName] = useState(() => initialSession.activePresetName || null);
   // A sampled instrument under the keys (data/sampledInstruments.js), or null for the synth.
   const [instrument, setInstrument] = useState(() => initialSession.instrument || null);
-  const [controlSections, setControlSections] = useState(() => (
-    initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
-  ));
+  // The sound the piece in the player brought with it (a landing piece, a
+  // performance). While the dial still shows it the piece plays in its own
+  // voice; once the listener chooses another sound it is revoiced through that.
+  const [pieceSoundName, setPieceSoundName] = useState(null);
+  const revoice = pieceSoundName !== null && activePresetName !== pieceSoundName;
   const scrollRaf = useRef(null);
   const noticeTimeoutRef = useRef(null);
   const sessionSnapshotRef = useRef(null);
@@ -97,12 +88,40 @@ const App = () => {
   const isGraphWarm = engineStatus.graphWarmed;
 
   // MIDI playback hook
-  const midiPlayback = useMidiPlayback({ waveformType, audioParams });
-  const opening = useOpeningPerformance({ audioParams });
-  const playMidi = useCallback((...args) => {
+  const midiPlayback = useMidiPlayback({ waveformType, audioParams, revoice });
+  const opening = useOpeningPerformance({ audioParams, waveformType, revoice });
+
+  const handleAudioParamsChange = useCallback((nextParams) => {
+    setAudioParams((prev) => sanitizeAudioParams({
+      ...prev,
+      ...nextParams
+    }));
+  }, []);
+
+  // From the sound dial. Browsing there loads sounds one after another, so no
+  // notice; whatever is playing carries on in the new sound, and only a played
+  // note takes the keys over.
+  const applySound = useCallback((sound) => {
+    if (sound.waveformType) setWaveformType(sound.waveformType);
+    if (sound.audioParams) handleAudioParamsChange(sound.audioParams);
+    setInstrument(sound.instrument || null);
+    setActivePresetName(sound.name);
+  }, [handleAudioParamsChange]);
+
+  // A piece that brings its own sound puts it on the dial, so the dial shows
+  // what is playing and playing along continues in that voice.
+  const applyPieceSound = useCallback((sound) => {
+    applySound(sound);
+    setPieceSoundName(sound.name);
+  }, [applySound]);
+
+  // `options.sound` comes with a performance chosen in the library; a replay
+  // leaves the dial where the listener put it.
+  const playMidi = useCallback((midi, options) => {
     opening.stop();
-    midiPlayback.play(...args);
-  }, [opening.stop, midiPlayback.play]);
+    if (options?.sound) applyPieceSound(options.sound);
+    midiPlayback.play(midi, options);
+  }, [applyPieceSound, opening.stop, midiPlayback.play]);
   const transportBpm = (midiPlayback.currentMidi?.bpm || 120) * midiPlayback.tempoFactor;
 
   // A MIDI file picked on another page (Design, a study) lands here to play.
@@ -110,7 +129,6 @@ const App = () => {
     const pending = consumePendingMidi();
     if (!pending) return;
     playMidi(pending);
-    setSidebarTab('midi');
     setSidebarOpen(true);
   }, [playMidi]);
 
@@ -293,7 +311,6 @@ const App = () => {
           const { parseMidiFile } = await import('./utils/midiParser.js');
           const midiData = await parseMidiFile(midiFile);
           playMidi(midiData);
-          setSidebarTab('midi');
           setSidebarOpen(true);
           pushNotice('MIDI pasted.');
         } catch (error) {
@@ -349,8 +366,6 @@ const App = () => {
       audioParams,
       activePresetName,
       instrument,
-      controlSections,
-      sidebarTab,
       activeSampleId,
       sampleSelection,
       showShortcuts,
@@ -363,11 +378,9 @@ const App = () => {
     activeSampleId,
     audioParams,
     instrument,
-    controlSections,
     midiPlayback.tempoFactor,
     sampleSelection,
     showShortcuts,
-    sidebarTab,
     waveformType
   ]);
 
@@ -386,45 +399,16 @@ const App = () => {
     };
   }, []);
 
-  const handleAudioParamChange = useCallback((paramName, value) => {
-    setAudioParams((prev) => sanitizeAudioParams({
-      ...prev,
-      [paramName]: value
-    }));
-  }, []);
-
-  const handleAudioParamsChange = useCallback((nextParams) => {
-    setAudioParams((prev) => sanitizeAudioParams({
-      ...prev,
-      ...nextParams
-    }));
-  }, []);
-
   const handleSoundOn = useCallback(() => {
     audioEngine.context?.resume().catch(() => {});
   }, []);
   const handleSidebarOpen = useCallback(() => setSidebarOpen(true), []);
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), []);
 
-  const applySound = useCallback((sound) => {
-    if (sound.waveformType) setWaveformType(sound.waveformType);
-    if (sound.audioParams) handleAudioParamsChange(sound.audioParams);
-    setInstrument(sound.instrument || null);
-    setActivePresetName(sound.name);
-  }, [handleAudioParamsChange]);
-
-  // From the sound dial. Browsing there loads sounds one after another, so
-  // no notice; and picking a sound is taking the instrument over.
-  const handleSoundChosen = useCallback((sound) => {
-    opening.stop();
-    applySound(sound);
-  }, [applySound, opening.stop]);
-
-  // The landing piece brings its own sound; load it under the keys as well, so
-  // the dial shows what is playing and playing along continues in that voice.
+  // The landing piece's own sound, once its recordings or patch have loaded.
   useEffect(() => {
-    if (opening.sound) applySound(opening.sound);
-  }, [applySound, opening.sound]);
+    if (opening.sound) applyPieceSound(opening.sound);
+  }, [applyPieceSound, opening.sound]);
 
   // Hand the instrument's recordings to the engine once they are decoded; the
   // previous sound keeps playing until then. The engine is never woken for
@@ -460,44 +444,6 @@ const App = () => {
   useEffect(() => () => {
     audioEngine.setInstrument(null);
   }, []);
-
-  // Choosing a waveform is choosing the synth again.
-  const handleWaveformChange = useCallback((nextWaveform) => {
-    setWaveformType(nextWaveform);
-    if (!instrument) return;
-    setInstrument(null);
-    setActivePresetName(null);
-  }, [instrument]);
-
-  const handleControlSectionToggle = useCallback((section) => {
-    if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTROL_SECTIONS, section)) return;
-    setControlSections((prev) => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  }, []);
-
-  const soundControlsValue = useMemo(() => ({
-    waveformType,
-    onWaveformChange: handleWaveformChange,
-    instrument,
-    audioParams,
-    onParamChange: handleAudioParamChange,
-    onParamsChange: handleAudioParamsChange,
-    transportBpm,
-    controlSections,
-    onControlSectionToggle: handleControlSectionToggle
-  }), [
-    waveformType,
-    instrument,
-    audioParams,
-    transportBpm,
-    controlSections,
-    handleAudioParamChange,
-    handleAudioParamsChange,
-    handleControlSectionToggle,
-    handleWaveformChange
-  ]);
 
   const midiTransportValue = useMemo(() => ({
     isPlaying: midiPlayback.isPlaying,
@@ -580,7 +526,7 @@ const App = () => {
           </main>
 
           <React.Suspense fallback={null}>
-            <SoundDial activeSoundName={activePresetName || waveformType} onChoose={handleSoundChosen} />
+            <SoundDial activeSoundName={activePresetName || waveformType} onChoose={applySound} />
           </React.Suspense>
 
         {showShortcuts && (
@@ -635,20 +581,17 @@ const App = () => {
 
         </div>
 
-        <SoundControlsContext.Provider value={soundControlsValue}>
-          <MidiTransportContext.Provider value={midiTransportValue}>
-            <Sidebar
-              isOpen={sidebarOpen}
-              onOpen={handleSidebarOpen}
-              onClose={handleSidebarClose}
-              activeTab={sidebarTab}
-              onTabChange={setSidebarTab}
-              isMidiPlaying={midiPlayback.isPlaying}
-              midiName={midiPlayback.currentMidi?.name || ''}
-              soundLabel={activePresetName || waveformType}
-            />
-          </MidiTransportContext.Provider>
-        </SoundControlsContext.Provider>
+        {/* Sounds are chosen on the dial here, so this sidebar has no Sound panel. */}
+        <MidiTransportContext.Provider value={midiTransportValue}>
+          <Sidebar
+            isOpen={sidebarOpen}
+            onOpen={handleSidebarOpen}
+            onClose={handleSidebarClose}
+            soundPanel={false}
+            isMidiPlaying={midiPlayback.isPlaying}
+            midiName={midiPlayback.currentMidi?.name || ''}
+          />
+        </MidiTransportContext.Provider>
 
       </div>
     </ErrorBoundary>

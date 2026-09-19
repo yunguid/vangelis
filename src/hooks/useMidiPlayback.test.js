@@ -170,6 +170,46 @@ describe('useMidiPlayback', () => {
     expect(call.params).toEqual({ volume: 0.4, release: 0.07 });
   });
 
+  it('revoiced, plays the voice a note brings through the player\'s sound, and gives it back', async () => {
+    const sound = { waveformType: 'Saw', audioParams: { volume: 0.4, release: 1.5 } };
+    const { result, rerender } = renderHook((props) => useMidiPlayback(props), {
+      initialProps: { ...sound, revoice: true }
+    });
+    const recording = { buffer: {}, baseFrequency: 329.63 };
+
+    await act(async () => {
+      result.current.play({
+        duration: 3,
+        bpm: 120,
+        notes: [
+          { midi: 64, time: 0.5, duration: 0.2, velocity: 0.8, sample: recording, audioParamOverrides: { release: 0.07 } },
+          { midi: 65, time: 1, duration: 0.2, velocity: 0.8, waveformType: 'Square', audioParams: { volume: 0.9 } },
+          { midi: 67, time: 1.5, duration: 0.2, velocity: 0.8, sample: recording }
+        ]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    // No recording to hand over early: the note starts on its beat, not 60 ms before it.
+    await act(async () => { vi.advanceTimersByTime(460); });
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    await act(async () => { vi.advanceTimersByTime(600); });
+
+    expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
+    const played = audioEngine.playFrequency.mock.calls.map(([note]) => note);
+    expect(played).toHaveLength(2);
+    // The recording and its room are set aside; so is the second note's own patch.
+    expect(played[0]).toMatchObject({ velocity: 0.8, voiced: false, waveformType: 'Saw', params: sound.audioParams });
+    expect(played[1]).toMatchObject({ voiced: false, waveformType: 'Saw', params: sound.audioParams });
+
+    // Back on its own sound, the piece plays its recordings again.
+    rerender({ ...sound, revoice: false });
+    await act(async () => { vi.advanceTimersByTime(500); });
+    expect(audioEngine.playBufferedSample).toHaveBeenCalledTimes(1);
+    expect(audioEngine.playBufferedSample.mock.calls[0][0]).toMatchObject({ buffer: recording.buffer, velocity: 0.8 });
+  });
+
   it('records opt-in MIDI startup and scheduler lateness samples', async () => {
     const recordInteraction = vi.fn();
     const completePaint = vi.fn();

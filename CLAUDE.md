@@ -89,6 +89,7 @@ src/
 │   ├── midiParser.js          # Parse .mid files using @tonejs/midi
 │   ├── factoryPresets.js      # Deferred 45-patch factory bank
 │   ├── userPresetStorage.js   # localStorage-backed user presets (+ change subscription)
+│   ├── midiLibraryPrefs.js    # Liked and removed MIDI files (localStorage)
 │   ├── soundCatalog.js        # Every loadable sound in browsing order (acoustic, waveforms, banks, user)
 │   ├── audioParams.js         # Audio parameter definitions and sanitization
 │   │
@@ -145,9 +146,16 @@ src/
   whole tone, mf and ff, each left to ring out, on the same level line as the
   piece's takes (which are cut to its note lengths). A key struck hard plays
   the forte take; a position plucked again within 1.5 s plays the other one
-- A landing piece loads its own sound under the keys (`useOpeningPerformance`
-  reports it as `sound`), so the dial shows what is playing and playing along
-  continues in that voice; a sound saved from the Sound tab keeps its instrument
+- A piece that brings its own sound (a landing piece, a performance chosen in
+  the MIDI library) puts it on the dial and under the keys, so the dial shows
+  what is playing and playing along continues in that voice. The dial stays the
+  listener's: turn it to another sound and the piece carries on, revoiced
+  through that sound (`revoice` in `useMidiPlayback` sets aside the recording,
+  patch and room a note brings and keeps its pitch, time and touch); turn back
+  to the piece's own sound and it plays its own recordings again. Only a played
+  note takes the keys over from a landing piece. Playing a piece again leaves
+  the dial where the listener put it; a sound saved from a Sound tab keeps its
+  instrument
 
 ### Factory Preset Bank
 - 45 hand-designed patches in `utils/factoryPresets.js`, grouped by category
@@ -167,10 +175,12 @@ src/
   bands. Drag, scroll, arrow keys, the steppers or a click on the ring turn it;
   `/` opens it and typing finds sounds by name, category or description.
   Resting on a sound loads it, and the loaded sound persists in the session
-- The sidebar's Sound tab shapes the sound and keeps a save row (`PresetShelf`
-  with `saveOnly`); saved sounds persist in localStorage, join the dial as
-  "Your sounds" and can be removed there. The full `PresetShelf` browser
-  remains on the Design page
+- The home page chooses sounds on the dial alone: its sidebar is the MIDI
+  browser (`<Sidebar soundPanel={false}>`). The editor, Design and Studies
+  pages have no dial, so their sidebars keep the Sound tab, which shapes the
+  sound and keeps a save row (`PresetShelf` with `saveOnly`); saved sounds
+  persist in localStorage, join the dial as "Your sounds" and can be removed
+  there. The full `PresetShelf` browser remains on the Design page
 - The Design (`#/sound-designer`) and Studies (`#/studies`) pages are routable
   but deliberately not linked from the sidebar rail; Design is kept for
   background sound design
@@ -187,8 +197,13 @@ src/
   while there is a choice); "On load" switches in the MIDI tab choose which
   are in the queue (localStorage), and all off means a silent landing
 - Play MIDI through the synth with full sound engine
-- "Performances" bring their own sampled instrument instead of the loaded
-  preset: `Saudade de Triana`, an original bossa/flamenco piece for nylon
+- Liked pieces lead the MIDI library under "Favorites", and a piece can be
+  removed from it (and restored from the line under the list); both live as
+  ids in localStorage (`utils/midiLibraryPrefs.js`), and a removed piece no
+  longer opens the page either
+- "Performances" bring their own sampled instrument and put it on the dial
+  (see Sampled Instruments for playing them through another sound):
+  `Saudade de Triana`, an original bossa/flamenco piece for nylon
   guitar written string-and-fret by `scripts/generate_guitar_performance.mjs`
   (MIDI channel = string) and played from per-string recordings arranged by
   `src/data/nylonGuitar.js` (samples built by `scripts/build_nylon_guitar.mjs`,

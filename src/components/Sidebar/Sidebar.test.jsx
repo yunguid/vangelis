@@ -129,6 +129,15 @@ describe('Sidebar', () => {
     expect(await screen.findByTestId('sound-tab')).toBeInTheDocument();
   });
 
+  it('keeps only the MIDI panel on a page that chooses its sound elsewhere', async () => {
+    render(<Sidebar {...buildProps({ isOpen: true, activeTab: 'sound', soundPanel: false })} />);
+
+    expect(screen.queryByRole('button', { name: /sound controls/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /close midi browser/i })).toBeInTheDocument();
+    expect(await screen.findByTestId('midi-tab')).toBeInTheDocument();
+    expect(screen.queryByTestId('sound-tab')).not.toBeInTheDocument();
+  });
+
   it('does not rerender the sound panel when only MIDI progress changes', async () => {
     const props = buildProps({ isOpen: true, activeTab: 'sound' });
     const soundValue = { waveformType: 'Sine', audioParams: {} };
