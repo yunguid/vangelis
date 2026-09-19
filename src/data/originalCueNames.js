@@ -1,7 +1,7 @@
 /**
  * Display-name codes for the "Originals" MIDI corpus.
  *
- * Single source of truth for the 58 originals' display names. Both
+ * Single source of truth for the 59 originals' display names. Both
  * `src/utils/midiParser.js` (the in-app MIDI browser) and
  * `scripts/generate_original_midis.mjs` (the corpus generator, which embeds
  * the name into each .mid file's header) import `ORIGINAL_CUE_NAMES` from
@@ -261,7 +261,8 @@ export const ORIGINAL_CUE_IDS = [
   'original-glass-garden',
   'original-copper-wires',
   'original-dust-devils',
-  'original-crystal-run'
+  'original-crystal-run',
+  'original-pocket-park'
 ];
 
 /**
@@ -328,7 +329,8 @@ export const ORIGINAL_CUE_NAMES = {
   'original-glass-garden': 'DAWN BAY',
   'original-copper-wires': 'wr-13',
   'original-dust-devils': 'pl-28',
-  'original-crystal-run': 'LEDGER 1'
+  'original-crystal-run': 'LEDGER 1',
+  'original-pocket-park': 'HINGE 9'
 };
 
 /**

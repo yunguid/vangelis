@@ -79,7 +79,7 @@ export function polyBlamp(t, dt) {
   return 0.0;
 }
 
-export function waveformSample(waveform, phase, dt) {
+export function waveformSample(waveform, phase, dt, width = 0.5) {
   switch (waveform) {
     case WAVEFORMS.SINE:
       return Math.sin(TWO_PI * phase);
@@ -89,15 +89,21 @@ export function waveformSample(waveform, phase, dt) {
       return value;
     }
     case WAVEFORMS.SQUARE: {
-      let value = phase < 0.5 ? 1.0 : -1.0;
+      // Rising edge at phase 0, falling edge at phase `width`. At width 0.5
+      // every operation below is the fixed-square arithmetic it replaced
+      // (1 - 0.5 === 0.5, x - 0 === x), so existing patches render bit-exact.
+      let value = phase < width ? 1.0 : -1.0;
+      const fallPhase = (phase + (1.0 - width)) % 1.0;
       if (dt <= BLEP4_MAX_DT) {
         value += polyBlep4(phase, dt);
-        value -= polyBlep4((phase + 0.5) % 1.0, dt);
+        value -= polyBlep4(fallPhase, dt);
       } else {
         value += polyBlep(phase, dt);
-        value -= polyBlep((phase + 0.5) % 1.0, dt);
+        value -= polyBlep(fallPhase, dt);
       }
-      return value;
+      // A narrow pulse carries DC (2·width − 1); left in, the amp envelope
+      // would turn it into a thump on every note.
+      return value - (2.0 * width - 1.0);
     }
     case WAVEFORMS.TRIANGLE: {
       let value = 2.0 * Math.abs(2.0 * phase - 1.0) - 1.0;

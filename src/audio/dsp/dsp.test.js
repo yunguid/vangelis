@@ -83,6 +83,58 @@ describe('oscillator', () => {
     }
   });
 
+  it('pulse width sets the duty cycle, stays DC-free, and leaves the 50% square untouched', () => {
+    const dt = 110 / SR;
+    const cycle = (width) => {
+      const samples = [];
+      for (let phase = 0; phase < 1; phase += dt / 64) {
+        samples.push(width === undefined
+          ? waveformSample(WAVEFORMS.SQUARE, phase, dt)
+          : waveformSample(WAVEFORMS.SQUARE, phase, dt, width));
+      }
+      return samples;
+    };
+    for (const width of [0.125, 0.25, 0.5]) {
+      const samples = cycle(width);
+      // High for `width` of the cycle, measured against the DC-shifted midline.
+      const midline = -(2 * width - 1);
+      const high = samples.filter((value) => value > midline).length / samples.length;
+      expect(high).toBeCloseTo(width, 2);
+      const mean = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+      expect(Math.abs(mean)).toBeLessThan(0.01);
+    }
+    // Existing patches never pass a width: the default must be the old square.
+    expect(cycle(0.5)).toEqual(cycle(undefined));
+    expect(waveformSample(WAVEFORMS.SQUARE, 0.2, dt)).toBe(1);
+    expect(waveformSample(WAVEFORMS.SQUARE, 0.7, dt)).toBe(-1);
+  });
+
+  it('a voice renders the pulse width it is given', () => {
+    const highFraction = (squareDuty) => {
+      const params = { ...DEFAULT_PARAMS, squareDuty, attack: 0.001, sustain: 1 };
+      const routesBox = { compiled: compileModRoutes(params.modRoutes, params) };
+      const voice = new Voice(SR, routesBox);
+      voice.start({
+        noteId: `pulse-${squareDuty}`,
+        frequency: 110,
+        waveform: 'square',
+        velocity: 1,
+        params,
+        frame: 0,
+        glideFrom: 0
+      });
+      const out = [];
+      for (let i = 0; i < SR / 2; i++) {
+        voice.nextSample(1.0, 0.0);
+        if (i > SR / 10) out.push(voice.outL);
+      }
+      // DC is removed, so a 25% pulse sits above zero for a quarter of the time.
+      return out.filter((value) => value > 0).length / out.length;
+    };
+    expect(highFraction(0.5)).toBeCloseTo(0.5, 1);
+    expect(highFraction(0.25)).toBeCloseTo(0.25, 1);
+  });
+
   it('preserves modulo phase advancement on common and multi-wrap inputs', () => {
     const params = {
       ...DEFAULT_PARAMS,

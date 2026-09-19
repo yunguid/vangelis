@@ -124,12 +124,12 @@ describe('original cues corpus', () => {
   );
   const originals = getBuiltInMidiFiles('/').filter((file) => file.id.startsWith('original-'));
 
-  it('registers a full corpus of 58 cues', () => {
-    expect(originals.length).toBe(58);
+  it('registers a full corpus of 59 cues', () => {
+    expect(originals.length).toBe(59);
   });
 
-  it('names all 58 originals with unique, parenthesis-free code names', () => {
-    expect(originals.length).toBe(58);
+  it('names all 59 originals with unique, parenthesis-free code names', () => {
+    expect(originals.length).toBe(59);
 
     const names = originals.map((file) => file.name);
     expect(new Set(names).size).toBe(names.length);

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import AudioControls from './AudioControls.jsx';
+import { SoundControlsContext } from '../context/SynthContexts.jsx';
 
 vi.mock('./EffectMacroDial.jsx', () => ({
   EffectMacroActivityProvider: ({ children }) => children,
@@ -47,5 +48,21 @@ describe('AudioControls', () => {
 
     expect(screen.getByTestId('macro-dial-feedback')).toHaveTextContent('Feedback:88:true:true');
     expect(screen.getByTestId('macro-dial-size')).toHaveTextContent('Size:88:true:false');
+  });
+
+  it('offers pulse width only while the waveform is a square', () => {
+    const open = { sections: { ...buildProps().sections, modulation: true } };
+    const renderWith = (waveformType) => render(
+      <SoundControlsContext.Provider value={{ waveformType }}>
+        <AudioControls {...buildProps(open)} />
+      </SoundControlsContext.Provider>
+    );
+
+    const square = renderWith('Square');
+    expect(screen.getByText('Pulse width')).toBeInTheDocument();
+    square.unmount();
+
+    renderWith('Sine');
+    expect(screen.queryByText('Pulse width')).not.toBeInTheDocument();
   });
 });

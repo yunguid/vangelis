@@ -2195,6 +2195,105 @@ const blackIce = () => {
   });
 };
 
+/**
+ * Pocket Park — a sunny stroll for the Handheld patches ("Pocket Lead" on
+ * top). D major, 112 BPM, written the way 8-bit portables were scored: a
+ * singing pulse lead with a dotted lilt, the same line replayed a sixteenth
+ * late and quieter as its "echo" (those chips had no delay line), a wave
+ * channel bass bouncing root-fifth, and a decaying square picking out the
+ * chord in eighths. A A' B A'' — the B section leans on a borrowed G minor
+ * for one wistful bar before the tune comes home.
+ */
+const pocketPark = () => {
+  const bpm = 112;
+  const lead = new Part({ bpm, seed: 911 });
+  const echo = new Part({ bpm, seed: 912 });
+  const bass = new Part({ bpm, seed: 913 });
+  const pluck = new Part({ bpm, seed: 914 });
+
+  const CHORDS = {
+    D: { bass: ['D2', 'A2'], tones: ['D4', 'F#4', 'A4', 'F#4'] },
+    Bm: { bass: ['B1', 'F#2'], tones: ['B3', 'D4', 'F#4', 'D4'] },
+    G: { bass: ['G1', 'D2'], tones: ['G3', 'B3', 'D4', 'B3'] },
+    A: { bass: ['A1', 'E2'], tones: ['A3', 'C#4', 'E4', 'C#4'] },
+    'F#m': { bass: ['F#1', 'C#2'], tones: ['F#3', 'A3', 'C#4', 'A3'] },
+    Em: { bass: ['E2', 'B2'], tones: ['E4', 'G4', 'B4', 'G4'] },
+    Gm: { bass: ['G1', 'D2'], tones: ['G3', 'Bb3', 'D4', 'Bb3'] }
+  };
+  const SECTION_A = ['D', 'Bm', 'G', 'A', 'D', 'F#m', 'G', 'A'];
+  const SECTION_B = ['Em', 'A', 'F#m', 'Bm', 'G', 'Gm', 'A', 'A'];
+  // Two bars of band alone, then A A' B A'', then a two-bar tag on the tonic.
+  const BARS = ['D', 'D', ...SECTION_A, ...SECTION_A, ...SECTION_B, ...SECTION_A, 'D', 'D'];
+
+  BARS.forEach((name, barIndex) => {
+    const chord = CHORDS[name];
+    const start = barIndex * 4;
+    const lastBar = barIndex === BARS.length - 1;
+    if (lastBar) {
+      bass.add(chord.bass[0], start, 3.5, 0.7);
+      pluck.chord(['D4', 'F#4', 'A4', 'D5'], start, 3.5, 0.5);
+      return;
+    }
+    // Root, fifth on the "and" of two, root again, fifth: the bounce.
+    bass.add(chord.bass[0], start, 1.4, 0.72);
+    bass.add(chord.bass[1], start + 1.5, 0.45, 0.6);
+    bass.add(chord.bass[0], start + 2, 0.9, 0.68);
+    bass.add(chord.bass[1], start + 3, 0.9, 0.62);
+    for (let eighth = 0; eighth < 8; eighth++) {
+      pluck.add(chord.tones[eighth % 4], start + eighth * 0.5, 0.4, eighth % 4 === 0 ? 0.46 : 0.36);
+    }
+  });
+
+  // Beats are relative to the section's first bar.
+  const THEME = [
+    ['F#4', 0, 0.75, 0.74], ['A4', 0.75, 0.25, 0.62], ['D5', 1, 1, 0.78], ['B4', 2, 0.5, 0.66], ['A4', 2.5, 1.5, 0.7],
+    ['B4', 4, 0.75, 0.72], ['D5', 4.75, 0.25, 0.62], ['F#5', 5, 1, 0.8], ['E5', 6, 0.5, 0.68], ['D5', 6.5, 1.5, 0.7],
+    ['B4', 8, 0.75, 0.72], ['D5', 8.75, 0.25, 0.62], ['G5', 9, 1.5, 0.82], ['F#5', 10.5, 0.5, 0.7], ['E5', 11, 1, 0.7],
+    ['C#5', 12, 1, 0.72], ['E5', 13, 0.5, 0.68], ['A4', 13.5, 0.5, 0.6], ['C#5', 14, 2, 0.7],
+    ['D5', 16, 0.75, 0.76], ['F#5', 16.75, 0.25, 0.64], ['A5', 17, 1, 0.84], ['F#5', 18, 0.5, 0.7], ['D5', 18.5, 1.5, 0.72],
+    ['C#5', 20, 0.75, 0.72], ['F#5', 20.75, 0.25, 0.62], ['A5', 21, 1, 0.8], ['E5', 22, 0.5, 0.66], ['C#5', 22.5, 1.5, 0.68]
+  ];
+  // Two ways out of the theme: one that turns back round, one that lands.
+  const TURNAROUND = [
+    ['B4', 24, 0.5, 0.68], ['D5', 24.5, 0.5, 0.7], ['G5', 25, 1, 0.8], ['E5', 26, 0.5, 0.68], ['D5', 26.5, 0.5, 0.66], ['B4', 27, 1, 0.66],
+    ['A4', 28, 0.5, 0.64], ['C#5', 28.5, 0.5, 0.68], ['E5', 29, 1, 0.74], ['D5', 30, 0.5, 0.66], ['C#5', 30.5, 0.5, 0.66], ['E5', 31, 1, 0.72]
+  ];
+  const LANDING = [
+    ['B4', 24, 0.5, 0.68], ['D5', 24.5, 0.5, 0.7], ['G5', 25, 1.5, 0.8], ['F#5', 26.5, 0.5, 0.7], ['E5', 27, 1, 0.7],
+    ['C#5', 28, 1, 0.7], ['E5', 29, 1, 0.74], ['A5', 30, 1, 0.8], ['C#5', 31, 1, 0.66],
+    ['D5', 32, 3, 0.78], ['A4', 35, 1, 0.6], ['D5', 36, 3.5, 0.72]
+  ];
+  const BRIDGE = [
+    ['G5', 0, 1.5, 0.78], ['F#5', 1.5, 0.5, 0.66], ['E5', 2, 1, 0.7], ['B4', 3, 1, 0.64],
+    ['C#5', 4, 1, 0.68], ['E5', 5, 1, 0.72], ['A5', 6, 2, 0.82],
+    ['A5', 8, 1.5, 0.8], ['F#5', 9.5, 0.5, 0.68], ['E5', 10, 1, 0.7], ['C#5', 11, 1, 0.66],
+    ['D5', 12, 1, 0.7], ['F#5', 13, 1, 0.74], ['B5', 14, 2, 0.86],
+    ['B5', 16, 0.75, 0.84], ['A5', 16.75, 0.25, 0.7], ['G5', 17, 1, 0.78], ['D5', 18, 2, 0.7],
+    ['Bb5', 20, 0.75, 0.8], ['A5', 20.75, 0.25, 0.68], ['G5', 21, 1, 0.74], ['D5', 22, 2, 0.66],
+    ['E5', 24, 1, 0.7], ['A5', 25, 1, 0.78], ['C#6', 26, 2, 0.88],
+    ['B5', 28, 0.5, 0.78], ['A5', 28.5, 0.5, 0.74], ['G5', 29, 0.5, 0.7], ['E5', 29.5, 0.5, 0.68], ['C#5', 30, 1, 0.68], ['A4', 31, 1, 0.62]
+  ];
+
+  const ECHO_DELAY = 0.25; // one sixteenth behind the lead
+  const sing = (phrase, sectionStart, withEcho) => {
+    phrase.forEach(([note, at, beats, velocity]) => {
+      lead.add(note, sectionStart + at, beats, velocity);
+      if (withEcho) echo.add(note, sectionStart + at + ECHO_DELAY, beats, velocity * 0.45);
+    });
+  };
+  sing([...THEME, ...TURNAROUND], 8, false);
+  sing([...THEME, ...TURNAROUND], 40, true);
+  sing(BRIDGE, 72, true);
+  sing([...THEME, ...LANDING], 104, true);
+
+  writeMidi({
+    id: 'original-pocket-park',
+    name: 'Pocket Park (Handheld)',
+    bpm,
+    parts: [lead, echo, bass, pluck]
+  });
+};
+
 // ── Main ───────────────────────────────────────────────────────────────
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -2237,4 +2336,6 @@ wave4ChordCues();
 wave4CellCues();
 midnightSlide();
 blackIce();
+// Written for the Handheld patch category.
+pocketPark();
 console.log('done');

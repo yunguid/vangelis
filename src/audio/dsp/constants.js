@@ -64,6 +64,9 @@ export const DEFAULT_PARAMS = {
   useFM: false,
   fmRatio: 2.0,
   fmIndex: 2.0,
+  // Square duty cycle. 0.5 is the classic square; 0.25 and 0.125 are the thin
+  // pulse voices of 8-bit handheld sound chips.
+  squareDuty: 0.5,
   phaseOffsetDeg: 0,
   useFilter: false,
   filterCutoff: 18000,

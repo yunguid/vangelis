@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useSoundControls } from '../context/SynthContexts.jsx';
 import EffectMacroDial, { EffectMacroActivityProvider } from './EffectMacroDial.jsx';
 import {
   AUDIO_PARAM_DEFAULTS,
@@ -120,6 +121,14 @@ const REVERB_WIDTH_SLIDER = makePercentSlider('reverbWidth', {
     if (value < 0.8) return 'Wide';
     return 'Wrap';
   }
+});
+
+// Duty cycle of the square: 50% is the plain square, 25% and 12.5% are the
+// thin pulse voices of 8-bit handhelds.
+const PULSE_WIDTH_SLIDER = makePercentSlider('squareDuty', {
+  id: 'pulse-width',
+  label: 'Pulse width',
+  display: (value) => `${(value * 100).toFixed(1)}%`
 });
 
 const PHASE_SLIDER = makeSlider('phaseOffset', {
@@ -393,6 +402,8 @@ const AudioControls = ({
   compact = false,
   embedded = false
 }) => {
+  // Pulse width only shapes a square, so the slider only exists for one.
+  const { waveformType } = useSoundControls();
   const [localSections, setLocalSections] = useState(DEFAULT_CONTROL_SECTIONS);
   const [showDelayAdvanced, setShowDelayAdvanced] = useState(false);
   const [showReverbAdvanced, setShowReverbAdvanced] = useState(false);
@@ -719,6 +730,7 @@ const AudioControls = ({
             </div>
           )}
 
+          {waveformType === 'Square' && renderSlider(PULSE_WIDTH_SLIDER)}
           {renderSlider(PHASE_SLIDER)}
 
           <label className="toggle-row" htmlFor="use-filter">

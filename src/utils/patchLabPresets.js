@@ -1,7 +1,8 @@
 /**
  * Patch Lab — an original bank exploring broad production techniques:
  * widescreen analog scoring, orchestral-pop arranging, modern beat-lab
- * sound design, and experimental synthesis. Every patch is authored from
+ * sound design, experimental synthesis, and the four-channel voice of 8-bit
+ * handheld sound chips. Every patch is authored from
  * scratch against this engine's real controls (no imported factory banks,
  * no recreated commercial presets) and spreads over the same fully-specified
  * CLEAN_PATCH slate as the factory bank, so switching is deterministic.
@@ -16,7 +17,7 @@ import { CLEAN_PATCH, SRC, DST } from './factoryPresets.js';
 const patch = (overrides) => ({ ...CLEAN_PATCH, ...overrides });
 
 export const PATCH_LAB_CATEGORIES = Object.freeze([
-  'Cinema Analog', 'Orchestral Pop', 'Beat Lab', 'Experimental'
+  'Cinema Analog', 'Orchestral Pop', 'Beat Lab', 'Experimental', 'Handheld'
 ]);
 
 export const PATCH_LAB_PRESETS = [
@@ -279,6 +280,65 @@ export const PATCH_LAB_PRESETS = [
       reverbEnabled: true, reverbMode: 'ambient', reverbMix: 0.4,
       reverbSize: 0.8, reverbDecay: 0.7, reverbTone: 0.4,
       reverbPreDelay: 32, reverbWidth: 0.95
+    })
+  },
+
+  // ── Handheld — the dry, four-channel sound of 8-bit portables ─────────
+  // Those chips had two pulse voices (12.5 / 25 / 50 % duty), one soft
+  // wavetable voice and no effects at all, so every patch here is bone dry:
+  // the "echo" in that music is a second voice replaying the line a step
+  // late, which is an arranging job, not a delay line.
+  {
+    id: 'lab-pocket-lead',
+    name: 'Pocket Lead',
+    category: 'Handheld',
+    description: 'Quarter-duty pulse that sings — thin, nasal, a touch of vibrato.',
+    factory: true,
+    waveformType: 'Square',
+    audioParams: patch({
+      squareDuty: 0.25,
+      attack: 0.005, decay: 0.12, sustain: 0.72, release: 0.06,
+      lfo1Shape: 1, lfoRate: 5.6,
+      modRoutes: [
+        { src: SRC.LFO1, dst: DST.PITCH, depth: 0.012 },
+        { src: SRC.WHEEL, dst: DST.PITCH, depth: 0.03 }
+      ]
+    })
+  },
+  {
+    id: 'lab-pocket-echo',
+    name: 'Pocket Echo',
+    category: 'Handheld',
+    description: 'Eighth-duty pulse, thinner and quieter — layer it a step behind a lead.',
+    factory: true,
+    waveformType: 'Square',
+    audioParams: patch({
+      squareDuty: 0.125,
+      attack: 0.005, decay: 0.2, sustain: 0.5, release: 0.05,
+      velocityCurve: 0.3
+    })
+  },
+  {
+    id: 'lab-wave-channel-bass',
+    name: 'Wave Channel Bass',
+    category: 'Handheld',
+    description: 'Round, unshaped triangle bass that starts and stops like a switch.',
+    factory: true,
+    waveformType: 'Triangle',
+    audioParams: patch({
+      attack: 0.005, decay: 0.05, sustain: 1, release: 0.03
+    })
+  },
+  {
+    id: 'lab-chip-pluck',
+    name: 'Chip Pluck',
+    category: 'Handheld',
+    description: 'Full square with a hardware-style decay to nothing — made for arpeggios.',
+    factory: true,
+    waveformType: 'Square',
+    audioParams: patch({
+      attack: 0.005, decay: 0.24, sustain: 0, release: 0.08,
+      velocityCurve: 0.2
     })
   }
 ];

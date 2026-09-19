@@ -35,6 +35,7 @@ export const CLEAN_PATCH = Object.freeze({
   useADSR: true,
   attack: 0.01, decay: 0.18, sustain: 0.76, release: 0.42,
   useFM: false, fmRatio: 2, fmIndex: 2,
+  squareDuty: 0.5,
   phaseOffset: 0,
   useFilter: false, filterCutoff: 18000, filterResonance: 0.7, filterMode: 0,
   lfo1Shape: 0, lfoRate: 0, lfoDepth: 0, lfoTarget: 0,

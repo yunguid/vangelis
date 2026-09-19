@@ -42,6 +42,7 @@ export class Voice {
     this.fmIndex = 0.0;
     this.useADSR = true;
     this.startFrame = 0;
+    this.squareDuty = 0.5;
     this.unisonVoices = 1;
     this.unisonDetune = 0.0;
     this.unisonPhases = new Float32Array(4);
@@ -104,6 +105,7 @@ export class Voice {
     this.lfo2.shape = clamp(Math.floor(params.lfo2Shape ?? 0), 0, 5);
     this.lfo2.rate = clamp(params.lfo2Rate ?? 0, 0, 40);
 
+    this.squareDuty = clamp(params.squareDuty ?? this.squareDuty, 0.05, 0.95);
     this.unisonVoices = clamp(params.unisonVoices ?? this.unisonVoices, 1, 4);
     this.unisonDetune = params.unisonDetune ?? this.unisonDetune;
 
@@ -351,7 +353,7 @@ export class Voice {
         }
       }
       const dt = Math.min(0.45, baseDt * detuneRatio + fmRate);
-      const s = waveformSample(this.waveform, phaseWithMod, dt);
+      const s = waveformSample(this.waveform, phaseWithMod, dt, this.squareDuty);
       if (stereo) {
         oscL += s * this.unisonGainL[i];
         oscR += s * this.unisonGainR[i];
