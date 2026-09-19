@@ -148,28 +148,34 @@ describe('PianoRollPage cloud saves', () => {
 describe('PianoRollPage layers', () => {
   const originalSetPointerCapture = Element.prototype.setPointerCapture;
 
+  const seedDraft = (tracks) => {
+    localStorage.setItem('vangelis.editorDraft.v1', JSON.stringify({
+      activeTrackId: tracks[tracks.length - 1].id,
+      pattern: {
+        name: 'Layered loop',
+        bpm: 120,
+        bars: 4,
+        nextNoteId: 2,
+        nextTrackId: tracks.length + 1,
+        tracks,
+        loopRange: null,
+        notes: [{ id: 'note-1', midi: 60, start: 0, duration: 1, velocity: 0.8, trackId: 'track-1' }]
+      }
+    }));
+  };
+
+  const TWO_TRACKS = [
+    { id: 'track-1', name: 'Lead', instrument: 'Sine' },
+    { id: 'track-2', name: 'Layer 2', instrument: 'Square' }
+  ];
+
   beforeEach(() => {
     vi.resetModules();
     localStorage.clear();
     cloudMocks.isCloudConfigured.mockReturnValue(false);
     stubCanvasContext();
     Element.prototype.setPointerCapture = () => {};
-    localStorage.setItem('vangelis.editorDraft.v1', JSON.stringify({
-      activeTrackId: 'track-2',
-      pattern: {
-        name: 'Two layers',
-        bpm: 120,
-        bars: 4,
-        nextNoteId: 2,
-        nextTrackId: 3,
-        tracks: [
-          { id: 'track-1', name: 'Lead', instrument: 'Sine' },
-          { id: 'track-2', name: 'Layer 2', instrument: 'Square' }
-        ],
-        loopRange: null,
-        notes: [{ id: 'note-1', midi: 60, start: 0, duration: 1, velocity: 0.8, trackId: 'track-1' }]
-      }
-    }));
+    seedDraft(TWO_TRACKS);
   });
 
   afterEach(() => {
@@ -191,6 +197,51 @@ describe('PianoRollPage layers', () => {
     expect(screen.getByRole('button', { name: /^Edit Lead/ })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Add chord' }));
     expect(screen.getByRole('button', { name: /^Edit Lead: 3 notes/ })).toBeInTheDocument();
+  });
+
+  it('turns a track off from its activator', async () => {
+    await renderPage();
+    const activator = screen.getByRole('button', { name: 'Turn Lead off' });
+    expect(activator).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(activator);
+
+    expect(screen.queryByRole('button', { name: 'Turn Lead off' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Turn Lead on' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('offers solo only once there is a second track', async () => {
+    seedDraft([{ id: 'track-1', name: 'Lead', instrument: 'Sine' }]);
+    const { unmount } = await renderPage();
+    expect(screen.getByRole('button', { name: 'Edit Lead: 1 notes' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Solo Lead' })).toBeNull();
+    unmount();
+
+    seedDraft(TWO_TRACKS);
+    await renderPage();
+    expect(screen.getByRole('button', { name: 'Solo Lead' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Solo Layer 2' })).toBeTruthy();
+  });
+
+  it('gives every track its own sound button, not just the one being edited', async () => {
+    await renderPage();
+    expect(screen.getByRole('button', { name: /^Choose sound for Lead/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Choose sound for Layer 2/ })).toBeTruthy();
+  });
+
+  it('renames a track in place, reverting on Escape', async () => {
+    await renderPage();
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Edit Lead: 1 notes' }));
+    // Typing must land in the field straight away.
+    expect(screen.getByRole('textbox', { name: 'Rename Lead' })).toHaveFocus();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Rename Lead' }), { target: { value: 'Bass' } });
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Rename Lead' }), { key: 'Escape' });
+    expect(screen.getByRole('button', { name: 'Edit Lead: 1 notes' })).toBeTruthy();
+
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Edit Lead: 1 notes' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Rename Lead' }), { target: { value: 'Bass' } });
+    fireEvent.blur(screen.getByRole('textbox', { name: 'Rename Lead' }));
+    expect(screen.getByRole('button', { name: 'Edit Bass: 1 notes' })).toBeTruthy();
   });
 });
 
