@@ -158,19 +158,28 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
         </button>
       </div>
 
-      <div className="layer-sound-browser__filters">
+      {/* Banks are always on show: a dropdown hid "My sounds", so saved sounds
+          looked like they had gone nowhere. */}
+      <div className="layer-sound-browser__banks" role="group" aria-label="Bank">
+        {['all', ...SOUND_BANKS].map((entry) => (
+          <button
+            key={entry}
+            type="button"
+            className={bank === entry ? 'is-selected' : ''}
+            aria-pressed={bank === entry}
+            onClick={() => {
+              setBank(entry);
+              setCategory('all');
+            }}
+          >
+            {entry === 'all' ? 'All' : entry}
+          </button>
+        ))}
+      </div>
+
+      {categories.length > 1 && (
         <select
-          aria-label="Bank"
-          value={bank}
-          onChange={(event) => {
-            setBank(event.target.value);
-            setCategory('all');
-          }}
-        >
-          <option value="all">All banks</option>
-          {SOUND_BANKS.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
-        </select>
-        <select
+          className="layer-sound-browser__category"
           aria-label="Category"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
@@ -178,7 +187,7 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
           <option value="all">All categories</option>
           {categories.map((entry) => <option key={entry} value={entry}>{entry}</option>)}
         </select>
-      </div>
+      )}
 
       {!catalog && !catalogError && (
         <div className="layer-sound-browser__status" role="status">Loading sound bank…</div>
@@ -211,7 +220,14 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
               })}
             </ul>
           ) : (
-            <div className="layer-sound-browser__status">No sounds match those filters.</div>
+            <div className="layer-sound-browser__status">
+              {bank === 'My sounds' && !deferredQuery.trim() ? (
+                <span>
+                  Nothing saved yet. Save a sound on the{' '}
+                  <a href="#/sound-designer">Design page</a> and it lands here.
+                </span>
+              ) : 'No sounds match those filters.'}
+            </div>
           )}
         </>
       )}

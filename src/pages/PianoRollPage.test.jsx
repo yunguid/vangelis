@@ -46,6 +46,21 @@ const renderPage = async () => {
 
 const originalGetContext = HTMLCanvasElement.prototype.getContext;
 
+const stubCanvasContext = () => {
+  HTMLCanvasElement.prototype.getContext = function getContext(type) {
+    if (type !== '2d') return null;
+    return {
+      canvas: this,
+      scale: () => {},
+      fillRect: () => {},
+      beginPath: () => {},
+      moveTo: () => {},
+      lineTo: () => {},
+      stroke: () => {}
+    };
+  };
+};
+
 describe('PianoRollPage cloud saves', () => {
   beforeEach(() => {
     vi.resetModules();
@@ -54,18 +69,7 @@ describe('PianoRollPage cloud saves', () => {
     cloudMocks.isCloudConfigured.mockReturnValue(true);
     cloudMocks.getSession.mockResolvedValue(null);
     cloudMocks.listCloudPatterns.mockResolvedValue([]);
-    HTMLCanvasElement.prototype.getContext = function getContext(type) {
-      if (type !== '2d') return null;
-      return {
-        canvas: this,
-        scale: () => {},
-        fillRect: () => {},
-        beginPath: () => {},
-        moveTo: () => {},
-        lineTo: () => {},
-        stroke: () => {}
-      };
-    };
+    stubCanvasContext();
   });
 
   afterEach(() => {
@@ -140,3 +144,53 @@ describe('PianoRollPage cloud saves', () => {
     expect(screen.getByLabelText('Email address for the sign-in link')).toBeTruthy();
   });
 });
+
+describe('PianoRollPage layers', () => {
+  const originalSetPointerCapture = Element.prototype.setPointerCapture;
+
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+    cloudMocks.isCloudConfigured.mockReturnValue(false);
+    stubCanvasContext();
+    Element.prototype.setPointerCapture = () => {};
+    localStorage.setItem('vangelis.editorDraft.v1', JSON.stringify({
+      activeTrackId: 'track-2',
+      pattern: {
+        name: 'Two layers',
+        bpm: 120,
+        bars: 4,
+        nextNoteId: 2,
+        nextTrackId: 3,
+        tracks: [
+          { id: 'track-1', name: 'Lead', instrument: 'Sine' },
+          { id: 'track-2', name: 'Layer 2', instrument: 'Square' }
+        ],
+        loopRange: null,
+        notes: [{ id: 'note-1', midi: 60, start: 0, duration: 1, velocity: 0.8, trackId: 'track-1' }]
+      }
+    }));
+  });
+
+  afterEach(() => {
+    cleanup();
+    HTMLCanvasElement.prototype.getContext = originalGetContext;
+    Element.prototype.setPointerCapture = originalSetPointerCapture;
+  });
+
+  it('switches to a note\'s layer when it is clicked, so Add chord can build on it', async () => {
+    const { container } = await renderPage();
+    expect(screen.getByRole('button', { name: /^Edit Layer 2/ })).toHaveAttribute('aria-pressed', 'true');
+
+    const leadNote = container.querySelector('[data-note-id="note-1"]');
+    // jsdom has no PointerEvent, and the plain Event testing-library falls back
+    // to drops `button`; a MouseEvent of the same type carries it.
+    fireEvent(leadNote, new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    fireEvent(leadNote, new MouseEvent('pointerup', { bubbles: true, button: 0 }));
+
+    expect(screen.getByRole('button', { name: /^Edit Lead/ })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Add chord' }));
+    expect(screen.getByRole('button', { name: /^Edit Lead: 3 notes/ })).toBeInTheDocument();
+  });
+});
+

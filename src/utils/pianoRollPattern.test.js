@@ -310,6 +310,31 @@ describe('scale, chord, and loop tools', () => {
     expect(chord.pattern.notes.map((note) => note.midi).sort((a, b) => a - b)).toEqual([60, 64, 67]);
   });
 
+  it('does not stack duplicate notes when a chord is built twice', () => {
+    const root = addNote(createPattern(), { midi: 60, start: 0, duration: 1 });
+    const first = buildChords(root.pattern, new Set([root.note.id]), 'major');
+    // The editor selects the whole chord after building it, so a second press
+    // runs with all three notes as roots.
+    const everyNote = new Set(first.pattern.notes.map((note) => note.id));
+    const second = buildChords(first.pattern, everyNote, 'major');
+
+    const voices = second.pattern.notes.map((note) => `${note.midi}@${note.start}`);
+    expect(new Set(voices).size).toBe(voices.length);
+    expect(voices).toContain('60@0');
+    expect(voices).toContain('64@0');
+    expect(voices).toContain('67@0');
+  });
+
+  it('gives a new layer a colour no other layer is using', () => {
+    let pattern = createPattern();
+    pattern = addTrack(pattern).pattern;
+    pattern = addTrack(pattern).pattern;
+    pattern = deleteTrack(pattern, pattern.tracks[0].id);
+    const added = addTrack(pattern);
+    const colors = added.pattern.tracks.map((track) => track.color);
+    expect(new Set(colors).size).toBe(colors.length);
+  });
+
   it('clones selected notes in place so the copies can be nudged away', () => {
     const added = addNote(createPattern(), { midi: 60, start: 1, duration: 1 });
     const selected = new Set([added.note.id]);

@@ -14,12 +14,11 @@ describe('LayerSoundBrowser', () => {
       />
     );
 
-    expect(screen.getByRole('option', { name: 'My sounds' })).toBeInTheDocument();
+    // Banks are visible buttons, not dropdown options, so saved sounds can be found.
+    expect(screen.getByRole('button', { name: 'My sounds' })).toBeInTheDocument();
     await screen.findByRole('button', { name: /Widescreen Swell/ });
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Bank' }), {
-      target: { value: 'Patch Lab' }
-    });
+    fireEvent.click(screen.getByRole('button', { name: 'Patch Lab' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), {
       target: { value: 'Cinema Analog' }
     });

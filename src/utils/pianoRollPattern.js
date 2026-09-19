@@ -20,7 +20,12 @@ export const BAR_OPTIONS = [1, 2, 4, 8];
 export const BPM_MIN = 40;
 export const BPM_MAX = 240;
 
-export const TRACK_COLORS = ['#e8783d', '#66a6a8', '#c295d8', '#d6b85a', '#6f91c9', '#d56f82'];
+// Saturated on purpose: the colour is how a note says which layer it belongs to,
+// so neighbouring layers sit far apart on the wheel.
+export const TRACK_COLORS = ['#ff2e97', '#00e5ff', '#c6ff00', '#b967ff', '#ff9100', '#4d7cff'];
+// The muted palette saved patterns were written with; normalizePattern maps
+// each onto the neon colour of the same slot.
+const LEGACY_TRACK_COLORS = ['#e8783d', '#66a6a8', '#c295d8', '#d6b85a', '#6f91c9', '#d56f82'];
 export const TRACK_INSTRUMENTS = ['Sine', 'Sawtooth', 'Square', 'Triangle'];
 
 export const CHORD_TYPES = [
@@ -113,7 +118,9 @@ export const normalizePattern = (pattern) => {
     id: track?.id || `track-${index + 1}`,
     name: String(track?.name || `Layer ${index + 1}`).slice(0, 32),
     instrument: TRACK_INSTRUMENTS.includes(track?.instrument) ? track.instrument : TRACK_INSTRUMENTS[index % TRACK_INSTRUMENTS.length],
-    color: track?.color || TRACK_COLORS[index % TRACK_COLORS.length],
+    color: TRACK_COLORS[LEGACY_TRACK_COLORS.indexOf(track?.color)]
+      || track?.color
+      || TRACK_COLORS[index % TRACK_COLORS.length],
     muted: Boolean(track?.muted),
     solo: Boolean(track?.solo)
   }));
@@ -361,7 +368,12 @@ export const deleteNote = (pattern, noteId) => ({
 export const addTrack = (pattern, overrides = {}) => {
   const index = pattern.tracks?.length || 0;
   const id = `track-${pattern.nextTrackId || index + 1}`;
-  const track = { ...createDefaultTrack(index, id), ...overrides, id };
+  // After a delete the slot colour may already be on screen; prefer a free one
+  // so two layers never share a colour while the palette has room.
+  const usedColors = new Set((pattern.tracks || []).map((entry) => entry.color));
+  const color = TRACK_COLORS.find((entry) => !usedColors.has(entry))
+    || TRACK_COLORS[index % TRACK_COLORS.length];
+  const track = { ...createDefaultTrack(index, id), color, ...overrides, id };
   return {
     pattern: {
       ...pattern,
@@ -399,9 +411,16 @@ export const buildChords = (pattern, noteIds, chordTypeId = 'major') => {
   const addedNoteIds = [];
   roots.forEach((root) => {
     chord.intervals.slice(1).forEach((interval) => {
-      if (root.midi + interval > PITCH_MAX) return;
+      const midi = root.midi + interval;
+      if (midi > PITCH_MAX) return;
+      // A second press (or a selection that already holds the chord) must not
+      // stack identical notes: they double the voice and cannot be seen.
+      const alreadyThere = next.notes.some((note) => (
+        note.trackId === root.trackId && note.midi === midi && note.start === root.start
+      ));
+      if (alreadyThere) return;
       const result = addNote(next, {
-        midi: root.midi + interval,
+        midi,
         start: root.start,
         duration: root.duration,
         velocity: root.velocity,

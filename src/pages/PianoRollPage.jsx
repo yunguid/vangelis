@@ -84,6 +84,9 @@ const ROW_HEIGHT = 14;
 const KEY_COLUMN_WIDTH = 64;
 const RULER_HEIGHT = 30;
 const RESIZE_HANDLE_PX = 7;
+// Longer than any OS double-click interval, so the second click of a
+// double-click that switched layers is still recognised as part of it.
+const LAYER_SWITCH_GUARD_MS = 600;
 const AUDITION_MS = 260;
 const ROW_COUNT = PITCH_MAX - PITCH_MIN + 1;
 const GRID_HEIGHT = ROW_COUNT * ROW_HEIGHT;
@@ -311,6 +314,9 @@ const PianoRollPage = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState('sound');
   const [soundBrowserTrackId, setSoundBrowserTrackId] = React.useState(null);
+  const soundPopoverRef = React.useRef(null);
+  const tracksRef = React.useRef(null);
+  const layerSwitchAtRef = React.useRef(-Infinity);
 
   const playback = useMidiPlayback({
     waveformType,
@@ -891,6 +897,36 @@ const PianoRollPage = () => {
     return { beat, midi: midiForRow(row), x, y };
   }, [pxPerBeat]);
 
+  const handleSelectTrack = React.useCallback((trackId) => {
+    const track = patternRef.current.tracks.find((entry) => entry.id === trackId);
+    if (!track) return;
+    setActiveTrackId(trackId);
+    setWaveformType(track.instrument);
+    setAudioParams(sanitizeAudioParams(track.audioParams || AUDIO_PARAM_DEFAULTS));
+    setActivePresetName(track.soundName || null);
+    setSelectedIds(new Set());
+  }, []);
+
+  // Number keys jump straight to a layer; the strip shows the same numbers.
+  React.useEffect(() => {
+    const onKeyDown = (event) => {
+      const nodeName = event.target?.nodeName;
+      if (nodeName === 'INPUT' || nodeName === 'SELECT' || nodeName === 'TEXTAREA') return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!/^[1-9]$/.test(event.key)) return;
+      const track = patternRef.current.tracks[Number(event.key) - 1];
+      if (track) handleSelectTrack(track.id);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleSelectTrack]);
+
+  // With many layers the strip scrolls sideways; keep the active one in view.
+  React.useEffect(() => {
+    tracksRef.current?.querySelector('.is-active')
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [activeTrackId]);
+
   const findNoteAt = React.useCallback((beat, midi) => (
     patternRef.current.notes.find((note) => (
       note.trackId === activeTrackId
@@ -937,9 +973,12 @@ const PianoRollPage = () => {
       ? patternRef.current.notes.find((note) => note.id === noteId)
       : findNoteAt(beat, midi);
 
+    const onOtherLayer = Boolean(hitNote) && hitNote.trackId !== activeTrackId;
+
     if (event.button === 2) {
       gestureSnapshotRef.current = patternRef.current;
-      if (hitNote) {
+      // Erasing stays on the layer being edited.
+      if (hitNote && !onOtherLayer) {
         setPattern((prev) => deleteNote(prev, hitNote.id));
         setSelectedIds((prev) => {
           if (!prev.has(hitNote.id)) return prev;
@@ -955,6 +994,15 @@ const PianoRollPage = () => {
     if (event.button !== 0) return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
+
+    if (onOtherLayer) {
+      // Clicking any note brings its layer to the front with that note
+      // selected. No move starts: this press only changes what is being edited.
+      handleSelectTrack(hitNote.trackId);
+      setSelectedIds(new Set([hitNote.id]));
+      layerSwitchAtRef.current = performance.now();
+      return;
+    }
 
     if (hitNote) {
       gestureSnapshotRef.current = patternRef.current;
@@ -985,7 +1033,7 @@ const PianoRollPage = () => {
     const baseSelection = event.shiftKey ? new Set(selectedIds) : new Set();
     if (!event.shiftKey) setSelectedIds(new Set());
     setDrag({ mode: 'marquee', x0: x, y0: y, x1: x, y1: y, baseSelection });
-  }, [pointerToGrid, findNoteAt, selectedIds, beginMove, pxPerBeat]);
+  }, [pointerToGrid, findNoteAt, selectedIds, beginMove, pxPerBeat, activeTrackId, handleSelectTrack]);
 
   const handleLayerDoubleClick = React.useCallback((event) => {
     const { beat, midi } = pointerToGrid(event);
@@ -999,6 +1047,9 @@ const PianoRollPage = () => {
     gestureSnapshotRef.current = null;
 
     if (hitNote) {
+      // A double-click whose first press switched layers was aimed at the
+      // layer, not at deleting the note it landed on.
+      if (performance.now() - layerSwitchAtRef.current < LAYER_SWITCH_GUARD_MS) return;
       commitPattern((prev) => deleteNote(prev, hitNote.id));
       setSelectedIds(new Set());
       return;
@@ -1083,16 +1134,6 @@ const PianoRollPage = () => {
     audition(midi);
   }, [audition]);
 
-  const handleSelectTrack = React.useCallback((trackId) => {
-    const track = patternRef.current.tracks.find((entry) => entry.id === trackId);
-    if (!track) return;
-    setActiveTrackId(trackId);
-    setWaveformType(track.instrument);
-    setAudioParams(sanitizeAudioParams(track.audioParams || AUDIO_PARAM_DEFAULTS));
-    setActivePresetName(track.soundName || null);
-    setSelectedIds(new Set());
-  }, []);
-
   const handleAddTrack = React.useCallback(() => {
     pushHistory(patternRef.current);
     const { pattern: next, track } = addTrack(patternRef.current);
@@ -1151,6 +1192,18 @@ const PianoRollPage = () => {
   const handleSoundBrowserClose = React.useCallback(() => {
     setSoundBrowserTrackId(null);
   }, []);
+
+  React.useEffect(() => {
+    if (!soundBrowserTrackId) return undefined;
+    const onPointerDown = (event) => {
+      if (soundPopoverRef.current?.contains(event.target)) return;
+      // A layer's own sound button toggles the bank itself.
+      if (event.target.closest?.('.piano-roll-track__sound')) return;
+      setSoundBrowserTrackId(null);
+    };
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => window.removeEventListener('pointerdown', onPointerDown, true);
+  }, [soundBrowserTrackId]);
 
   React.useEffect(() => {
     if (!CLOUD_ENABLED) return undefined;
@@ -1504,8 +1557,9 @@ const PianoRollPage = () => {
       return (
         <div
           key={`ghost-${note.id}`}
+          data-note-id={note.id}
           className="piano-roll__ghost-note"
-          title={`${track?.name || 'Layer'} · ${midiNoteToName(note.midi).noteId}`}
+          title={`${track?.name || 'Layer'} · ${midiNoteToName(note.midi).noteId} — click to edit this layer`}
           style={{
             '--track-color': track?.color,
             left: note.start * pxPerBeat,
@@ -1624,6 +1678,7 @@ const PianoRollPage = () => {
             <dl>
               <dt>Double-click</dt><dd>Add / remove note</dd>
               <dt>Click · drag</dt><dd>Select · multi-select</dd>
+              <dt>1–9 · click a note</dt><dd>Switch layer</dd>
               <dt>Drag note</dt><dd>Move selection</dd>
               <dt>Drag right edge</dt><dd>Resize</dd>
               <dt>Arrows · ⇧↑↓</dt><dd>Nudge · octave</dd>
@@ -1844,59 +1899,11 @@ const PianoRollPage = () => {
             <span className="piano-roll-tray__outside">{outOfScaleCount} outside</span>
           )}
 
-          {/* Selection actions ride the right end of this row on purpose: their
-              own row would move the grid down the instant a note is selected. */}
-          {(selectedIds.size > 0 || loopRange) && (
-            <div className="piano-roll-selection" aria-live="polite">
-              {selectedIds.size > 0 && (
-                <span className="piano-roll-selection__count">{selectedIds.size} selected</span>
-              )}
-              <select
-                value={chordTypeId}
-                onChange={(event) => setChordTypeId(event.target.value)}
-                aria-label="Chord type"
-              >
-                {CHORD_TYPES.map((chord) => (
-                  <option key={chord.id} value={chord.id}>{chord.label}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="btn btn--secondary"
-                onClick={handleBuildChord}
-                disabled={selectedIds.size === 0}
-                title="Turn each selected note into a chord"
-              >
-                Add chord
-              </button>
-              <button
-                type="button"
-                className="btn btn--secondary"
-                onClick={handleLoopSelection}
-                disabled={selectedIds.size === 0 && !loopRange}
-                title={loopRange
-                  ? 'Go back to playing the whole timeline (⇧⌘L)'
-                  : 'Play only the bars you selected, over and over (⇧⌘L)'}
-              >
-                {loopRange ? 'Unloop' : 'Loop these bars'}
-              </button>
-              {activeScale && (
-                <button
-                  type="button"
-                  className="btn btn--secondary"
-                  onClick={handleSnapSelectionToScale}
-                  disabled={selectedIds.size === 0}
-                  title={`Move the selected notes onto the nearest ${SCALE_ROOTS[scaleRoot]} ${activeScale.label} note`}
-                >
-                  Snap to key
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
-        <div className="piano-roll-tracks" role="group" aria-label="Instrument layers">
-          {pattern.tracks.map((track) => {
+        <div className="piano-roll-tracks" role="group" aria-label="Instrument layers" ref={tracksRef}>
+          <span className="piano-roll-tracks__caption" aria-hidden="true">Layers</span>
+          {pattern.tracks.map((track, trackIndex) => {
             const isActive = track.id === activeTrack?.id;
             const noteCount = pattern.notes.filter((note) => note.trackId === track.id).length;
             return (
@@ -1911,10 +1918,9 @@ const PianoRollPage = () => {
                   onClick={() => handleSelectTrack(track.id)}
                   aria-pressed={isActive}
                   aria-label={`Edit ${track.name}: ${noteCount} notes`}
-                  title={`Edit ${track.name}: ${noteCount} notes`}
+                  title={`Edit ${track.name}: ${noteCount} notes${trackIndex < 9 ? ` (press ${trackIndex + 1})` : ''}`}
                 >
-                  <i aria-hidden="true" />
-                  <span>{noteCount}</span>
+                  <i aria-hidden="true">{trackIndex + 1}</i>
                 </button>
                 <input
                   className="piano-roll-track__name"
@@ -1923,17 +1929,21 @@ const PianoRollPage = () => {
                   onChange={(event) => handleTrackPatch(track.id, { name: event.target.value.slice(0, 32) })}
                   aria-label={`Layer name: ${track.name}`}
                 />
-                <button
-                  type="button"
-                  className="piano-roll-track__sound"
-                  onClick={() => handleSoundBrowserToggle(track.id)}
-                  aria-expanded={soundBrowserTrackId === track.id}
-                  aria-label={`Choose sound for ${track.name}. Current sound: ${track.soundName || track.instrument}`}
-                  title={`Choose sound for ${track.name}`}
-                >
-                  <span>{track.soundName || track.instrument}</span>
-                  {ICON_CHEVRON}
-                </button>
+                {/* Only the layer being edited carries its sound picker, so the
+                    strip stays short enough to keep several layers in view. */}
+                {isActive && (
+                  <button
+                    type="button"
+                    className="piano-roll-track__sound"
+                    onClick={() => handleSoundBrowserToggle(track.id)}
+                    aria-expanded={soundBrowserTrackId === track.id}
+                    aria-label={`Choose sound for ${track.name}. Current sound: ${track.soundName || track.instrument}`}
+                    title={`Choose sound for ${track.name}`}
+                  >
+                    <span>{track.soundName || track.instrument}</span>
+                    {ICON_CHEVRON}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="btn btn--toggle"
@@ -1969,7 +1979,7 @@ const PianoRollPage = () => {
         </div>
 
         {soundBrowserTrack && (
-          <div className="piano-roll-sound-popover">
+          <div className="piano-roll-sound-popover" ref={soundPopoverRef}>
             <LayerSoundBrowser
               track={soundBrowserTrack}
               onChoose={handleSoundChoose}
@@ -2074,6 +2084,58 @@ const PianoRollPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Selection actions float over the bottom of the grid. Inside the tray they
+          wrapped onto a line of their own on narrower windows, which shoved the
+          grid down the instant a note was selected. */}
+      {(selectedIds.size > 0 || loopRange) && (
+        <div className="piano-roll-selection" aria-live="polite">
+          {selectedIds.size > 0 && (
+            <>
+              <span className="piano-roll-selection__count">{selectedIds.size} selected</span>
+              <select
+                value={chordTypeId}
+                onChange={(event) => setChordTypeId(event.target.value)}
+                aria-label="Chord type"
+              >
+                {CHORD_TYPES.map((chord) => (
+                  <option key={chord.id} value={chord.id}>{chord.label}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                onClick={handleBuildChord}
+                title="Turn each selected note into a chord"
+              >
+                Add chord
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={handleLoopSelection}
+            disabled={selectedIds.size === 0 && !loopRange}
+            title={loopRange
+              ? 'Go back to playing the whole timeline (⇧⌘L)'
+              : 'Play only the bars you selected, over and over (⇧⌘L)'}
+          >
+            {loopRange ? 'Unloop' : 'Loop these bars'}
+          </button>
+          {activeScale && (
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={handleSnapSelectionToScale}
+              disabled={selectedIds.size === 0}
+              title={`Move the selected notes onto the nearest ${SCALE_ROOTS[scaleRoot]} ${activeScale.label} note`}
+            >
+              Snap to key
+            </button>
+          )}
+        </div>
+      )}
 
       <SoundControlsContext.Provider value={soundControlsValue}>
         <MidiTransportContext.Provider value={midiTransportValue}>

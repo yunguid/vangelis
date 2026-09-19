@@ -182,6 +182,10 @@ src/
 - Loop transport through the current patch (`useMidiPlayback`
   `{ loop: true }`), selectable 1/2/4/8 bars, BPM 40-240, snap
   1/4-1/32 incl. triplets, optional key/scale row highlighting
+- Instrument layers, one neon colour each (`TRACK_COLORS`): solid notes are
+  the layer being edited, outlined notes belong to other layers; clicking any
+  note (or pressing 1-9) switches to its layer. Selection actions (chord
+  builder, loop bars, snap to key) float over the grid so the grid never moves
 - Canvas grid + DOM note layer; "Open in player" hands the pattern to the
   home player via `utils/pendingMidiHandoff.js`
 
