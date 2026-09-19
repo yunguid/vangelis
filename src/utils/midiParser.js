@@ -6,6 +6,7 @@
 
 import classicalCatalog from '../data/classicalCatalog.json';
 import { ORIGINAL_CUE_IDS, getOriginalCueName } from '../data/originalCueNames.js';
+import { getLandingFiles } from '../data/landingQueue.js';
 import { withBase } from './baseUrl.js';
 
 let midiLibraryPromise;
@@ -261,21 +262,20 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
   // is currently loaded. Display names come from the shared
   // ../data/originalCueNames.js map (single source of truth, also consumed
   // by the generator script) so the two can't drift.
+  // A `landing` field makes a piece eligible for the landing queue; the
+  // pieces themselves are defined once, in ../data/landingQueue.js.
+  const landingFiles = getLandingFiles(base);
+  const landingById = new Map(landingFiles.map((file) => [file.id, file]));
   const originalFiles = ORIGINAL_CUE_IDS.map((id) => ({
     id,
     name: getOriginalCueName(id),
-    path: toBuiltInPath(`originals/${id}.mid`)
+    path: toBuiltInPath(`originals/${id}.mid`),
+    ...(landingById.has(id) ? { landing: landingById.get(id).landing } : {})
   }));
 
   // Performances bring their own sampled instrument (see
   // ../data/nylonGuitar.js) instead of playing through the loaded preset.
-  const performanceFiles = [{
-    id: 'performance-saudade-de-triana',
-    name: 'Saudade de Triana',
-    path: toBuiltInPath('performances/saudade-de-triana.mid'),
-    instrument: 'nylon-guitar',
-    instrumentLabel: 'Nylon-string guitar'
-  }];
+  const performanceFiles = landingFiles.filter((file) => file.instrument);
 
   return [
     ...performanceFiles,

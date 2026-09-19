@@ -383,6 +383,41 @@
   margin: 0;
 }
 
+/* Rows that can open the page carry their landing-queue switch beside them. */
+.midi-tab__item--landing {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.midi-tab__item--landing .midi-tab__file-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.midi-tab__landing {
+  flex: none;
+  padding: 0 10px;
+  border: 1px solid rgba(244, 241, 232, 0.05);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--color-text-tertiary);
+  font-family: inherit;
+  font-size: var(--text-label);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.midi-tab__landing:hover {
+  color: var(--color-text-primary);
+}
+
+.midi-tab__landing[aria-pressed='true'] {
+  border-color: var(--btn-toggle-on-border);
+  background: var(--btn-toggle-on-bg);
+  color: var(--color-text-primary);
+}
+
 .midi-tab__file-btn {
   width: 100%;
   min-height: 54px;

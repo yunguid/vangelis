@@ -6,6 +6,12 @@ import {
   preloadMidiParser
 } from '../../utils/midiParser.js';
 import { audioEngine } from '../../utils/audioEngine.js';
+import {
+  arrangeBuiltInPiece,
+  isLandingEligible,
+  loadLandingSelection,
+  saveLandingSelection
+} from '../../data/landingQueue.js';
 
 
 const MidiLibrary = ({ active = true, onPlay }) => {
@@ -21,6 +27,18 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     ...file,
     displayName: file.displayTitle || file.name
   })), []);
+  // Which pieces may play by themselves when the page opens.
+  const [landingSelection, setLandingSelection] = useState(() => loadLandingSelection(builtInFiles));
+  const handleLandingToggle = useCallback((fileId) => {
+    setLandingSelection((current) => {
+      const next = new Set(current);
+      if (next.has(fileId)) next.delete(fileId);
+      else next.add(fileId);
+      saveLandingSelection(next);
+      return next;
+    });
+  }, []);
+
   const filteredFiles = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return builtInFiles;
@@ -37,7 +55,11 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     {
       key: 'originals',
       title: 'Originals',
-      files: filteredFiles.filter((file) => file.id.startsWith('original-'))
+      // Pieces with a landing switch lead the group, so the whole queue can be
+      // seen without scrolling through every original.
+      files: filteredFiles
+        .filter((file) => file.id.startsWith('original-'))
+        .sort((left, right) => Number(isLandingEligible(right)) - Number(isLandingEligible(left)))
     },
     {
       key: 'classics',
@@ -89,14 +111,11 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     setSelectedFile(file);
 
     try {
-      let midiData = await loadMidiWithFallback(file);
-      if (file.instrument === 'nylon-guitar') {
-        const [{ loadGuitarPerformance }, context] = await Promise.all([
-          import('../../data/nylonGuitar.js'),
-          audioEngine.ensureAudioContext()
-        ]);
-        midiData = await loadGuitarPerformance(context, midiData);
-      }
+      // Performances bring their own sampled instrument; everything else
+      // plays through whatever sound is loaded.
+      const midiData = file.instrument
+        ? (await arrangeBuiltInPiece(await audioEngine.ensureAudioContext(), file)).score
+        : await loadMidiWithFallback(file);
       onPlay({
         ...midiData,
         name: file.displayName,
@@ -193,7 +212,10 @@ const MidiLibrary = ({ active = true, onPlay }) => {
             )}
             <ul className="midi-tab__list">
               {group.files.map((file) => (
-                <li key={file.id} className="midi-tab__item">
+                <li
+                  key={file.id}
+                  className={`midi-tab__item ${isLandingEligible(file) ? 'midi-tab__item--landing' : ''}`}
+                >
                   <button
                     type="button"
                     className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
@@ -214,6 +236,18 @@ const MidiLibrary = ({ active = true, onPlay }) => {
                       </span>
                     )}
                   </button>
+                  {isLandingEligible(file) && (
+                    <button
+                      type="button"
+                      className="midi-tab__landing"
+                      aria-pressed={landingSelection.has(file.id)}
+                      aria-label={`Play ${file.displayName} when the page opens`}
+                      title="One of the pieces switched on here plays, at random, each time the page opens"
+                      onClick={() => handleLandingToggle(file.id)}
+                    >
+                      On load
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

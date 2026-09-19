@@ -37,6 +37,9 @@ beforeEach(async () => {
   fixture.engine.ensureAudioContext.mockResolvedValue(fixture.context);
   fixture.engine.ensureWasm.mockResolvedValue(undefined);
   fixture.load.mockResolvedValue(score());
+  // The hook plays whichever queued piece is picked; these tests are about the
+  // scheduler, so the queue holds only the piano piece the fixture stands in for.
+  localStorage.setItem('vangelis.landingQueue.v1', JSON.stringify(['performance-opening-piano']));
   ({ useOpeningPerformance } = await import('./useOpeningPerformance.js'));
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });

@@ -1,18 +1,31 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { audioEngine } from '../utils/audioEngine.js';
 import { useMidiPlayback } from './useMidiPlayback.js';
-import { OPENING_PARAMS } from '../data/openingPerformance.js';
+import {
+  arrangeBuiltInPiece,
+  getLandingFiles,
+  loadLandingSelection,
+  loadLastLandingId,
+  pickLandingPiece,
+  saveLastLandingId
+} from '../data/landingQueue.js';
 
 // Once per document visit, including hash-route navigation back to the keyboard.
 let openingClaimed = false;
 
 export function useOpeningPerformance({ audioParams }) {
-  const pianoParams = useMemo(() => ({
-    ...OPENING_PARAMS,
+  // The sound of whichever piece the landing queue picked; null until it has
+  // loaded, and for pieces that only override part of the listener's sound.
+  const [pieceSound, setPieceSound] = useState(null);
+  const pieceParams = useMemo(() => ({
+    ...(pieceSound?.params || audioParams),
     volume: (audioParams.volume ?? 0.68) * 0.85,
     pan: audioParams.pan ?? 0
-  }), [audioParams.volume, audioParams.pan]);
-  const playback = useMidiPlayback({ waveformType: 'Sine', audioParams: pianoParams });
+  }), [pieceSound, audioParams]);
+  const playback = useMidiPlayback({
+    waveformType: pieceSound?.waveformType || 'Sine',
+    audioParams: pieceParams
+  });
   const cancelled = useRef(openingClaimed);
   const started = useRef(false);
   const userParams = useRef(audioParams);
@@ -45,9 +58,15 @@ export function useOpeningPerformance({ audioParams }) {
         context = await audioEngine.ensureAudioContext();
         if (disposed || cancelled.current) return;
         context.addEventListener('statechange', tryStart);
-        const { loadOpeningPerformance } = await import('../data/openingPerformance.js');
-        score = await loadOpeningPerformance(context);
+        const files = getLandingFiles();
+        const piece = pickLandingPiece(files, loadLandingSelection(files), loadLastLandingId());
+        // Every piece switched off in the MIDI tab: the page opens silent.
+        if (!piece) return;
+        const arranged = await arrangeBuiltInPiece(context, piece);
         if (disposed || cancelled.current) return;
+        saveLastLandingId(piece.id);
+        setPieceSound({ params: arranged.params, waveformType: arranged.waveformType });
+        score = arranged.score;
         // Prepare the existing audio engine before reporting that playback started.
         await audioEngine.ensureWasm();
         tryStart();
