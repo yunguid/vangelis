@@ -58,7 +58,8 @@ src/
 ├── components/
 │   ├── AudioControls.jsx      # ADSR, effects, filter, and mod-matrix controls
 │   ├── ErrorBoundary.jsx      # React error boundary
-│   ├── PresetShelf.jsx        # Factory + localStorage preset save/load
+│   ├── PresetShelf.jsx        # Preset browser (Design page) and the Sound tab's save row
+│   ├── SoundDial.jsx          # The sound selector: a wide dial docked to the bottom edge
 │   ├── Scene.jsx              # Audio-reactive WebGL2 shader background
 │   ├── UIOverlay.jsx          # Waveform selector overlay
 │   ├── WaveCandy*.jsx         # Perceptual visualizer suite (Canvas 2D)
@@ -87,7 +88,8 @@ src/
 │   ├── math.js                # Shared math utilities (clamp, MIDI helpers)
 │   ├── midiParser.js          # Parse .mid files using @tonejs/midi
 │   ├── factoryPresets.js      # Deferred 45-patch factory bank
-│   ├── userPresetStorage.js   # localStorage-backed user presets
+│   ├── userPresetStorage.js   # localStorage-backed user presets (+ change subscription)
+│   ├── soundCatalog.js        # Every loadable sound in browsing order (waveforms, banks, user)
 │   ├── audioParams.js         # Audio parameter definitions and sanitization
 │   │
 │   └── audioEngine/           # Core audio engine modules
@@ -139,8 +141,19 @@ src/
   loads with the factory bank in one deferred step
 - Every factory patch spreads over a fully-specified clean slate so preset
   switching is deterministic (nothing leaks from the previous sound)
-- PresetShelf UI: category groups, prev/next cycling, active-patch readout,
-  descriptions; user presets persist in localStorage
+- Sounds are chosen on the `SoundDial`, a wide dial docked to the bottom of the
+  home page (the top of a wheel whose hub lies below the page): every sound in
+  `utils/soundCatalog.js` is a tick under a fixed needle, grouped into category
+  bands. Drag, scroll, arrow keys, the steppers or a click on the ring turn it;
+  `/` opens it and typing finds sounds by name, category or description.
+  Resting on a sound loads it, and the loaded sound persists in the session
+- The sidebar's Sound tab shapes the sound and keeps a save row (`PresetShelf`
+  with `saveOnly`); saved sounds persist in localStorage, join the dial as
+  "Your sounds" and can be removed there. The full `PresetShelf` browser
+  remains on the Design page
+- The Design (`#/sound-designer`) and Studies (`#/studies`) pages are routable
+  but deliberately not linked from the sidebar rail; Design is kept for
+  background sound design
 - `factoryPresets.test.js` pins all patches to legal engine ranges
 
 ### MIDI Playback
@@ -195,6 +208,12 @@ src/
 - Loop transport through the current patch (`useMidiPlayback`
   `{ loop: true }`), selectable 1/2/4/8 bars, BPM 40-240, snap
   1/4-1/32 incl. triplets, optional key/scale row highlighting
+- Track column down the right edge of the grid (Ableton's arrangement
+  headers): one fixed-height deck per layer with an activator carrying the
+  layer number (lit = on, click mutes), the name (click to edit that layer,
+  double-click to rename in place), solo and the layer's sound. The column is
+  a fixed width and scrolls on its own, so the grid never moves; on a phone the
+  decks run as a strip above the grid
 - Instrument layers, one neon colour each (`TRACK_COLORS`): solid notes are
   the layer being edited, outlined notes belong to other layers; clicking any
   note (or pressing 1-9) switches to its layer. Selection actions (chord
