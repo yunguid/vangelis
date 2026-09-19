@@ -264,6 +264,26 @@ Benchmark the synth worklet's DSP hot loop:
 node scripts/bench_synth_worklet.mjs
 ```
 
+## Shipping
+
+Standing permission for agent sessions. `main` is unprotected, has no CI and
+deploys to production on every push (Vercel and GitHub Pages); a pushed branch
+gets a Vercel preview.
+
+- When the task is done and `npx vitest run`, `npx vite build` and
+  `npm run -s audit:ui` pass, commit on the session's `claude/<topic>` branch,
+  fetch and rebase onto `origin/main` (re-run the gates if main moved), push
+  the branch and open a PR whose body is the task summary: what was verified
+  and how, what was assumed, what was left open.
+- Push over SSH. Open the PR with a token passed to that one command
+  (`GH_TOKEN=… gh pr create`), never through `gh`'s saved login or `gh auth`;
+  without a token, hand over
+  `https://github.com/yunguid/vangelis/compare/main...<branch>?expand=1`.
+- A task that says "push to main" or "ship it" means: fast-forward `main`
+  after a fresh fetch and rebase. Never force-push, and never merge a PR or
+  enable auto-merge unless the task says so.
+- A task that says "do not push" overrides this section.
+
 ## Keyboard Controls
 
 | Key | Action |
