@@ -25,6 +25,9 @@
  *   a_i = stiffness * (target_i - x_i) + tension * (x_{i-1} + x_{i+1} - 2 x_i)
  * and the Verlet update with velocity damping:
  *   x_i' = x_i + (x_i - xPrev_i) * damping + a_i * dt^2
+ * Every node's acceleration is taken from the same instant before any node
+ * moves; sweeping in place instead couples each node to a neighbour that has
+ * already moved, which with damping diverges at everyday frame intervals.
  */
 export class VerletChain {
   /**
@@ -32,7 +35,7 @@ export class VerletChain {
    * @param {object} [opts]
    * @param {number} [opts.stiffness] spring rate toward targets (1/s^2)
    * @param {number} [opts.tension] neighbor coupling rate (1/s^2)
-   * @param {number} [opts.damping] velocity retained per step (0..1)
+   * @param {number} [opts.damping] velocity retained per 1/60 s (0..1)
    * @param {number} [opts.initial] initial node value
    */
   constructor(count, { stiffness = 90, tension = 320, damping = 0.9, initial = 0 } = {}) {
@@ -42,6 +45,8 @@ export class VerletChain {
     this.damping = damping;
     this.positions = new Float32Array(count).fill(initial);
     this.prevPositions = new Float32Array(count).fill(initial);
+    this.accelerations = new Float32Array(count);
+    this.pendingTime = 0;
   }
 
   /** Snap the chain (and its history) to the given value or array. */
@@ -54,28 +59,35 @@ export class VerletChain {
   }
 
   /**
-   * Advance the chain toward per-node targets. The explicit stencil has a
-   * CFL-style stability bound ((stiffness + tension) * h^2 must stay small),
-   * so large frames are split into substeps instead of exploding.
+   * Advance the chain toward per-node targets. Position Verlet carries its
+   * velocity as (x - xPrev), which is only a velocity while the step size
+   * stays the same: frames that alternate between 33 ms and 50 ms rescale it
+   * back and forth and pump the string up without bound. So time is spent in
+   * fixed substeps, with the remainder carried to the next frame. The substep
+   * also keeps (stiffness + 4 * tension) * h^2, the stiffest mode of the chain
+   * (four is the largest eigenvalue of the discrete Laplacian), under 1;
+   * damped Verlet is stable below 2 * (1 + damping).
    * @param {ArrayLike<number>} targets length >= count
    * @param {number} dt seconds
    */
   step(targets, dt) {
-    const total = Math.min(Math.max(dt, 0.001), 0.1);
-    const hMax = Math.sqrt(0.4 / Math.max(1, this.stiffness + this.tension));
-    const substeps = Math.min(4, Math.max(1, Math.ceil(total / hMax)));
-    const h = total / substeps;
-    const h2 = h * h;
-    const { positions: x, prevPositions: xp, count } = this;
     const k = this.stiffness;
     const c = this.tension;
-    const d = this.damping;
+    const h = Math.min(1 / 120, Math.sqrt(1 / Math.max(1, k + 4 * c)));
+    this.pendingTime += Math.min(Math.max(dt, 0.001), 0.1);
+    const substeps = Math.floor(this.pendingTime / h);
+    this.pendingTime -= substeps * h;
+    const h2 = h * h;
+    const d = Math.pow(this.damping, h * 60);
+    const { positions: x, prevPositions: xp, accelerations: a, count } = this;
     for (let s = 0; s < substeps; s++) {
       for (let i = 0; i < count; i++) {
         const left = x[i > 0 ? i - 1 : i];
         const right = x[i < count - 1 ? i + 1 : i];
-        const accel = k * (targets[i] - x[i]) + c * (left + right - 2 * x[i]);
-        const next = x[i] + (x[i] - xp[i]) * d + accel * h2;
+        a[i] = k * (targets[i] - x[i]) + c * (left + right - 2 * x[i]);
+      }
+      for (let i = 0; i < count; i++) {
+        const next = x[i] + (x[i] - xp[i]) * d + a[i] * h2;
         xp[i] = x[i];
         x[i] = Number.isFinite(next) ? next : targets[i];
       }

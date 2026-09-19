@@ -91,6 +91,27 @@ describe('lagrangeEnvelope', () => {
 });
 
 describe('VerletChain', () => {
+  it('stays on its targets at every frame pacing the visualizer really runs at', () => {
+    // WaveCandy's string. Its 30 fps policy lands frames 33 ms or 50 ms apart
+    // and a busy tab stretches them to 100 ms and more. The chain used to
+    // diverge past 1e13, which the spectrum tile drew as a clamped square block.
+    const targets = new Float32Array(96).fill(-100);
+    for (let i = 0; i <= 10; i++) targets[i] = -30;
+    const pacings = [[1 / 120], [1 / 60], [1 / 50], [1 / 30], [1 / 24], [1 / 20], [0.1], [0.2],
+      [1 / 30, 0.05], [1 / 60, 0.1, 1 / 30]];
+    for (const pacing of pacings) {
+      const chain = new VerletChain(96, { stiffness: 130, tension: 300, damping: 0.9, initial: -70 });
+      let widest = 0;
+      for (let frame = 0; frame < 1200; frame++) {
+        chain.step(targets, pacing[frame % pacing.length]);
+        for (const x of chain.positions) widest = Math.max(widest, Math.abs(x));
+      }
+      expect(widest).toBeLessThan(160);
+      expect(chain.positions[0]).toBeCloseTo(-30, 0);
+      expect(chain.positions[95]).toBeCloseTo(-100, 0);
+    }
+  });
+
   it('settles onto a constant target', () => {
     const chain = new VerletChain(32, { stiffness: 120, tension: 200, damping: 0.86 });
     const targets = new Float32Array(32).fill(0.7);
