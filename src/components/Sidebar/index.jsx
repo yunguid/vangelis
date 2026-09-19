@@ -68,6 +68,7 @@ const SoundPanelContent = React.memo(({ value }) => {
   const {
     waveformType,
     onWaveformChange,
+    instrument,
     audioParams,
     onParamChange,
     onParamsChange,
@@ -80,6 +81,7 @@ const SoundPanelContent = React.memo(({ value }) => {
     <SoundTab
       currentWaveform={waveformType}
       onWaveformChange={onWaveformChange}
+      instrument={instrument}
       audioParams={audioParams}
       onParamChange={onParamChange}
       onParamsChange={onParamsChange}

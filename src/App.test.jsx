@@ -4,8 +4,15 @@ import App from './App';
 import { parseMidiFile } from './utils/midiParser.js';
 
 // Opening lifecycle is exercised with the real MIDI scheduler in its integration tests.
+// `opening.sound` stands in for the sound of whichever landing piece was picked.
+const opening = vi.hoisted(() => ({ sound: null }));
 vi.mock('./hooks/useOpeningPerformance.js', () => ({
-  useOpeningPerformance: () => ({ status: 'done', activeNotes: new Set(), stop: vi.fn(), listen: vi.fn() })
+  useOpeningPerformance: () => ({ activeNotes: new Set(), stop: vi.fn(), sound: opening.sound })
+}));
+
+const recordings = vi.hoisted(() => ({ load: null }));
+vi.mock('./data/sampledInstruments.js', () => ({
+  loadSampledInstrument: (...args) => recordings.load(...args)
 }));
 
 const engineStatus = vi.hoisted(() => ({ current: { wasmReady: false, graphWarmed: false } }));
@@ -24,6 +31,7 @@ vi.mock('./utils/audioEngine.js', () => ({
     getActivity: vi.fn(() => ({ isActive: false, lastEventTime: 0 })),
     subscribeActivity: vi.fn(() => () => {}),
     getAnalysisNodes: vi.fn(() => null),
+    setInstrument: vi.fn(() => Promise.resolve()),
     loadCustomSample: vi.fn(() => Promise.resolve({ duration: 1, channels: 2 })),
     clearCustomSample: vi.fn(),
     setCustomSampleBaseNote: vi.fn(),
@@ -58,6 +66,8 @@ describe('App', () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     engineStatus.current = { wasmReady: false, graphWarmed: false };
+    opening.sound = null;
+    recordings.load = vi.fn();
   });
 
   it('renders the app title', async () => {
@@ -120,6 +130,49 @@ describe('App', () => {
     render(<App />);
     expect(screen.queryByRole('button', { name: 'Turn sound on' })).not.toBeInTheDocument();
     expect(screen.queryByText('Audio engine warms now.')).not.toBeInTheDocument();
+  });
+
+  it('puts the landing piece\'s instrument under the keys and remembers it', async () => {
+    const { audioEngine } = await import('./utils/audioEngine.js');
+    const piano = { pick: vi.fn() };
+    recordings.load.mockResolvedValue(piano);
+    opening.sound = { name: 'Grand Piano', instrument: 'opening-piano', audioParams: { release: 0.45 } };
+    const { unmount, rerender } = render(<App />);
+    // Nothing is fetched or decoded until the engine has its audio context.
+    await act(async () => {});
+    expect(recordings.load).not.toHaveBeenCalled();
+    expect(audioEngine.ensureAudioContext).not.toHaveBeenCalled();
+
+    audioEngine.context = { state: 'running' };
+    engineStatus.current = { wasmReady: true, contextReady: true, graphWarmed: true };
+    act(() => audioEngine.subscribe.mock.calls.forEach(([listener]) => listener(engineStatus.current)));
+    rerender(<App />);
+    await waitFor(() => expect(audioEngine.setInstrument).toHaveBeenLastCalledWith(piano));
+    expect(recordings.load).toHaveBeenCalledWith(audioEngine.context, 'opening-piano');
+    delete audioEngine.context; // the engine mock is shared with the other tests
+
+    unmount(); // the editor shares the engine, so the instrument leaves with the page
+    expect(audioEngine.setInstrument).toHaveBeenLastCalledWith(null);
+    const saved = JSON.parse(window.localStorage.getItem('vangelis-ui-session-v2'));
+    expect(saved).toMatchObject({ instrument: 'opening-piano', activePresetName: 'Grand Piano' });
+  });
+
+  it('says so and returns to the synth when an instrument cannot be loaded', async () => {
+    const { audioEngine } = await import('./utils/audioEngine.js');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    recordings.load.mockRejectedValue(new Error('HTTP 404'));
+    opening.sound = { name: 'Nylon Guitar', instrument: 'nylon-guitar', audioParams: {} };
+    engineStatus.current = { wasmReady: true, contextReady: true, graphWarmed: true };
+    try {
+      const { unmount } = render(<App />);
+      expect(await screen.findByText('That instrument could not be loaded.')).toBeInTheDocument();
+      expect(consoleError).toHaveBeenCalled();
+      expect(audioEngine.setInstrument).toHaveBeenLastCalledWith(null);
+      unmount();
+      expect(JSON.parse(window.localStorage.getItem('vangelis-ui-session-v2')).instrument).toBeNull();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it('keeps only Record in the header', () => {

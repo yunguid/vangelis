@@ -6,7 +6,11 @@
  * several dynamics, several notes per file).
  *
  * Only the string/fret/dynamic combinations the score uses are built, each
- * just long enough for its longest note. Per sample: split the take out of
+ * just long enough for its longest note. With --keys it builds the playable
+ * guitar instead (data/sampledInstruments.js): one position per whole tone at
+ * three dynamics, left to ring, into public/samples/nylon-guitar/keys. Both
+ * sets share the level line, so the instrument matches the piece.
+ * Per sample: split the take out of
  * its file, remove the chamber's sub-70 Hz rumble, retune it to equal
  * temperament (the guitar was recorded 10-45 cents flat), align the pluck to
  * a fixed pre-roll, trim the player's uneven levels onto one line across the
@@ -14,7 +18,7 @@
  * correlated). See public/samples/nylon-guitar/README.md.
  *
  * Usage (needs ffmpeg with libmp3lame):
- *   node scripts/build_nylon_guitar.mjs --source <dir with Guitar.*.aif>
+ *   node scripts/build_nylon_guitar.mjs --source <dir with Guitar.*.aif> [--keys]
  */
 
 import { execFileSync } from 'node:child_process';
@@ -24,6 +28,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import tonejsMidi from '@tonejs/midi';
 import { GUITAR_OPEN_STRINGS, assignGuitarTakes } from '../src/data/nylonGuitar.js';
+import { GUITAR_KEY_POSITIONS, GUITAR_KEY_TAKES } from '../src/data/sampledInstruments.js';
 
 const SAMPLE_RATE = 44100;
 const HOP = 441; // 10 ms envelope frames
@@ -31,6 +36,8 @@ const PRE_ROLL_SECONDS = 0.003;
 const RING_MARGIN_SECONDS = 0.3;
 const MIN_SECONDS = 0.8;
 const MAX_SECONDS = 6.5;
+const KEYS_SECONDS = 5; // the longest a playable take is left to ring
+const RING_FLOOR = 0.01; // a string has rung out 40 dB under its pluck
 const TAIL_FADE_FRACTION = 0.35;
 const LEVEL_WINDOW_SECONDS = 0.25;
 const LEVEL_SLOPE_DB_PER_SEMITONE = -0.1; // trebles a little under the basses, as on the instrument
@@ -41,12 +48,13 @@ const SEMITONES = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
 const sourceFlag = process.argv.indexOf('--source');
 if (sourceFlag < 0 || !process.argv[sourceFlag + 1]) {
-  console.error('usage: node scripts/build_nylon_guitar.mjs --source <dir with Guitar.*.aif>');
+  console.error('usage: node scripts/build_nylon_guitar.mjs --source <dir with Guitar.*.aif> [--keys]');
   process.exit(1);
 }
 const sourceDir = path.resolve(process.argv[sourceFlag + 1]);
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const outDir = path.join(root, 'public', 'samples', 'nylon-guitar');
+const keysMode = process.argv.includes('--keys');
+const outDir = path.join(root, 'public', 'samples', 'nylon-guitar', ...(keysMode ? ['keys'] : []));
 const workDir = mkdtempSync(path.join(os.tmpdir(), 'nylon-guitar-'));
 
 const toDb = (amplitude) => 20 * Math.log10(Math.max(amplitude, 1e-12));
@@ -69,6 +77,11 @@ assignGuitarTakes(played).forEach((key, index) => {
   entry.seconds = Math.max(entry.seconds, note.duration);
   needed.set(key, entry);
 });
+
+// The playable set rings for as long as the string does (`seconds: null`).
+const keyTakes = GUITAR_KEY_POSITIONS.flatMap((position) => GUITAR_KEY_TAKES.map((dynamic) => ({
+  key: position.name + dynamic, channel: position.string - 1, midi: position.midi, dynamic, seconds: null
+})));
 
 // ── Source takes ────────────────────────────────────────────────────────
 
@@ -194,7 +207,22 @@ function writeWav(file, samples, sampleRate) {
 
 // ── Cut, measure ────────────────────────────────────────────────────────
 
-const samples = [...needed.values()].map((entry) => {
+/** How long a take rings: until its 10 ms level stays RING_FLOOR under the pluck. */
+function ringSeconds(audio, onset, to) {
+  const level = (frame) => {
+    let energy = 0;
+    for (let i = onset + frame * HOP; i < onset + (frame + 1) * HOP; i++) energy += audio[i] * audio[i];
+    return Math.sqrt(energy / HOP);
+  };
+  const frames = Math.floor((to - onset) / HOP);
+  let pluck = 0;
+  for (let frame = 0; frame < Math.min(frames, 10); frame++) pluck = Math.max(pluck, level(frame));
+  let last = 0;
+  for (let frame = 0; frame < frames; frame++) if (level(frame) > pluck * RING_FLOOR) last = frame;
+  return ((last + 1) * HOP) / SAMPLE_RATE;
+}
+
+const cutTake = (entry) => {
   const { audio, from, to } = findTake(entry);
   let peak = 0;
   for (let i = from; i < from + SAMPLE_RATE * 0.05; i++) peak = Math.max(peak, Math.abs(audio[i]));
@@ -207,7 +235,9 @@ const samples = [...needed.values()].map((entry) => {
   // that is off by its tuning error and ffmpeg resamples it back.
   const tunedRate = Math.round(SAMPLE_RATE * 2 ** (-cents / 1200));
 
-  const seconds = Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, entry.seconds + RING_MARGIN_SECONDS));
+  const seconds = entry.seconds === null
+    ? Math.min(KEYS_SECONDS, Math.max(MIN_SECONDS, ringSeconds(audio, onset, to) / (1 - TAIL_FADE_FRACTION)))
+    : Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, entry.seconds + RING_MARGIN_SECONDS));
   const start = Math.max(0, onset - Math.round(PRE_ROLL_SECONDS * tunedRate));
   const frames = Math.min(Math.round(seconds * tunedRate), to - start);
   const take = audio.slice(start, start + frames);
@@ -218,22 +248,32 @@ const samples = [...needed.values()].map((entry) => {
   const window = Math.round(LEVEL_WINDOW_SECONDS * tunedRate);
   for (let i = onset - start; i < onset - start + window; i++) energy += take[i] * take[i];
   return { ...entry, take, tunedRate, cents, levelDb: toDb(Math.sqrt(energy / window)) };
-});
+};
+
+const pieceSamples = [...needed.values()].map(cutTake);
+const samples = keysMode ? keyTakes.map(cutTake) : pieceSamples;
 
 // ── Level: every take sits on one line across the neck ─────────────────
 // The player's levels wander by 20 dB from note to note, and the soft takes
 // are there for their gentler attack, not to be quieter: velocity sets loudness.
 
-const meanPitch = samples.reduce((sum, sample) => sum + sample.midi, 0) / samples.length;
-const meanLevel = samples.reduce((sum, sample) => sum + sample.levelDb, 0) / samples.length;
+// The line and the gain are always the piece's, so the playable set matches it.
+
+const meanPitch = pieceSamples.reduce((sum, sample) => sum + sample.midi, 0) / pieceSamples.length;
+const meanLevel = pieceSamples.reduce((sum, sample) => sum + sample.levelDb, 0) / pieceSamples.length;
 const slope = LEVEL_SLOPE_DB_PER_SEMITONE;
-let loudest = 0;
-for (const sample of samples) {
+const peakOnLine = (sample) => {
   sample.trimDb = meanLevel + slope * (sample.midi - meanPitch) - sample.levelDb;
   const trim = fromDb(sample.trimDb);
-  for (let i = 0; i < sample.take.length; i++) loudest = Math.max(loudest, Math.abs(sample.take[i]) * trim);
+  let peak = 0;
+  for (let i = 0; i < sample.take.length; i++) peak = Math.max(peak, Math.abs(sample.take[i]) * trim);
+  return peak;
+};
+const sharedGainDb = PEAK_TARGET_DBFS - toDb(Math.max(...pieceSamples.map(peakOnLine)));
+for (const sample of samples) {
+  const peakDb = toDb(peakOnLine(sample)) + sharedGainDb;
+  if (peakDb > 0) throw new Error(`${sample.key}: peaks at +${peakDb.toFixed(2)} dBFS on the piece's level line`);
 }
-const sharedGainDb = PEAK_TARGET_DBFS - toDb(loudest);
 
 // ── Encode ──────────────────────────────────────────────────────────────
 

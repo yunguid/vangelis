@@ -89,7 +89,7 @@ src/
 │   ├── midiParser.js          # Parse .mid files using @tonejs/midi
 │   ├── factoryPresets.js      # Deferred 45-patch factory bank
 │   ├── userPresetStorage.js   # localStorage-backed user presets (+ change subscription)
-│   ├── soundCatalog.js        # Every loadable sound in browsing order (waveforms, banks, user)
+│   ├── soundCatalog.js        # Every loadable sound in browsing order (acoustic, waveforms, banks, user)
 │   ├── audioParams.js         # Audio parameter definitions and sanitization
 │   │
 │   └── audioEngine/           # Core audio engine modules
@@ -128,6 +128,26 @@ src/
 - Samples mapped across keyboard with pitch shifting
 - Supports one-shot and looped playback
 - Per-voice envelopes applied to samples
+
+### Sampled Instruments
+- `data/sampledInstruments.js`: the Grand Piano (the lullaby's Salamander
+  recordings, a minor third apart) and the Nylon Guitar are sounds like any
+  preset, in the dial's "Acoustic" band. Each carries its envelope and room as
+  `audioParams` plus `instrument`, the recordings App decodes and hands to
+  `audioEngine.setInstrument`; `playFrequency` then plays every key, hardware
+  MIDI note and MIDI-file note from the recording nearest its pitch (never
+  more than a semitone away from D2 to A#5 on the piano, E2 to B5 on the
+  guitar). A note that brings its own voice (`voiced`: a piece's patch, an
+  editor layer) stays with the synth, and the instrument leaves with the home
+  page so the editor's layers keep their own sounds
+- The playable guitar has its own takes (`public/samples/nylon-guitar/keys`,
+  built by `scripts/build_nylon_guitar.mjs --keys`): one fretted position per
+  whole tone, mf and ff, each left to ring out, on the same level line as the
+  piece's takes (which are cut to its note lengths). A key struck hard plays
+  the forte take; a position plucked again within 1.5 s plays the other one
+- A landing piece loads its own sound under the keys (`useOpeningPerformance`
+  reports it as `sound`), so the dial shows what is playing and playing along
+  continues in that voice; a sound saved from the Sound tab keeps its instrument
 
 ### Factory Preset Bank
 - 45 hand-designed patches in `utils/factoryPresets.js`, grouped by category

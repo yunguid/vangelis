@@ -63,6 +63,8 @@ class AudioEngine {
     this.customSample = null;
     this.customSampleBaseFrequency = 261.63; // C4
     this.customSampleLoop = false;
+    // A sampled instrument (data/sampledInstruments.js): notes play its recordings.
+    this.instrument = null;
 
     this.isRecording = false;
     this.recordingListeners = new Set();
@@ -96,7 +98,8 @@ class AudioEngine {
     return {
       ...this.status,
       isRecording: this.isRecording,
-      hasCustomSample: !!this.customSample
+      // Either way, notes are played from recordings and need no synth worklet.
+      hasCustomSample: !!(this.customSample || this.instrument)
     };
   }
 
@@ -497,13 +500,26 @@ class AudioEngine {
     };
   }
 
-  playFrequency({ noteId, frequency, waveformType, params = {}, velocity = 1 }) {
+  /**
+   * `voiced` marks a note that brings its own sound (a piece's patch, an
+   * editor layer): it is played by the synth even while an instrument is loaded.
+   */
+  playFrequency({ noteId, frequency, waveformType, params = {}, velocity = 1, voiced = false }) {
     if (!this.context) {
       this.ensureAudioContext().catch(() => {});
       return null;
     }
 
     this.ensureSamplePool(this.context);
+
+    if (this.instrument && !voiced) {
+      return this.playBufferedSample({
+        noteId,
+        frequency,
+        params,
+        ...this.instrument.pick(frequency, velocity, this.context.currentTime)
+      });
+    }
 
     if (!this.customSample && !this.worklet.ready) {
       this.ensureWorklet().catch(() => {});
@@ -581,6 +597,14 @@ class AudioEngine {
       leftAnalyser: this.globalNodes.leftAnalyser,
       rightAnalyser: this.globalNodes.rightAnalyser
     };
+  }
+
+  // ============ Sampled Instruments ============
+
+  /** Play the keys through an instrument's recordings; null returns them to the synth. */
+  setInstrument(instrument) {
+    this.instrument = instrument || null;
+    this.notify();
   }
 
   // ============ Custom Sample Support ============

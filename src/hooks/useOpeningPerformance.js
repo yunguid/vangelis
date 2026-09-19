@@ -65,7 +65,7 @@ export function useOpeningPerformance({ audioParams }) {
         const arranged = await arrangeBuiltInPiece(context, piece);
         if (disposed || cancelled.current) return;
         saveLastLandingId(piece.id);
-        setPieceSound({ params: arranged.params, waveformType: arranged.waveformType });
+        setPieceSound({ params: arranged.params, waveformType: arranged.waveformType, sound: arranged.sound });
         score = arranged.score;
         // Prepare the existing audio engine before reporting that playback started.
         await audioEngine.ensureWasm();
@@ -88,5 +88,6 @@ export function useOpeningPerformance({ audioParams }) {
     else if (wasPlaying.current) stop();
   }, [playback.isPlaying, stop]);
 
-  return { activeNotes: playback.activeNotes, stop };
+  // `sound` is what the piece is played with, for the page to load under the keys.
+  return { activeNotes: playback.activeNotes, stop, sound: pieceSound?.sound ?? null };
 }

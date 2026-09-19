@@ -17,6 +17,16 @@ note, so every note sounds from a recording of that exact string and fret and
 nothing is pitch-shifted. A position plucked again within 1.5 s plays the next
 softer take so no recording sounds twice in a row.
 
+`keys/` is the playable guitar (the "Nylon Guitar" sound on the dial,
+`src/data/sampledInstruments.js`): one fretted position per whole tone from
+E2 to A#5 (the open low E is the only open string), so every key in that range
+plays a recording at most a semitone away. Each position has its mf and ff
+takes, left to ring until they are 40 dB under the pluck (5 s at most) and
+faded from there. The pp takes are left out: brought up to the level line they
+lift the chamber's noise by as much as 22 dB, which a note held for seconds
+exposes. `--keys` builds this set; it uses the level line and the shared gain
+of the piece's takes, so the instrument is as loud as the piece.
+
 `node scripts/build_nylon_guitar.mjs --source <dir with Guitar.*.aif>`
 rebuilds them. Per take it:
 

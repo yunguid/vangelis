@@ -6,7 +6,7 @@ import { midiNoteToFrequency } from '../utils/math.js';
 export const GUITAR_OPEN_STRINGS = [64, 59, 55, 50, 45, 40];
 // The guitar was recorded at three dynamics; hard strokes use the forte takes.
 export const GUITAR_FORTE_VELOCITY = 0.78;
-const REPEAT_SECONDS = 1.5;
+export const GUITAR_REPEAT_SECONDS = 1.5;
 
 // Envelope and room only: volume and pan stay with the player's own settings.
 // The recordings are anechoic, so the room reverb is the space the guitar sits in.
@@ -30,21 +30,38 @@ export function assignGuitarTakes(notes) {
     const position = `s${note.channel + 1}f${note.midi - GUITAR_OPEN_STRINGS[note.channel]}`;
     const [preferred, alternate] = note.velocity >= GUITAR_FORTE_VELOCITY ? ['ff', 'mf'] : ['mf', 'pp'];
     const last = lastPluck.get(position);
-    const repeated = last && note.time - last.time < REPEAT_SECONDS && last.take === preferred;
+    const repeated = last && note.time - last.time < GUITAR_REPEAT_SECONDS && last.take === preferred;
     const take = repeated ? alternate : preferred;
     lastPluck.set(position, { time: note.time, take });
     return position + take;
   });
 }
 
+// Decoded once per audio context: the piece and the playable Nylon Guitar
+// (data/sampledInstruments.js) share the same takes.
+const decodedTakes = new WeakMap();
+
+/** A Map of take name ("s3f2mf") to its decoded recording. */
+export async function loadGuitarTakes(context, keys) {
+  if (!decodedTakes.has(context)) decodedTakes.set(context, new Map());
+  const cache = decodedTakes.get(context);
+  const buffers = await Promise.all(keys.map((key) => {
+    if (!cache.has(key)) {
+      const loading = fetch(withBase(`samples/nylon-guitar/${key}.mp3`)).then(async (response) => {
+        if (!response.ok) throw new Error(`Nylon guitar ${key}: HTTP ${response.status}`);
+        return context.decodeAudioData(await response.arrayBuffer());
+      });
+      cache.set(key, loading);
+      loading.catch(() => cache.delete(key)); // a failed load may be retried
+    }
+    return cache.get(key);
+  }));
+  return new Map(keys.map((key, index) => [key, buffers[index]]));
+}
+
 export async function loadGuitarPerformance(context, score) {
   const keys = [...new Set(assignGuitarTakes(score.notes))];
-  const buffers = new Map(await Promise.all(keys.map(async (key) => {
-    const response = await fetch(withBase(`samples/nylon-guitar/${key}.mp3`));
-    if (!response.ok) throw new Error(`Nylon guitar ${key}: HTTP ${response.status}`);
-    return [key, await context.decodeAudioData(await response.arrayBuffer())];
-  })));
-  return arrangeGuitarPerformance(score, buffers);
+  return arrangeGuitarPerformance(score, await loadGuitarTakes(context, keys));
 }
 
 export function arrangeGuitarPerformance(score, buffers) {

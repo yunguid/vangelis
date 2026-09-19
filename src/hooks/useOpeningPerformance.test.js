@@ -14,7 +14,9 @@ const fixture = vi.hoisted(() => ({
 }));
 vi.mock('../utils/audioEngine.js', () => ({ audioEngine: fixture.engine }));
 vi.mock('../data/openingPerformance.js', () => ({
-  OPENING_PARAMS: { release: 0.025 }, loadOpeningPerformance: fixture.load
+  OPENING_PARAMS: { release: 0.025 }, loadOpeningPerformance: fixture.load,
+  // Imported by data/sampledInstruments.js, which names the piece's sound.
+  loadOpeningSamples: vi.fn(), nearestOpeningSample: vi.fn()
 }));
 
 let useOpeningPerformance;
@@ -41,6 +43,8 @@ beforeEach(async () => {
   // scheduler, so the queue holds only the piano piece the fixture stands in for.
   localStorage.setItem('vangelis.landingQueue.v1', JSON.stringify(['performance-opening-piano']));
   ({ useOpeningPerformance } = await import('./useOpeningPerformance.js'));
+  // The hook imports this lazily; fake timers cannot wait on a real module load.
+  await import('../data/sampledInstruments.js');
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
@@ -50,6 +54,8 @@ describe('opening performance with the real MIDI scheduler', () => {
     await flush();
     expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
     expect(result.current.activeNotes.has('C4')).toBe(true);
+    // The page loads this under the keys, so the dial shows what is playing.
+    expect(result.current.sound).toMatchObject({ name: 'Grand Piano', instrument: 'opening-piano' });
     act(() => result.current.stop());
     expect(result.current.activeNotes.size).toBe(0);
     expect(fixture.engine.stopNote).toHaveBeenCalled();

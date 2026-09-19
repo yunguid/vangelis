@@ -186,6 +186,51 @@ describe('audioEngine effect gating', () => {
   });
 });
 
+describe('audioEngine sampled instrument', () => {
+  const original = {
+    context: audioEngine.context,
+    samplePool: audioEngine.samplePool,
+    worklet: audioEngine.worklet,
+    nodes: audioEngine.globalNodes
+  };
+
+  afterEach(() => {
+    audioEngine.setInstrument(null);
+    audioEngine.context = original.context;
+    audioEngine.samplePool = original.samplePool;
+    audioEngine.worklet = original.worklet;
+    audioEngine.globalNodes = original.nodes;
+  });
+
+  it('plays the keys from its recordings, but leaves a note with its own voice to the synth', () => {
+    const voice = { startSample: vi.fn() };
+    const take = { buffer: { duration: 9 }, baseFrequency: 440, velocity: 0.5 };
+    const instrument = { pick: vi.fn(() => take) };
+    audioEngine.context = { currentTime: 12 };
+    audioEngine.globalNodes = null;
+    audioEngine.samplePool = { acquire: vi.fn(() => voice) };
+    audioEngine.worklet = { ready: true, noteOn: vi.fn(), setParams: vi.fn() };
+
+    audioEngine.setInstrument(instrument);
+    expect(audioEngine.getStatus().hasCustomSample).toBe(true); // the keyboard need not wait for the worklet
+
+    audioEngine.playFrequency({ noteId: 'A4', frequency: 466.16, velocity: 0.8 });
+    expect(instrument.pick).toHaveBeenCalledWith(466.16, 0.8, 12);
+    expect(voice.startSample).toHaveBeenCalledWith(expect.objectContaining({
+      noteId: 'A4', frequency: 466.16, buffer: take.buffer, baseFrequency: 440, velocity: 0.5
+    }));
+    expect(audioEngine.worklet.noteOn).not.toHaveBeenCalled();
+
+    audioEngine.playFrequency({ noteId: 'lead', frequency: 220, waveformType: 'Square', voiced: true });
+    expect(audioEngine.worklet.noteOn).toHaveBeenCalledWith(expect.objectContaining({ noteId: 'lead' }));
+    expect(voice.startSample).toHaveBeenCalledTimes(1);
+
+    audioEngine.setInstrument(null);
+    audioEngine.playFrequency({ noteId: 'B4', frequency: 493.88 });
+    expect(audioEngine.worklet.noteOn).toHaveBeenCalledWith(expect.objectContaining({ noteId: 'B4' }));
+  });
+});
+
 describe('audio parameter equality', () => {
   it('compares normalized scalars and modulation routes without serialization', () => {
     const baseline = {

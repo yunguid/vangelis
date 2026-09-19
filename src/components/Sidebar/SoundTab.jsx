@@ -7,6 +7,7 @@ import PresetShelf from '../PresetShelf.jsx';
 const SoundTab = ({
   currentWaveform,
   onWaveformChange,
+  instrument,
   audioParams,
   onParamChange,
   onParamsChange,
@@ -24,6 +25,7 @@ const SoundTab = ({
       {/* Sounds are chosen on the dial at the bottom of the page; shaped ones are saved here. */}
       <PresetShelf
         waveformType={currentWaveform}
+        instrument={instrument}
         audioParams={audioParams}
         saveOnly
       />

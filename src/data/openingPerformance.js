@@ -31,16 +31,34 @@ const RING_SECONDS = 8; // the recordings are 9 s with a faded tail
 const OSTINATO_SECONDS = 20 * BAR_SECONDS;
 const topLineFloor = (time) => (time < OSTINATO_SECONDS ? 69 : 59);
 
-export async function loadOpeningPerformance(context) {
-  const { parseMidiFile } = await import('../utils/midiParser.js');
-  const [score, samples] = await Promise.all([
-    parseMidiFile(withBase('midi/subwoofer-lullaby.mid')),
-    Promise.all(OPENING_SAMPLE_KEYS.map(async ([key, midi]) => {
+// Decoded once per audio context: the lullaby and the playable Grand Piano
+// (data/sampledInstruments.js) share the same fifteen recordings.
+const decodedSamples = new WeakMap();
+
+export function loadOpeningSamples(context) {
+  if (!decodedSamples.has(context)) {
+    const loading = Promise.all(OPENING_SAMPLE_KEYS.map(async ([key, midi]) => {
       const response = await fetch(withBase(`samples/opening/${key}.mp3`));
       if (!response.ok) throw new Error(`Opening piano ${key}: HTTP ${response.status}`);
       const buffer = await context.decodeAudioData(await response.arrayBuffer());
       return { midi, buffer, baseFrequency: midiNoteToFrequency(midi) };
-    }))
+    }));
+    decodedSamples.set(context, loading);
+    loading.catch(() => decodedSamples.delete(context)); // a failed load may be retried
+  }
+  return decodedSamples.get(context);
+}
+
+/** The recording nearest a pitch; the lower one when two are equally near. */
+export const nearestOpeningSample = (samples, midi) => samples.reduce((best, candidate) => (
+  Math.abs(candidate.midi - midi) < Math.abs(best.midi - midi) ? candidate : best
+));
+
+export async function loadOpeningPerformance(context) {
+  const { parseMidiFile } = await import('../utils/midiParser.js');
+  const [score, samples] = await Promise.all([
+    parseMidiFile(withBase('midi/subwoofer-lullaby.mid')),
+    loadOpeningSamples(context)
   ]);
   return arrangeOpeningPerformance(score, samples);
 }
@@ -67,9 +85,7 @@ export function arrangeOpeningPerformance(score, samples) {
     const nextStrike = nextStrikes.get(midi) ?? Infinity;
     nextStrikes.set(midi, time);
     const duration = Math.min(nextPedal, nextStrike - RESTRIKE_GAP, time + RING_SECONDS) - time;
-    const sample = samples.reduce((best, candidate) => (
-      Math.abs(candidate.midi - midi) < Math.abs(best.midi - midi) ? candidate : best
-    ));
+    const sample = nearestOpeningSample(samples, midi);
     // Gentle four-bar swells, no random timing drift. The top line sings about
     // 5 dB over the hands under it; the inner voices sit just under the bass.
     const phrase = Math.sin((time / 12.8) * Math.PI);

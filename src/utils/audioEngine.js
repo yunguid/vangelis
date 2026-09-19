@@ -200,6 +200,12 @@ export class LazyAudioEngineGateway {
     return this.runtime?.getAnalysisNodes() || null;
   }
 
+  setInstrument(instrument) {
+    // Nothing to clear on an engine that was never asked to start.
+    if (!instrument && !this.runtimePromise) return Promise.resolve();
+    return this.ensureRuntime().then((runtime) => runtime.setInstrument(instrument));
+  }
+
   loadCustomSample(file) {
     return this.ensureRuntime().then((runtime) => runtime.loadCustomSample(file));
   }

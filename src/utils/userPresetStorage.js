@@ -37,12 +37,14 @@ const persist = (presets) => {
   listeners.forEach((listener) => listener());
 };
 
-export const saveUserPreset = ({ name, waveformType, audioParams }) => {
+export const saveUserPreset = ({ name, waveformType, instrument, audioParams }) => {
   const trimmed = (name || '').trim().slice(0, 48) || 'Untitled';
   const preset = {
     id: makeId(),
     name: trimmed,
     waveformType,
+    // Set when the sound is a sampled instrument (data/sampledInstruments.js).
+    ...(instrument ? { instrument } : {}),
     audioParams,
     createdAt: Date.now()
   };

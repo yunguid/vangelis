@@ -76,6 +76,8 @@ const App = () => {
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
   const [notice, setNotice] = useState('');
   const [activePresetName, setActivePresetName] = useState(() => initialSession.activePresetName || null);
+  // A sampled instrument under the keys (data/sampledInstruments.js), or null for the synth.
+  const [instrument, setInstrument] = useState(() => initialSession.instrument || null);
   const [controlSections, setControlSections] = useState(() => (
     initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
   ));
@@ -346,6 +348,7 @@ const App = () => {
       waveformType,
       audioParams,
       activePresetName,
+      instrument,
       controlSections,
       sidebarTab,
       activeSampleId,
@@ -359,6 +362,7 @@ const App = () => {
     activePresetName,
     activeSampleId,
     audioParams,
+    instrument,
     controlSections,
     midiPlayback.tempoFactor,
     sampleSelection,
@@ -402,14 +406,68 @@ const App = () => {
   const handleSidebarOpen = useCallback(() => setSidebarOpen(true), []);
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), []);
 
+  const applySound = useCallback((sound) => {
+    if (sound.waveformType) setWaveformType(sound.waveformType);
+    if (sound.audioParams) handleAudioParamsChange(sound.audioParams);
+    setInstrument(sound.instrument || null);
+    setActivePresetName(sound.name);
+  }, [handleAudioParamsChange]);
+
   // From the sound dial. Browsing there loads sounds one after another, so
   // no notice; and picking a sound is taking the instrument over.
   const handleSoundChosen = useCallback((sound) => {
     opening.stop();
-    if (sound.waveformType) setWaveformType(sound.waveformType);
-    if (sound.audioParams) handleAudioParamsChange(sound.audioParams);
-    setActivePresetName(sound.name);
-  }, [handleAudioParamsChange, opening.stop]);
+    applySound(sound);
+  }, [applySound, opening.stop]);
+
+  // The landing piece brings its own sound; load it under the keys as well, so
+  // the dial shows what is playing and playing along continues in that voice.
+  useEffect(() => {
+    if (opening.sound) applySound(opening.sound);
+  }, [applySound, opening.sound]);
+
+  // Hand the instrument's recordings to the engine once they are decoded; the
+  // previous sound keeps playing until then. The engine is never woken for
+  // this: decoding waits for the audio context the warm-up (or a first touch)
+  // brings.
+  const contextReady = engineStatus.contextReady;
+  useEffect(() => {
+    if (!instrument) {
+      audioEngine.setInstrument(null);
+      return undefined;
+    }
+    if (!contextReady) return undefined;
+    let current = true;
+    (async () => {
+      try {
+        const { loadSampledInstrument } = await import('./data/sampledInstruments.js');
+        const loaded = await loadSampledInstrument(audioEngine.context, instrument);
+        if (current) await audioEngine.setInstrument(loaded);
+      } catch (error) {
+        if (!current) return;
+        console.error(`Failed to load the ${instrument} recordings:`, error);
+        pushNotice('That instrument could not be loaded.');
+        setInstrument(null);
+        setActivePresetName(null);
+      }
+    })();
+    return () => {
+      current = false;
+    };
+  }, [contextReady, instrument, pushNotice]);
+
+  // The editor and the other pages share the engine; the instrument stays here.
+  useEffect(() => () => {
+    audioEngine.setInstrument(null);
+  }, []);
+
+  // Choosing a waveform is choosing the synth again.
+  const handleWaveformChange = useCallback((nextWaveform) => {
+    setWaveformType(nextWaveform);
+    if (!instrument) return;
+    setInstrument(null);
+    setActivePresetName(null);
+  }, [instrument]);
 
   const handleControlSectionToggle = useCallback((section) => {
     if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTROL_SECTIONS, section)) return;
@@ -421,7 +479,8 @@ const App = () => {
 
   const soundControlsValue = useMemo(() => ({
     waveformType,
-    onWaveformChange: setWaveformType,
+    onWaveformChange: handleWaveformChange,
+    instrument,
     audioParams,
     onParamChange: handleAudioParamChange,
     onParamsChange: handleAudioParamsChange,
@@ -430,12 +489,14 @@ const App = () => {
     onControlSectionToggle: handleControlSectionToggle
   }), [
     waveformType,
+    instrument,
     audioParams,
     transportBpm,
     controlSections,
     handleAudioParamChange,
     handleAudioParamsChange,
-    handleControlSectionToggle
+    handleControlSectionToggle,
+    handleWaveformChange
   ]);
 
   const midiTransportValue = useMemo(() => ({

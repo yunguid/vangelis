@@ -99,29 +99,22 @@ export const saveLastLandingId = (id) => writeJson(LAST_PLAYED_KEY, id);
  * Turn a built-in file into a score ready for useMidiPlayback, voiced the way
  * the piece is meant to sound. Returns the score plus the player-level sound
  * (`params`, `waveformType`) it should be played through; `params` is null
- * when the piece only overrides part of the listener's own sound.
+ * when the piece only overrides part of the listener's own sound. `sound` is
+ * that voice as the sound dial knows it (a sampled instrument or a preset), so
+ * the page can load it for the keys too; null for a piece without one.
  */
 export async function arrangeBuiltInPiece(context, file) {
-  if (file.instrument === 'opening-piano') {
-    const { loadOpeningPerformance, OPENING_PARAMS } = await import('./openingPerformance.js');
-    const score = await loadOpeningPerformance(context);
-    // The piano's envelope and room travel with the notes (as the guitar's do),
-    // so it sounds right from the MIDI tab too; level and pan stay the listener's.
-    const { volume, pan, ...room } = OPENING_PARAMS;
-    const notes = score.notes.map((note) => ({ ...note, audioParamOverrides: room }));
-    return { score: { ...score, notes }, params: OPENING_PARAMS, waveformType: 'Sine' };
+  if (file.instrument) {
+    // Loaded with the recordings, never with the page.
+    const { findSampledInstrument } = await import('./sampledInstruments.js');
+    const arranged = await arrangeSampledPiece(context, file);
+    return { ...arranged, sound: findSampledInstrument(file.instrument) };
   }
 
   const { parseMidiFile } = await import('../utils/midiParser.js');
   const parsed = await parseMidiFile(file.path);
-
-  if (file.instrument === 'nylon-guitar') {
-    const { loadGuitarPerformance } = await import('./nylonGuitar.js');
-    return { score: await loadGuitarPerformance(context, parsed), params: null, waveformType: 'Sine' };
-  }
-
   const presetId = file.landing?.presetId;
-  if (!presetId) return { score: parsed, params: null, waveformType: null };
+  if (!presetId) return { score: parsed, params: null, waveformType: null, sound: null };
   const { PATCH_LAB_PRESETS } = await import('../utils/patchLabPresets.js');
   const preset = PATCH_LAB_PRESETS.find((entry) => entry.id === presetId);
   if (!preset) throw new Error(`Landing piece ${file.id}: unknown preset ${presetId}`);
@@ -133,5 +126,29 @@ export async function arrangeBuiltInPiece(context, file) {
     waveformType: preset.waveformType,
     audioParams: params
   }));
-  return { score: { ...parsed, notes }, params, waveformType: preset.waveformType };
+  return { score: { ...parsed, notes }, params, waveformType: preset.waveformType, sound: preset };
+}
+
+/** A performance played from its own recordings. */
+async function arrangeSampledPiece(context, file) {
+  if (file.instrument === 'opening-piano') {
+    const { loadOpeningPerformance, OPENING_PARAMS } = await import('./openingPerformance.js');
+    const score = await loadOpeningPerformance(context);
+    // The piano's envelope and room travel with the notes (as the guitar's do),
+    // so it sounds right from the MIDI tab too; level and pan stay the listener's.
+    const { volume, pan, ...room } = OPENING_PARAMS;
+    const notes = score.notes.map((note) => ({ ...note, audioParamOverrides: room }));
+    return { score: { ...score, notes }, params: OPENING_PARAMS, waveformType: 'Sine' };
+  }
+
+  if (file.instrument === 'nylon-guitar') {
+    const [{ parseMidiFile }, { loadGuitarPerformance }] = await Promise.all([
+      import('../utils/midiParser.js'),
+      import('./nylonGuitar.js')
+    ]);
+    const parsed = await parseMidiFile(file.path);
+    return { score: await loadGuitarPerformance(context, parsed), params: null, waveformType: 'Sine' };
+  }
+
+  throw new Error(`Landing piece ${file.id}: unknown instrument ${file.instrument}`);
 }

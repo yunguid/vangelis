@@ -238,7 +238,9 @@ export function useMidiPlayback({
       ? audioEngine.playBufferedSample({ ...voiceOptions, ...noteOptions.sample, when: noteOptions.when })
       : audioEngine.playFrequency({
         ...voiceOptions,
-        waveformType: noteOptions.waveformType || waveformRef.current
+        waveformType: noteOptions.waveformType || waveformRef.current,
+        // A note that brings its own patch is the synth's, whatever instrument is loaded.
+        voiced: Boolean(noteOptions.audioParams || noteOptions.waveformType)
       });
     if (started?.voiceId) {
       startedVoiceIds.push(started.voiceId);

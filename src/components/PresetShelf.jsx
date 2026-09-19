@@ -22,10 +22,12 @@ import { FACTORY_PRESET_COUNT, PATCH_LAB_PRESET_COUNT } from '../utils/presetCat
  * region in both branches — saving is a core action, never hidden.
  *
  * `saveOnly` renders just that save row: the sidebar's Sound tab, where sounds
- * are shaped and saved but chosen on the SoundDial instead.
+ * are shaped and saved but chosen on the SoundDial instead. `instrument` is the
+ * sampled instrument under the keys, saved with the sound so it comes back.
  */
 const PresetShelf = ({
   waveformType,
+  instrument = null,
   audioParams,
   onApply,
   activePresetName,
@@ -193,11 +195,11 @@ const PresetShelf = ({
   }, [browseOpen, ensureFactoryCatalog]);
 
   const handleSave = useCallback(() => {
-    const preset = saveUserPreset({ name, waveformType, audioParams });
+    const preset = saveUserPreset({ name, waveformType, instrument, audioParams });
     setUserPresets((prev) => [preset, ...prev].slice(0, 50));
     setActiveId(preset.id);
     setName('');
-  }, [name, waveformType, audioParams]);
+  }, [name, waveformType, instrument, audioParams]);
 
   const handleDelete = useCallback((id) => {
     setUserPresets(deleteUserPreset(id));
