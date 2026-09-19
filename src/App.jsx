@@ -48,6 +48,13 @@ const isTextInputTarget = (target) => {
   return !!target?.isContentEditable;
 };
 
+const SOUND_OFF_ICON = (
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
+    <path d="M16 9.5l4.5 5M20.5 9.5l-4.5 5" />
+  </svg>
+);
+
 const App = () => {
   useAudioEngineWarmup();
   const showPrimaryVisual = useDeferredVisualMount(PRIMARY_VISUAL_DELAY_MS);
@@ -385,6 +392,9 @@ const App = () => {
     }));
   }, []);
 
+  const handleSoundOn = useCallback(() => {
+    audioEngine.context?.resume().catch(() => {});
+  }, []);
   const handleSidebarOpen = useCallback(() => setSidebarOpen(true), []);
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), []);
 
@@ -487,7 +497,14 @@ const App = () => {
                   wasmLoaded={wasmLoaded}
                   externalActiveNotes={externalActiveNotes}
                 />
-                {!isGraphWarm && (
+                {engineStatus.audioBlocked ? (
+                  // The browser is holding audio until a gesture. This one is not a
+                  // note, so it starts the opening instead of taking it over.
+                  <button type="button" className="btn btn--accent sound-prompt" onClick={handleSoundOn}>
+                    {SOUND_OFF_ICON}
+                    Turn sound on
+                  </button>
+                ) : !isGraphWarm && (
                   <div className="warmup-indicator" aria-live="polite">
                     <span className="warmup-indicator__marker" aria-hidden="true" />
                     <span>Audio engine warms now.</span>

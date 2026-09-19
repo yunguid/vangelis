@@ -10,6 +10,7 @@ const COLD_STATUS = Object.freeze({
   wasmReady: false,
   contextReady: false,
   graphWarmed: false,
+  audioBlocked: false,
   error: null,
   isRecording: false,
   hasCustomSample: false

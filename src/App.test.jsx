@@ -8,10 +8,12 @@ vi.mock('./hooks/useOpeningPerformance.js', () => ({
   useOpeningPerformance: () => ({ status: 'done', activeNotes: new Set(), stop: vi.fn(), listen: vi.fn() })
 }));
 
+const engineStatus = vi.hoisted(() => ({ current: { wasmReady: false, graphWarmed: false } }));
+
 // Mock the audio engine
 vi.mock('./utils/audioEngine.js', () => ({
   audioEngine: {
-    getStatus: () => ({ wasmReady: false, graphWarmed: false }),
+    getStatus: () => engineStatus.current,
     subscribe: vi.fn(() => () => {}),
     subscribeRecording: vi.fn(() => () => {}),
     setGlobalParams: vi.fn(),
@@ -55,6 +57,7 @@ describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    engineStatus.current = { wasmReady: false, graphWarmed: false };
   });
 
   it('renders the app title', async () => {
@@ -100,6 +103,23 @@ describe('App', () => {
   it('does not show keyboard waveform label', () => {
     render(<App />);
     expect(screen.queryByText(/Waveform:/)).not.toBeInTheDocument();
+  });
+
+  it('offers to turn sound on while the browser blocks audio, and nothing once it runs', async () => {
+    const { audioEngine } = await import('./utils/audioEngine.js');
+    const resume = vi.fn(() => Promise.resolve());
+    audioEngine.context = { resume };
+    engineStatus.current = { wasmReady: true, contextReady: true, graphWarmed: true, audioBlocked: true };
+    const { unmount } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Turn sound on' }));
+    delete audioEngine.context; // the engine mock is shared with the other tests
+    expect(resume).toHaveBeenCalledTimes(1);
+    unmount();
+
+    engineStatus.current = { wasmReady: true, contextReady: true, graphWarmed: true, audioBlocked: false };
+    render(<App />);
+    expect(screen.queryByRole('button', { name: 'Turn sound on' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Audio engine warms now.')).not.toBeInTheDocument();
   });
 
   it('keeps only Record in the header', () => {

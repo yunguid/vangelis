@@ -39,6 +39,8 @@ class AudioEngine {
       wasmReady: false,
       contextReady: false,
       graphWarmed: false,
+      // The context exists but the browser will not run it without a gesture.
+      audioBlocked: false,
       error: null
     };
 
@@ -328,22 +330,33 @@ class AudioEngine {
   installUnlockHandlers() {
     if (typeof window === 'undefined') return;
 
-    const resume = async () => {
-      if (this.context?.state === 'suspended') {
-        try {
-          await this.context.resume();
-        } catch (e) {
-          // Ignore
-        }
-      }
-      if (this.context?.state === 'running') {
-        this.markGraphReady();
+    // iOS plays Web Audio through the ringer channel, so the silent switch
+    // mutes an instrument; a playback session sounds like any music app.
+    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+
+    // Browsers hold audio until a gesture that carries user activation. On
+    // touch that is the release (pointerup/touchend/click), not the press, and
+    // iOS interrupts a running context when the page is backgrounded, so every
+    // gesture resumes a context that is not running.
+    const resume = () => {
+      if (this.context && this.context.state !== 'running') {
+        this.context.resume().catch(() => {});
       }
     };
-
-    ['pointerdown', 'touchstart', 'mousedown', 'keydown'].forEach((event) => {
-      window.addEventListener(event, resume, { passive: true, once: true });
+    ['pointerdown', 'pointerup', 'touchend', 'mousedown', 'keydown', 'click'].forEach((event) => {
+      window.addEventListener(event, resume, { passive: true, capture: true });
     });
+
+    const syncState = () => {
+      const running = this.context.state === 'running';
+      if (running) this.markGraphReady();
+      if (this.status.audioBlocked === running) {
+        this.status.audioBlocked = !running;
+        this.notify();
+      }
+    };
+    this.context.addEventListener('statechange', syncState);
+    syncState();
   }
 
   markGraphReady() {

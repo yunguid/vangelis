@@ -8,9 +8,11 @@ export const OPENING_PARAMS = sanitizeAudioParams({
   // string; it also fades the piano out from under a takeover note.
   volume: 0.58, useADSR: true, attack: 0.005, sustain: 1,
   release: 0.45, useFilter: false, distortion: 0,
-  reverbEnabled: true, reverbMode: 'hall', reverbMix: 0.3,
-  reverbSize: 0.78, reverbDecay: 0.62, reverbTone: 0.38,
-  reverbPreDelay: 24, reverbWidth: 0.9, delayEnabled: false
+  // The grand is close-miked and dry, so the space is all reverb: a 3.3 s
+  // tail about 13 dB under the piano. Its low cut keeps the bass out of it.
+  reverbEnabled: true, reverbMode: 'ambient', reverbMix: 0.62,
+  reverbSize: 0.85, reverbDecay: 0.8, reverbTone: 0.38,
+  reverbPreDelay: 30, reverbWidth: 0.9, delayEnabled: false
 });
 
 // Salamander Grand is recorded in minor thirds, so every pitch in the score is
@@ -23,6 +25,11 @@ const BAR_SECONDS = 3.2; // four beats at 75 BPM
 const BASS_CEILING = 52; // E3, the top of the left hand's bass register
 const RESTRIKE_GAP = 0.08; // a repeated string starts fading just before the hammer lands
 const RING_SECONDS = 8; // the recordings are 9 s with a faded tail
+// The top line is the highest note struck at a moment, once it clears the
+// accompaniment under it: the ostinato reaches G#4 for the first twenty bars,
+// the later left-hand figure only G#3.
+const OSTINATO_SECONDS = 20 * BAR_SECONDS;
+const topLineFloor = (time) => (time < OSTINATO_SECONDS ? 69 : 59);
 
 export async function loadOpeningPerformance(context) {
   const { parseMidiFile } = await import('../utils/midiParser.js');
@@ -48,6 +55,10 @@ export function arrangeOpeningPerformance(score, samples) {
   const pedalChanges = score.notes
     .filter((note) => note.midi - 12 <= BASS_CEILING && isDownbeat(note.time * scale))
     .map((note) => note.time * scale);
+  const highestAt = new Map();
+  for (const note of score.notes) {
+    highestAt.set(note.time, Math.max(highestAt.get(note.time) ?? 0, note.midi - 12));
+  }
   const nextStrikes = new Map();
   const notes = score.notes.slice().reverse().map((note) => {
     const midi = note.midi - 12;
@@ -59,9 +70,11 @@ export function arrangeOpeningPerformance(score, samples) {
     const sample = samples.reduce((best, candidate) => (
       Math.abs(candidate.midi - midi) < Math.abs(best.midi - midi) ? candidate : best
     ));
-    // Gentle four-bar swells, melody above accompaniment, no random timing drift.
+    // Gentle four-bar swells, no random timing drift. The top line sings about
+    // 5 dB over the hands under it; the inner voices sit just under the bass.
     const phrase = Math.sin((time / 12.8) * Math.PI);
-    const velocity = (midi >= 60 ? 0.72 : 0.57) + phrase * 0.045;
+    const topLine = midi === highestAt.get(note.time) && midi >= topLineFloor(time);
+    const velocity = (topLine ? 0.92 : midi >= 60 ? 0.52 : 0.57) + phrase * 0.045;
     return { ...note, midi, time, duration, velocity, sample };
   }).reverse();
   return { name: 'Subwoofer Lullaby', composer: 'C418', bpm: 75,

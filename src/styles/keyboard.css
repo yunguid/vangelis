@@ -227,6 +227,18 @@
   overflow: hidden;
 }
 
+/* While the browser blocks audio: centred under the keys, never over them. */
+.sound-prompt {
+  position: absolute;
+  top: calc(100% + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.sound-prompt:active:not(:disabled) {
+  transform: translate(-50%, 1px);
+}
+
 .warmup-indicator__marker {
   width: 8px;
   height: 8px;
@@ -352,6 +364,18 @@
   .key-black {
     margin-top: 6px;
     border-radius: 0 0 4px 4px;
+  }
+
+  .sound-prompt {
+    position: static;
+    align-self: center;
+    min-height: var(--control-h-touch);
+    margin-top: 12px;
+    transform: none;
+  }
+
+  .sound-prompt:active:not(:disabled) {
+    transform: translateY(1px);
   }
 
   .warmup-indicator {
