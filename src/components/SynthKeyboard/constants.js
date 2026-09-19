@@ -2,6 +2,13 @@ export const BASE_OCTAVE = 4;
 export const MIN_OFFSET = -5;
 export const MAX_OFFSET = 2;
 
+/* The dynamics a key can be struck at: C/V step through them, the touch bar picks one. */
+export const KEY_VELOCITIES = [
+  { label: 'Soft', value: 0.55 },
+  { label: 'Med', value: 0.85 },
+  { label: 'Hard', value: 1 }
+];
+
 /* var() so breakpoints can retune key sizes; the fallback is the desktop size. */
 export const WHITE_KEY_HEIGHT = 'var(--white-key-height, clamp(72px, 18vh, 120px))';
 export const BLACK_KEY_WIDTH = 'var(--black-key-width, clamp(24px, 4.2vw, 48px))';

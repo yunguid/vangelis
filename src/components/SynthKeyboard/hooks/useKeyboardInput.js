@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { KEYBOARD_MAP, MIN_OFFSET, MAX_OFFSET, clamp } from '../constants';
+import { KEYBOARD_MAP, KEY_VELOCITIES, MIN_OFFSET, MAX_OFFSET, clamp } from '../constants';
 import { getNoteMeta } from '../utils/noteMeta';
+
+// Striking the same key again inside this window is a harder hit: up to
+// RESTRIKE_ACCENT on top of the key velocity, fading to nothing at its edge.
+const RESTRIKE_WINDOW_MS = 250;
+const RESTRIKE_ACCENT = 0.15;
 
 const isTextEntryTarget = (target) => {
   const tagName = target?.tagName;
@@ -8,25 +13,33 @@ const isTextEntryTarget = (target) => {
   return !!target?.isContentEditable;
 };
 
+const stepKeyVelocity = (current, direction) => {
+  const index = KEY_VELOCITIES.findIndex((level) => level.value === current);
+  return KEY_VELOCITIES[clamp(index + direction, 0, KEY_VELOCITIES.length - 1)].value;
+};
+
 export function useKeyboardInput({
   octaveOffsetRef,
   setOctaveOffset,
+  keyVelocityRef,
+  setKeyVelocity,
   startNote,
   stopNote
 }) {
   const keyToNoteRef = useRef(null);
   if (!keyToNoteRef.current) keyToNoteRef.current = new Map();
-  const keyboardVelocityRef = useRef(null);
-  if (!keyboardVelocityRef.current) keyboardVelocityRef.current = new Map();
+  const lastStrikeRef = useRef(null);
+  if (!lastStrikeRef.current) lastStrikeRef.current = new Map();
 
+  // A typed key has no velocity of its own, so it plays at the key velocity
+  // (C/V, or the touch bar). Coming back to a key never makes it quieter.
   const velocityFromKeyboard = useCallback((key) => {
     const now = performance.now();
-    const last = keyboardVelocityRef.current.get(key) || 0;
-    keyboardVelocityRef.current.set(key, now);
-    if (!last) return 0.85;
-    const delta = now - last;
-    return clamp(1 - delta / 250, 0.3, 1);
-  }, []);
+    const last = lastStrikeRef.current.get(key) ?? -Infinity;
+    lastStrikeRef.current.set(key, now);
+    const accent = RESTRIKE_ACCENT * clamp(1 - (now - last) / RESTRIKE_WINDOW_MS, 0, 1);
+    return Math.min(1, keyVelocityRef.current + accent);
+  }, [keyVelocityRef]);
 
   const getNote = useCallback((noteName, relativeOctave) => {
     return getNoteMeta(noteName, relativeOctave, octaveOffsetRef.current);
@@ -57,6 +70,16 @@ export function useKeyboardInput({
     if (key === 'x') {
       event.preventDefault();
       setOctaveOffset((prev) => clamp(prev + 1, MIN_OFFSET, MAX_OFFSET));
+      return;
+    }
+    if (key === 'c') {
+      event.preventDefault();
+      setKeyVelocity((prev) => stepKeyVelocity(prev, -1));
+      return;
+    }
+    if (key === 'v') {
+      event.preventDefault();
+      setKeyVelocity((prev) => stepKeyVelocity(prev, 1));
       return;
     }
 
@@ -98,7 +121,7 @@ export function useKeyboardInput({
         );
       }
     }
-  }, [getNote, setOctaveOffset, startNote, velocityFromKeyboard]);
+  }, [getNote, setOctaveOffset, setKeyVelocity, startNote, velocityFromKeyboard]);
 
   const handleKeyboardUp = useCallback((event) => {
     const physicalKey = event.code || event.key.toLowerCase();

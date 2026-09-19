@@ -7,6 +7,7 @@ import {
   BASE_OCTAVE,
   MIN_OFFSET,
   MAX_OFFSET,
+  KEY_VELOCITIES,
   clamp
 } from './constants';
 import { useVisualFeedback } from './hooks/useVisualFeedback';
@@ -26,12 +27,6 @@ const matchesCompact = () => (
   && window.matchMedia(COMPACT_QUERY).matches
 );
 
-const TOUCH_VELOCITIES = [
-  { label: 'Soft', value: 0.55 },
-  { label: 'Med', value: 0.85 },
-  { label: 'Hard', value: 1 }
-];
-
 const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = false, externalActiveNotes = EMPTY_ACTIVE_NOTES, onUserPlay }) => {
   const keyboardRef = useRef(null);
   const keyElementsRef = useRef(null);
@@ -47,12 +42,13 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
   // Compact mode: fewer, fatter keys plus an on-screen octave/velocity bar,
   // because Z/X and C/V don't exist on a touch screen.
   const [isCompact, setIsCompact] = useState(matchesCompact);
-  const [touchVelocity, setTouchVelocity] = useState(0.85);
-  const touchVelocityRef = useRef(touchVelocity);
+  // The dynamic keys are struck at, typed or touched: C/V step it, the bar picks it.
+  const [keyVelocity, setKeyVelocity] = useState(0.85);
+  const keyVelocityRef = useRef(keyVelocity);
 
   useEffect(() => {
-    touchVelocityRef.current = touchVelocity;
-  }, [touchVelocity]);
+    keyVelocityRef.current = keyVelocity;
+  }, [keyVelocity]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
@@ -91,10 +87,12 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
     scheduleVisualUpdate
   });
 
-  // Keyboard input (Z/X for octave, A-L for notes)
+  // Keyboard input (Z/X for octave, C/V for velocity, A-L for notes)
   useKeyboardInput({
     octaveOffsetRef,
     setOctaveOffset,
+    keyVelocityRef,
+    setKeyVelocity,
     startNote,
     stopNote
   });
@@ -106,7 +104,7 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
     startNote,
     stopNote,
     switchPointerNote,
-    touchVelocityRef
+    keyVelocityRef
   });
 
   // Register key elements for visual feedback
@@ -244,14 +242,14 @@ const SynthKeyboard = ({ waveformType = 'Sine', audioParams = {}, wasmLoaded = f
             +
           </button>
         </div>
-        <div className="keyboard-touch-bar__velocity" role="group" aria-label="Touch velocity">
-          {TOUCH_VELOCITIES.map(({ label, value }) => (
+        <div className="keyboard-touch-bar__velocity" role="group" aria-label="Key velocity">
+          {KEY_VELOCITIES.map(({ label, value }) => (
             <button
               key={label}
               type="button"
-              className={`keyboard-touch-bar__vel ${touchVelocity === value ? 'keyboard-touch-bar__vel--active' : ''}`}
-              onClick={() => setTouchVelocity(value)}
-              aria-pressed={touchVelocity === value}
+              className={`keyboard-touch-bar__vel ${keyVelocity === value ? 'keyboard-touch-bar__vel--active' : ''}`}
+              onClick={() => setKeyVelocity(value)}
+              aria-pressed={keyVelocity === value}
             >
               {label}
             </button>

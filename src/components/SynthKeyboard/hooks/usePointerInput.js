@@ -7,7 +7,7 @@ export function usePointerInput({
   startNote,
   stopNote,
   switchPointerNote,
-  touchVelocityRef
+  keyVelocityRef
 }) {
   useEffect(() => {
     const container = keyboardRef.current;
@@ -15,9 +15,9 @@ export function usePointerInput({
     const pendingMoves = new Map();
     let moveFrameId = null;
 
-    // Touch screens rarely report pressure; the on-screen velocity selector
-    // supplies the playing dynamic instead.
-    const fallbackVelocity = () => touchVelocityRef?.current ?? 0.85;
+    // Touch screens rarely report pressure; the key velocity (C/V, or the touch
+    // bar) supplies the playing dynamic instead.
+    const fallbackVelocity = () => keyVelocityRef?.current ?? 0.85;
 
     const getMetaFromElement = (element) => {
       if (!element) return null;
@@ -149,5 +149,5 @@ export function usePointerInput({
       container.removeEventListener('pointercancel', pointerUp);
       container.removeEventListener('lostpointercapture', lostPointerCapture, true);
     };
-  }, [keyboardRef, pointerToNoteRef, startNote, stopNote, switchPointerNote, touchVelocityRef]);
+  }, [keyboardRef, pointerToNoteRef, startNote, stopNote, switchPointerNote, keyVelocityRef]);
 }

@@ -53,7 +53,7 @@ describe('usePointerInput', () => {
       startNote: vi.fn(),
       stopNote,
       switchPointerNote,
-      touchVelocityRef: { current: 0.85 }
+      keyVelocityRef: { current: 0.85 }
     }));
 
     const pointerMove = listeners.get('pointermove');

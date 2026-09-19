@@ -276,6 +276,12 @@ node scripts/bench_synth_worklet.mjs
 | ? | Show shortcuts overlay |
 | Esc | Close overlays |
 
+Typed keys carry no velocity of their own: they play at the key velocity
+(Soft 0.55 / Med 0.85 / Hard 1), which C/V step and the touch bar's
+Soft/Med/Hard picks; touches that report no pressure use it too. Striking the
+same key again within 250 ms adds an accent of up to +0.15, and coming back to
+a key never makes it quieter (`SynthKeyboard/hooks/useKeyboardInput.js`).
+
 ## Dependencies
 
 ### Core
