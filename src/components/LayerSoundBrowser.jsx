@@ -6,11 +6,14 @@ import React, {
   useRef,
   useState
 } from 'react';
-import { TRACK_INSTRUMENTS } from '../utils/pianoRollPattern.js';
+// The same four names as the editor's TRACK_INSTRUMENTS, taken from the shared
+// params module: importing the pattern model would tie this lazy chunk back to
+// the editor page's own chunk.
+import { WAVEFORM_OPTIONS } from '../utils/audioParams.js';
 import { loadUserPresets } from '../utils/userPresetStorage.js';
 import './LayerSoundBrowser.css';
 
-const WAVEFORM_SOUNDS = TRACK_INSTRUMENTS.map((waveformType) => ({
+const WAVEFORM_SOUNDS = WAVEFORM_OPTIONS.map((waveformType) => ({
   id: `waveform-${waveformType.toLowerCase()}`,
   name: waveformType,
   category: 'Basic waveforms',

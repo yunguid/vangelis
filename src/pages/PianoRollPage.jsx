@@ -1,5 +1,4 @@
 import React from 'react';
-import LayerSoundBrowser from '../components/LayerSoundBrowser.jsx';
 import Sidebar from '../components/Sidebar';
 import {
   MidiTransportContext,
@@ -80,10 +79,20 @@ import {
 } from '../utils/unsavedNavigationGuard.js';
 import './PianoRollPage.css';
 
-const ROW_HEIGHT = 14;
+// Tall enough that a note can carry its name and read as the layer's colour.
+const ROW_HEIGHT = 20;
+const GRID_GROUND = '#14171a';
+const GRID_BLACK_KEY_ROW = 'rgba(0, 0, 0, 0.13)';
+const GRID_IN_KEY_ROW = 'rgba(89, 160, 177, 0.16)';
+// Subdivision lines stay hidden until they are this far apart, then fade in.
+const SUBDIVISION_MIN_PX = 12;
+const SUBDIVISION_FADE_PX = 16;
 const KEY_COLUMN_WIDTH = 64;
 const RULER_HEIGHT = 30;
 const RESIZE_HANDLE_PX = 7;
+// A note shows its name once the name fits: ~6.7px per 11px monospace
+// character plus the label's padding. "C5" fits a sixteenth at 100% zoom.
+const noteNameFits = (name, widthPx) => widthPx >= name.length * 6.7 + 8;
 // Longer than any OS double-click interval, so the second click of a
 // double-click that switched layers is still recognised as part of it.
 const LAYER_SWITCH_GUARD_MS = 600;
@@ -94,6 +103,8 @@ const EDIT_RESCHEDULE_DEBOUNCE_MS = 120;
 const DRAFT_SAVE_DEBOUNCE_MS = 400;
 const CLOUD_SYNC_DEBOUNCE_MS = 2000;
 const HISTORY_LIMIT = 100;
+// 100% zoom: a sixteenth is 24px wide, room for a note to be seen and named.
+const DEFAULT_PX_PER_BEAT = 96;
 const ZOOM_MIN = 24;
 const ZOOM_MAX = 336;
 const ZOOM_STEP = 1.15;
@@ -204,58 +215,65 @@ const drawGrid = (canvas, {
   const ctx = canvas.getContext('2d');
   ctx.scale(backingWidth / width, dpr);
 
+  // The grid is a quiet stage for the notes: one ground colour, black-key rows
+  // a shade darker, and lines only where they carry rhythm or register.
+  ctx.fillStyle = GRID_GROUND;
+  ctx.fillRect(0, 0, width, GRID_HEIGHT);
+  const hasScale = Boolean(scaleId);
   for (let row = 0; row < ROW_COUNT; row += 1) {
     const midi = midiForRow(row);
     const y = row * ROW_HEIGHT;
-    const hasScale = Boolean(scaleId);
-    ctx.fillStyle = hasScale
-      ? (isBlackKey(midi) ? 'rgba(6, 9, 14, 0.99)' : 'rgba(10, 14, 20, 0.99)')
-      : (isBlackKey(midi) ? 'rgba(10, 14, 21, 0.98)' : 'rgba(17, 23, 33, 0.98)');
-    ctx.fillRect(0, y, width, ROW_HEIGHT);
-
-    if (hasScale) {
-      const isScaleTone = isInScale(midi, scaleRoot, scaleId);
-      const isChordTone = isInChord(midi, scaleRoot, chordTypeId);
-      if (!isScaleTone && !isChordTone) continue;
-      ctx.fillStyle = 'rgba(89, 160, 177, 0.38)';
+    if (isBlackKey(midi)) {
+      ctx.fillStyle = GRID_BLACK_KEY_ROW;
       ctx.fillRect(0, y, width, ROW_HEIGHT);
-      ctx.fillStyle = 'rgba(173, 223, 232, 0.42)';
-      ctx.fillRect(0, y, width, 1);
+    }
+    if (hasScale && (isInScale(midi, scaleRoot, scaleId) || isInChord(midi, scaleRoot, chordTypeId))) {
+      ctx.fillStyle = GRID_IN_KEY_ROW;
+      ctx.fillRect(0, y, width, ROW_HEIGHT);
     }
   }
 
-  // Horizontal row lines; octave boundaries (B->C) brighter.
+  // Only octave boundaries (B->C) get a horizontal line.
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
   for (let row = 0; row <= ROW_COUNT; row += 1) {
-    const midi = midiForRow(row);
+    if ((((midiForRow(row) % 12) + 12) % 12) !== 11) continue;
     const y = row * ROW_HEIGHT + 0.5;
-    ctx.strokeStyle = (((midi % 12) + 12) % 12) === 11
-      ? 'rgba(255, 255, 255, 0.2)'
-      : 'rgba(255, 255, 255, 0.04)';
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
   }
 
-  // Vertical lines with FL-style hierarchy: subdivisions faint (thirds when
-  // a triplet snap is active), beats medium, bars strongest.
+  // Bars strongest, beats faint. Subdivisions (thirds when a triplet snap is
+  // active) only appear once zoom gives them room, and fade in as it grows, so
+  // an empty grid never reads as a lattice.
   const subdivision = snapBeats || 0.25;
+  const subdivisionPx = subdivision * pxPerBeat;
+  const subdivisionAlpha = Math.min(
+    Math.max((subdivisionPx - SUBDIVISION_MIN_PX) / SUBDIVISION_FADE_PX, 0),
+    1
+  ) * 0.06;
   const totalBeats = bars * BEATS_PER_BAR;
   for (let beat = 0; beat <= totalBeats + 1e-6; beat += subdivision) {
-    const x = Math.round(beat * pxPerBeat) + 0.5;
     const onBeat = Math.abs(beat - Math.round(beat)) < 1e-6;
     const onBar = onBeat && Math.round(beat) % BEATS_PER_BAR === 0;
+    if (!onBeat && subdivisionAlpha === 0) continue;
+    const x = Math.round(beat * pxPerBeat) + 0.5;
     ctx.strokeStyle = onBar
-      ? 'rgba(255, 255, 255, 0.3)'
+      ? 'rgba(255, 255, 255, 0.22)'
       : onBeat
-        ? 'rgba(255, 255, 255, 0.13)'
-        : 'rgba(255, 255, 255, 0.055)';
+        ? 'rgba(255, 255, 255, 0.08)'
+        : `rgba(255, 255, 255, ${subdivisionAlpha})`;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, GRID_HEIGHT);
     ctx.stroke();
   }
 };
+
+// Only needed once a track's sound button is pressed, so it stays out of the
+// editor's upfront JavaScript.
+const LayerSoundBrowser = React.lazy(() => import('../components/LayerSoundBrowser.jsx'));
 
 const PianoRollPage = () => {
   useAudioEngineWarmup();
@@ -282,7 +300,7 @@ const PianoRollPage = () => {
   const [pxPerBeat, setPxPerBeat] = React.useState(() => (
     Number.isFinite(draft?.pxPerBeat)
       ? Math.min(Math.max(draft.pxPerBeat, ZOOM_MIN), ZOOM_MAX)
-      : 56
+      : DEFAULT_PX_PER_BEAT
   ));
   const [savedPatterns, setSavedPatterns] = React.useState(() => loadSavedPatterns());
   const [drag, setDrag] = React.useState(null);
@@ -461,10 +479,19 @@ const PianoRollPage = () => {
     }
   }, [pattern.bars, chordTypeId, snapBeats, scaleId, scaleRoot, pxPerBeat]);
 
-  // Boot the viewport around C5 so melodies land mid-screen.
+  // Open on the music: the middle of the pattern's notes sits mid-screen, and
+  // an empty pattern opens around C5.
   React.useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = rowForMidi(84) * ROW_HEIGHT;
+    if (!el) return;
+    const pitches = pattern.notes.map((note) => note.midi);
+    const centerMidi = pitches.length > 0
+      ? (Math.min(...pitches) + Math.max(...pitches)) / 2
+      : 72;
+    const centerY = (rowForMidi(Math.round(centerMidi)) + 0.5) * ROW_HEIGHT + RULER_HEIGHT;
+    el.scrollTop = Math.max(0, centerY - el.clientHeight / 2);
+    // Mount only: later edits must never move the grid under the cursor.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   React.useEffect(() => () => {
@@ -1579,11 +1606,15 @@ const PianoRollPage = () => {
           style={{
             '--track-color': track?.color,
             left: note.start * pxPerBeat,
-            top: rowForMidi(note.midi) * ROW_HEIGHT + 2,
-            width: Math.max(note.duration * pxPerBeat - 1, 3),
-            height: ROW_HEIGHT - 4
+            top: rowForMidi(note.midi) * ROW_HEIGHT + 1,
+            width: Math.max(note.duration * pxPerBeat - 1, 4),
+            height: ROW_HEIGHT - 2
           }}
-        />
+        >
+          {noteNameFits(midiNoteToName(note.midi).noteId, note.duration * pxPerBeat) && (
+            <span className="piano-roll__note-name">{midiNoteToName(note.midi).noteId}</span>
+          )}
+        </div>
       );
     }), [activeTrack?.id, pattern.notes, pattern.tracks, pxPerBeat]);
 
@@ -1607,7 +1638,11 @@ const PianoRollPage = () => {
           width: Math.max(note.duration * pxPerBeat - 1, 4),
           height: ROW_HEIGHT - 2
         }}
-      />
+      >
+        {noteNameFits(midiNoteToName(note.midi).noteId, note.duration * pxPerBeat) && (
+          <span className="piano-roll__note-name">{midiNoteToName(note.midi).noteId}</span>
+        )}
+      </div>
     );
   }), [activeScale, activeTrack?.color, activeTrackNotes, isScaleMidi, pxPerBeat, scaleRoot, selectedIds]);
 
@@ -1652,6 +1687,84 @@ const PianoRollPage = () => {
             title="Unsaved changes"
           />
         )}
+        {/* Tempo, length, snap and key live in the bar as quiet inline controls:
+            a row of their own cost the grid 50px for values that rarely change. */}
+        <div className="piano-roll-topbar__settings" role="group" aria-label="Pattern settings">
+          <label className="piano-roll-setting">
+            <span>BPM</span>
+            <input
+              type="number"
+              min={BPM_MIN}
+              max={BPM_MAX}
+              value={pattern.bpm}
+              onChange={(event) => {
+                const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
+                setPattern((prev) => ({ ...prev, bpm }));
+              }}
+            />
+          </label>
+
+          <div className="piano-roll-setting">
+            <div className="piano-roll-stepper" role="group" aria-label="Timeline bars">
+              <button
+                type="button"
+                onClick={() => handleBarsChange(pattern.bars - BAR_CHUNK)}
+                disabled={pattern.bars <= BAR_CHUNK}
+                aria-label={`Remove ${BAR_CHUNK} bars`}
+                title={`Remove ${BAR_CHUNK} bars`}
+              >
+                −
+              </button>
+              <output>{pattern.bars} bars</output>
+              <button
+                type="button"
+                onClick={() => handleBarsChange(pattern.bars + BAR_CHUNK)}
+                disabled={pattern.bars >= MAX_PATTERN_BARS}
+                aria-label={`Add ${BAR_CHUNK} bars`}
+                title={`Add ${BAR_CHUNK} bars`}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <label className="piano-roll-setting">
+            <span>Snap</span>
+            <select value={snapId} onChange={(event) => setSnapId(event.target.value)}>
+              {SNAP_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="piano-roll-setting">
+            <span>Scale</span>
+            <select value={scaleId} onChange={(event) => setScaleId(event.target.value)}>
+              <option value="">Off</option>
+              {SCALES.map((scale) => (
+                <option key={scale.id} value={scale.id}>{scale.label}</option>
+              ))}
+            </select>
+          </label>
+
+          {scaleId && (
+            <label className="piano-roll-setting">
+              <span>Key</span>
+              <select
+                value={scaleRoot}
+                onChange={(event) => setScaleRoot(Number(event.target.value))}
+              >
+                {SCALE_ROOTS.map((root, index) => (
+                  <option key={root} value={index}>{root}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {activeScale && outOfScaleCount > 0 && (
+            <span className="piano-roll-setting__outside">{outOfScaleCount} outside</span>
+          )}
+        </div>
         <div className="piano-roll-topbar__zoom" role="group" aria-label="Zoom">
           <button
             type="button"
@@ -1669,7 +1782,7 @@ const PianoRollPage = () => {
             aria-label="Fit pattern to view"
             title="Fit the whole pattern on screen"
           >
-            {Math.round((pxPerBeat / 56) * 100)}%
+            {Math.round((pxPerBeat / DEFAULT_PX_PER_BEAT) * 100)}%
           </button>
           <button
             type="button"
@@ -1836,84 +1949,6 @@ const PianoRollPage = () => {
         </details>
       </div>
 
-      <div className="piano-roll-tray">
-        <label className="piano-roll-tray__field">
-          <span>BPM</span>
-          <input
-            type="number"
-            min={BPM_MIN}
-            max={BPM_MAX}
-            value={pattern.bpm}
-            onChange={(event) => {
-              const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
-              setPattern((prev) => ({ ...prev, bpm }));
-            }}
-          />
-        </label>
-
-        <div className="piano-roll-tray__field">
-          <span>Timeline</span>
-          <div className="piano-roll-stepper" role="group" aria-label="Timeline bars">
-            <button
-              type="button"
-              onClick={() => handleBarsChange(pattern.bars - BAR_CHUNK)}
-              disabled={pattern.bars <= BAR_CHUNK}
-              aria-label={`Remove ${BAR_CHUNK} bars`}
-              title={`Remove ${BAR_CHUNK} bars`}
-            >
-              −
-            </button>
-            <output>{pattern.bars} bars</output>
-            <button
-              type="button"
-              onClick={() => handleBarsChange(pattern.bars + BAR_CHUNK)}
-              disabled={pattern.bars >= MAX_PATTERN_BARS}
-              aria-label={`Add ${BAR_CHUNK} bars`}
-              title={`Add ${BAR_CHUNK} bars`}
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <label className="piano-roll-tray__field">
-          <span>Snap</span>
-          <select value={snapId} onChange={(event) => setSnapId(event.target.value)}>
-            {SNAP_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label className="piano-roll-tray__field">
-          <span>Scale</span>
-          <select value={scaleId} onChange={(event) => setScaleId(event.target.value)}>
-            <option value="">Off</option>
-            {SCALES.map((scale) => (
-              <option key={scale.id} value={scale.id}>{scale.label}</option>
-            ))}
-          </select>
-        </label>
-
-        {scaleId && (
-          <label className="piano-roll-tray__field">
-            <span>Key</span>
-            <select
-              value={scaleRoot}
-              onChange={(event) => setScaleRoot(Number(event.target.value))}
-            >
-              {SCALE_ROOTS.map((root, index) => (
-                <option key={root} value={index}>{root}</option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {activeScale && outOfScaleCount > 0 && (
-          <span className="piano-roll-tray__outside">{outOfScaleCount} outside</span>
-        )}
-      </div>
-
       <div className="piano-roll-stage">
         <div
           className="piano-roll"
@@ -1942,7 +1977,7 @@ const PianoRollPage = () => {
               ))}
             </div>
 
-            <div className="piano-roll__keys">
+            <div className="piano-roll__keys" style={{ '--track-color': activeTrack?.color }}>
               {keyRows.map((key) => (
                 <button
                   key={key.midi}
@@ -2068,6 +2103,9 @@ const PianoRollPage = () => {
                       S
                     </button>
                   )}
+                  {/* Every track can change its sound in one click. The track being
+                      edited shows the sound by name on a second row; the others
+                      keep to one row and show only the chevron. */}
                   <button
                     type="button"
                     className="piano-roll-deck__sound"
@@ -2096,11 +2134,13 @@ const PianoRollPage = () => {
 
           {soundBrowserTrack && (
             <div className="piano-roll-sound-popover" ref={soundPopoverRef}>
-              <LayerSoundBrowser
-                track={soundBrowserTrack}
-                onChoose={handleSoundChoose}
-                onClose={handleSoundBrowserClose}
-              />
+              <React.Suspense fallback={null}>
+                <LayerSoundBrowser
+                  track={soundBrowserTrack}
+                  onChoose={handleSoundChoose}
+                  onClose={handleSoundBrowserClose}
+                />
+              </React.Suspense>
             </div>
           )}
         </aside>

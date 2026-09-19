@@ -287,23 +287,89 @@
   background: var(--color-core-accent);
 }
 
-/* ── Tray: settings row ─────────────────────────────────────────────────── */
+/* ── Pattern settings (inside the top bar) ─────────────────────────────────
+   Tempo, length, snap and key sit in the bar as inline text-weight controls:
+   a caption, then a control that only shows its box on hover or focus. */
 
-.piano-roll-tray {
-  flex: none;
+.piano-roll-topbar__settings {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--gap-group);
+  gap: 2px 14px;
   min-width: 0;
-  /* Caption (16px) + gap (4px) + control height. */
-  min-height: calc(var(--control-h) + 20px);
-  padding: 0 14px 12px;
-  border-bottom: 1px solid var(--border-hairline);
 }
 
+/* With room to spare the settings stay on the bar's one line. */
+@media (min-width: 1100px) {
+  .piano-roll-topbar__settings {
+    flex-wrap: nowrap;
+  }
+}
+
+.piano-roll-setting {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 6px;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-label);
+  letter-spacing: 0.06em;
+}
+
+.piano-roll-setting input,
+.piano-roll-setting select {
+  height: var(--control-h-sm);
+  min-width: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-body);
+  cursor: pointer;
+}
+
+.piano-roll-setting input:hover,
+.piano-roll-setting select:hover,
+.piano-roll-setting input:focus,
+.piano-roll-setting select:focus {
+  background: var(--surface-inset);
+  color: var(--color-text-primary);
+}
+
+.piano-roll-setting input[type='number'] {
+  width: 56px;
+}
+
+/* A select is normally as wide as its longest option, which left "Off" adrift
+   from its chevron; size it to what it is showing instead. */
+.piano-roll-setting select {
+  field-sizing: content;
+}
+
+/* The bars stepper drops its box with the rest of the bar's settings. */
+.piano-roll-setting .piano-roll-stepper {
+  height: var(--control-h-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.piano-roll-setting .piano-roll-stepper:hover,
+.piano-roll-setting .piano-roll-stepper:focus-within {
+  background: var(--surface-inset);
+}
+
+.piano-roll-setting__outside {
+  color: color-mix(in srgb, var(--color-core-accent) 70%, var(--color-core-paper));
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+
+/* ── Selection actions ──────────────────────────────────────────────────── */
+
 /* Floats over the bottom of the grid, so selecting a note can never change the
-   tray's height and move the grid under the cursor. Centred on the grid, which
+   page's layout and move the grid under the cursor. Centred on the grid, which
    is the page minus the sidebar rail on the left and the deck column on the
    right. */
 .piano-roll-selection {
@@ -340,32 +406,6 @@
   white-space: nowrap;
 }
 
-.piano-roll-tray__field {
-  display: flex;
-  flex-direction: column;
-  flex: none;
-  gap: 4px;
-  min-width: 0;
-  font-size: var(--text-label);
-  letter-spacing: 0.08em;
-  color: var(--color-text-secondary);
-}
-
-/* Pinned so the caption's metrics, not the font, decide the row height. */
-.piano-roll-tray__field > span {
-  line-height: 16px;
-}
-
-/* Above 1100px nothing in the settings row may wrap, so the row is exactly one
-   field tall. */
-@media (min-width: 1100px) {
-  .piano-roll-tray {
-    flex-wrap: nowrap;
-  }
-}
-
-.piano-roll-tray__field input,
-.piano-roll-tray__field select,
 .piano-roll-selection select {
   height: var(--control-h);
   min-width: 0;
@@ -376,17 +416,6 @@
   color: var(--color-text-primary);
   font-family: inherit;
   font-size: var(--text-body);
-}
-
-.piano-roll-tray__field input[type='number'] {
-  width: 76px;
-}
-
-.piano-roll-tray__outside {
-  padding-bottom: 12px;
-  color: color-mix(in srgb, var(--color-core-accent) 70%, var(--color-core-paper));
-  font-size: var(--text-label);
-  white-space: nowrap;
 }
 
 /* ── Stage: the grid and the track column side by side ──────────────────── */
@@ -417,22 +446,25 @@
   padding: 6px;
 }
 
-/* 84px = two 32px rows + the 4px gap + 14px of padding + the 2px border. The
-   border is always drawn (transparent when idle) so selecting moves nothing. */
+/* One row per track. Only the track being edited opens a second row for its
+   sound, and it is marked by a tint of its own colour rather than a frame, so
+   the column stays quiet next to the notes. The column sits beside the grid, so
+   a card changing height never moves the grid. */
 .piano-roll-deck {
   display: grid;
-  grid-template-columns: var(--control-h-sm) 1fr var(--control-h-sm);
-  grid-template-rows: var(--control-h-sm) var(--control-h-sm);
+  grid-template-columns: var(--control-h-sm) 1fr var(--control-h-sm) var(--control-h-sm);
+  grid-auto-rows: var(--control-h-sm);
   gap: 4px 6px;
-  height: var(--deck-h);
-  padding: 7px 8px;
-  border: 1px solid transparent;
+  padding: 5px 8px;
   border-radius: var(--radius-medium);
 }
 
 .piano-roll-deck.is-active {
-  border-color: var(--track-color);
-  background: color-mix(in srgb, var(--track-color) 16%, transparent);
+  background: color-mix(in srgb, var(--track-color) 14%, transparent);
+}
+
+.piano-roll-deck:not(.is-active) .piano-roll-deck__select {
+  color: var(--color-text-secondary);
 }
 
 /* The activator carries the layer's number — the same number key switches to
@@ -504,22 +536,24 @@
 }
 
 .piano-roll-deck__solo {
-  grid-area: 1 / 3;
+  grid-area: 1 / 4;
 }
 
+/* On an idle track the sound button is only its chevron, in the track's one
+   row; its name is still the button's accessible name and tooltip. */
 .piano-roll-deck__sound {
-  grid-area: 2 / 1 / 3 / -1;
+  grid-area: 1 / 3;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 8px;
   width: 100%;
   min-width: 0;
   height: var(--control-h-sm);
-  padding: 0 8px;
+  padding: 0;
   border: 0;
   border-radius: var(--radius-small);
-  background: var(--surface-inset);
+  background: transparent;
   color: var(--color-text-secondary);
   font-family: inherit;
   font-size: var(--text-body);
@@ -534,9 +568,22 @@
 }
 
 .piano-roll-deck__sound span {
+  display: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The track being edited spells its sound out on a second row. */
+.piano-roll-deck.is-active .piano-roll-deck__sound {
+  grid-area: 2 / 1 / 3 / -1;
+  justify-content: space-between;
+  padding: 0 8px;
+  background: color-mix(in srgb, var(--color-core-ink) 35%, transparent);
+}
+
+.piano-roll-deck.is-active .piano-roll-deck__sound span {
+  display: block;
 }
 
 .piano-roll-deck__sound svg {
@@ -621,43 +668,45 @@
   border-right: 1px solid var(--border-hairline);
 }
 
+/* The keyboard is a ruler, not a feature: dark on dark, so the only strong
+   colour on the page is the notes. A key lights in the active track's colour
+   while it is pressed. */
 .piano-roll__key {
   border: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
-  background: #8f897b;
-  color: rgba(16, 20, 27, 0.85);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
+  background: #1e2124;
+  color: var(--color-text-tertiary);
   font-family: inherit;
-  /* Key labels ride 14px rows, so they stay under the 11px floor. */
-  font-size: 10px;
-  letter-spacing: 0.08em;
+  font-size: var(--text-label);
+  letter-spacing: 0.06em;
   text-align: right;
-  padding: 0 6px 0 0;
+  padding: 0 8px 0 0;
   cursor: pointer;
   line-height: 1;
 }
 
 .piano-roll__key--black {
-  background: #1b2029;
-  color: rgba(225, 236, 247, 0.55);
+  background: #121416;
+}
+
+.piano-roll__key:hover {
+  background: color-mix(in srgb, var(--track-color, var(--color-core-paper)) 16%, #1e2124);
 }
 
 .piano-roll__key.is-out-of-scale {
-  color: rgba(180, 190, 201, 0.25);
-  filter: brightness(0.62);
+  color: color-mix(in srgb, var(--color-text-tertiary) 45%, transparent);
 }
 
 .piano-roll__key.is-in-scale,
 .piano-roll__key.is-in-chord,
 .piano-roll__key--black.is-in-scale,
 .piano-roll__key--black.is-in-chord {
-  background: #3f7480;
-  color: rgba(228, 242, 245, 0.92);
-  font-weight: 700;
-  filter: none;
+  background: color-mix(in srgb, #59a0b1 26%, #1e2124);
+  color: var(--color-text-primary);
 }
 
 .piano-roll__key:active {
-  background: color-mix(in srgb, var(--color-core-accent) 85%, var(--color-core-paper));
+  background: var(--track-color, var(--color-core-paper));
   color: var(--color-core-ink);
 }
 
@@ -677,49 +726,71 @@
   touch-action: none;
 }
 
-.piano-roll__note {
+/* Notes are the page: solid, rounded, in their layer's colour, and named once
+   they are wide enough. Everything around them is kept quiet so they read. */
+.piano-roll__note,
+.piano-roll__ghost-note {
   position: absolute;
   box-sizing: border-box;
-  background: var(--track-color, var(--color-core-accent));
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.piano-roll__note {
   border: 1px solid color-mix(in srgb, var(--color-core-ink) 80%, transparent);
-  border-left: 3px solid color-mix(in srgb, var(--track-color, var(--color-core-accent)) 45%, var(--color-core-paper));
+  background: var(--track-color, var(--color-core-accent));
   cursor: grab;
+}
+
+/* The handlers find a note by the element under the pointer, so the label
+   must never be that element. */
+.piano-roll__note-name {
+  padding: 0 4px;
+  color: color-mix(in srgb, var(--color-core-ink) 88%, var(--track-color, var(--color-core-accent)));
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
 }
 
 .piano-roll__note:hover {
   filter: brightness(1.12);
 }
 
-/* Selected keeps most of the layer colour, so a selection still says which
-   layer it is on; the paper frame is what marks it. */
+/* Selected keeps the layer colour, so a selection still says which layer it is
+   on; the paper frame is what marks it. */
 .piano-roll__note.is-selected {
-  background: color-mix(in srgb, var(--track-color, var(--color-core-accent)) 70%, var(--color-core-paper));
   border-color: var(--color-core-paper);
-  border-left-color: var(--color-core-paper);
   outline: 1px solid var(--color-core-paper);
 }
 
 /* Out of key: hollowed out rather than recoloured, so the track colour still
    says which layer the note belongs to. */
 .piano-roll__note.is-out-of-scale:not(.is-selected) {
-  background: color-mix(in srgb, var(--color-core-ink) 72%, var(--track-color, var(--color-core-accent)));
   border-color: color-mix(in srgb, var(--track-color, var(--color-core-accent)) 60%, transparent);
-  border-left-color: color-mix(in srgb, var(--track-color, var(--color-core-accent)) 60%, var(--color-core-paper));
+  background: color-mix(in srgb, var(--color-core-ink) 72%, var(--track-color, var(--color-core-accent)));
+}
+
+.piano-roll__note.is-out-of-scale:not(.is-selected) .piano-roll__note-name,
+.piano-roll__ghost-note .piano-roll__note-name {
+  color: var(--track-color);
+  font-weight: 400;
 }
 
 /* Other layers: outlined in their full colour, filled only lightly. Solid means
    "the layer being edited", outlined means "another layer — click to edit". */
 .piano-roll__ghost-note {
-  position: absolute;
-  box-sizing: border-box;
   border: 1px solid var(--track-color);
-  border-left-width: 3px;
-  background: color-mix(in srgb, var(--track-color) 22%, transparent);
+  background: color-mix(in srgb, var(--track-color) 14%, transparent);
   cursor: pointer;
 }
 
 .piano-roll__ghost-note:hover {
-  background: color-mix(in srgb, var(--track-color) 45%, transparent);
+  background: color-mix(in srgb, var(--track-color) 38%, transparent);
 }
 
 /* A layer whose activator is off: still there, plainly not sounding. */
@@ -852,8 +923,13 @@
     overflow-y: hidden;
   }
 
+  /* In the strip every card keeps the two-row height (84px = two 32px rows +
+     the 4px gap + padding), active or not: the strip sits above the grid, so a
+     card growing here would push the grid down on every track switch. */
   .piano-roll-deck {
     flex: 0 0 176px;
+    height: var(--deck-h);
+    padding: 8px;
   }
 
   .piano-roll-decks__add {
@@ -861,10 +937,6 @@
     height: auto;
     border-top: 0;
     border-left: 1px solid var(--border-hairline);
-  }
-
-  .piano-roll-tray {
-    gap: var(--gap-control);
   }
 
   .piano-roll-topbar__name {

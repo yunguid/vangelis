@@ -238,6 +238,21 @@ src/
   the layer being edited, outlined notes belong to other layers; clicking any
   note (or pressing 1-9) switches to its layer. Selection actions (chord
   builder, loop bars, snap to key) float over the grid so the grid never moves
+- Notes-first look: 20px rows and a 96px beat at 100% zoom, so a sixteenth is
+  24px; notes are solid rounded boxes in their track colour and carry their
+  name whenever it fits (`noteNameFits`). The canvas draws one ground colour,
+  lightly shaded black-key rows, octave lines, bar and beat lines; subdivision
+  lines fade in with zoom. The key column is dark (a pressed key lights in the
+  active track's colour), tempo/bars/snap/scale sit inline in the top bar, and
+  the grid opens centred on the pattern's notes. Neon is for tracks and notes,
+  orange for transport, everything else monochrome
+- Track cards are one row (number, name, sound chevron, solo); only the active
+  track opens a second row naming its sound. In the phone strip every card
+  keeps the fixed two-row height so a track switch cannot move the grid
+- `LayerSoundBrowser` is lazy-loaded from the editor and must not import
+  `utils/pianoRollPattern.js`: that module lives in the editor page's chunk, and
+  an import back into it re-keys the page in the build manifest, which breaks
+  `perf:site`'s route closure guard (the editor route is 38.5 KB of a 40 KB budget)
 - Canvas grid + DOM note layer; "Open in player" hands the pattern to the
   home player via `utils/pendingMidiHandoff.js`
 
