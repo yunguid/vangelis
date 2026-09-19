@@ -14,11 +14,17 @@ this attribution does not assert that the composition is public domain.
 
 The source has 356 notes at 67 BPM with fixed music-box pin durations.
 The piano adaptation lowers it one octave, uses 75 BPM (about three minutes),
-restores sustained piano holds capped before repeated strikes, and shapes
-velocity in four-bar phrases. This is a piano interpretation of the linked
-track, not an exact recreation of the original production. The upright piano
-is rendered live through the existing sample pool, MIDI scheduler and reverb.
-See `public/samples/opening/README.md` for the sample attribution.
+and shapes velocity in four-bar phrases. Note lengths come from a sustain
+pedal rather than a fixed cap: the dampers fall on each downbeat that brings a
+new bass note (E3 or lower), so a held harmony rings for as long as its bass
+does (one bar in the middle section, two in the sparse ones), a repeated key
+lifts 80 ms before it is struck again, and the closing notes ring out. The
+recorded decay is the only envelope; release is a 0.45 s damper fall, which
+is also how the piano gets out from under a takeover note. This is a piano
+interpretation of the linked track, not an exact recreation of the original
+production. The grand piano is rendered live through the existing sample pool,
+MIDI scheduler and reverb, with every pitch at most one semitone from a
+recording. See `public/samples/opening/README.md` for the sample attribution.
 
 The opening plays once per document visit on the home keyboard. If browser
 policy suspends audio, it waits at the beginning until a user gesture unlocks
