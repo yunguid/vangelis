@@ -267,7 +267,18 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
     path: toBuiltInPath(`originals/${id}.mid`)
   }));
 
+  // Performances bring their own sampled instrument (see
+  // ../data/nylonGuitar.js) instead of playing through the loaded preset.
+  const performanceFiles = [{
+    id: 'performance-saudade-de-triana',
+    name: 'Saudade de Triana',
+    path: toBuiltInPath('performances/saudade-de-triana.mid'),
+    instrument: 'nylon-guitar',
+    instrumentLabel: 'Nylon-string guitar'
+  }];
+
   return [
+    ...performanceFiles,
     ...originalFiles,
     ...classicalFiles,
     {

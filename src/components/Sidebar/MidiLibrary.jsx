@@ -5,6 +5,7 @@ import {
   preloadMidiFile,
   preloadMidiParser
 } from '../../utils/midiParser.js';
+import { audioEngine } from '../../utils/audioEngine.js';
 
 
 const MidiLibrary = ({ active = true, onPlay }) => {
@@ -29,6 +30,11 @@ const MidiLibrary = ({ active = true, onPlay }) => {
   }, [builtInFiles, searchQuery]);
   const groups = useMemo(() => [
     {
+      key: 'performances',
+      title: 'Performances',
+      files: filteredFiles.filter((file) => file.instrument)
+    },
+    {
       key: 'originals',
       title: 'Originals',
       files: filteredFiles.filter((file) => file.id.startsWith('original-'))
@@ -37,7 +43,7 @@ const MidiLibrary = ({ active = true, onPlay }) => {
       key: 'classics',
       title: 'Classics',
       files: filteredFiles
-        .filter((file) => !file.id.startsWith('original-'))
+        .filter((file) => !file.id.startsWith('original-') && !file.instrument)
         .sort((left, right) => (
           (left.featuredRank ?? Infinity) - (right.featuredRank ?? Infinity)
         ))
@@ -83,7 +89,14 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     setSelectedFile(file);
 
     try {
-      const midiData = await loadMidiWithFallback(file);
+      let midiData = await loadMidiWithFallback(file);
+      if (file.instrument === 'nylon-guitar') {
+        const [{ loadGuitarPerformance }, context] = await Promise.all([
+          import('../../data/nylonGuitar.js'),
+          audioEngine.ensureAudioContext()
+        ]);
+        midiData = await loadGuitarPerformance(context, midiData);
+      }
       onPlay({
         ...midiData,
         name: file.displayName,
@@ -193,11 +206,11 @@ const MidiLibrary = ({ active = true, onPlay }) => {
                     <span className="midi-tab__file-title-row">
                       <span className="midi-tab__file-name">{file.displayName}</span>
                     </span>
-                    {file.composer && (
+                    {(file.composer || file.instrumentLabel) && (
                       <span className="midi-tab__file-composer">
                         {file.catalogLabel
                           ? `${file.composer} · ${file.catalogLabel}`
-                          : file.composer}
+                          : file.composer || file.instrumentLabel}
                       </span>
                     )}
                   </button>
