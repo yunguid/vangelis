@@ -100,3 +100,25 @@ describe('sample voice stale-callback guards', () => {
     expect(pool.acquire('n3')).toBe(voice); // back in the free list exactly once
   });
 });
+
+describe('scored start times', () => {
+  it('starts the source and its envelope on the audio clock, not when the timer fired', () => {
+    const ctx = makeCtx();
+    ctx.currentTime = 2;
+    const pool = createSampleVoicePool({ ctx, inputBus: {}, poolSize: 1 });
+    const voice = pool.acquire('n1');
+    voice.startSample({ ...startArgs('n1'), when: 2.06 });
+    expect(voice.bufferSource.start).toHaveBeenCalledWith(2.06);
+    expect(voice.gainNode.gain.setValueAtTime).toHaveBeenCalledWith(expect.any(Number), 2.06);
+    expect(voice.startTime).toBe(2.06);
+  });
+
+  it('plays at once when the requested time has already passed', () => {
+    const ctx = makeCtx();
+    ctx.currentTime = 2;
+    const pool = createSampleVoicePool({ ctx, inputBus: {}, poolSize: 1 });
+    const voice = pool.acquire('n1');
+    voice.startSample({ ...startArgs('n1'), when: 1.9 });
+    expect(voice.bufferSource.start).toHaveBeenCalledWith(2);
+  });
+});

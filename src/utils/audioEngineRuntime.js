@@ -450,7 +450,7 @@ class AudioEngine {
 
   // ============ Note Playback ============
 
-  playBufferedSample({ noteId, buffer, frequency, baseFrequency, params = {}, velocity = 1, loop = false }) {
+  playBufferedSample({ noteId, buffer, frequency, baseFrequency, params = {}, velocity = 1, loop = false, when }) {
     if (!buffer) return null;
     if (!this.context) {
       this.ensureAudioContext().catch(() => {});
@@ -473,7 +473,8 @@ class AudioEngine {
       baseFrequency,
       velocity,
       params: sanitized,
-      loop
+      loop,
+      when
     });
     this.markVoiceStarted(voiceId);
 

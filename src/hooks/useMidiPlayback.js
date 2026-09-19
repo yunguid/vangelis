@@ -15,6 +15,8 @@ const PROGRESS_UPDATE_INTERVAL_MS = 40;
 const ACTIVE_NOTES_UPDATE_INTERVAL_MS = 40;
 const SCHEDULER_LOOKAHEAD_SECONDS = 2;
 const SCHEDULER_TICK_MS = 500;
+// Sampled notes are handed to the audio clock this far ahead of their start.
+const SAMPLE_LEAD_SECONDS = 0.06;
 
 function resolveMidiDuration(midiData) {
   const declaredDuration = Number(midiData?.duration);
@@ -222,13 +224,18 @@ export function useMidiPlayback({
    */
   const triggerNoteOn = useCallback((noteId, voiceId, frequency, velocity, noteOptions = {}) => {
     const startedVoiceIds = [];
-    const params = noteOptions.audioParams || audioParamsRef.current;
+    // audioParams replaces the player's sound outright (piano-roll layers);
+    // audioParamOverrides only brings an envelope and a room, so volume and
+    // pan stay on the player's controls.
+    const params = noteOptions.audioParams || (noteOptions.audioParamOverrides
+      ? { ...audioParamsRef.current, ...noteOptions.audioParamOverrides }
+      : audioParamsRef.current);
 
     const voiceOptions = {
       noteId: voiceId, frequency, params, velocity
     };
     const started = noteOptions.sample
-      ? audioEngine.playBufferedSample({ ...voiceOptions, ...noteOptions.sample })
+      ? audioEngine.playBufferedSample({ ...voiceOptions, ...noteOptions.sample, when: noteOptions.when })
       : audioEngine.playFrequency({
         ...voiceOptions,
         waveformType: noteOptions.waveformType || waveformRef.current
@@ -389,14 +396,15 @@ export function useMidiPlayback({
         const frequency = midiNoteToFrequency(note.midi);
         const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
 
-        const startDelay = Math.max(0, (scheduledStart - now) * 1000);
+        const lead = note.sample ? SAMPLE_LEAD_SECONDS : 0;
+        const startDelay = Math.max(0, (scheduledStart - lead - now) * 1000);
         scheduleTrackedTimeout(() => {
           const startedVoiceIds = triggerNoteOn(
             noteId,
             voiceId,
             frequency,
             note.velocity,
-            note
+            note.sample ? { ...note, when: scheduledStart } : note
           );
           if (startedVoiceIds.length > 0) {
             scheduledVoiceMapRef.current.set(voiceId, startedVoiceIds);

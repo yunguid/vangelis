@@ -35,11 +35,13 @@ class SampleVoice {
     this.recycleTimer = null;
   }
 
-  startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop }) {
+  startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop, when }) {
     this.cleanup();
 
     const ctx = this.ctx;
-    const now = ctx.currentTime;
+    // Scored notes name their start on the audio clock, so a strum keeps its
+    // string-to-string spacing however late the timer that got here fired.
+    const now = Math.max(ctx.currentTime, when ?? 0);
 
     this.bufferSource = ctx.createBufferSource();
     this.bufferSource.buffer = buffer;

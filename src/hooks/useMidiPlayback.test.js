@@ -140,6 +140,36 @@ describe('useMidiPlayback', () => {
     expect(audioEngine.playFrequency.mock.calls[0][0].params).toBe(layerParams);
   });
 
+  it('hands a sampled note to the audio clock ahead of time, keeping the player volume under its overrides', async () => {
+    const { result } = renderHook(() => useMidiPlayback({
+      waveformType: 'Sine',
+      audioParams: { volume: 0.4, release: 1.5 }
+    }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 2,
+        bpm: 120,
+        notes: [{
+          midi: 64, time: 0.5, duration: 0.2, velocity: 0.8,
+          sample: { buffer: {}, baseFrequency: 329.63 },
+          audioParamOverrides: { release: 0.07 }
+        }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await act(async () => { vi.advanceTimersByTime(430); });
+    expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
+    await act(async () => { vi.advanceTimersByTime(15); });
+
+    expect(audioEngine.playBufferedSample).toHaveBeenCalledTimes(1);
+    const call = audioEngine.playBufferedSample.mock.calls[0][0];
+    expect(call.when).toBeCloseTo(0.5, 6);
+    expect(call.params).toEqual({ volume: 0.4, release: 0.07 });
+  });
+
   it('records opt-in MIDI startup and scheduler lateness samples', async () => {
     const recordInteraction = vi.fn();
     const completePaint = vi.fn();
