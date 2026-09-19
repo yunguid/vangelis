@@ -1555,9 +1555,11 @@ if (retiredPublicArtifacts.length > 0 || productionServiceWorkerRegistrationCall
     expected: 'none'
   });
 }
+// The rail no longer links to the Design page (it is kept for background sound
+// design, reachable by its route only), so it has no route left to prefetch.
 if (
-  sidebarIntentPrefetchImports !== 1
-  || sidebarIntentPrefetchHandlers !== 2
+  sidebarIntentPrefetchImports !== 0
+  || sidebarIntentPrefetchHandlers !== 0
   || !sidebarEscapeListenerIsOpenOnly
 ) {
   failures.push({
@@ -1565,7 +1567,7 @@ if (
     routePrefetchImports: sidebarIntentPrefetchImports,
     intentHandlers: sidebarIntentPrefetchHandlers,
     escapeListener: sidebarEscapeListenerIsOpenOnly ? 'open-only' : 'always-on',
-    expected: '1 remaining design-route import, 2 intent handlers, open-only listener'
+    expected: 'no route prefetch in the rail, open-only listener'
   });
 }
 if (

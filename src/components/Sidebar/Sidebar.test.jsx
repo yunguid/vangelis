@@ -70,18 +70,10 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: /return to keyboard/i })).not.toBeInTheDocument();
   });
 
-  it('renders a rail-level Design nav link to the sound-designer page', () => {
+  it('keeps the Design and Studies pages out of the rail (their routes still exist)', () => {
     render(<Sidebar {...buildProps()} />);
-    const designLink = screen.getByRole('link', { name: /open the sound design workspace/i });
-    expect(designLink).toBeInTheDocument();
-    expect(designLink).toHaveAttribute('href', '#/sound-designer');
-  });
-
-  it('renders a rail-level Studies nav link to the song study library', () => {
-    render(<Sidebar {...buildProps()} />);
-    const studiesLink = screen.getByRole('link', { name: /open the song study library/i });
-    expect(studiesLink).toBeInTheDocument();
-    expect(studiesLink).toHaveAttribute('href', '#/studies');
+    expect(screen.queryByRole('link', { name: /sound design/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /song study/i })).not.toBeInTheDocument();
   });
 
   it('renders a rail-level Editor nav link to the pattern editor', () => {

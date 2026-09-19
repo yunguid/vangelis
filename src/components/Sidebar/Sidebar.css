@@ -72,8 +72,8 @@
   transition: opacity var(--transition-hover);
 }
 
-/* The longest label ("Studies") must clear the 72px rail on one line:
-   7 monospace chars at 11px + 0.03em tracking ~ 49px inside a 54px button. */
+/* Labels must clear the 72px rail on one line: the longest ("Editor") is
+   6 monospace chars at 11px + 0.03em tracking ~ 42px inside a 54px button. */
 .sidebar-rail__label {
   display: block;
   line-height: 1;
@@ -262,20 +262,6 @@
   background: transparent;
   border: 0;
   box-shadow: none;
-}
-
-.sound-tab__designer-link {
-  align-self: flex-start;
-  color: var(--color-core-accent);
-  font-size: 0.78rem;
-  letter-spacing: 0.06em;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.sound-tab__designer-link:hover,
-.sound-tab__designer-link:focus-visible {
-  color: var(--color-text-primary);
 }
 
 /* Backdrop */

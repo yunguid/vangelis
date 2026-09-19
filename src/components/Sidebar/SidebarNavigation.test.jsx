@@ -19,8 +19,9 @@ describe('SidebarNavigation', () => {
 
     expect(screen.getByRole('button', { name: 'Sound panel unavailable on this page' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'MIDI panel unavailable on this page' })).toBeDisabled();
-    expect(screen.getByRole('link', { name: 'Open the sound design workspace' }))
-      .toHaveAttribute('href', '#/sound-designer');
+    expect(screen.getByRole('link', { name: 'Open the pattern editor' }))
+      .toHaveAttribute('href', '#/editor');
+    expect(screen.queryByRole('link', { name: 'Open the sound design workspace' })).not.toBeInTheDocument();
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 });
