@@ -294,7 +294,6 @@ const SongStudyPageContent = ({ study }) => {
   const [audioParams, setAudioParams] = React.useState(() => (
     sanitizeAudioParams(study?.audioParams || DEFAULT_STUDY_AUDIO_PARAMS)
   ));
-  const [activePresetName, setActivePresetName] = React.useState(null);
   const [controlSections, setControlSections] = React.useState(DEFAULT_STUDY_CONTROL_SECTIONS);
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [sidebarTab, setSidebarTab] = React.useState('sound');
@@ -359,10 +358,6 @@ const SongStudyPageContent = ({ study }) => {
       ...prev,
       ...nextParams
     }));
-  }, []);
-
-  const handlePresetApplied = React.useCallback((presetName) => {
-    setActivePresetName(presetName || null);
   }, []);
 
   const handleControlSectionToggle = React.useCallback((section) => {
@@ -467,9 +462,7 @@ const SongStudyPageContent = ({ study }) => {
     onParamsChange: handleParamsChange,
     transportBpm: (displayMidi?.bpm || 120) * playback.tempoFactor,
     controlSections,
-    onControlSectionToggle: handleControlSectionToggle,
-    activePresetName,
-    onPresetApplied: handlePresetApplied
+    onControlSectionToggle: handleControlSectionToggle
   }), [
     waveformType,
     audioParams,
@@ -478,9 +471,7 @@ const SongStudyPageContent = ({ study }) => {
     controlSections,
     handleParamChange,
     handleParamsChange,
-    handleControlSectionToggle,
-    activePresetName,
-    handlePresetApplied
+    handleControlSectionToggle
   ]);
 
   const midiTransportValue = React.useMemo(() => ({
@@ -868,7 +859,7 @@ const SongStudyPageContent = ({ study }) => {
             currentView="studies"
             isMidiPlaying={playback.isPlaying}
             midiName={displayMidi?.name || study.title}
-            soundLabel={activePresetName || waveformType}
+            soundLabel={waveformType}
           />
         </MidiTransportContext.Provider>
       </SoundControlsContext.Provider>

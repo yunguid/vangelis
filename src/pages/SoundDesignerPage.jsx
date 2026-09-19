@@ -202,10 +202,6 @@ const SoundDesignerPage = () => {
     ));
   }, []);
 
-  const handleSidebarPresetApplied = React.useCallback((presetName) => {
-    setActivePresetName(presetName || null);
-  }, []);
-
   const handleMidiHandoff = React.useCallback((midiData) => {
     setPendingMidi(midiData);
     window.location.hash = '#/';
@@ -219,18 +215,14 @@ const SoundDesignerPage = () => {
     onParamsChange: handleAudioParamsChange,
     transportBpm: 120,
     controlSections,
-    onControlSectionToggle: handleControlSectionToggle,
-    activePresetName,
-    onPresetApplied: handleSidebarPresetApplied
+    onControlSectionToggle: handleControlSectionToggle
   }), [
     waveformType,
     audioParams,
     controlSections,
     handleAudioParamChange,
     handleAudioParamsChange,
-    handleControlSectionToggle,
-    activePresetName,
-    handleSidebarPresetApplied
+    handleControlSectionToggle
   ]);
 
   const midiTransportValue = React.useMemo(() => ({

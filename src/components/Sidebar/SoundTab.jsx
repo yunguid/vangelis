@@ -3,7 +3,6 @@ import UIOverlay from '../UIOverlay.jsx';
 import AudioControls from '../AudioControls.jsx';
 import '../../styles/controls.css';
 import PresetShelf from '../PresetShelf.jsx';
-import { SOUND_DESIGNER_HREF } from '../../utils/routes.js';
 
 const SoundTab = ({
   currentWaveform,
@@ -13,30 +12,20 @@ const SoundTab = ({
   onParamsChange,
   transportBpm,
   sections,
-  onSectionToggle,
-  onPresetApplied,
-  activePresetName
+  onSectionToggle
 }) => (
   <div className="sound-tab">
     <div className="sound-tab__surface">
-      <a className="sound-tab__designer-link" href={SOUND_DESIGNER_HREF}>
-        sound designer &rarr;
-      </a>
       <UIOverlay
         currentWaveform={currentWaveform}
         onWaveformChange={onWaveformChange}
         compact
       />
+      {/* Sounds are chosen on the dial at the bottom of the page; shaped ones are saved here. */}
       <PresetShelf
         waveformType={currentWaveform}
         audioParams={audioParams}
-        activePresetName={activePresetName}
-        foldBrowse
-        onApply={(preset) => {
-          if (preset.waveformType) onWaveformChange?.(preset.waveformType);
-          if (preset.audioParams) onParamsChange?.(preset.audioParams);
-          onPresetApplied?.(preset.name);
-        }}
+        saveOnly
       />
       <AudioControls
         audioParams={audioParams}

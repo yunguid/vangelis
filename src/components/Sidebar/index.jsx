@@ -73,9 +73,7 @@ const SoundPanelContent = React.memo(({ value }) => {
     onParamsChange,
     transportBpm,
     controlSections,
-    onControlSectionToggle,
-    activePresetName,
-    onPresetApplied
+    onControlSectionToggle
   } = value;
 
   return (
@@ -88,8 +86,6 @@ const SoundPanelContent = React.memo(({ value }) => {
       transportBpm={transportBpm}
       sections={controlSections}
       onSectionToggle={onControlSectionToggle}
-      onPresetApplied={onPresetApplied}
-      activePresetName={activePresetName}
     />
   );
 }, hiddenPanelPropsEqual);

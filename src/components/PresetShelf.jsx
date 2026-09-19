@@ -20,6 +20,9 @@ import { FACTORY_PRESET_COUNT, PATCH_LAB_PRESET_COUNT } from '../utils/presetCat
  * behind a disclosure button, so a 45-button preset wall doesn't dominate a
  * compact strip. The save row is deliberately kept out of the collapsible
  * region in both branches — saving is a core action, never hidden.
+ *
+ * `saveOnly` renders just that save row: the sidebar's Sound tab, where sounds
+ * are shaped and saved but chosen on the SoundDial instead.
  */
 const PresetShelf = ({
   waveformType,
@@ -27,7 +30,8 @@ const PresetShelf = ({
   onApply,
   activePresetName,
   foldBrowse = false,
-  hideSave = false
+  hideSave = false,
+  saveOnly = false
 }) => {
   const [browseOpen, setBrowseOpen] = useState(false);
   const [userPresets, setUserPresets] = useState(() => loadUserPresets());
@@ -228,6 +232,36 @@ const PresetShelf = ({
     </li>
   );
 
+  const saveRow = (
+    <div className="preset-shelf__group preset-shelf__group--save">
+      <div className="preset-shelf__save-row">
+        <input
+          type="text"
+          className="preset-shelf__name-input"
+          placeholder="Preset name"
+          maxLength={48}
+          value={name}
+          aria-label="New preset name"
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSave();
+          }}
+        />
+        <button
+          type="button"
+          className="button-primary preset-shelf__save"
+          onClick={handleSave}
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  );
+
+  if (saveOnly) {
+    return <section className="preset-shelf" aria-label="Save this sound">{saveRow}</section>;
+  }
+
   return (
     <section className="preset-shelf" aria-label="Synth presets">
       <div className="preset-shelf__transport">
@@ -299,29 +333,7 @@ const PresetShelf = ({
           </div>
         </div>
       )}
-      {!hideSave && <div className="preset-shelf__group preset-shelf__group--save">
-        <div className="preset-shelf__save-row">
-          <input
-            type="text"
-            className="preset-shelf__name-input"
-            placeholder="Preset name"
-            maxLength={48}
-            value={name}
-            aria-label="New preset name"
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave();
-            }}
-          />
-          <button
-            type="button"
-            className="button-primary preset-shelf__save"
-            onClick={handleSave}
-          >
-            Save
-          </button>
-        </div>
-      </div>}
+      {!hideSave && saveRow}
     </section>
   );
 };

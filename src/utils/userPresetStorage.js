@@ -20,12 +20,21 @@ export const loadUserPresets = () => {
   }
 };
 
+const listeners = new Set();
+
+/** Hear about saves and deletes made anywhere on the page. Returns an unsubscribe. */
+export const subscribeUserPresets = (listener) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
 const persist = (presets) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
   } catch {
     // Storage full or unavailable; preset stays in memory only.
   }
+  listeners.forEach((listener) => listener());
 };
 
 export const saveUserPreset = ({ name, waveformType, audioParams }) => {

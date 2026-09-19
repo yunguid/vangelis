@@ -48,6 +48,8 @@ const isTextInputTarget = (target) => {
   return !!target?.isContentEditable;
 };
 
+const SoundDial = React.lazy(() => import('./components/SoundDial.jsx'));
+
 const SOUND_OFF_ICON = (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
@@ -73,7 +75,7 @@ const App = () => {
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
   const [notice, setNotice] = useState('');
-  const [activePresetName, setActivePresetName] = useState(null);
+  const [activePresetName, setActivePresetName] = useState(() => initialSession.activePresetName || null);
   const [controlSections, setControlSections] = useState(() => (
     initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
   ));
@@ -343,6 +345,7 @@ const App = () => {
     const snapshot = {
       waveformType,
       audioParams,
+      activePresetName,
       controlSections,
       sidebarTab,
       activeSampleId,
@@ -353,6 +356,7 @@ const App = () => {
     sessionSnapshotRef.current = snapshot;
     sessionSaveSchedulerRef.current.schedule();
   }, [
+    activePresetName,
     activeSampleId,
     audioParams,
     controlSections,
@@ -398,10 +402,14 @@ const App = () => {
   const handleSidebarOpen = useCallback(() => setSidebarOpen(true), []);
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), []);
 
-  const handlePresetApplied = useCallback((presetName) => {
-    setActivePresetName(presetName || null);
-    if (presetName) pushNotice(`Patch loaded: ${presetName}`);
-  }, [pushNotice]);
+  // From the sound dial. Browsing there loads sounds one after another, so
+  // no notice; and picking a sound is taking the instrument over.
+  const handleSoundChosen = useCallback((sound) => {
+    opening.stop();
+    if (sound.waveformType) setWaveformType(sound.waveformType);
+    if (sound.audioParams) handleAudioParamsChange(sound.audioParams);
+    setActivePresetName(sound.name);
+  }, [handleAudioParamsChange, opening.stop]);
 
   const handleControlSectionToggle = useCallback((section) => {
     if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTROL_SECTIONS, section)) return;
@@ -419,9 +427,7 @@ const App = () => {
     onParamsChange: handleAudioParamsChange,
     transportBpm,
     controlSections,
-    onControlSectionToggle: handleControlSectionToggle,
-    activePresetName,
-    onPresetApplied: handlePresetApplied
+    onControlSectionToggle: handleControlSectionToggle
   }), [
     waveformType,
     audioParams,
@@ -429,9 +435,7 @@ const App = () => {
     controlSections,
     handleAudioParamChange,
     handleAudioParamsChange,
-    handleControlSectionToggle,
-    activePresetName,
-    handlePresetApplied
+    handleControlSectionToggle
   ]);
 
   const midiTransportValue = useMemo(() => ({
@@ -513,6 +517,10 @@ const App = () => {
               </div>
             </div>
           </main>
+
+          <React.Suspense fallback={null}>
+            <SoundDial activeSoundName={activePresetName || waveformType} onChoose={handleSoundChosen} />
+          </React.Suspense>
 
         {showShortcuts && (
           <div className="shortcuts-overlay" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">

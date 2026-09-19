@@ -1,0 +1,300 @@
+/* The sound selector: a wide dial docked to the bottom edge, the top of a wheel
+   whose hub lies below the page. The face is drawn in a 960 x 288 box, so --u is
+   one drawing unit in CSS pixels. On a phone the dial is wider than the screen
+   and the dock crops its sides. */
+.sound-dial-dock {
+  /* About 30% of the window tall, so an open dial stays well clear of the keys. */
+  --dial-w: clamp(780px, min(92vw, 100vh), 960px);
+  --dial-h: calc(var(--dial-w) * 0.3);
+  --u: calc(var(--dial-w) / 960);
+  position: fixed;
+  left: 72px; /* the sidebar rail */
+  right: 0;
+  bottom: 0;
+  height: var(--dial-h);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 60;
+}
+
+.sound-dial {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: var(--dial-w);
+  height: var(--dial-h);
+  /* Closed, only the cap shows: the scale, the needle and the sound's name. */
+  transform: translate(-50%, calc(100% - 74 * var(--u) - 40px));
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: auto;
+  font-family: var(--font-mono);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sound-dial--open {
+  transform: translate(-50%, 0);
+}
+
+.sound-dial__face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.sound-dial__disc {
+  fill: color-mix(in srgb, var(--color-core-ink) 94%, var(--color-core-paper));
+  stroke: var(--border-hairline-strong);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.sound-dial__wheel {
+  transform-box: view-box; /* the hub it turns about is set beside the rotation */
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.sound-dial__wheel--held {
+  transition: none;
+}
+
+.sound-dial__tick {
+  stroke: color-mix(in srgb, var(--color-core-paper) 38%, transparent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.sound-dial__tick--current {
+  stroke: var(--color-core-accent);
+  stroke-width: 3;
+}
+
+.sound-dial__tick--muted {
+  stroke: color-mix(in srgb, var(--color-core-paper) 10%, transparent);
+}
+
+.sound-dial__band {
+  fill: none;
+  stroke: var(--border-hairline);
+  stroke-width: 1.5;
+}
+
+.sound-dial__band-name {
+  fill: var(--color-text-tertiary);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+}
+
+.sound-dial__needle {
+  fill: var(--color-core-accent);
+}
+
+/* Drag anywhere on the face to turn the wheel; the controls sit above this. */
+.sound-dial__scale {
+  position: absolute;
+  inset: 0;
+  clip-path: circle(calc(544 * var(--u)) at 50% calc(544 * var(--u)));
+  cursor: grab;
+  touch-action: none;
+}
+
+.sound-dial__scale:active {
+  cursor: grabbing;
+}
+
+.sound-dial__name,
+.sound-dial__step,
+.sound-dial__remove {
+  border: 0;
+  background: none;
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The category labels ride the ring 488 to 496 units from the wheel's centre.
+   The name and the rows below it are placed and sized so their corners stay
+   inside 485, clear of any label turning past. */
+.sound-dial__name {
+  position: absolute;
+  top: calc(70 * var(--u));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(264 * var(--u) + 28px);
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-medium);
+  font-size: clamp(15px, calc(21 * var(--u)), 21px);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sound-dial__step {
+  flex: none;
+  width: var(--control-h);
+  height: var(--control-h);
+  border-radius: var(--radius-medium);
+  color: var(--color-text-secondary);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.sound-dial__name:hover,
+.sound-dial__step:hover {
+  background: var(--btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+.sound-dial__name:focus-visible,
+.sound-dial__step:focus-visible,
+.sound-dial__remove:focus-visible,
+.sound-dial__search:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.sound-dial__hub {
+  position: absolute;
+  top: calc(70 * var(--u) + 42px);
+  bottom: 6px;
+  left: 50%;
+  width: min(580px, 68%, 100vw - 32px);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 160ms ease, visibility 0s linear 160ms;
+}
+
+.sound-dial--open .sound-dial__hub {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 200ms ease 80ms;
+}
+
+.sound-dial__about {
+  flex: none;
+  max-width: calc(780 * var(--u)); /* wider than the hub: the caption sits at the dial's base */
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-label);
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sound-dial__remove {
+  margin-left: 8px;
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-label);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.sound-dial__finder {
+  flex: none;
+  width: min(100%, 380px);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sound-dial__search {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-h);
+  padding: 0 12px;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-medium);
+  background: var(--surface-inset);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-body);
+}
+
+.sound-dial__search::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* The dial is wide and shallow, so the list runs in columns. */
+.sound-dial__list {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  grid-auto-rows: 32px;
+  align-content: start;
+  column-gap: 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.sound-dial__option {
+  padding: 0 10px;
+  border-radius: var(--radius-small);
+  color: var(--color-text-secondary);
+  font-size: var(--text-body);
+  line-height: 32px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.sound-dial__option:hover {
+  background: var(--btn-hover-bg);
+  color: var(--color-text-primary);
+}
+
+.sound-dial__option--current {
+  background: var(--btn-toggle-on-bg);
+  color: var(--color-text-primary);
+}
+
+.sound-dial__empty {
+  grid-column: 1 / -1;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-label);
+  line-height: 32px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  /* The rail becomes a bottom bar here, 65px tall with its labels; the dial
+     rises from just above it. Sized from the height, not the narrow width, so
+     the hub still has room for a few rows of the list. */
+  .sound-dial-dock {
+    --dial-w: clamp(773px, 115vh, 933px);
+    left: 0;
+    bottom: calc(65px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sound-dial__about {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sound-dial,
+  .sound-dial__wheel,
+  .sound-dial__hub {
+    transition: none;
+  }
+}
