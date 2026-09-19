@@ -110,12 +110,12 @@ describe('oscillator', () => {
   });
 
   it('a voice renders the pulse width it is given', () => {
-    const highFraction = (squareDuty) => {
-      const params = { ...DEFAULT_PARAMS, squareDuty, attack: 0.001, sustain: 1 };
+    const highFraction = (duty) => {
+      const params = { ...DEFAULT_PARAMS, duty, attack: 0.001, sustain: 1 };
       const routesBox = { compiled: compileModRoutes(params.modRoutes, params) };
       const voice = new Voice(SR, routesBox);
       voice.start({
-        noteId: `pulse-${squareDuty}`,
+        noteId: `pulse-${duty}`,
         frequency: 110,
         waveform: 'square',
         velocity: 1,
