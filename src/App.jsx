@@ -60,15 +60,8 @@ const App = () => {
   ));
   const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
   const [isRecording, setIsRecording] = useState(false);
-  // On phones the sidebar is a full-screen sheet; never boot with it open
-  // there, or the synth hides behind a modal. On desktop it starts open so
-  // the sound controls are immediately at hand.
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined'
-      && typeof window.matchMedia === 'function'
-      && window.matchMedia('(max-width: 900px)').matches) return false;
-    return true;
-  });
+  // Arrival is just the keyboard playing the opening; the sidebar opens on request.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState(() => initialSession.sidebarTab || 'sound');
   const [activeSampleId, setActiveSampleId] = useState(() => initialSession.activeSampleId || null);
   const [sampleSelection, setSampleSelection] = useState(() => initialSession.sampleSelection || null);
