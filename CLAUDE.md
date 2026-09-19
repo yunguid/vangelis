@@ -246,6 +246,16 @@ src/
   active track's colour), tempo/bars/snap/scale sit inline in the top bar, and
   the grid opens centred on the pattern's notes. Neon is for tracks and notes,
   orange for transport, everything else monochrome
+- Metronome: the four beat cells beside BPM are its switch and its face.
+  `addMetronomeClicks` (utils/pianoRollPattern.js) adds one dry square click per
+  beat, accented on real downbeats even when a loop starts mid-bar, to the data
+  handed to the transport, so clicks loop and follow tempo with the notes. The
+  recording path and "Send to player" never get clicks; the setting is saved in
+  the editor draft. The lit cell runs on `startVisibilityAwareRafLoop`, never
+  raw `requestAnimationFrame` (`perf:site` caps explicit rAF sites at 12)
+- A track's numbered colour square is its on/off switch: under the pointer or
+  keyboard focus the number gives way to a power mark and a bright frame; solo
+  brightens on hover and fills with the track colour when on
 - Track cards are one row (number, name, sound chevron, solo); only the active
   track opens a second row naming its sound. In the phone strip every card
   keeps the fixed two-row height so a track switch cannot move the grid

@@ -27,6 +27,7 @@ export const loadEditorDraft = () => {
       chordTypeId: stringOrNull(parsed.chordTypeId),
       activeTrackId: stringOrNull(parsed.activeTrackId),
       pxPerBeat: finiteOrNull(parsed.pxPerBeat),
+      metronome: parsed.metronome === true,
       updatedAt: Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : 0
     };
   } catch {
@@ -46,6 +47,7 @@ export const saveEditorDraft = (draft) => {
       chordTypeId: stringOrNull(draft.chordTypeId),
       activeTrackId: stringOrNull(draft.activeTrackId),
       pxPerBeat: finiteOrNull(draft.pxPerBeat),
+      metronome: draft.metronome === true,
       updatedAt: Date.now()
     }));
   } catch {

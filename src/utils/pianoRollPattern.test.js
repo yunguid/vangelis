@@ -7,6 +7,7 @@ import {
   MIN_NOTE_BEATS,
   PITCH_MAX,
   PITCH_MIN,
+  addMetronomeClicks,
   addNote,
   addTrack,
   applyNoteDelta,
@@ -411,5 +412,30 @@ describe('patternToMidiData', () => {
     expect(midiData.duration).toBe(2); // 4 beats at 120bpm
     expect(midiData.notes[0]).toMatchObject({ midi: 60, time: 0, duration: 1, velocity: 0.5, trackId: 'track-1', waveformType: 'Sine' });
     expect(midiData.notes[1]).toMatchObject({ midi: 64, time: 1, duration: 0.5, velocity: DEFAULT_VELOCITY, trackId: 'track-1', waveformType: 'Sine' });
+  });
+});
+
+describe('metronome', () => {
+  it('clicks once per beat, accents downbeats, and leaves the notes alone', () => {
+    const { pattern } = addNote(createPattern({ bpm: 120, bars: 4 }), { midi: 60, start: 1, duration: 1 });
+    const midiData = patternToMidiData(pattern);
+    const withClicks = addMetronomeClicks(midiData);
+    const clicks = withClicks.notes.filter((note) => note.metronome);
+
+    expect(clicks).toHaveLength(16);
+    expect(clicks.map((note) => note.time).slice(0, 5)).toEqual([0, 0.5, 1, 1.5, 2]);
+    expect(clicks.filter((note) => note.velocity === 0.9).map((note) => note.time)).toEqual([0, 2, 4, 6]);
+    expect(withClicks.notes.filter((note) => !note.metronome)).toEqual(midiData.notes);
+    expect(withClicks.duration).toBe(midiData.duration);
+    expect(midiData.notes).toHaveLength(1);
+  });
+
+  it('keeps the accent on real downbeats when the loop starts mid-bar', () => {
+    const clicks = addMetronomeClicks({
+      bpm: 60, duration: 6, timelineOffsetBeats: 2.5, notes: []
+    }).notes;
+    // Loop covers beats 2.5 to 8.5: clicks on beats 3..8, downbeats at 4 and 8.
+    expect(clicks.map((note) => note.time)).toEqual([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]);
+    expect(clicks.filter((note) => note.velocity === 0.9).map((note) => note.time)).toEqual([1.5, 5.5]);
   });
 });

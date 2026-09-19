@@ -1,4 +1,5 @@
 import React from 'react';
+import { startVisibilityAwareRafLoop } from '../utils/visibilityRaf.js';
 import Sidebar from '../components/Sidebar';
 import {
   MidiTransportContext,
@@ -41,6 +42,7 @@ import {
   addNote,
   addTrack,
   applyNoteDelta,
+  addMetronomeClicks,
   buildChords,
   cloneNotesInPlace,
   copyNotesPayload,
@@ -163,6 +165,13 @@ const ICON_MORE = (
   </svg>
 );
 
+const ICON_POWER = (
+  <svg className="piano-roll-deck__power-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3v9" />
+    <path d="M6.3 7.2a8 8 0 1 0 11.4 0" />
+  </svg>
+);
+
 const ICON_CHEVRON = (
   <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M6.5 9.5 12 15l5.5-5.5" />
@@ -195,6 +204,48 @@ const PianoRollPlayhead = React.memo(({ getProgress, offsetX = 0, travelWidth })
 });
 
 PianoRollPlayhead.displayName = 'PianoRollPlayhead';
+
+// The metronome's face and its switch in one: four cells, the current beat lit
+// while the loop runs. It reads the transport clock each frame, like the
+// playhead, so it never drifts from what is heard.
+const BeatCounter = React.memo(({ on, running, getProgress, shapeRef, onToggle }) => {
+  const cellsRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const cells = cellsRef.current ? [...cellsRef.current.children] : [];
+    const light = (index) => cells.forEach((cell, cellIndex) => {
+      cell.toggleAttribute('data-lit', cellIndex === index);
+    });
+    if (!running) {
+      light(-1);
+      return undefined;
+    }
+    // The shared loop sleeps while the tab is hidden and wakes with it.
+    return startVisibilityAwareRafLoop(() => {
+      const shape = shapeRef.current;
+      if (!shape) return;
+      const beat = shape.offsetBeats + getProgress() * shape.beats;
+      light(((Math.floor(beat + 1e-6) % BEATS_PER_BAR) + BEATS_PER_BAR) % BEATS_PER_BAR);
+    });
+  }, [running, getProgress, shapeRef]);
+
+  return (
+    <button
+      type="button"
+      className="piano-roll-beats"
+      onClick={onToggle}
+      aria-pressed={on}
+      aria-label="Metronome"
+      title={on ? 'Metronome on: a click on every beat while the loop plays' : 'Metronome off'}
+    >
+      <span className="piano-roll-beats__cells" ref={cellsRef} aria-hidden="true">
+        {Array.from({ length: BEATS_PER_BAR }, (_, index) => <i key={index} />)}
+      </span>
+    </button>
+  );
+});
+
+BeatCounter.displayName = 'BeatCounter';
 
 const drawGrid = (canvas, {
   bars,
@@ -302,6 +353,11 @@ const PianoRollPage = () => {
       ? Math.min(Math.max(draft.pxPerBeat, ZOOM_MIN), ZOOM_MAX)
       : DEFAULT_PX_PER_BEAT
   ));
+  const [metronomeOn, setMetronomeOn] = React.useState(() => draft?.metronome === true);
+  const metronomeOnRef = React.useRef(metronomeOn);
+  metronomeOnRef.current = metronomeOn;
+  // What the transport is looping right now, for the beat counter.
+  const playbackShapeRef = React.useRef(null);
   const [savedPatterns, setSavedPatterns] = React.useState(() => loadSavedPatterns());
   const [drag, setDrag] = React.useState(null);
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
@@ -404,14 +460,15 @@ const PianoRollPage = () => {
       scaleRoot,
       chordTypeId,
       activeTrackId,
-      pxPerBeat
+      pxPerBeat,
+      metronome: metronomeOn
     };
     if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current);
     draftSaveTimeoutRef.current = setTimeout(() => {
       draftSaveTimeoutRef.current = null;
       saveEditorDraft(draftRef.current);
     }, DRAFT_SAVE_DEBOUNCE_MS);
-  }, [pattern, snapId, scaleId, scaleRoot, chordTypeId, activeTrackId, pxPerBeat]);
+  }, [pattern, snapId, scaleId, scaleRoot, chordTypeId, activeTrackId, pxPerBeat, metronomeOn]);
 
   // The draft outlives the page on purpose: leaving flushes it, nothing clears it.
   React.useEffect(() => {
@@ -556,15 +613,28 @@ const PianoRollPage = () => {
     }, AUDITION_MS);
   }, [waveformType, audioParams]);
 
+  // The loop as the transport should play it: the pattern's notes, plus clicks
+  // when the metronome is on. Emptiness is judged on the notes alone, and the
+  // recording path never comes through here, so a WAV never carries clicks.
+  const buildLoopPlayback = React.useCallback(() => {
+    const midiData = patternToMidiData(patternRef.current, { useLoopRange: true });
+    if (midiData.notes.length === 0) return null;
+    playbackShapeRef.current = {
+      offsetBeats: midiData.timelineOffsetBeats || 0,
+      beats: midiData.duration / (60 / midiData.bpm)
+    };
+    return metronomeOnRef.current ? addMetronomeClicks(midiData) : midiData;
+  }, []);
+
   const handlePlayToggle = React.useCallback(() => {
     if (playback.isPlaying && !playback.isPaused) {
       playback.stop();
       return;
     }
-    const midiData = patternToMidiData(patternRef.current, { useLoopRange: true });
-    if (midiData.notes.length === 0) return;
+    const midiData = buildLoopPlayback();
+    if (!midiData) return;
     playback.play(midiData, { loop: true });
-  }, [playback.isPlaying, playback.isPaused, playback.play, playback.stop]);
+  }, [buildLoopPlayback, playback.isPlaying, playback.isPaused, playback.play, playback.stop]);
 
   // Live edits replace the scheduled score at the exact audio-clock position.
   // This keeps a debounced edit from seeking back to an older React frame.
@@ -573,8 +643,8 @@ const PianoRollPage = () => {
     if (editRestartTimeoutRef.current) clearTimeout(editRestartTimeoutRef.current);
     editRestartTimeoutRef.current = setTimeout(() => {
       editRestartTimeoutRef.current = null;
-      const midiData = patternToMidiData(patternRef.current, { useLoopRange: true });
-      if (midiData.notes.length === 0) {
+      const midiData = buildLoopPlayback();
+      if (!midiData) {
         playback.stop();
         return;
       }
@@ -582,7 +652,7 @@ const PianoRollPage = () => {
     }, EDIT_RESCHEDULE_DEBOUNCE_MS);
     return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pattern]);
+  }, [pattern, metronomeOn]);
 
   const handleCopy = React.useCallback(() => {
     const payload = copyNotesPayload(patternRef.current, selectedIds);
@@ -1704,6 +1774,14 @@ const PianoRollPage = () => {
             />
           </label>
 
+          <BeatCounter
+            on={metronomeOn}
+            running={isRolling}
+            getProgress={playback.getPlaybackProgress}
+            shapeRef={playbackShapeRef}
+            onToggle={() => setMetronomeOn((current) => !current)}
+          />
+
           <div className="piano-roll-setting">
             <div className="piano-roll-stepper" role="group" aria-label="Timeline bars">
               <button
@@ -2066,7 +2144,10 @@ const PianoRollPage = () => {
                     aria-label={muteLabel}
                     title={muteLabel}
                   >
-                    {trackIndex + 1}
+                    {/* At rest it names the track; under the pointer it shows
+                        what a press does. */}
+                    <span className="piano-roll-deck__power-number">{trackIndex + 1}</span>
+                    {ICON_POWER}
                   </button>
                   {rename?.trackId === track.id ? (
                     <input

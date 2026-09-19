@@ -348,6 +348,51 @@
   field-sizing: content;
 }
 
+/* The metronome: four beat cells that are also its switch. Hollow when it is
+   off, filled when on, and the beat being played lit while the loop runs. */
+.piano-roll-beats {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: var(--control-h-sm);
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  cursor: pointer;
+}
+
+.piano-roll-beats:hover,
+.piano-roll-beats:focus-visible {
+  background: var(--surface-inset);
+}
+
+.piano-roll-beats__cells {
+  display: flex;
+  gap: 4px;
+}
+
+.piano-roll-beats__cells i {
+  width: 9px;
+  height: 14px;
+  border: 1px solid var(--color-text-tertiary);
+  border-radius: 2px;
+}
+
+.piano-roll-beats[aria-pressed='true'] .piano-roll-beats__cells i {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--color-core-paper) 28%, transparent);
+}
+
+.piano-roll-beats__cells i[data-lit] {
+  border-color: transparent;
+  background: var(--color-core-paper);
+}
+
+.piano-roll-beats[aria-pressed='true'] .piano-roll-beats__cells i[data-lit]:first-child {
+  background: var(--color-core-accent);
+}
+
 /* The bars stepper drops its box with the rest of the bar's settings. */
 .piano-roll-setting .piano-roll-stepper {
   height: var(--control-h-sm);
@@ -492,6 +537,42 @@
   color: var(--color-text-tertiary);
 }
 
+/* Under the pointer (or keyboard focus) the number gives way to a power mark
+   and the square takes a bright frame, so it reads as the switch it is. Both
+   marks share one grid cell, so nothing in the card moves. */
+.piano-roll-deck__power-number,
+.piano-roll-deck__power-icon {
+  grid-area: 1 / 1;
+}
+
+.piano-roll-deck__power-icon {
+  opacity: 0;
+}
+
+.piano-roll-deck__power:hover,
+.piano-roll-deck__power:focus-visible {
+  border-color: var(--color-core-paper);
+  outline: 0;
+}
+
+.piano-roll-deck__power:hover .piano-roll-deck__power-number,
+.piano-roll-deck__power:focus-visible .piano-roll-deck__power-number {
+  opacity: 0;
+}
+
+.piano-roll-deck__power:hover .piano-roll-deck__power-icon,
+.piano-roll-deck__power:focus-visible .piano-roll-deck__power-icon {
+  opacity: 1;
+}
+
+/* A muted track offers its colour back: "press to turn it on again". */
+.piano-roll-deck__power[aria-pressed='false']:hover,
+.piano-roll-deck__power[aria-pressed='false']:focus-visible {
+  border-color: var(--track-color);
+  background: color-mix(in srgb, var(--track-color) 22%, transparent);
+  color: var(--track-color);
+}
+
 /* Same box either way, so a rename never nudges the deck. */
 .piano-roll-deck__select,
 .piano-roll-deck__rename {
@@ -537,6 +618,23 @@
 
 .piano-roll-deck__solo {
   grid-area: 1 / 4;
+  color: var(--color-text-tertiary);
+  font-weight: 700;
+}
+
+.piano-roll-deck__solo:hover,
+.piano-roll-deck__solo:focus-visible {
+  border-color: var(--color-core-paper);
+  background: var(--btn-active-bg);
+  color: var(--color-text-primary);
+  outline: 0;
+}
+
+/* A soloed track says so in its own colour. */
+.piano-roll-deck__solo[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--track-color);
+  color: var(--color-core-ink);
 }
 
 /* On an idle track the sound button is only its chevron, in the track's one

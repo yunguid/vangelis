@@ -532,3 +532,44 @@ export const patternToMidiData = (pattern, { useLoopRange = false } = {}) => {
       })
   };
 };
+
+// The metronome's two voices: a short, dry square blip, higher on the downbeat.
+const METRONOME_PARAMS = Object.freeze({
+  useADSR: true, attack: 0.005, decay: 0.03, sustain: 0, release: 0.02,
+  useFM: false, useFilter: false, unisonVoices: 1, unisonDetune: 0,
+  distortion: 0, delayEnabled: false, reverbEnabled: false, volume: 0.5, pan: 0.5
+});
+const METRONOME_DOWNBEAT_MIDI = 96; // C7
+const METRONOME_BEAT_MIDI = 89; // F6
+const METRONOME_CLICK_SECONDS = 0.04;
+
+/**
+ * Add one click per beat to playback data from `patternToMidiData`, accented on
+ * bar downbeats. Clicks ride the same schedule as the notes, so they loop and
+ * follow tempo with them. `timelineOffsetBeats` keeps the accents on real
+ * downbeats when a loop range starts mid-bar. Each click carries its own sound
+ * and a `metronome` flag; nothing about the pattern itself changes.
+ */
+export const addMetronomeClicks = (midiData) => {
+  const secondsPerBeat = 60 / midiData.bpm;
+  const offsetBeats = midiData.timelineOffsetBeats || 0;
+  // `+ 0` turns the -0 that Math.ceil gives for an offset of zero into 0.
+  const firstBeat = Math.ceil(offsetBeats - 1e-9) + 0;
+  const clicks = [];
+  for (let beat = firstBeat; (beat - offsetBeats) * secondsPerBeat < midiData.duration - 1e-9; beat += 1) {
+    const downbeat = beat % BEATS_PER_BAR === 0;
+    clicks.push({
+      midi: downbeat ? METRONOME_DOWNBEAT_MIDI : METRONOME_BEAT_MIDI,
+      time: (beat - offsetBeats) * secondsPerBeat,
+      duration: METRONOME_CLICK_SECONDS,
+      velocity: downbeat ? 0.9 : 0.6,
+      waveformType: 'Square',
+      audioParams: METRONOME_PARAMS,
+      metronome: true
+    });
+  }
+  return {
+    ...midiData,
+    notes: [...midiData.notes, ...clicks].sort((a, b) => a.time - b.time || a.midi - b.midi)
+  };
+};
