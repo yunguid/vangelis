@@ -20,12 +20,24 @@ export const BAR_OPTIONS = [1, 2, 4, 8];
 export const BPM_MIN = 40;
 export const BPM_MAX = 240;
 
-// Saturated on purpose: the colour is how a note says which layer it belongs to,
-// so neighbouring layers sit far apart on the wheel.
-export const TRACK_COLORS = ['#ff2e97', '#00e5ff', '#c6ff00', '#b967ff', '#ff9100', '#4d7cff'];
-// The muted palette saved patterns were written with; normalizePattern maps
-// each onto the neon colour of the same slot.
-const LEGACY_TRACK_COLORS = ['#e8783d', '#66a6a8', '#c295d8', '#d6b85a', '#6f91c9', '#d56f82'];
+// Enamel paint on concrete: the colour is how a note says which layer it
+// belongs to, so neighbouring layers sit far apart on the wheel, but none glows.
+export const TRACK_COLORS = ['#d9ae43', '#6f9fb4', '#c65a3e', '#8fae68', '#a68fc9', '#5fa89a'];
+// Palettes older patterns were saved with (the first muted set, then neon);
+// normalizePattern maps each onto the colour of the same slot.
+const LEGACY_PALETTES = [
+  ['#e8783d', '#66a6a8', '#c295d8', '#d6b85a', '#6f91c9', '#d56f82'],
+  ['#ff2e97', '#00e5ff', '#c6ff00', '#b967ff', '#ff9100', '#4d7cff']
+];
+const upgradeTrackColor = (color) => {
+  for (const palette of LEGACY_PALETTES) {
+    const slot = palette.indexOf(color);
+    if (slot >= 0) return TRACK_COLORS[slot];
+  }
+  return color;
+};
+// MIDI velocity 1 is the quietest note that still sounds.
+export const MIN_VELOCITY = 1 / 127;
 export const TRACK_INSTRUMENTS = ['Sine', 'Sawtooth', 'Square', 'Triangle'];
 
 export const CHORD_TYPES = [
@@ -118,9 +130,7 @@ export const normalizePattern = (pattern) => {
     id: track?.id || `track-${index + 1}`,
     name: String(track?.name || `Layer ${index + 1}`).slice(0, 32),
     instrument: TRACK_INSTRUMENTS.includes(track?.instrument) ? track.instrument : TRACK_INSTRUMENTS[index % TRACK_INSTRUMENTS.length],
-    color: TRACK_COLORS[LEGACY_TRACK_COLORS.indexOf(track?.color)]
-      || track?.color
-      || TRACK_COLORS[index % TRACK_COLORS.length],
+    color: upgradeTrackColor(track?.color) || TRACK_COLORS[index % TRACK_COLORS.length],
     muted: Boolean(track?.muted),
     solo: Boolean(track?.solo)
   }));
@@ -187,7 +197,8 @@ export const addNote = (pattern, {
   start,
   duration,
   velocity = DEFAULT_VELOCITY,
-  trackId = pattern.tracks?.[0]?.id || 'track-1'
+  trackId = pattern.tracks?.[0]?.id || 'track-1',
+  muted = false
 }) => {
   const note = clampNoteToPattern(pattern, {
     id: `note-${pattern.nextNoteId}`,
@@ -195,7 +206,8 @@ export const addNote = (pattern, {
     start,
     duration,
     velocity,
-    trackId
+    trackId,
+    ...(muted ? { muted: true } : {})
   });
   const kept = pattern.notes.filter((existing) => (
     existing.trackId !== note.trackId
@@ -255,7 +267,9 @@ export const copyNotesPayload = (pattern, noteIds) => {
   const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
   return pattern.notes
     .filter((note) => ids.has(note.id))
-    .map(({ midi, start, duration, velocity, trackId }) => ({ midi, start, duration, velocity, trackId }))
+    .map(({ midi, start, duration, velocity, trackId, muted }) => ({
+      midi, start, duration, velocity, trackId, ...(muted ? { muted: true } : {})
+    }))
     .sort((a, b) => a.start - b.start || a.midi - b.midi);
 };
 
@@ -459,6 +473,145 @@ export const snapNotesToScale = (pattern, noteIds, rootPitchClass, scaleId) => {
 
 export const snapMidiToScale = nearestScaleMidi;
 
+/**
+ * What a note operation acts on: the selection, or every note of the track
+ * being edited when nothing is selected (Ableton's rule for its Notes panel).
+ */
+export const operationTargetIds = (pattern, selectedIds, trackId) => {
+  if (selectedIds && selectedIds.size > 0) return selectedIds;
+  return new Set(pattern.notes.filter((note) => note.trackId === trackId).map((note) => note.id));
+};
+
+const mapTargets = (pattern, noteIds, mapNote) => {
+  const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
+  const targets = pattern.notes.filter((note) => ids.has(note.id));
+  if (targets.length === 0) return pattern;
+  const span = {
+    start: Math.min(...targets.map((note) => note.start)),
+    end: Math.max(...targets.map((note) => note.start + note.duration)),
+    low: Math.min(...targets.map((note) => note.midi)),
+    high: Math.max(...targets.map((note) => note.midi))
+  };
+  return {
+    ...pattern,
+    notes: pattern.notes.map((note) => (
+      ids.has(note.id) ? clampNoteToPattern(pattern, mapNote(note, span)) : note
+    ))
+  };
+};
+
+/** Move note starts toward the grid; `strength` 1 lands them on it. */
+export const quantizeNotes = (pattern, noteIds, snapBeats, strength = 1) => {
+  if (!snapBeats) return pattern;
+  return mapTargets(pattern, noteIds, (note) => ({
+    ...note,
+    start: note.start + (quantizeBeats(note.start, snapBeats) - note.start) * strength
+  }));
+};
+
+/**
+ * Stretch every note to the start of the next later note, so a line plays
+ * without gaps; notes that start together (chords) move as one. The last
+ * notes keep their length.
+ */
+export const legatoNotes = (pattern, noteIds) => {
+  const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
+  const starts = [...new Set(pattern.notes.filter((note) => ids.has(note.id)).map((note) => note.start))]
+    .sort((a, b) => a - b);
+  return mapTargets(pattern, ids, (note) => {
+    const next = starts.find((start) => start > note.start + 1e-6);
+    return next === undefined ? note : { ...note, duration: next - note.start };
+  });
+};
+
+/** Play the notes backwards in time, within the span they cover. */
+export const reverseNotes = (pattern, noteIds) => mapTargets(pattern, noteIds, (note, span) => ({
+  ...note,
+  start: span.start + span.end - (note.start + note.duration)
+}));
+
+/** Turn the notes upside down, mirroring pitch between their lowest and highest. */
+export const invertNotes = (pattern, noteIds) => mapTargets(pattern, noteIds, (note, span) => ({
+  ...note,
+  midi: span.low + span.high - note.midi
+}));
+
+/**
+ * Scale timing from the first note (x2 plays at half speed, 0.5 at double).
+ * The timeline grows in BAR_CHUNK steps when the stretched notes need room.
+ */
+export const stretchNotes = (pattern, noteIds, factor) => {
+  const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
+  const targets = pattern.notes.filter((note) => ids.has(note.id));
+  if (targets.length === 0 || !(factor > 0)) return pattern;
+  const origin = Math.min(...targets.map((note) => note.start));
+  const end = Math.max(...targets.map((note) => origin + (note.start + note.duration - origin) * factor));
+  const neededBars = Math.ceil(end / BEATS_PER_BAR / BAR_CHUNK - 1e-6) * BAR_CHUNK;
+  const roomy = neededBars > pattern.bars
+    ? { ...pattern, bars: Math.min(MAX_PATTERN_BARS, neededBars) }
+    : pattern;
+  return mapTargets(roomy, ids, (note) => ({
+    ...note,
+    start: origin + (note.start - origin) * factor,
+    duration: Math.max(note.duration * factor, MIN_NOTE_BEATS)
+  }));
+};
+
+/**
+ * Cut notes in two at `atBeat`. A note is only cut where both halves keep at
+ * least MIN_NOTE_BEATS; the left half keeps the note's id.
+ */
+export const sliceNotes = (pattern, noteIds, atBeat) => {
+  const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
+  let nextNoteId = pattern.nextNoteId;
+  const added = [];
+  const notes = [];
+  pattern.notes.forEach((note) => {
+    const end = note.start + note.duration;
+    if (!ids.has(note.id)
+      || atBeat - note.start < MIN_NOTE_BEATS - 1e-9
+      || end - atBeat < MIN_NOTE_BEATS - 1e-9) {
+      notes.push(note);
+      return;
+    }
+    const right = { ...note, id: `note-${nextNoteId++}`, start: atBeat, duration: end - atBeat };
+    notes.push({ ...note, duration: atBeat - note.start }, right);
+    added.push(right.id);
+  });
+  if (added.length === 0) return { pattern, noteIds: [] };
+  return { pattern: { ...pattern, nextNoteId, notes }, noteIds: added };
+};
+
+/** Set velocities by id, each clamped to MIDI's 1..127 range. */
+export const setNoteVelocities = (pattern, velocityById) => ({
+  ...pattern,
+  notes: pattern.notes.map((note) => (
+    velocityById.has(note.id)
+      ? { ...note, velocity: clamp(velocityById.get(note.id), MIN_VELOCITY, 1) }
+      : note
+  ))
+});
+
+/**
+ * Deactivate notes (Ableton's 0 key): they stay on the grid but do not play.
+ * Mixed targets all go silent; only an all-muted set comes back on.
+ */
+export const toggleNotesMuted = (pattern, noteIds) => {
+  const ids = noteIds instanceof Set ? noteIds : new Set(noteIds);
+  const targets = pattern.notes.filter((note) => ids.has(note.id));
+  if (targets.length === 0) return pattern;
+  const mute = targets.some((note) => !note.muted);
+  return {
+    ...pattern,
+    notes: pattern.notes.map((note) => {
+      if (!ids.has(note.id)) return note;
+      if (mute) return { ...note, muted: true };
+      const { muted, ...rest } = note;
+      return rest;
+    })
+  };
+};
+
 /** Shift+Cmd/Ctrl+L: toggle a bar-rounded loop spanning selected notes. */
 export const toggleLoopForSelection = (pattern, noteIds) => {
   if (pattern.loopRange?.enabled) {
@@ -509,6 +662,7 @@ export const patternToMidiData = (pattern, { useLoopRange = false } = {}) => {
     timelineOffsetBeats: startBeat,
     notes: [...pattern.notes]
       .filter((note) => {
+        if (note.muted) return false;
         const track = audibleTracks.get(note.trackId) || pattern.tracks?.[0];
         if (track?.muted) return false;
         if (soloedTrackIds.size > 0 && !soloedTrackIds.has(note.trackId)) return false;

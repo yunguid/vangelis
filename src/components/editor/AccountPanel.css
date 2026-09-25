@@ -1,0 +1,90 @@
+/* The account panel: the same slab as the projects list, set at the right. */
+.account-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(300px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-panel);
+  box-shadow: 8px 8px 0 var(--slab-joint);
+}
+
+.account-panel__title {
+  margin: 0;
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.account-panel__who {
+  margin: 0;
+  overflow: hidden;
+  color: var(--bone);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-panel__note {
+  margin: 0;
+  color: var(--ash);
+  font-size: 12px;
+}
+
+.account-panel__error {
+  margin: 0;
+  color: var(--oxide);
+  font-size: 12px;
+}
+
+.account-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-panel__form input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-well);
+  color: var(--bone);
+  font-family: var(--font-grotesk);
+  font-size: 13px;
+}
+
+.account-panel__form input::placeholder {
+  color: var(--soot);
+}
+
+.account-panel__button {
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--slab-raised);
+  color: var(--bone);
+  font-family: var(--font-grotesk);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.account-panel__button:hover:not(:disabled) {
+  background: var(--slab-raised-hover);
+}
+
+.account-panel__button--primary {
+  background: var(--bone);
+  color: var(--ink);
+}
+
+.account-panel__button--primary:hover:not(:disabled) {
+  background: #f1ece2;
+}

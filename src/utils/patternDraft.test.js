@@ -46,6 +46,14 @@ describe('patternDraft', () => {
     expect(draft.updatedAt).toBeGreaterThan(0);
   });
 
+  it('remembers which project it belongs to and whether the velocity lane is open', () => {
+    saveEditorDraft({ pattern: draftPattern, projectId: 'project-7', velocityLane: false });
+    expect(loadEditorDraft()).toMatchObject({ projectId: 'project-7', velocityLane: false });
+    // A draft from before projects has no project yet; the lane defaults open.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ pattern: draftPattern }));
+    expect(loadEditorDraft()).toMatchObject({ projectId: null, velocityLane: true });
+  });
+
   it('keeps the newest draft only', () => {
     saveEditorDraft({ pattern: draftPattern });
     saveEditorDraft({ pattern: { ...draftPattern, name: 'Second pass', notes: [] } });

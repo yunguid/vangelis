@@ -27,7 +27,8 @@ vi.mock('../utils/audioEngine.js', () => ({
 vi.mock('../utils/cloudPatternStore.js', () => ({
   isCloudConfigured: () => false, getSession: async () => null, onAuthChange: () => () => {},
   listCloudPatterns: async () => [], upsertCloudPattern: async () => null,
-  deleteCloudPattern: async () => true, signInWithEmail: async () => ({ error: null }), signOut: async () => {}
+  deleteCloudPattern: async () => true, uploadPatternMidi: async () => true,
+  signInWithPassword: async () => ({ error: null }), signOut: async () => {}
 }));
 
 const originalGetContext = HTMLCanvasElement.prototype.getContext;

@@ -19,12 +19,23 @@ import {
   deleteNotes,
   deleteTrack,
   duplicateNotes,
+  legatoNotes,
+  MIN_VELOCITY,
+  operationTargetIds,
+  quantizeNotes,
+  reverseNotes,
+  setNoteVelocities,
+  sliceNotes,
+  stretchNotes,
+  toggleNotesMuted,
+  TRACK_COLORS,
   nudgeNotes,
   normalizePattern,
   pasteNotesPayload,
   resizeNotes,
   snapNotesToScale,
   getSnapBeats,
+  invertNotes,
   isInScale,
   isInChord,
   patternBeats,
@@ -437,5 +448,126 @@ describe('metronome', () => {
     // Loop covers beats 2.5 to 8.5: clicks on beats 3..8, downbeats at 4 and 8.
     expect(clicks.map((note) => note.time)).toEqual([0.5, 1.5, 2.5, 3.5, 4.5, 5.5]);
     expect(clicks.filter((note) => note.velocity === 0.9).map((note) => note.time)).toEqual([1.5, 5.5]);
+  });
+});
+
+describe('note transforms', () => {
+  // Three notes on the first track and one on a second, so every transform can
+  // be checked for leaving other notes alone.
+  const build = () => {
+    let pattern = createPattern({ bars: 4 });
+    pattern = addTrack(pattern).pattern;
+    const ids = [];
+    [
+      { midi: 60, start: 0.1, duration: 0.5 },
+      { midi: 64, start: 1.05, duration: 0.25 },
+      { midi: 67, start: 2, duration: 1 }
+    ].forEach((spec) => {
+      const result = addNote(pattern, spec);
+      pattern = result.pattern;
+      ids.push(result.note.id);
+    });
+    const other = addNote(pattern, { midi: 48, start: 0.1, duration: 0.5, trackId: 'track-2' });
+    return { pattern: other.pattern, ids: new Set(ids), otherId: other.note.id };
+  };
+  const byId = (pattern, id) => pattern.notes.find((note) => note.id === id);
+
+  it('targets the selection, or the whole track when nothing is selected', () => {
+    const { pattern, ids, otherId } = build();
+    expect(operationTargetIds(pattern, new Set([otherId]), 'track-1')).toEqual(new Set([otherId]));
+    expect(operationTargetIds(pattern, new Set(), 'track-1')).toEqual(ids);
+  });
+
+  it('quantizes starts onto the grid, fully or part of the way', () => {
+    const { pattern, ids, otherId } = build();
+    const full = quantizeNotes(pattern, ids, 0.5);
+    expect([...ids].map((id) => byId(full, id).start)).toEqual([0, 1, 2]);
+    expect(byId(full, otherId).start).toBe(0.1);
+    const half = quantizeNotes(pattern, ids, 0.5, 0.5);
+    expect(byId(half, 'note-1').start).toBeCloseTo(0.05);
+    expect(quantizeNotes(pattern, ids, null)).toBe(pattern);
+  });
+
+  it('makes a line legato, moving chord notes together and keeping the last note', () => {
+    let { pattern, ids } = build();
+    const chordNote = addNote(pattern, { midi: 55, start: 0.1, duration: 0.25 });
+    pattern = chordNote.pattern;
+    const targets = new Set([...ids, chordNote.note.id]);
+    const next = legatoNotes(pattern, targets);
+    expect(byId(next, 'note-1').duration).toBeCloseTo(0.95);
+    expect(byId(next, chordNote.note.id).duration).toBeCloseTo(0.95);
+    expect(byId(next, 'note-2').duration).toBeCloseTo(0.95);
+    expect(byId(next, 'note-3').duration).toBe(1);
+  });
+
+  it('reverses time and inverts pitch within the span the notes cover', () => {
+    const { pattern, ids, otherId } = build(); // span 0.1..3, pitches 60..67
+    const reversed = reverseNotes(pattern, ids);
+    expect(byId(reversed, 'note-3').start).toBeCloseTo(0.1);
+    expect(byId(reversed, 'note-1').start).toBeCloseTo(2.5);
+    expect(byId(reversed, otherId).start).toBe(0.1);
+    const inverted = invertNotes(pattern, ids);
+    expect([...ids].map((id) => byId(inverted, id).midi)).toEqual([67, 63, 60]);
+  });
+
+  it('stretches from the first note and grows the timeline when it runs out', () => {
+    const { pattern, ids } = build();
+    const doubled = stretchNotes(pattern, ids, 2);
+    expect(byId(doubled, 'note-3')).toMatchObject({ start: 3.9, duration: 2 });
+    expect(doubled.bars).toBe(4);
+    const long = stretchNotes(pattern, ids, 8); // last note would end at 23.3 beats
+    expect(long.bars).toBe(8);
+    expect(byId(long, 'note-3').start + byId(long, 'note-3').duration).toBeCloseTo(23.3);
+    const halved = stretchNotes(pattern, ids, 0.5);
+    expect(byId(halved, 'note-2')).toMatchObject({ duration: MIN_NOTE_BEATS });
+  });
+
+  it('slices notes in two only where both halves stay playable', () => {
+    const { pattern, ids } = build();
+    const { pattern: cut, noteIds } = sliceNotes(pattern, ids, 2.5);
+    expect(noteIds).toHaveLength(1);
+    expect(byId(cut, 'note-3')).toMatchObject({ start: 2, duration: 0.5 });
+    expect(byId(cut, noteIds[0])).toMatchObject({ start: 2.5, duration: 0.5, midi: 67 });
+    expect(cut.nextNoteId).toBe(pattern.nextNoteId + 1);
+    expect(sliceNotes(pattern, ids, 2.05).noteIds).toEqual([]);
+  });
+
+  it('clamps velocities to the MIDI range', () => {
+    const { pattern } = build();
+    const next = setNoteVelocities(pattern, new Map([['note-1', 0], ['note-2', 1.4]]));
+    expect(byId(next, 'note-1').velocity).toBe(MIN_VELOCITY);
+    expect(byId(next, 'note-2').velocity).toBe(1);
+  });
+
+  it('mutes notes out of playback, and only an all-muted set comes back', () => {
+    const { pattern } = build();
+    const muted = toggleNotesMuted(pattern, new Set(['note-1']));
+    expect(patternToMidiData(muted).notes.map((note) => note.midi)).not.toContain(60);
+    const mixed = toggleNotesMuted(muted, new Set(['note-1', 'note-2']));
+    expect(byId(mixed, 'note-1').muted).toBe(true);
+    expect(byId(mixed, 'note-2').muted).toBe(true);
+    const back = toggleNotesMuted(mixed, new Set(['note-1', 'note-2']));
+    expect(byId(back, 'note-1').muted).toBeUndefined();
+    expect(patternToMidiData(back).notes).toHaveLength(4);
+  });
+
+  it('carries a muted note through copy and paste', () => {
+    const { pattern } = build();
+    const muted = toggleNotesMuted(pattern, new Set(['note-1']));
+    const payload = copyNotesPayload(muted, new Set(['note-1']));
+    const pasted = pasteNotesPayload(muted, payload, 4);
+    expect(byId(pasted.pattern, pasted.noteIds[0]).muted).toBe(true);
+  });
+
+  it('moves saved neon and muted-palette colours onto the current palette', () => {
+    const pattern = normalizePattern({
+      tracks: [
+        { id: 'track-1', color: '#ff2e97' },
+        { id: 'track-2', color: '#66a6a8' },
+        { id: 'track-3', color: '#123456' }
+      ],
+      notes: []
+    });
+    expect(pattern.tracks.map((track) => track.color)).toEqual([TRACK_COLORS[0], TRACK_COLORS[1], '#123456']);
   });
 });

@@ -1,0 +1,226 @@
+/* The projects list: a slab dropped over the grid, offset shadow and all.
+   It inherits the editor's tokens from .piano-roll-page. */
+.project-browser {
+  display: flex;
+  flex-direction: column;
+  width: min(460px, calc(100vw - 32px));
+  max-height: min(70vh, 620px);
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-panel);
+  box-shadow: 8px 8px 0 var(--slab-joint);
+}
+
+.project-browser__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 14px;
+  border-bottom: 1px solid var(--slab-joint);
+}
+
+.project-browser__title {
+  margin: 0;
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+.project-browser__count {
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.project-browser__new {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--bone);
+  color: var(--ink);
+  font-family: var(--font-grotesk);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.project-browser__new:hover {
+  background: #f1ece2;
+}
+
+.project-browser__icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ash);
+  cursor: pointer;
+}
+
+.project-browser__icon:hover {
+  background: var(--slab-raised-hover);
+  color: var(--bone);
+}
+
+.project-browser__search {
+  height: 34px;
+  margin: 8px 10px 4px;
+  padding: 0 10px;
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-well);
+  color: var(--bone);
+  font-family: var(--font-grotesk);
+  font-size: 13px;
+}
+
+.project-browser__search::placeholder {
+  color: var(--soot);
+}
+
+.project-browser__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.project-browser__row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid rgba(14, 14, 13, 0.55);
+}
+
+.project-browser__row.is-current {
+  box-shadow: inset 3px 0 0 var(--brass);
+}
+
+.project-browser__open {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px 9px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--bone);
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-browser__open:hover {
+  background: var(--slab-raised);
+}
+
+.project-browser__name {
+  overflow: hidden;
+  font-family: var(--font-grotesk);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-browser__meta {
+  grid-row: 2;
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-browser__where {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  align-self: center;
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+}
+
+.project-browser__where--account {
+  color: var(--brass);
+}
+
+.project-browser__where--pending {
+  color: var(--signal);
+}
+
+.project-browser__actions,
+.project-browser__confirm {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px 0 2px;
+}
+
+/* The row's own buttons stay out of the way until the row is pointed at. */
+.project-browser__actions {
+  opacity: 0;
+}
+
+.project-browser__row:hover .project-browser__actions,
+.project-browser__row:focus-within .project-browser__actions {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .project-browser__actions {
+    opacity: 1;
+  }
+}
+
+.project-browser__danger,
+.project-browser__keep {
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 2px;
+  font-family: var(--font-grotesk);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.project-browser__danger {
+  background: var(--oxide);
+  color: var(--ink);
+}
+
+.project-browser__keep {
+  background: var(--slab-raised);
+  color: var(--bone);
+}
+
+.project-browser__empty,
+.project-browser__foot {
+  margin: 0;
+  padding: 14px;
+  color: var(--ash);
+  font-size: 12px;
+}
+
+.project-browser__foot {
+  padding: 10px 14px;
+  border-top: 1px solid var(--slab-joint);
+  color: var(--soot);
+  font-size: 11px;
+}

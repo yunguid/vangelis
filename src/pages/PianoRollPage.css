@@ -1,351 +1,268 @@
+/* ── The editor: poured concrete ─────────────────────────────────────────────
+   Flat slabs of warm grey laid edge to edge, the joints between them cut
+   darker, nothing rounded past a sharpened corner, nothing glowing. Colour is
+   kept for three jobs: tracks and notes (enamel paint), time (signal orange:
+   play, metronome, loop, playhead) and the record light (oxide). */
+
 .piano-roll-page {
+  --slab-joint: #0e0e0d;
+  --slab-well: #1b1b19;
+  --slab-panel: #2d2c29;
+  --slab-raised: #393834;
+  --slab-raised-hover: #44423d;
+  --bone: #e4dfd4;
+  --ash: #aaa598;
+  --soot: #78746c;
+  --ink: #111110;
+  --signal: #e8702a;
+  --oxide: #cc4b33;
+  --brass: #b08d57;
+  --key-white: #c8c3b7;
+  --key-white-hover: #d8d3c7;
+  --key-white-dim: #8e8a81;
+  --key-black: #1c1b19;
+  --key-seam: #7c786f;
+  --font-grotesk: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   /* The track column's width and a deck's height are constants: whatever a
      deck does — select, mute, solo, rename, or a new track arriving — the
      grid beside it keeps the exact same box. */
   --deck-col-w: 216px;
   --deck-h: 84px;
+  --bar-h: 44px;
+  --tools-h: 38px;
+  --lane-h: 88px;
+  /* The strip along the left edge where the pointer calls the dock. */
+  --gutter: 10px;
   position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  color: var(--color-text-primary);
-  background: var(--color-bg-deep);
-  padding-left: var(--sidebar-rail-width, 72px); /* clear the fixed sidebar rail */
-  animation: piano-roll-enter 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  padding-left: var(--gutter);
+  background: var(--slab-joint);
+  color: var(--bone);
+  font-family: var(--font-grotesk);
+  font-size: 12px;
 }
 
-@keyframes piano-roll-enter {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* The app colours every span, label and term globally; in here text takes
+   the colour of the control it sits in. */
+.piano-roll-page span,
+.piano-roll-page label,
+.piano-roll-page p,
+.piano-roll-page dt,
+.piano-roll-page dd,
+.piano-roll-page kbd,
+.piano-roll-page li {
+  color: inherit;
 }
 
-/* ── Toolbar rows ───────────────────────────────────────────────────────────
-   The top bar and the tray are one surface: neither draws a fill or a border
-   of its own, and a single hairline under the tray separates them from the
-   grid. */
+.piano-roll-page button:focus-visible,
+.piano-roll-page summary:focus-visible,
+.piano-roll-page input:focus-visible,
+.piano-roll-page select:focus-visible {
+  outline: 2px solid var(--bone);
+  outline-offset: 1px;
+}
 
-.piano-roll-topbar {
+/* ── Chrome: the transport bar over the tool bar ─────────────────────────── */
+
+.piano-roll-chrome {
+  flex: none;
+  position: relative;
+  z-index: 30;
+}
+
+.piano-roll-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  height: var(--bar-h);
+  padding: 0 10px;
+  background: var(--slab-panel);
+  border-bottom: 1px solid var(--slab-joint);
+}
+
+.piano-roll-bar__group {
   display: flex;
   align-items: center;
-  gap: var(--gap-control);
-  padding: 10px 14px;
-  flex: none;
+  gap: 6px;
+  min-width: 0;
 }
 
-.piano-roll-topbar summary {
+.piano-roll-bar__group--transport {
+  gap: 8px;
+}
+
+.piano-roll-bar__group--end {
+  justify-content: flex-end;
+}
+
+.piano-roll-bar__name {
+  flex: 0 1 240px;
+  min-width: 80px;
+  height: 28px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--bone);
+  font-family: var(--font-grotesk);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.piano-roll-bar__name:hover,
+.piano-roll-bar__name:focus {
+  border-bottom-color: var(--soot);
+  outline: 0;
+}
+
+/* Where the work is kept, in words; a press saves now. */
+.piano-roll-bar__status {
+  flex: none;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.piano-roll-bar__status:hover {
+  color: var(--bone);
+}
+
+.piano-roll-bar__status.is-busy {
+  color: var(--ash);
+}
+
+.piano-roll-bar__status.is-error {
+  color: var(--oxide);
+}
+
+/* Buttons are blocks cut from the same slab: flat, square-shouldered. */
+.piano-roll-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--slab-raised);
+  color: var(--bone);
+  font-family: var(--font-grotesk);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
   list-style: none;
 }
 
-.piano-roll-topbar summary::-webkit-details-marker {
+.piano-roll-button::-webkit-details-marker {
   display: none;
 }
 
-.piano-roll-topbar__play {
-  min-width: 96px;
+.piano-roll-button:hover:not(:disabled) {
+  background: var(--slab-raised-hover);
 }
 
-.piano-roll-topbar__record.is-recording {
-  background: var(--btn-toggle-on-bg);
-  color: var(--color-text-primary);
+.piano-roll-button[aria-pressed='true'],
+.piano-roll-button[aria-expanded='true'],
+.piano-roll-menu-anchor[open] > .piano-roll-button {
+  background: var(--bone);
+  color: var(--ink);
 }
 
-.piano-roll-topbar__name {
-  flex: 1;
-  min-width: 120px;
-  max-width: 320px;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  background: transparent;
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--text-title);
-  letter-spacing: 0.03em;
-  padding: 4px 0;
-}
-
-.piano-roll-topbar__name:hover,
-.piano-roll-topbar__name:focus {
-  border-bottom-color: var(--border-hairline-strong);
-}
-
-.piano-roll-topbar__dirty {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  background: var(--color-core-accent);
-}
-
-.piano-roll-topbar__zoom,
-.piano-roll-stepper {
-  display: flex;
-  align-items: center;
-  flex: none;
-  height: var(--control-h);
-  border-radius: var(--radius-medium);
-  background: var(--surface-inset);
-}
-
-.piano-roll-topbar__zoom {
-  margin-left: auto;
-}
-
-.piano-roll-topbar__zoom button,
-.piano-roll-stepper button {
-  height: 100%;
-  width: var(--control-h-sm);
-  border: 0;
-  border-radius: var(--radius-medium);
-  background: transparent;
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--text-body);
-  line-height: 1;
-  cursor: pointer;
-}
-
-.piano-roll-topbar__zoom button:hover:not(:disabled),
-.piano-roll-stepper button:hover:not(:disabled) {
-  background: var(--btn-hover-bg);
-}
-
-.piano-roll-topbar__zoom-fit {
-  width: auto;
-  padding: 0 6px;
-  min-width: 52px;
-  color: var(--color-text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-
-.piano-roll-stepper output {
-  padding: 0 4px;
-  min-width: 64px;
-  color: var(--color-text-primary);
-  font-size: var(--text-body);
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* ── Popovers: help, overflow menu ─────────────────────────────────────── */
-
-.piano-roll-topbar__help,
-.piano-roll-topbar__more {
-  position: relative;
-  flex: none;
-}
-
-.piano-roll-topbar__help-panel,
-.piano-roll-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 30;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-large);
-  background: var(--surface-popover);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
-}
-
-.piano-roll-topbar__help-panel {
-  width: 300px;
-  padding: 12px 14px;
-}
-
-.piano-roll-topbar__help-panel h2 {
-  margin: 0 0 8px;
-  font-size: var(--text-label);
-  letter-spacing: 0.1em;
-  color: var(--color-text-secondary);
-}
-
-.piano-roll-topbar__help-panel dl {
-  margin: 0;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
-  font-size: var(--text-label);
-}
-
-.piano-roll-topbar__help-panel dt {
-  color: var(--color-text-primary);
-  white-space: nowrap;
-}
-
-.piano-roll-topbar__help-panel dd {
-  margin: 0;
-  color: var(--color-text-secondary);
-}
-
-.piano-roll-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 280px;
-  max-width: 360px;
-  max-height: min(70vh, 480px);
-  overflow-y: auto;
-  padding: 6px;
-}
-
-.piano-roll-menu__item,
-.piano-roll-menu__load {
-  width: 100%;
-  justify-content: flex-start;
-  text-align: left;
-}
-
-.piano-roll-menu__heading {
-  margin: 4px 6px 2px;
-  font-size: var(--text-label);
-  letter-spacing: 0.1em;
-  color: var(--color-text-secondary);
-}
-
-.piano-roll-menu__list {
-  display: flex;
-  flex-direction: column;
-  margin: 0 0 6px;
+.piano-roll-button--icon {
+  width: 28px;
   padding: 0;
-  list-style: none;
 }
 
-.piano-roll-menu__entry {
-  display: grid;
-  grid-template-columns: 1fr auto;
+.piano-roll-button--transport {
+  width: 38px;
+  height: 30px;
 }
 
-.piano-roll-menu__load {
-  grid-area: 1 / 1;
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
+.piano-roll-button--transport[aria-pressed='true'] {
+  background: var(--signal);
+  color: var(--ink);
 }
 
-.piano-roll-menu__delete {
-  grid-area: 1 / 2;
-  font-size: var(--text-label);
-  color: var(--color-text-tertiary);
+.piano-roll-button--record {
+  height: 30px;
+  width: 30px;
+  color: var(--oxide);
 }
 
-.piano-roll-menu__meta {
-  grid-area: 2 / 1 / auto / span 2;
-  padding: 0 12px 6px;
-  color: var(--color-text-tertiary);
-  font-size: var(--text-label);
+.piano-roll-button--record.is-recording {
+  background: var(--oxide);
+  color: var(--ink);
 }
 
-/* ── Cloud account block (inside the overflow menu) ────────────────────── */
-
-.piano-roll-cloud,
-.piano-roll-cloud__form {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--gap-control);
+.piano-roll-button--account.is-signed-in {
+  color: var(--brass);
 }
 
-.piano-roll-cloud {
-  margin-top: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-hairline);
-  font-size: var(--text-label);
-  color: var(--color-text-secondary);
+.piano-roll-button--account.is-signed-in[aria-expanded='true'] {
+  color: var(--ink);
 }
 
-.piano-roll-cloud input {
-  flex: 1;
-  height: var(--control-h);
-  min-width: 160px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: var(--radius-medium);
-  background: var(--surface-inset);
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--text-body);
-}
-
-.piano-roll-cloud__status,
-.piano-roll-cloud__note {
-  font-size: var(--text-label);
-}
-
-.piano-roll-cloud__note {
-  color: color-mix(in srgb, var(--color-core-accent) 70%, var(--color-core-paper));
-}
-
-.piano-roll-cloud__pending {
-  width: 6px;
-  height: 6px;
-  background: var(--color-core-accent);
-}
-
-/* ── Pattern settings (inside the top bar) ─────────────────────────────────
-   Tempo, length, snap and key sit in the bar as inline text-weight controls:
-   a caption, then a control that only shows its box on hover or focus. */
-
-.piano-roll-topbar__settings {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 2px 14px;
-  min-width: 0;
-}
-
-/* With room to spare the settings stay on the bar's one line. */
-@media (min-width: 1100px) {
-  .piano-roll-topbar__settings {
-    flex-wrap: nowrap;
-  }
-}
-
-.piano-roll-setting {
-  display: flex;
+/* A caption stamped beside a recessed readout. */
+.piano-roll-field {
+  display: inline-flex;
   align-items: center;
   flex: none;
   gap: 6px;
-  color: var(--color-text-tertiary);
-  font-size: var(--text-label);
-  letter-spacing: 0.06em;
 }
 
-.piano-roll-setting input,
-.piano-roll-setting select {
-  height: var(--control-h-sm);
+.piano-roll-field > span {
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+}
+
+.piano-roll-field input,
+.piano-roll-field select,
+.piano-roll-selection select {
+  height: 26px;
   min-width: 0;
   padding: 0 6px;
-  border: 0;
-  border-radius: var(--radius-small);
-  background: transparent;
-  color: var(--color-text-secondary);
-  font-family: inherit;
-  font-size: var(--text-body);
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-well);
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 12px;
   cursor: pointer;
 }
 
-.piano-roll-setting input:hover,
-.piano-roll-setting select:hover,
-.piano-roll-setting input:focus,
-.piano-roll-setting select:focus {
-  background: var(--surface-inset);
-  color: var(--color-text-primary);
-}
-
-.piano-roll-setting input[type='number'] {
+.piano-roll-field input[type='number'] {
   width: 56px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* A select is normally as wide as its longest option, which left "Off" adrift
-   from its chevron; size it to what it is showing instead. */
-.piano-roll-setting select {
+.piano-roll-field select {
   field-sizing: content;
+}
+
+.piano-roll-field input:hover,
+.piano-roll-field select:hover,
+.piano-roll-selection select:hover {
+  border-color: var(--soot);
 }
 
 /* The metronome: four beat cells that are also its switch. Hollow when it is
@@ -354,113 +271,250 @@
   display: flex;
   align-items: center;
   flex: none;
-  height: var(--control-h-sm);
-  padding: 0 8px;
+  height: 28px;
+  padding: 0 7px;
   border: 0;
-  border-radius: var(--radius-small);
-  background: transparent;
+  border-radius: 2px;
+  background: var(--slab-raised);
   cursor: pointer;
 }
 
-.piano-roll-beats:hover,
-.piano-roll-beats:focus-visible {
-  background: var(--surface-inset);
+.piano-roll-beats:hover {
+  background: var(--slab-raised-hover);
 }
 
 .piano-roll-beats__cells {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .piano-roll-beats__cells i {
-  width: 9px;
+  width: 7px;
   height: 14px;
-  border: 1px solid var(--color-text-tertiary);
-  border-radius: 2px;
+  border: 1px solid var(--soot);
 }
 
 .piano-roll-beats[aria-pressed='true'] .piano-roll-beats__cells i {
   border-color: transparent;
-  background: color-mix(in srgb, var(--color-core-paper) 28%, transparent);
+  background: var(--ash);
 }
 
 .piano-roll-beats__cells i[data-lit] {
   border-color: transparent;
-  background: var(--color-core-paper);
+  background: var(--bone);
 }
 
 .piano-roll-beats[aria-pressed='true'] .piano-roll-beats__cells i[data-lit]:first-child {
-  background: var(--color-core-accent);
+  background: var(--signal);
 }
 
-/* The bars stepper drops its box with the rest of the bar's settings. */
-.piano-roll-setting .piano-roll-stepper {
-  height: var(--control-h-sm);
-  background: transparent;
-  color: var(--color-text-secondary);
-}
-
-.piano-roll-setting .piano-roll-stepper:hover,
-.piano-roll-setting .piano-roll-stepper:focus-within {
-  background: var(--surface-inset);
-}
-
-.piano-roll-setting__outside {
-  color: color-mix(in srgb, var(--color-core-accent) 70%, var(--color-core-paper));
-  font-size: var(--text-label);
-  white-space: nowrap;
-}
-
-/* ── Selection actions ──────────────────────────────────────────────────── */
-
-/* Floats over the bottom of the grid, so selecting a note can never change the
-   page's layout and move the grid under the cursor. Centred on the grid, which
-   is the page minus the sidebar rail on the left and the deck column on the
-   right. */
-.piano-roll-selection {
-  position: absolute;
-  bottom: 24px;
-  left: calc(50% + (var(--sidebar-rail-width, 72px) - var(--deck-col-w)) / 2);
-  z-index: 20;
+.piano-roll-stepper,
+.piano-roll-tools__zoom {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: var(--gap-control);
-  max-width: calc(100% - var(--sidebar-rail-width, 72px) - var(--deck-col-w) - 28px);
-  padding: 6px;
-  overflow-x: auto;
-  transform: translateX(-50%);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-large);
-  background: var(--surface-popover);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
-  /* It mounts mid double-click (adding a note), which would select its text. */
-  user-select: none;
+  flex: none;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--slab-raised);
 }
 
-.piano-roll-selection .btn {
-  flex: none;
+.piano-roll-stepper button,
+.piano-roll-tools__zoom button {
+  height: 100%;
+  width: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.piano-roll-selection__count {
-  flex: none;
-  padding: 0 6px;
-  color: var(--color-text-secondary);
-  font-size: var(--text-label);
+.piano-roll-stepper button:hover:not(:disabled),
+.piano-roll-tools__zoom button:hover:not(:disabled) {
+  background: var(--slab-raised-hover);
+}
+
+.piano-roll-stepper output {
+  min-width: 58px;
+  padding: 0 2px;
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: center;
   font-variant-numeric: tabular-nums;
+}
+
+.piano-roll-tools__zoom {
+  margin-left: auto;
+}
+
+.piano-roll-tools__zoom .piano-roll-tools__zoom-fit {
+  width: auto;
+  min-width: 48px;
+  padding: 0 6px;
+  color: var(--ash);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The tool bar: a slab set a little lower than the transport. */
+.piano-roll-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--tools-h);
+  padding: 0 10px;
+  background: var(--slab-well);
+  border-bottom: 1px solid var(--slab-joint);
+}
+
+/* Five tools butted together, the joints between them showing. */
+.piano-roll-tools__set {
+  display: flex;
+  flex: none;
+  gap: 1px;
+  padding: 0;
+  background: var(--slab-joint);
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+}
+
+.piano-roll-tool {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 26px;
+  border: 0;
+  background: var(--slab-raised);
+  color: var(--ash);
+  cursor: pointer;
+}
+
+.piano-roll-tool:hover {
+  background: var(--slab-raised-hover);
+  color: var(--bone);
+}
+
+.piano-roll-tool[aria-checked='true'] {
+  background: var(--bone);
+  color: var(--ink);
+}
+
+.piano-roll-tools__outside {
+  flex: none;
+  color: var(--signal);
+  font-family: var(--font-mono);
+  font-size: 10px;
   white-space: nowrap;
 }
 
-.piano-roll-selection select {
-  height: var(--control-h);
-  min-width: 0;
+/* ── Menus (native <details>, so their contents are always mounted) ─────── */
+
+.piano-roll-menu-anchor {
+  position: relative;
+  flex: none;
+}
+
+.piano-roll-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  padding: 4px;
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-panel);
+  box-shadow: 6px 6px 0 var(--slab-joint);
+}
+
+.piano-roll-menu--end {
+  right: 0;
+  left: auto;
+}
+
+.piano-roll-menu__heading {
+  margin: 0;
+  padding: 6px 10px 5px;
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+
+.piano-roll-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: var(--radius-medium);
-  background: var(--surface-inset);
-  color: var(--color-text-primary);
-  font-family: inherit;
-  font-size: var(--text-body);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--bone);
+  font-family: var(--font-grotesk);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.piano-roll-menu__item:hover {
+  background: var(--slab-raised-hover);
+}
+
+.piano-roll-menu__item kbd {
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.piano-roll-help {
+  width: 330px;
+  padding: 4px 4px 10px;
+}
+
+.piano-roll-help dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 14px;
+  margin: 0;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.piano-roll-help dt {
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.piano-roll-help dd {
+  margin: 0;
+  color: var(--ash);
+}
+
+/* ── Popovers: projects, account, a track's sounds ───────────────────────── */
+
+.piano-roll-popover {
+  position: absolute;
+  top: calc(var(--bar-h) + 4px);
+  z-index: 60;
+}
+
+.piano-roll-popover--projects {
+  left: calc(var(--gutter) + 8px);
+}
+
+.piano-roll-popover--account {
+  right: 8px;
 }
 
 /* ── Stage: the grid and the track column side by side ──────────────────── */
@@ -469,6 +523,412 @@
   display: flex;
   flex: 1;
   min-height: 0;
+}
+
+/* ── Grid ───────────────────────────────────────────────────────────────── */
+
+.piano-roll {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--slab-well);
+}
+
+.piano-roll__content {
+  display: grid;
+}
+
+.piano-roll__corner {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  background: var(--slab-panel);
+  border-right: 1px solid var(--slab-joint);
+  border-bottom: 1px solid var(--slab-joint);
+}
+
+.piano-roll__ruler {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--slab-panel);
+  border-bottom: 1px solid var(--slab-joint);
+}
+
+.piano-roll__bar-marker {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  padding: 5px 0 0 5px;
+  border-left: 1px solid var(--slab-joint);
+  color: var(--bone);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.piano-roll__bar-marker--beat {
+  top: 13px;
+  height: calc(100% - 13px);
+  padding-top: 2px;
+  border-left-color: rgba(0, 0, 0, 0.4);
+  color: var(--soot);
+  font-size: 9px;
+}
+
+/* The loop brace along the top of the ruler, as in Ableton. */
+.piano-roll__loop-brace {
+  position: absolute;
+  top: 0;
+  height: 4px;
+  background: var(--signal);
+}
+
+/* The keyboard is cast in the same concrete, lighter where the keys are
+   white. Black keys reach 62% across; where two white keys meet (B-C, E-F)
+   a seam shows, and white keys meet halfway down each black key. */
+.piano-roll__keys {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--slab-joint);
+  background: var(--key-white);
+}
+
+.piano-roll__key {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--key-white);
+  cursor: pointer;
+}
+
+.piano-roll__key:hover {
+  background: var(--key-white-hover);
+}
+
+.piano-roll__key--seam {
+  box-shadow: inset 0 -1px 0 var(--key-seam);
+}
+
+.piano-roll__key--black::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 62%;
+  background: var(--key-black);
+}
+
+.piano-roll__key--black::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 38%;
+  height: 1px;
+  background: var(--key-seam);
+}
+
+.piano-roll__key--black:hover::before {
+  background: #2c2b28;
+}
+
+.piano-roll__key.is-out-of-scale {
+  background: var(--key-white-dim);
+}
+
+.piano-roll__key:active,
+.piano-roll__key--black:active::before {
+  background: var(--track-color, var(--signal));
+}
+
+.piano-roll__key-label {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #3b3934;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.piano-roll__key.is-in-chord .piano-roll__key-label {
+  color: #6d4c1c;
+  font-weight: 700;
+}
+
+.piano-roll__grid {
+  position: relative;
+}
+
+.piano-roll__grid-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.piano-roll__notes {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+.piano-roll__notes[data-tool='draw'],
+.piano-roll__notes[data-tool='paint'] {
+  cursor: crosshair;
+}
+
+.piano-roll__notes[data-tool='slice'] {
+  cursor: col-resize;
+}
+
+.piano-roll__notes[data-tool='erase'] {
+  cursor: cell;
+}
+
+/* Notes are painted blocks: as solid as they are loud, square-cut, named
+   once they are wide enough. */
+.piano-roll__note,
+.piano-roll__ghost-note {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.piano-roll__note {
+  border: 1px solid rgba(8, 8, 7, 0.62);
+  background: var(--note-fill, var(--track-color));
+  cursor: move;
+}
+
+.piano-roll__notes[data-tool='paint'] .piano-roll__note,
+.piano-roll__notes[data-tool='slice'] .piano-roll__note,
+.piano-roll__notes[data-tool='erase'] .piano-roll__note {
+  cursor: inherit;
+}
+
+/* Either edge takes a resize; the handles are the note's own ends. */
+.piano-roll__notes[data-tool='select'] .piano-roll__note::before,
+.piano-roll__notes[data-tool='select'] .piano-roll__note::after,
+.piano-roll__notes[data-tool='draw'] .piano-roll__note::before,
+.piano-roll__notes[data-tool='draw'] .piano-roll__note::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  max-width: 33%;
+  cursor: ew-resize;
+}
+
+.piano-roll__note::before {
+  left: 0;
+}
+
+.piano-roll__note::after {
+  right: 0;
+}
+
+/* The handlers find a note by the element under the pointer, so the label
+   must never be that element. */
+.piano-roll__note-name {
+  padding: 0 4px;
+  color: rgba(12, 12, 11, 0.86);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Selected: the full colour, framed in bone with a cut inside it, so a
+   selection still says which layer it is on. */
+.piano-roll__note.is-selected {
+  border-color: var(--bone);
+  background: var(--track-color);
+  box-shadow: inset 0 0 0 1px rgba(8, 8, 7, 0.9);
+}
+
+/* Out of key: hollowed out rather than recoloured, so the track colour still
+   says which layer the note belongs to. */
+.piano-roll__note.is-out-of-scale:not(.is-selected) {
+  border-color: var(--track-color);
+  background: color-mix(in srgb, var(--track-color) 22%, var(--slab-well));
+}
+
+.piano-roll__note.is-out-of-scale:not(.is-selected) .piano-roll__note-name,
+.piano-roll__ghost-note .piano-roll__note-name {
+  color: var(--track-color);
+  font-weight: 400;
+}
+
+/* Muted (0): still on the grid, plainly not sounding. */
+.piano-roll__note.is-muted {
+  border: 1px dashed var(--track-color);
+  background: transparent;
+}
+
+.piano-roll__note.is-muted .piano-roll__note-name {
+  color: var(--track-color);
+}
+
+.piano-roll__note.is-muted.is-selected {
+  border-style: solid;
+  border-color: var(--bone);
+}
+
+/* Other layers: outlined in their colour, barely filled. Solid means "the
+   layer being edited", outlined means "another layer — click to edit". */
+.piano-roll__ghost-note {
+  border: 1px solid color-mix(in srgb, var(--track-color) 75%, transparent);
+  background: color-mix(in srgb, var(--track-color) 12%, transparent);
+  cursor: pointer;
+}
+
+.piano-roll__ghost-note:hover {
+  background: color-mix(in srgb, var(--track-color) 34%, transparent);
+}
+
+.piano-roll__ghost-note.is-muted {
+  opacity: 0.4;
+}
+
+.piano-roll__loop-region {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  border-left: 1px solid var(--signal);
+  border-right: 1px solid var(--signal);
+  background: color-mix(in srgb, var(--signal) 6%, transparent);
+  pointer-events: none;
+}
+
+.piano-roll__marquee {
+  position: absolute;
+  border: 1px solid var(--bone);
+  background: rgba(228, 223, 212, 0.07);
+  pointer-events: none;
+}
+
+/* The slice tool's cut, drawn where the note will part. */
+.piano-roll__knife {
+  position: absolute;
+  z-index: 2;
+  width: 0;
+  margin-left: -1px;
+  border-left: 2px solid var(--signal);
+  pointer-events: none;
+}
+
+.piano-roll__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  width: 1px;
+  background: var(--signal);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.piano-roll__playhead::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -4px;
+  width: 0;
+  height: 0;
+  border-left: 4.5px solid transparent;
+  border-right: 4.5px solid transparent;
+  border-top: 7px solid var(--signal);
+}
+
+/* ── Velocity lane: pinned under the grid, scrolling sideways with it ───── */
+
+.piano-roll__lane-label,
+.piano-roll__lane {
+  position: sticky;
+  bottom: 0;
+  border-top: 2px solid var(--slab-joint);
+}
+
+.piano-roll__lane-label {
+  left: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  border-right: 1px solid var(--slab-joint);
+  background: var(--slab-panel);
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+}
+
+.piano-roll__lane {
+  z-index: 3;
+  background: #20201e;
+}
+
+.velocity-lane {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.velocity-lane__stem {
+  position: absolute;
+  bottom: 0;
+  border-top: 2px solid var(--track-color);
+  border-left: 1px solid var(--track-color);
+  background: color-mix(in srgb, var(--track-color) 9%, transparent);
+  pointer-events: none;
+}
+
+/* The stem's head: a square cap you can grab. */
+.velocity-lane__stem::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  left: -4px;
+  width: 7px;
+  height: 7px;
+  background: var(--track-color);
+}
+
+.velocity-lane__stem.is-selected {
+  border-color: var(--bone);
+}
+
+.velocity-lane__stem.is-selected::before {
+  background: var(--bone);
+}
+
+.velocity-lane__stem.is-muted {
+  opacity: 0.35;
 }
 
 /* ── Track decks ────────────────────────────────────────────────────────
@@ -481,35 +941,31 @@
   flex-direction: column;
   flex: none;
   width: var(--deck-col-w);
-  border-left: 1px solid var(--border-hairline);
+  border-left: 1px solid var(--slab-joint);
+  background: var(--slab-panel);
 }
 
 .piano-roll-decks__list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 6px;
 }
 
-/* One row per track. Only the track being edited opens a second row for its
-   sound, and it is marked by a tint of its own colour rather than a frame, so
-   the column stays quiet next to the notes. The column sits beside the grid, so
-   a card changing height never moves the grid. */
+/* One row per track, a stripe of its colour down the left. Only the track
+   being edited opens a second row for its sound. The column sits beside the
+   grid, so a card changing height never moves the grid. */
 .piano-roll-deck {
   display: grid;
-  grid-template-columns: var(--control-h-sm) 1fr var(--control-h-sm) var(--control-h-sm);
-  grid-auto-rows: var(--control-h-sm);
-  gap: 4px 6px;
-  padding: 5px 8px;
-  border-radius: var(--radius-medium);
+  grid-template-columns: 26px 1fr 26px 26px;
+  grid-auto-rows: 26px;
+  gap: 5px 6px;
+  padding: 7px 8px 7px 10px;
+  border-left: 4px solid var(--track-color);
+  border-bottom: 1px solid var(--slab-joint);
 }
 
 .piano-roll-deck.is-active {
-  background: color-mix(in srgb, var(--track-color) 14%, transparent);
-}
-
-.piano-roll-deck:not(.is-active) .piano-roll-deck__select {
-  color: var(--color-text-secondary);
+  background: var(--slab-raised);
 }
 
 /* The activator carries the layer's number — the same number key switches to
@@ -517,24 +973,24 @@
 .piano-roll-deck__power {
   grid-area: 1 / 1;
   display: grid;
-  width: var(--control-h-sm);
-  height: var(--control-h-sm);
+  width: 26px;
+  height: 26px;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: var(--radius-small);
+  border-radius: 1px;
   background: var(--track-color);
-  color: var(--color-core-ink);
-  font-family: inherit;
-  font-size: var(--text-label);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 
 .piano-roll-deck__power[aria-pressed='false'] {
-  border-color: var(--border-hairline);
+  border-color: var(--soot);
   background: transparent;
-  color: var(--color-text-tertiary);
+  color: var(--soot);
 }
 
 /* Under the pointer (or keyboard focus) the number gives way to a power mark
@@ -551,7 +1007,7 @@
 
 .piano-roll-deck__power:hover,
 .piano-roll-deck__power:focus-visible {
-  border-color: var(--color-core-paper);
+  border-color: var(--bone);
   outline: 0;
 }
 
@@ -579,14 +1035,15 @@
   grid-area: 1 / 2;
   width: 100%;
   min-width: 0;
-  height: var(--control-h-sm);
+  height: 26px;
   padding: 0 6px;
   border: 0;
-  border-radius: var(--radius-small);
+  border-radius: 1px;
   background: transparent;
-  color: var(--color-text-secondary);
-  font-family: inherit;
-  font-size: var(--text-body);
+  color: var(--ash);
+  font-family: var(--font-grotesk);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .piano-roll-deck__select {
@@ -603,38 +1060,42 @@
 }
 
 .piano-roll-deck__select:hover {
-  background: var(--btn-hover-bg);
-  color: var(--color-text-primary);
+  background: var(--slab-raised-hover);
+  color: var(--bone);
 }
 
 .piano-roll-deck.is-active .piano-roll-deck__select {
-  color: var(--color-text-primary);
+  color: var(--bone);
 }
 
 .piano-roll-deck__rename {
-  background: var(--surface-inset);
-  color: var(--color-text-primary);
+  background: var(--slab-well);
+  color: var(--bone);
 }
 
 .piano-roll-deck__solo {
   grid-area: 1 / 4;
-  color: var(--color-text-tertiary);
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 1px;
+  background: var(--slab-well);
+  color: var(--soot);
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
+  cursor: pointer;
 }
 
 .piano-roll-deck__solo:hover,
 .piano-roll-deck__solo:focus-visible {
-  border-color: var(--color-core-paper);
-  background: var(--btn-active-bg);
-  color: var(--color-text-primary);
-  outline: 0;
+  color: var(--bone);
 }
 
 /* A soloed track says so in its own colour. */
 .piano-roll-deck__solo[aria-pressed='true'] {
-  border-color: transparent;
   background: var(--track-color);
-  color: var(--color-core-ink);
+  color: var(--ink);
 }
 
 /* On an idle track the sound button is only its chevron, in the track's one
@@ -647,22 +1108,22 @@
   gap: 8px;
   width: 100%;
   min-width: 0;
-  height: var(--control-h-sm);
+  height: 26px;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-small);
+  border-radius: 1px;
   background: transparent;
-  color: var(--color-text-secondary);
-  font-family: inherit;
-  font-size: var(--text-body);
+  color: var(--ash);
+  font-family: var(--font-mono);
+  font-size: 11px;
   text-align: left;
   cursor: pointer;
 }
 
 .piano-roll-deck__sound:hover,
 .piano-roll-deck__sound[aria-expanded='true'] {
-  background: var(--btn-active-bg);
-  color: var(--color-text-primary);
+  background: var(--slab-raised-hover);
+  color: var(--bone);
 }
 
 .piano-roll-deck__sound span {
@@ -677,7 +1138,7 @@
   grid-area: 2 / 1 / 3 / -1;
   justify-content: space-between;
   padding: 0 8px;
-  background: color-mix(in srgb, var(--color-core-ink) 35%, transparent);
+  background: var(--slab-well);
 }
 
 .piano-roll-deck.is-active .piano-roll-deck__sound span {
@@ -686,16 +1147,26 @@
 
 .piano-roll-deck__sound svg {
   flex: none;
-  color: var(--color-text-secondary);
 }
 
 /* Always mounted, and outside the scroller, so adding a layer moves nothing. */
 .piano-roll-decks__add {
+  display: grid;
   flex: none;
+  place-items: center;
   width: 100%;
-  height: var(--control-h);
-  border-top: 1px solid var(--border-hairline);
+  height: 36px;
+  border: 0;
+  border-top: 1px solid var(--slab-joint);
   border-radius: 0;
+  background: var(--slab-raised);
+  color: var(--ash);
+  cursor: pointer;
+}
+
+.piano-roll-decks__add:hover {
+  background: var(--slab-raised-hover);
+  color: var(--bone);
 }
 
 /* Opens leftwards, over the grid, so the column it belongs to stays visible. */
@@ -707,280 +1178,110 @@
   width: min(420px, 58vw);
   max-height: 100%;
   overflow-y: auto;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-large);
-  background: var(--surface-popover);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-panel);
+  box-shadow: 6px 6px 0 var(--slab-joint);
 }
 
-/* ── Grid ───────────────────────────────────────────────────────────────── */
+/* ── Selection actions ──────────────────────────────────────────────────── */
 
-.piano-roll {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  overflow: auto;
-  background: var(--color-bg-deep);
-}
-
-.piano-roll__content {
-  display: grid;
-}
-
-.piano-roll__corner {
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 4;
-  background: var(--color-bg-deep);
-  border-right: 1px solid var(--border-hairline);
-  border-bottom: 1px solid var(--border-hairline);
-}
-
-.piano-roll__ruler {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--color-bg-deep);
-  border-bottom: 1px solid var(--border-hairline);
-}
-
-.piano-roll__bar-marker {
+/* Floats over the bottom of the grid, so selecting a note can never change the
+   page's layout and move the grid under the cursor. Centred on the grid: the
+   page minus the gutter on the left and the deck column on the right. */
+.piano-roll-selection {
   position: absolute;
-  top: 6px;
-  padding-left: 6px;
-  font-size: var(--text-label);
-  letter-spacing: 0.08em;
-  color: var(--color-text-secondary);
-  border-left: 1px solid var(--border-hairline-strong);
-  height: calc(100% - 6px);
-}
-
-.piano-roll__keys {
-  position: sticky;
-  left: 0;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border-hairline);
-}
-
-/* The keyboard is a ruler, not a feature: dark on dark, so the only strong
-   colour on the page is the notes. A key lights in the active track's colour
-   while it is pressed. */
-.piano-roll__key {
-  border: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.3);
-  background: #1e2124;
-  color: var(--color-text-tertiary);
-  font-family: inherit;
-  font-size: var(--text-label);
-  letter-spacing: 0.06em;
-  text-align: right;
-  padding: 0 8px 0 0;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.piano-roll__key--black {
-  background: #121416;
-}
-
-.piano-roll__key:hover {
-  background: color-mix(in srgb, var(--track-color, var(--color-core-paper)) 16%, #1e2124);
-}
-
-.piano-roll__key.is-out-of-scale {
-  color: color-mix(in srgb, var(--color-text-tertiary) 45%, transparent);
-}
-
-.piano-roll__key.is-in-scale,
-.piano-roll__key.is-in-chord,
-.piano-roll__key--black.is-in-scale,
-.piano-roll__key--black.is-in-chord {
-  background: color-mix(in srgb, #59a0b1 26%, #1e2124);
-  color: var(--color-text-primary);
-}
-
-.piano-roll__key:active {
-  background: var(--track-color, var(--color-core-paper));
-  color: var(--color-core-ink);
-}
-
-.piano-roll__grid {
-  position: relative;
-}
-
-.piano-roll__grid-canvas {
-  position: absolute;
-  inset: 0;
-  display: block;
-}
-
-.piano-roll__notes {
-  position: absolute;
-  inset: 0;
-  touch-action: none;
-}
-
-/* Notes are the page: solid, rounded, in their layer's colour, and named once
-   they are wide enough. Everything around them is kept quiet so they read. */
-.piano-roll__note,
-.piano-roll__ghost-note {
-  position: absolute;
-  box-sizing: border-box;
+  bottom: 18px;
+  left: calc(var(--gutter) + (100% - var(--gutter) - var(--deck-col-w)) / 2);
+  z-index: 20;
   display: flex;
   align-items: center;
-  overflow: hidden;
-  border-radius: 4px;
-}
-
-.piano-roll__note {
-  border: 1px solid color-mix(in srgb, var(--color-core-ink) 80%, transparent);
-  background: var(--track-color, var(--color-core-accent));
-  cursor: grab;
-}
-
-/* The handlers find a note by the element under the pointer, so the label
-   must never be that element. */
-.piano-roll__note-name {
-  padding: 0 4px;
-  color: color-mix(in srgb, var(--color-core-ink) 88%, var(--track-color, var(--color-core-accent)));
-  font-size: var(--text-label);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  pointer-events: none;
+  flex-wrap: nowrap;
+  gap: 4px;
+  max-width: calc(100% - var(--gutter) - var(--deck-col-w) - 28px);
+  padding: 4px;
+  overflow-x: auto;
+  transform: translateX(-50%);
+  border: 1px solid var(--slab-joint);
+  border-radius: 2px;
+  background: var(--slab-panel);
+  box-shadow: 6px 6px 0 var(--slab-joint);
+  /* It mounts mid double-click (adding a note), which would select its text. */
   user-select: none;
 }
 
-.piano-roll__note:hover {
-  filter: brightness(1.12);
+.piano-roll-selection--over-lane {
+  bottom: calc(var(--lane-h) + 18px);
 }
 
-/* Selected keeps the layer colour, so a selection still says which layer it is
-   on; the paper frame is what marks it. */
-.piano-roll__note.is-selected {
-  border-color: var(--color-core-paper);
-  outline: 1px solid var(--color-core-paper);
-}
-
-/* Out of key: hollowed out rather than recoloured, so the track colour still
-   says which layer the note belongs to. */
-.piano-roll__note.is-out-of-scale:not(.is-selected) {
-  border-color: color-mix(in srgb, var(--track-color, var(--color-core-accent)) 60%, transparent);
-  background: color-mix(in srgb, var(--color-core-ink) 72%, var(--track-color, var(--color-core-accent)));
-}
-
-.piano-roll__note.is-out-of-scale:not(.is-selected) .piano-roll__note-name,
-.piano-roll__ghost-note .piano-roll__note-name {
-  color: var(--track-color);
-  font-weight: 400;
-}
-
-/* Other layers: outlined in their full colour, filled only lightly. Solid means
-   "the layer being edited", outlined means "another layer — click to edit". */
-.piano-roll__ghost-note {
-  border: 1px solid var(--track-color);
-  background: color-mix(in srgb, var(--track-color) 14%, transparent);
-  cursor: pointer;
-}
-
-.piano-roll__ghost-note:hover {
-  background: color-mix(in srgb, var(--track-color) 38%, transparent);
-}
-
-/* A layer whose activator is off: still there, plainly not sounding. */
-.piano-roll__ghost-note.is-muted {
-  opacity: 0.45;
-}
-
-.piano-roll__loop-region {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 1;
-  border-left: 2px solid rgba(255, 210, 106, 0.85);
-  border-right: 2px solid rgba(255, 210, 106, 0.85);
-  background: rgba(255, 210, 106, 0.035);
-  box-shadow: inset 0 1px 0 rgba(255, 210, 106, 0.45);
-  pointer-events: none;
-}
-
-.piano-roll__loop-region span {
-  position: sticky;
-  left: 4px;
-  top: 3px;
-  display: inline-block;
-  padding: 2px 5px;
-  background: rgba(43, 35, 13, 0.9);
-  color: rgba(255, 224, 137, 0.95);
-  font-size: var(--text-label);
-  letter-spacing: 0.06em;
-}
-
-.piano-roll__marquee {
-  position: absolute;
-  border: 1px dashed color-mix(in srgb, var(--color-core-accent) 70%, var(--color-core-paper));
-  background: color-mix(in srgb, var(--color-core-accent) 12%, transparent);
-  pointer-events: none;
-}
-
-.piano-roll__playhead {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 1px;
-  background: color-mix(in srgb, var(--color-core-accent) 40%, var(--color-core-paper));
-  pointer-events: none;
-  will-change: transform;
-  z-index: 3;
-}
-
-.piano-roll__playhead::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -4px;
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 7px solid color-mix(in srgb, var(--color-core-accent) 40%, var(--color-core-paper));
+.piano-roll-selection__count {
+  flex: none;
+  padding: 0 8px;
+  color: var(--ash);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ── Narrow screens ─────────────────────────────────────────────────────
-   At 900px the sidebar rail becomes a bottom bar, so the left gutter goes
-   and the grid keeps clear of the bar. */
+   At 900px the dock becomes a bottom bar, so the left gutter goes and the
+   grid keeps clear of the bar; the bars scroll sideways at a fixed height
+   rather than wrapping, so the grid never moves. */
+
+@media (max-width: 1180px) {
+  .piano-roll-bar {
+    gap: 10px;
+  }
+
+  .piano-roll-bar__status {
+    display: none;
+  }
+}
 
 @media (max-width: 900px) {
   .piano-roll-page {
     --deck-col-w: 176px;
-    padding-left: 0;
+    --gutter: 0px;
     padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
+  .piano-roll-bar {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  /* Groups keep their width and the bar scrolls, rather than squeezing one
+     group under the next. */
+  .piano-roll-bar__group {
+    flex: none;
+  }
+
+  .piano-roll-tools {
+    overflow-x: auto;
+  }
+
   .piano-roll-selection {
-    bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
-    left: calc(50% - var(--deck-col-w) / 2);
-    max-width: calc(100% - var(--deck-col-w) - 28px);
+    bottom: 16px;
   }
 
-  .piano-roll-topbar {
-    flex-wrap: wrap;
+  .piano-roll-selection--over-lane {
+    bottom: calc(var(--lane-h) + 16px);
   }
 
-  .piano-roll-topbar__zoom,
-  .piano-roll-stepper {
-    height: var(--control-h-touch);
+  .piano-roll-menu,
+  .piano-roll-help {
+    position: fixed;
+    top: calc(var(--bar-h) + var(--tools-h) + 6px);
+    right: 8px;
+    left: auto;
+    width: min(86vw, 330px);
   }
 
-  .piano-roll-topbar__help-panel,
-  .piano-roll-menu {
-    width: min(86vw, 320px);
-    min-width: 0;
+  .piano-roll-popover--projects,
+  .piano-roll-popover--account {
+    right: 8px;
+    left: 8px;
   }
 
   /* Too narrow to open beside the column: sit above the bottom bar instead. */
@@ -1011,33 +1312,29 @@
     flex-direction: row;
     width: 100%;
     border-left: 0;
-    border-bottom: 1px solid var(--border-hairline);
+    border-bottom: 1px solid var(--slab-joint);
   }
 
   .piano-roll-decks__list {
     display: flex;
-    gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
   }
 
-  /* In the strip every card keeps the two-row height (84px = two 32px rows +
-     the 4px gap + padding), active or not: the strip sits above the grid, so a
-     card growing here would push the grid down on every track switch. */
+  /* In the strip every card keeps the two-row height, active or not: the
+     strip sits above the grid, so a card growing here would push the grid
+     down on every track switch. */
   .piano-roll-deck {
     flex: 0 0 176px;
     height: var(--deck-h);
-    padding: 8px;
+    border-bottom: 0;
+    border-right: 1px solid var(--slab-joint);
   }
 
   .piano-roll-decks__add {
-    width: var(--control-h-touch);
+    width: 44px;
     height: auto;
     border-top: 0;
-    border-left: 1px solid var(--border-hairline);
-  }
-
-  .piano-roll-topbar__name {
-    max-width: none;
+    border-left: 1px solid var(--slab-joint);
   }
 }
