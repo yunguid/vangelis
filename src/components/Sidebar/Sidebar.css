@@ -1,6 +1,9 @@
 /* Sidebar Container */
 .sidebar-container {
-  --sidebar-rail-width: 72px;
+  /* Where the panel starts: just past the dock's widest reach (its 74px
+     plateau, the rim's 2.5px ripple, the pointer's 8px swell and the rim's
+     stroke), which also clears the current page's needle at rest. */
+  --dock-reach: 86px;
   --sidebar-panel-width: clamp(380px, 30vw, 460px);
   position: fixed;
   top: 0;
@@ -12,81 +15,33 @@
   isolation: isolate;
 }
 
-/* Icon Rail — a vertical dock, buttons clustered mid-height */
-.sidebar-rail {
-  position: relative;
-  width: var(--sidebar-rail-width);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 9px 14px;
-  gap: 12px;
-  background: rgba(20, 22, 23, 0.98);
-  border-right: 1px solid rgba(235, 219, 178, 0.1);
-  backdrop-filter: blur(22px);
-  pointer-events: auto;
-  z-index: 2;
-}
-
-.sidebar-rail__nav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
+/* The four controls, icons only: bone at rest, brass for the page you are on,
+   the open panel and a playing MIDI file. The dock and the phone bar share them. */
 .sidebar-rail__btn {
-  width: 54px;
-  min-height: 54px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 8px 0 7px;
-  border-radius: var(--radius-medium);
-  background: transparent;
-  color: var(--color-text-tertiary);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+  color: rgba(216, 211, 200, 0.8);
   cursor: pointer;
-  transition: color var(--transition-hover), background-color var(--transition-hover);
-  position: relative;
-  font-size: var(--text-label);
-  font-weight: 500;
-  letter-spacing: 0.03em;
+  transition: color var(--transition-hover);
 }
 
-/* Active-item edge: inside the button's own box so the rail's padding and the
-   viewport edge cannot clip it. */
-.sidebar-rail__btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 2px;
-  height: 22px;
-  transform: translateY(-50%);
-  background: var(--color-core-accent);
-  opacity: 0;
-  transition: opacity var(--transition-hover);
+@media (hover: hover) {
+  .sidebar-rail__btn:hover {
+    color: #d8d3c8;
+  }
+
+  .sidebar-rail__btn:not(:disabled):hover::before {
+    transform: scale(1.08);
+  }
 }
 
-/* Labels must clear the 72px rail on one line: the longest ("Editor") is
-   6 monospace chars at 11px + 0.03em tracking ~ 42px inside a 54px button. */
-.sidebar-rail__label {
-  display: block;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.sidebar-rail__btn:hover {
-  background: var(--btn-hover-bg);
-  color: var(--color-text-primary);
-}
-
-.sidebar-container--disabled .sidebar-rail {
-  background: rgba(8, 12, 19, 0.82);
+.sidebar-rail__btn[aria-current='page'],
+.sidebar-rail__btn[aria-expanded='true'],
+.sidebar-rail__btn.sidebar-rail__btn--playing {
+  color: #b08d57;
 }
 
 .sidebar-rail__btn:disabled {
@@ -94,46 +49,223 @@
   opacity: 0.36;
 }
 
-.sidebar-rail__btn:disabled:hover {
-  background: transparent;
-  color: var(--color-text-tertiary);
+/* Each icon is a 24 x 24 drawing with 1.5 strokes and round caps, used as a
+   mask so it paints in the control's colour. They live here rather than as
+   inline SVG to keep the markup out of every route's JS budget. The dots in
+   the SVG namespace URL are escaped as %2E, or perf:site's selector audit
+   would take its host name for class names. */
+.sidebar-rail__btn::before {
+  content: '';
+  width: 24px;
+  height: 24px;
+  background: currentColor;
+  -webkit-mask: var(--icon) center / 24px 24px no-repeat;
+  mask: var(--icon) center / 24px 24px no-repeat;
+  forced-color-adjust: none;
+  transition: transform 160ms ease;
 }
 
-.sidebar-rail__btn--active,
-.sidebar-rail__btn--current {
-  background: var(--btn-toggle-on-bg);
-  color: var(--color-text-primary);
+/* Sound controls: a knob with its pointer inside a gauge of seven ticks. */
+.sidebar-rail__btn[data-icon='sound'] {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.4 19.4A9.4 9.4 0 1 1 18.6 19.4M6.6 18.2 5.4 19.4M4.4 12.8H2.6M6.6 7.4 5.4 6.2M12 5.2V3.4M17.4 7.4l1.2-1.2M19.6 12.8h1.8M17.4 18.2l1.2 1.2M12 12.8 8.9 9.7'/%3E%3Ccircle cx='12' cy='12.8' r='4.4'/%3E%3C/svg%3E");
 }
 
-.sidebar-rail__btn--active::before,
-.sidebar-rail__btn--current::before {
-  opacity: 1;
+/* MIDI library: a 5-pin DIN socket, pins on the upper arc, key notch below. */
+.sidebar-rail__btn[data-icon='midi'] {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.4 21.3A9.4 9.4 0 1 1 13.6 21.3v-2.2h-3.2z'/%3E%3Cpath d='M6.6 12h0M8.2 8.2h0M12 6.6h0M15.8 8.2h0M17.4 12h0' stroke-width='2.4'/%3E%3C/svg%3E");
 }
 
-.sidebar-rail__btn--active:hover,
-.sidebar-rail__btn--current:hover {
-  background: color-mix(in srgb, var(--color-core-accent) 30%, transparent);
+/* Keyboard: one octave's slice, five white keys with black keys over C, D, F. */
+.sidebar-rail__btn[data-icon='keys'] {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.75 5h18.5v14H2.75zM6.5 13.4V19M10.2 13.4V19M13.9 5v14M17.6 13.4V19'/%3E%3Cpath d='M5.3 5h2.4v8.4H5.3zM9 5h2.4v8.4H9zM16.4 5h2.4v8.4h-2.4z' fill='%23000' stroke='none'/%3E%3C/svg%3E");
 }
 
-.sidebar-rail__btn--playing {
-  color: color-mix(in srgb, var(--color-core-accent) 70%, var(--color-core-paper));
+/* Editor: a piano roll, a key strip down the left edge and three notes. */
+.sidebar-rail__btn[data-icon='roll'] {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.75 4.75h18.5v14.5H2.75zM7 4.75v14.5'/%3E%3Cpath d='M2.75 7.4h2.4v1.7H2.75zM2.75 10.6h2.4v1.7H2.75zM2.75 15h2.4v1.7H2.75zM9 15h4.5v2H9zM13.5 11.5H16v2h-2.5zM15 8h4.5v2H15z' fill='%23000' stroke='none'/%3E%3C/svg%3E");
 }
 
-/* Nav action rail button: an <a>, not a <button>, so it needs its own reset
-   (no underline, box-sizing) — everything else matches .sidebar-rail__btn. */
-.sidebar-rail__btn--nav {
-  text-decoration: none;
-  box-sizing: border-box;
+/* The dock: at rest only a brass notch marks the left edge. Pointing at the
+   edge, tabbing into the dock or opening a panel grows a wave out of the wall
+   that carries the controls. While it is hidden only the 10px edge strip takes
+   the pointer, so the page underneath stays clickable. */
+@media (min-width: 901px) {
+  .sidebar-rail {
+    position: relative;
+    flex: none;
+    width: var(--dock-reach);
+    z-index: 2;
+  }
+
+  .dock__edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 10px;
+    pointer-events: auto;
+  }
+
+  .dock__notch {
+    position: absolute;
+    top: calc(50% - 20px);
+    left: 0;
+    width: 3px;
+    height: 40px;
+    border-radius: 0 2px 2px 0;
+    background: #b08d57;
+    opacity: 0.45;
+    transition: opacity 180ms ease;
+  }
+
+  .sidebar-rail[data-dock='shown'] .dock__notch {
+    opacity: 0;
+  }
+
+  /* The hover box: the dock's full height, as wide as its reach. */
+  .dock__body {
+    position: absolute;
+    top: calc(50% - 220px);
+    left: 0;
+    width: 100%;
+    height: 440px;
+  }
+
+  .sidebar-rail[data-dock='shown'] .dock__body {
+    pointer-events: auto;
+  }
+
+  .dock__wave {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 440px;
+    overflow: visible;
+    pointer-events: none;
+    transform-origin: left center;
+    transform: scaleX(0.04);
+    opacity: 0;
+    transition: transform 180ms ease-in, opacity 180ms ease-in;
+  }
+
+  /* Grows out of the wall with a slight liquid overshoot. */
+  .sidebar-rail[data-dock='shown'] .dock__wave {
+    transform: none;
+    opacity: 1;
+    transition: transform 260ms cubic-bezier(0.2, 0.9, 0.25, 1.15), opacity 120ms ease-out;
+  }
+
+  /* The wave loads after the page; if the dock came out before it arrived, it
+     still grows in rather than popping up. */
+  @starting-style {
+    .sidebar-rail[data-dock='shown'] .dock__wave {
+      transform: scaleX(0.04);
+      opacity: 0;
+    }
+  }
+
+  .dock__rim,
+  .dock__engraving {
+    stroke: #b08d57;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .dock__rim {
+    fill: #161615;
+    fill-opacity: 0.97;
+    stroke-width: 1.25;
+    stroke-linecap: round;
+  }
+
+  .dock__engraving {
+    fill: none;
+    stroke-width: 0.75;
+    stroke-opacity: 0.35;
+  }
+
+  .dock__rivet {
+    fill: #b08d57;
+    fill-opacity: 0.7;
+  }
+
+  /* Centred on the plateau: four 44px targets with 8px gaps span y 120-320. */
+  .sidebar-rail__nav {
+    position: absolute;
+    top: 120px;
+    left: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sidebar-rail .sidebar-rail__btn {
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 120ms ease-in, transform 120ms ease-in, color var(--transition-hover);
+  }
+
+  .sidebar-rail[data-dock='shown'] .sidebar-rail__btn {
+    opacity: 1;
+    transform: none;
+    transition: opacity 200ms ease-out var(--dock-delay, 0ms),
+      transform 260ms cubic-bezier(0.2, 0.9, 0.25, 1.15) var(--dock-delay, 0ms),
+      color var(--transition-hover);
+  }
+
+  .sidebar-rail[data-dock='shown'] .sidebar-rail__btn:disabled {
+    opacity: 0.36;
+  }
+
+  .sidebar-rail__nav > :nth-child(2) {
+    --dock-delay: 30ms;
+  }
+
+  .sidebar-rail__nav > :nth-child(3) {
+    --dock-delay: 60ms;
+  }
+
+  .sidebar-rail__nav > :nth-child(4) {
+    --dock-delay: 90ms;
+  }
 }
 
-.sidebar-rail__indicator {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-core-accent);
+/* No hover to reveal it: tapping the notch toggles the dock, a tap anywhere
+   else hides it. The tap target stays left of the controls once it is shown. */
+@media (min-width: 901px) and (hover: none) {
+  .dock__edge {
+    display: none;
+  }
+
+  .dock__notch {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .dock__notch::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    bottom: -12px;
+    left: 0;
+    width: 32px;
+  }
+
+  .sidebar-rail[data-dock='shown'] .dock__notch::before {
+    width: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-rail[data-dock] .dock__wave,
+  .sidebar-rail[data-dock] .sidebar-rail__btn {
+    transform: none;
+    transition: opacity 120ms ease, color var(--transition-hover);
+  }
+
+  .sidebar-rail__btn:not(:disabled):hover::before {
+    transform: none;
+  }
 }
 
 /* Expandable Panel */
@@ -268,7 +400,7 @@
 .sidebar-backdrop {
   position: fixed;
   inset: 0;
-  left: calc(var(--sidebar-rail-width) + var(--sidebar-panel-width));
+  left: calc(var(--dock-reach) + var(--sidebar-panel-width));
   background: color-mix(in srgb, var(--color-core-ink) 18%, transparent);
   pointer-events: auto;
   z-index: 0;
@@ -719,44 +851,52 @@
     justify-content: flex-end;
   }
 
+  /* No dock on a phone: the controls sit in a bar along the bottom. */
   .sidebar-rail {
-    width: 100%;
-    height: auto;
-    min-height: 56px;
-    flex-direction: row;
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    width: 100%;
+    min-height: 56px;
     padding: 8px max(12px, env(safe-area-inset-left, 0px))
       calc(8px + env(safe-area-inset-bottom, 0px))
       max(12px, env(safe-area-inset-right, 0px));
-    border-right: 0;
-    border-top: 0;
     background: rgba(10, 14, 23, 0.94);
     backdrop-filter: blur(18px);
+    pointer-events: auto;
+  }
+
+  .sidebar-container--disabled .sidebar-rail {
+    background: rgba(8, 12, 19, 0.82);
+  }
+
+  .dock__edge,
+  .dock__notch,
+  .dock__wave {
+    display: none;
+  }
+
+  .dock__body {
+    flex: 1;
   }
 
   .sidebar-rail__nav {
-    width: 100%;
-    flex-direction: row;
+    display: flex;
     justify-content: center;
     gap: 8px;
   }
 
+  /* 49px keeps the bar at the 65px it was with text labels under the icons;
+     the sound dial rises from that height. */
   .sidebar-rail__btn {
     flex: 1;
     width: auto;
-    min-height: 40px;
     max-width: 200px;
+    height: auto;
+    min-height: 49px;
     padding: 8px 10px;
-    border-radius: var(--radius-medium);
-  }
-
-  .sidebar-rail__label {
-    display: inline;
-  }
-
-  .sidebar-rail__indicator {
-    top: 8px;
-    right: 10px;
   }
 
   .sidebar-panel {
@@ -823,15 +963,12 @@
 @media (max-width: 520px) {
   .sidebar-rail {
     min-height: 54px;
-    gap: 6px;
     padding-inline: max(10px, env(safe-area-inset-left, 0px));
   }
 
   .sidebar-rail__btn {
     max-width: none;
-    min-height: 38px;
     padding: 8px 2px;
-    letter-spacing: 0.02em;
   }
 
   .sidebar-panel {

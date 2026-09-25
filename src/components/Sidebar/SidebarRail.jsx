@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { PIANO_ROLL_HREF } from '../../utils/routes.js';
 import './Sidebar.css';
 
@@ -9,6 +9,17 @@ const preloadPianoRollRoute = () => {
   pianoRollRoutePromise.catch(() => undefined);
 };
 
+// The wave behind the controls is desktop decoration: it is fetched off the
+// route's critical path, and never on a phone, where the dock is a bottom bar.
+const DockWave = React.lazy(() => import('./DockWave.jsx'));
+
+const HIDE_DELAY_MS = 320;
+
+const TABS = [
+  { id: 'sound', label: 'Sound', noun: 'controls', title: 'Sound controls' },
+  { id: 'midi', label: 'MIDI', noun: 'browser', title: 'MIDI library' }
+];
+
 const SidebarRail = ({
   isOpen = false,
   activeTab = 'sound',
@@ -18,85 +29,120 @@ const SidebarRail = ({
   onTabSelect = () => {},
   onPanelPreload = () => {}
 }) => {
-  const tabs = [
-    {
-      id: 'sound',
-      label: 'Sound',
-      icon: (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="6" y1="5" x2="6" y2="19" />
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="18" y1="5" x2="18" y2="19" />
-          <circle cx="6" cy="9" r="2.2" fill="currentColor" stroke="none" />
-          <circle cx="12" cy="15" r="2.2" fill="currentColor" stroke="none" />
-          <circle cx="18" cy="8" r="2.2" fill="currentColor" stroke="none" />
-        </svg>
-      ),
-      isActive: false
-    },
-    {
-      id: 'midi',
-      label: 'MIDI',
-      icon: (
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-        </svg>
-      ),
-      isActive: !disabled && isMidiPlaying
+  const rootRef = useRef(null);
+  const hideTimerRef = useRef(0);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [waveWanted, setWaveWanted] = useState(false);
+  const shown = hovered || focused || pinned || isOpen;
+
+  const reveal = () => {
+    clearTimeout(hideTimerRef.current);
+    setHovered(true);
+  };
+  const release = () => {
+    clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setHovered(false), HIDE_DELAY_MS);
+  };
+
+  // At desktop widths, mount the wave once the page is idle, or at once if the
+  // dock comes out first.
+  useEffect(() => {
+    if (waveWanted || !window.matchMedia?.('(min-width: 901px)').matches) return undefined;
+    if (shown || !window.requestIdleCallback) {
+      setWaveWanted(true);
+      return undefined;
     }
-  ];
+    const idleId = window.requestIdleCallback(() => setWaveWanted(true), { timeout: 1000 });
+    return () => window.cancelIdleCallback(idleId);
+  }, [waveWanted, shown]);
+
+  useEffect(() => {
+    if (!shown) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      clearTimeout(hideTimerRef.current);
+      setHovered(false);
+      setPinned(false);
+      if (rootRef.current.contains(document.activeElement)) document.activeElement.blur();
+    };
+    const onPointerDown = (event) => {
+      if (!rootRef.current.contains(event.target)) setPinned(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => {
+      // A hide is only ever pending while the dock is shown, so this also
+      // clears it on unmount.
+      clearTimeout(hideTimerRef.current);
+      window.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('pointerdown', onPointerDown);
+    };
+  }, [shown]);
 
   return (
-    <div className="sidebar-rail">
-      <div className="sidebar-rail__nav">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`sidebar-rail__btn ${isOpen && activeTab === tab.id ? 'sidebar-rail__btn--active' : ''} ${tab.isActive ? 'sidebar-rail__btn--playing' : ''}`}
-            onClick={() => onTabSelect(tab.id)}
-            onPointerEnter={() => onPanelPreload(tab.id)}
-            onFocus={() => onPanelPreload(tab.id)}
-            disabled={disabled}
-            aria-label={disabled ? `${tab.label} panel unavailable on this page` : isOpen && activeTab === tab.id ? `Close ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}` : `Open ${tab.label} ${tab.id === 'sound' ? 'controls' : 'browser'}`}
-            aria-expanded={!disabled && isOpen && activeTab === tab.id}
-            title={disabled ? 'Only on the keyboard page' : undefined}
-          >
-            {tab.icon}
-            <span className="sidebar-rail__label">{tab.label}</span>
-            {tab.isActive && <span className="sidebar-rail__indicator" />}
-          </button>
-        ))}
-        <a
-          className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'keyboard' ? 'sidebar-rail__btn--current' : ''}`}
-          href="#/"
-          aria-label="Open the keyboard player"
-          aria-current={currentView === 'keyboard' ? 'page' : undefined}
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="6" width="18" height="12" rx="1.5" />
-            <line x1="8.5" y1="6" x2="8.5" y2="13.5" />
-            <line x1="15.5" y1="6" x2="15.5" y2="13.5" />
-          </svg>
-          <span className="sidebar-rail__label">Play</span>
-        </a>
-        <a
-          className={`sidebar-rail__btn sidebar-rail__btn--nav ${currentView === 'editor' ? 'sidebar-rail__btn--current' : ''}`}
-          href={PIANO_ROLL_HREF}
-          aria-label="Open the pattern editor"
-          aria-current={currentView === 'editor' ? 'page' : undefined}
-          onPointerEnter={preloadPianoRollRoute}
-          onFocus={preloadPianoRollRoute}
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="16" rx="1.5" />
-            <line x1="9" y1="4" x2="9" y2="20" />
-            <rect x="10.5" y="7" width="6" height="2.6" rx="0.6" fill="currentColor" stroke="none" />
-            <rect x="13" y="12" width="5" height="2.6" rx="0.6" fill="currentColor" stroke="none" />
-          </svg>
-          <span className="sidebar-rail__label">Editor</span>
-        </a>
+    // onFocus/onBlur bubble here as focusin/focusout (React does this itself,
+    // preact/compat maps them). Only keyboard focus holds the dock out: a mouse
+    // click that focuses a control must not keep it out once the pointer leaves.
+    <div
+      className="sidebar-rail"
+      ref={rootRef}
+      data-dock={shown ? 'shown' : 'hidden'}
+      onFocus={(event) => setFocused(event.target.matches(':focus-visible'))}
+      onBlur={() => setFocused(false)}
+    >
+      <div className="dock__edge" onPointerEnter={reveal} onPointerLeave={release} />
+      <div className="dock__body" onPointerEnter={reveal} onPointerLeave={release}>
+        {waveWanted && (
+          <React.Suspense fallback={null}>
+            <DockWave currentView={currentView} />
+          </React.Suspense>
+        )}
+        <div className="sidebar-rail__nav">
+          {TABS.map((tab) => {
+            const expanded = !disabled && isOpen && activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={tab.id === 'midi' && !disabled && isMidiPlaying
+                  ? 'sidebar-rail__btn sidebar-rail__btn--playing'
+                  : 'sidebar-rail__btn'}
+                data-icon={tab.id}
+                onClick={() => onTabSelect(tab.id)}
+                onPointerEnter={() => onPanelPreload(tab.id)}
+                onFocus={() => onPanelPreload(tab.id)}
+                disabled={disabled}
+                aria-label={disabled
+                  ? `${tab.label} panel unavailable on this page`
+                  : `${expanded ? 'Close' : 'Open'} ${tab.label} ${tab.noun}`}
+                aria-expanded={expanded}
+                title={tab.title}
+              />
+            );
+          })}
+          <a
+            className="sidebar-rail__btn"
+            data-icon="keys"
+            href="#/"
+            title="Keyboard"
+            aria-label="Open the keyboard player"
+            aria-current={currentView === 'keyboard' ? 'page' : undefined}
+          />
+          <a
+            className="sidebar-rail__btn"
+            data-icon="roll"
+            href={PIANO_ROLL_HREF}
+            title="Editor"
+            aria-label="Open the pattern editor"
+            aria-current={currentView === 'editor' ? 'page' : undefined}
+            onPointerEnter={preloadPianoRollRoute}
+            onFocus={preloadPianoRollRoute}
+          />
+        </div>
       </div>
+      <div className="dock__notch" onClick={() => setPinned((value) => !value)} />
     </div>
   );
 };

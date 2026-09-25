@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import Sidebar from './index.jsx';
 import { MidiTransportContext, SoundControlsContext } from '../../context/SynthContexts.jsx';
 
@@ -55,18 +55,31 @@ const buildProps = (overrides = {}) => ({
   ...overrides
 });
 
+// jsdom has no matchMedia; a test that installs one must not leak it (once
+// restoreAllMocks strips its implementation it returns undefined).
+const originalMatchMedia = window.matchMedia;
+
 afterEach(() => {
   delete window.__vangelisPerf;
   document.body.style.overflow = '';
   document.body.style.touchAction = '';
+  window.matchMedia = originalMatchMedia;
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
 describe('Sidebar', () => {
-  it('renders rail buttons with labels', () => {
-    render(<Sidebar {...buildProps()} />);
-    expect(screen.getByRole('button', { name: /open midi browser/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /open sound controls/i })).toBeInTheDocument();
+  it('renders icon-only controls, named by aria-label with a title tooltip', () => {
+    const { container } = render(<Sidebar {...buildProps()} />);
+    expect(screen.getByRole('button', { name: /open midi browser/i }))
+      .toHaveAttribute('title', 'MIDI library');
+    expect(screen.getByRole('button', { name: /open sound controls/i }))
+      .toHaveAttribute('title', 'Sound controls');
+    expect(screen.getByRole('link', { name: 'Open the keyboard player' }))
+      .toHaveAttribute('title', 'Keyboard');
+    expect(screen.getByRole('link', { name: 'Open the pattern editor' }))
+      .toHaveAttribute('title', 'Editor');
+    expect(container.querySelector('.sidebar-rail').textContent).toBe('');
     expect(screen.queryByRole('link', { name: /return to keyboard/i })).not.toBeInTheDocument();
   });
 
@@ -280,5 +293,108 @@ describe('Sidebar', () => {
 
     expect(document.body.style.overflow).toBe('');
     expect(document.body.style.touchAction).toBe('');
+  });
+});
+
+describe('Sidebar wave dock', () => {
+  const renderDock = (overrides) => {
+    const view = render(<Sidebar {...buildProps(overrides)} />);
+    const dock = view.container.querySelector('.sidebar-rail');
+    return {
+      ...view,
+      dock,
+      edge: dock.querySelector('.dock__edge'),
+      body: dock.querySelector('.dock__body'),
+      notch: dock.querySelector('.dock__notch')
+    };
+  };
+
+  it('stays hidden until the pointer reaches the left edge', () => {
+    const { dock, edge } = renderDock();
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+
+    fireEvent.pointerEnter(edge);
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+  });
+
+  it('hides 320ms after the pointer leaves the edge and the wave, unless it comes back', () => {
+    vi.useFakeTimers();
+    const { dock, edge, body } = renderDock();
+
+    fireEvent.pointerEnter(edge);
+    fireEvent.pointerLeave(edge);
+    act(() => vi.advanceTimersByTime(300));
+    fireEvent.pointerEnter(body);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+
+    fireEvent.pointerLeave(body);
+    act(() => vi.advanceTimersByTime(319));
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+    act(() => vi.advanceTimersByTime(1));
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+  });
+
+  it('stays out while a panel is open and hides once it closes with the pointer away', () => {
+    vi.useFakeTimers();
+    const { dock, body, rerender } = renderDock({ isOpen: true });
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+
+    fireEvent.pointerEnter(body);
+    fireEvent.pointerLeave(body);
+    act(() => vi.advanceTimersByTime(1000));
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+
+    rerender(<Sidebar {...buildProps({ isOpen: false })} />);
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+  });
+
+  it('comes out while keyboard focus is inside it', () => {
+    const { dock } = renderDock();
+    const keyboardLink = screen.getByRole('link', { name: 'Open the keyboard player' });
+
+    act(() => keyboardLink.focus());
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+
+    act(() => keyboardLink.blur());
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+  });
+
+  it('goes away on Escape, taking keyboard focus out with it', () => {
+    const { dock, edge } = renderDock();
+    fireEvent.pointerEnter(edge);
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+
+    const keyboardLink = screen.getByRole('link', { name: 'Open the keyboard player' });
+    act(() => keyboardLink.focus());
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+    expect(keyboardLink).not.toHaveFocus();
+  });
+
+  it('toggles on a tap of the notch and hides on a tap outside it', () => {
+    const { dock, notch } = renderDock();
+    fireEvent.click(notch);
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+    fireEvent.click(notch);
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+
+    fireEvent.click(notch);
+    fireEvent.pointerDown(screen.getByRole('button', { name: /open sound controls/i }));
+    expect(dock).toHaveAttribute('data-dock', 'shown');
+    fireEvent.pointerDown(document.body);
+    expect(dock).toHaveAttribute('data-dock', 'hidden');
+  });
+
+  it('marks the current page and a playing MIDI file on their controls', () => {
+    renderDock({ currentView: 'editor', isMidiPlaying: true });
+    expect(screen.getByRole('link', { name: 'Open the pattern editor' }))
+      .toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Open the keyboard player' }))
+      .not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: /open midi browser/i }))
+      .toHaveClass('sidebar-rail__btn--playing');
   });
 });

@@ -33,7 +33,7 @@
 .sound-designer-page__shell {
   width: auto;
   max-width: 1080px;
-  margin-left: max(88px, calc((100vw - 1080px) / 2));
+  margin-left: max(24px, calc((100vw - 1080px) / 2));
   margin-right: max(16px, calc((100vw - 1080px) / 2));
   padding: var(--space-sm) var(--space-lg) 0;
   min-height: 100vh;

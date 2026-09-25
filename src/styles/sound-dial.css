@@ -8,7 +8,7 @@
   --dial-h: calc(var(--dial-w) * 0.3);
   --u: calc(var(--dial-w) / 960);
   position: fixed;
-  left: 72px; /* the sidebar rail */
+  left: 0; /* the sidebar hides at the left edge, so the dial centres in the full width */
   right: 0;
   bottom: 0;
   height: var(--dial-h);
@@ -305,12 +305,11 @@
 }
 
 @media (max-width: 900px) {
-  /* The rail becomes a bottom bar here, 65px tall with its labels; the dial
-     rises from just above it. Sized from the height, not the narrow width, so
-     the hub still has room for a few rows of the list. */
+  /* The sidebar becomes a 65px bottom bar here; the dial rises from just above
+     it. Sized from the height, not the narrow width, so the hub still has room
+     for a few rows of the list. */
   .sound-dial-dock {
     --dial-w: clamp(773px, 115vh, 933px);
-    left: 0;
     bottom: calc(65px + env(safe-area-inset-bottom, 0px));
   }
 
