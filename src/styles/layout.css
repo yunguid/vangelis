@@ -97,6 +97,41 @@
   padding: var(--space-lg) 0;
 }
 
+/* The visual row: Wave Candy, or the notes of what is playing, with the switch
+   in its corner. Both fill the same box, so nothing below it moves. */
+.visual-deck {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: min(1200px, 95vw);
+}
+
+.visual-deck__switch {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--color-text-tertiary);
+  opacity: 0.7;
+}
+
+.visual-deck__switch:hover,
+.visual-deck__switch:focus-visible,
+.visual-deck__switch[aria-pressed='true'] {
+  opacity: 1;
+}
+
+@media (max-width: 1200px) {
+  .visual-deck {
+    width: min(100%, 96vw);
+  }
+}
+
+@media (max-width: 900px) {
+  .visual-deck {
+    width: 100%;
+  }
+}
+
 /* Branding */
 .brand-block {
   display: flex;

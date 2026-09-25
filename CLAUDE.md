@@ -204,7 +204,15 @@ src/
   `mute` (a decay on the audio clock) and a set's `gain`
 - `node scripts/render_performance.mjs --piece <landing id> --out x.wav` renders
   a sampled performance offline the way the page plays it (voices, master chain
-  and the real reverb worklet), for comparing against a source recording
+  and the real reverb worklet), for comparing against a source recording;
+  `--peaks file.json` also writes the render's waveform (480 peak/RMS pairs)
+- A performance with a `waveform` file (`LANDING_PIECES`) shows it as a still
+  picture at the top of the open sound dial while its instrument is the loaded
+  sound; the dial takes it when it opens and keeps it until it closes
+- The visual row is a deck: its corner switch (`showNotes`, saved in the
+  session) swaps Wave Candy for `BirdsEyeRadar`, the falling notes of whatever
+  is playing (the MIDI tab's piece, else the landing piece), in the same box,
+  so the keyboard never moves
 - Visual feedback on keyboard shows active notes
 - Play/pause/stop controls with progress bar
 

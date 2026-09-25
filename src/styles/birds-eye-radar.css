@@ -61,3 +61,30 @@
     min-height: clamp(144px, 25vh, 194px);
   }
 }
+
+/* In the visual row, in Wave Candy's place and at its height: the keyboard never moves. */
+.birds-eye-radar--deck {
+  width: min(1200px, 95vw);
+}
+
+.birds-eye-radar--deck .birds-eye-radar__stage {
+  min-height: 0;
+  height: 150px;
+}
+
+@media (max-width: 1200px) {
+  .birds-eye-radar--deck {
+    width: min(100%, 96vw);
+  }
+}
+
+@media (max-width: 900px) {
+  .birds-eye-radar--deck {
+    width: 100%;
+  }
+
+  .birds-eye-radar--deck .birds-eye-radar__stage {
+    min-height: 0;
+    height: var(--wave-candy-height);
+  }
+}

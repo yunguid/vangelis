@@ -11,6 +11,8 @@
  * Usage (needs ffmpeg):
  *   node scripts/render_performance.mjs --piece <landing piece id> --out <file.wav>
  *     [--from <s>] [--to <s>] [--midi <draft.mid>, played in place of the piece's file]
+ *     [--peaks <file.json>, the render's waveform as 480 peak/RMS pairs: the
+ *      still picture of the piece the sound dial shows]
  */
 
 import { execFileSync } from 'node:child_process';
@@ -263,5 +265,32 @@ for (let i = 0; i < frames; i++) { interleaved[2 * i] = left[i]; interleaved[2 *
 writeFileSync(outFile, Buffer.concat([header, Buffer.from(interleaved.buffer)]));
 let peak = 0;
 for (let i = 0; i < frames; i++) peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
+const peaksFile = argument('peaks');
+if (peaksFile) {
+  // The waveform as a still picture: per bin, the loudest sample and the RMS,
+  // relative to the loudest bin, over the notes' own span.
+  const BINS = 480;
+  const last = Math.min(frames, Math.ceil((Math.max(...arranged.notes.map((note) => note.time + note.duration)) - from) * SAMPLE_RATE));
+  const size = last / BINS;
+  const bins = Array.from({ length: BINS }, (_, bin) => {
+    let max = 0;
+    let energy = 0;
+    const a = Math.floor(bin * size);
+    const b = Math.floor((bin + 1) * size);
+    for (let i = a; i < b; i++) {
+      const x = (left[i] + right[i]) / 2;
+      max = Math.max(max, Math.abs(x));
+      energy += x * x;
+    }
+    return [max, Math.sqrt(energy / Math.max(1, b - a))];
+  });
+  const top = Math.max(...bins.map(([max]) => max));
+  const round = (value) => Math.round((value / top) * 1000) / 1000;
+  writeFileSync(peaksFile, `${JSON.stringify({
+    seconds: Math.round((last / SAMPLE_RATE) * 100) / 100,
+    peak: bins.map(([max]) => round(max)),
+    rms: bins.map(([, rms]) => round(rms))
+  })}\n`);
+}
 console.log(`${outFile}: ${voices} notes, ${(frames / SAMPLE_RATE).toFixed(1)} s, peak ${(20 * Math.log10(peak)).toFixed(2)} dBFS`
   + (overThreshold ? `, ${overThreshold} samples over the limiter threshold (not modelled)` : ''));

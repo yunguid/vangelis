@@ -40,6 +40,22 @@ const openDial = async (onChoose = vi.fn()) => {
 
 describe('SoundDial', () => {
   beforeEach(() => vi.useFakeTimers());
+
+  it('shows the loaded piece\u2019s waveform on top while open, fixed until it closes', async () => {
+    const wave = { seconds: 1, peak: [0, 1, 0.5], rms: [0, 0.5, 0.2] };
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, json: async () => wave });
+    const artifact = { src: '/midi/piece.waveform.json', title: 'Pernambuco', caption: 'Luiz Bonfá · 3 notes' };
+    const { rerender } = render(<SoundDial activeSoundName="Sine" onChoose={vi.fn()} artifact={artifact} />);
+    fireEvent.click(screen.getByRole('button', { name: /choose a sound/i }));
+    await act(async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); });
+    expect(fetchMock).toHaveBeenCalledWith('/midi/piece.waveform.json');
+    expect(screen.getByText('Pernambuco · Luiz Bonfá · 3 notes')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'The waveform of Pernambuco' }).querySelectorAll('path')).toHaveLength(2);
+    // Browsing to another sound while open unloads the piece's sound; the picture stays put.
+    rerender(<SoundDial activeSoundName="Sine" onChoose={vi.fn()} artifact={null} />);
+    expect(screen.getByText('Pernambuco · Luiz Bonfá · 3 notes')).toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
   afterEach(() => {
     vi.useRealTimers();
     localStorage.clear();

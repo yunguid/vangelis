@@ -5,9 +5,11 @@ import { parseMidiFile } from './utils/midiParser.js';
 
 // Opening lifecycle is exercised with the real MIDI scheduler in its integration tests.
 // `opening.sound` stands in for the sound of whichever landing piece was picked.
-const opening = vi.hoisted(() => ({ sound: null }));
+const opening = vi.hoisted(() => ({ sound: null, currentMidi: null }));
 vi.mock('./hooks/useOpeningPerformance.js', () => ({
-  useOpeningPerformance: () => ({ activeNotes: new Set(), stop: vi.fn(), sound: opening.sound })
+  useOpeningPerformance: () => ({
+    activeNotes: new Set(), stop: vi.fn(), sound: opening.sound, currentMidi: opening.currentMidi, piece: null
+  })
 }));
 
 const recordings = vi.hoisted(() => ({ load: null }));
@@ -67,7 +69,25 @@ describe('App', () => {
     window.localStorage.clear();
     engineStatus.current = { wasmReady: false, graphWarmed: false };
     opening.sound = null;
+    opening.currentMidi = null;
     recordings.load = vi.fn();
+  });
+
+  it('swaps the visual row for the notes of the opening piece, and remembers it', async () => {
+    opening.currentMidi = { duration: 1, notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }] };
+    const { unmount } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Show the notes' }));
+    expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
+    // The landing piece feeds the notes, so there is no "load a MIDI file" prompt.
+    expect(screen.queryByText(/Load a MIDI file/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('wave-candy-mock')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show the sound' })).toHaveAttribute('aria-pressed', 'true');
+
+    unmount(); // leaving the page saves the session
+    render(<App />);
+    expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show the sound' }));
+    expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument();
   });
 
   it('renders the app title', async () => {

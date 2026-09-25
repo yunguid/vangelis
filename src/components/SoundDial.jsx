@@ -37,14 +37,37 @@ const turnedTo = (position, index, count) => {
   return Math.round(position) + (delta > count / 2 ? delta - count : delta);
 };
 
+// A performance's waveform, fetched once per piece: { seconds, peak: [...], rms: [...] }.
+const artifactRequests = new Map();
+const loadArtifact = (src) => {
+  if (!artifactRequests.has(src)) {
+    const request = fetch(src).then((response) => {
+      if (!response.ok) throw new Error(`Waveform ${src}: HTTP ${response.status}`);
+      return response.json();
+    });
+    request.catch(() => artifactRequests.delete(src)); // a failed load may be retried
+    artifactRequests.set(src, request);
+  }
+  return artifactRequests.get(src);
+};
+
+// The waveform as one closed shape, mirrored about the middle of a 0-100 box.
+const mirroredPath = (values) => {
+  const top = values.map((value, index) => `${index},${(50 - value * 48).toFixed(1)}`);
+  const bottom = values.map((value, index) => `${index},${(50 + value * 48).toFixed(1)}`).reverse();
+  return `M${top.join('L')}L${bottom.join('L')}Z`;
+};
+
 /**
  * SoundDial - the sound selector: a wide dial rising from the bottom edge.
  * Every sound is a tick on a wheel that turns under a fixed needle, grouped
  * into category bands. Turn it (drag, scroll, arrows, the side steppers), pick
  * from the list of the category under the needle, or type to find a sound.
- * Resting on a sound loads it, so browsing is auditioning.
+ * Resting on a sound loads it, so browsing is auditioning. `artifact`
+ * ({ src, title, caption }) is the piece whose sound is loaded, when it brings a
+ * still picture of its waveform: the open dial shows it on top.
  */
-const SoundDial = ({ activeSoundName, onChoose }) => {
+const SoundDial = ({ activeSoundName, onChoose, artifact = null }) => {
   const [catalog, setCatalog] = useState(null);
   const [failed, setFailed] = useState(false);
   const [open, setOpen] = useState(false);
@@ -60,6 +83,9 @@ const SoundDial = ({ activeSoundName, onChoose }) => {
   const chosenRef = useRef(null);
   const needleRef = useRef(null);
   const focusSearchRef = useRef(false);
+  // Taken when the dial opens and kept until it closes, so browsing never moves the list.
+  const [shownArtifact, setShownArtifact] = useState(null);
+  const [artifactWave, setArtifactWave] = useState(null);
 
   const ensureCatalog = useCallback(() => {
     loadingRef.current ||= loadSoundCatalog()
@@ -176,8 +202,19 @@ const SoundDial = ({ activeSoundName, onChoose }) => {
 
   const openDial = useCallback(() => {
     setOpen(true);
+    setShownArtifact(artifact);
     ensureCatalog();
-  }, [ensureCatalog]);
+  }, [artifact, ensureCatalog]);
+
+  useEffect(() => {
+    setArtifactWave(null);
+    if (!shownArtifact) return undefined;
+    let current = true;
+    loadArtifact(shownArtifact.src)
+      .then((wave) => { if (current) setArtifactWave(wave); })
+      .catch((error) => console.error('Sound dial: the piece\u2019s waveform did not load', error));
+    return () => { current = false; };
+  }, [shownArtifact]);
 
   // The hub is inert while closed, so the search can only take focus once open.
   useEffect(() => {
@@ -358,6 +395,27 @@ const SoundDial = ({ activeSoundName, onChoose }) => {
         </button>
 
         <div className="sound-dial__hub" inert={open ? undefined : ''}>
+          {shownArtifact && (
+            <figure className="sound-dial__artifact">
+              <svg
+                className="sound-dial__wave"
+                viewBox={`0 0 ${Math.max(1, (artifactWave?.peak.length || 1) - 1)} 100`}
+                preserveAspectRatio="none"
+                role="img"
+                aria-label={`The waveform of ${shownArtifact.title}`}
+              >
+                {artifactWave && (
+                  <>
+                    <path className="sound-dial__wave-peak" d={mirroredPath(artifactWave.peak)} />
+                    <path className="sound-dial__wave-body" d={mirroredPath(artifactWave.rms)} />
+                  </>
+                )}
+              </svg>
+              <figcaption className="sound-dial__artifact-caption">
+                {[shownArtifact.title, shownArtifact.caption].filter(Boolean).join(' · ')}
+              </figcaption>
+            </figure>
+          )}
           {/* The steppers sit here, inside the scale, so the whole ring stays draggable. */}
           <div className="sound-dial__finder">
             <button type="button" className="sound-dial__step" onClick={() => step(-1)} aria-label="Previous sound">

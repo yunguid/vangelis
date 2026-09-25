@@ -51,6 +51,7 @@ export const getDefaultSessionState = () => ({
   activeSampleId: null,
   sampleSelection: null,
   showShortcuts: false,
+  showNotes: false,
   tempoFactor: 1
 });
 
@@ -81,6 +82,7 @@ export function loadAppSession() {
       activeSampleId: typeof parsed.activeSampleId === 'string' ? parsed.activeSampleId : null,
       sampleSelection: coerceSampleSelection(parsed.sampleSelection),
       showShortcuts: !!parsed.showShortcuts,
+      showNotes: !!parsed.showNotes,
       tempoFactor: typeof parsed.tempoFactor === 'number' && Number.isFinite(parsed.tempoFactor)
         ? Math.max(0.25, Math.min(2, parsed.tempoFactor))
         : 1

@@ -37,7 +37,9 @@ export const LANDING_PIECES = Object.freeze([
     relativePath: 'performances/pernambuco.mid',
     instrument: 'nylon-guitar',
     transcription: 'pernambuco',
-    instrumentLabel: 'Nylon-string guitar'
+    instrumentLabel: 'Nylon-string guitar',
+    // Its rendered waveform (scripts/render_performance.mjs --peaks), shown in the open sound dial.
+    waveform: 'performances/pernambuco.waveform.json'
   },
   {
     id: 'original-pocket-park',
@@ -48,9 +50,10 @@ export const LANDING_PIECES = Object.freeze([
 
 /** The landing pieces as built-in file entries (the shape the MIDI library lists). */
 export const getLandingFiles = (base = import.meta.env.BASE_URL) => LANDING_PIECES.map(
-  ({ relativePath, presetId, ...piece }) => ({
+  ({ relativePath, presetId, waveform, ...piece }) => ({
     ...piece,
     path: withBase(`midi/${relativePath}`, base),
+    ...(waveform ? { waveform: withBase(`midi/${waveform}`, base) } : {}),
     landing: presetId ? { presetId } : {}
   })
 );

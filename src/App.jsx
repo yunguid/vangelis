@@ -25,6 +25,7 @@ import {
 } from './context/SynthContexts.jsx';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { consumePendingMidi } from './utils/pendingMidiHandoff.js';
+import { getLandingFiles } from './data/landingQueue.js';
 import { createTrailingDeadlineScheduler } from './utils/trailingDeadlineScheduler.js';
 import './styles/overlays.css';
 
@@ -50,6 +51,18 @@ const isTextInputTarget = (target) => {
 
 const SoundDial = React.lazy(() => import('./components/SoundDial.jsx'));
 
+// The visual row's switch: notes (a few staggered bars) or the sound (a wave).
+const NOTES_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <path d="M4 7h7M9 12h9M6 17h6" />
+  </svg>
+);
+const WAVE_ICON = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0" />
+  </svg>
+);
+
 const SOUND_OFF_ICON = (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
@@ -68,6 +81,8 @@ const App = () => {
     sanitizeAudioParams(initialSession.audioParams || AUDIO_PARAM_DEFAULTS)
   ));
   const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
+  // The visual row shows the sound (Wave Candy) or the notes of what is playing.
+  const [showNotes, setShowNotes] = useState(() => initialSession.showNotes || false);
   const [isRecording, setIsRecording] = useState(false);
   // Arrival is just the keyboard playing the opening; the sidebar opens on request.
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -116,6 +131,31 @@ const App = () => {
 
   // Hardware MIDI input (notes + pitch bend + mod wheel)
   const webMidi = useWebMidiInput({ waveformType, audioParams, onUserPlay: opening.stop });
+  const notesSource = midiPlayback.currentMidi ? midiPlayback : opening;
+  const toggleNotes = useCallback(() => setShowNotes((shown) => !shown), []);
+
+  // A performance that brings a still picture of its waveform shows it in the
+  // open sound dial while its instrument is the sound under the keys.
+  const shownPiece = useMemo(() => {
+    const id = midiPlayback.currentMidi?.sourceFileId;
+    return id ? getLandingFiles().find((file) => file.id === id) || null : opening.piece;
+  }, [midiPlayback.currentMidi, opening.piece]);
+  const noteCount = notesSource.currentMidi?.notes?.length ?? 0;
+  const dialArtifact = useMemo(() => (
+    shownPiece?.waveform && instrument === shownPiece.instrument
+      ? {
+        src: shownPiece.waveform,
+        title: shownPiece.name,
+        caption: [
+          shownPiece.composer,
+          noteCount
+            ? `${noteCount.toLocaleString('en-US')} notes${shownPiece.transcription ? ' transcribed from the record' : ''}`
+            : null
+        ].filter(Boolean).join(' · ')
+      }
+      : null
+  ), [instrument, noteCount, shownPiece]);
+
   const externalActiveNotes = useMemo(() => {
     const merged = new Set(midiPlayback.activeNotes);
     opening.activeNotes.forEach((noteId) => merged.add(noteId));
@@ -354,6 +394,7 @@ const App = () => {
       activeSampleId,
       sampleSelection,
       showShortcuts,
+      showNotes,
       tempoFactor: midiPlayback.tempoFactor
     };
     sessionSnapshotRef.current = snapshot;
@@ -366,6 +407,7 @@ const App = () => {
     controlSections,
     midiPlayback.tempoFactor,
     sampleSelection,
+    showNotes,
     showShortcuts,
     sidebarTab,
     waveformType
@@ -536,25 +578,37 @@ const App = () => {
           <AppHeader onToggleRecording={handleRecordToggle} isRecording={isRecording} />
 
           <main className="zone-center content-primary" aria-label="Keyboard area">
-            {showPrimaryVisual ? (
-              <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
-                <WaveCandy />
-              </React.Suspense>
-            ) : (
-              <div className="wave-candy wave-candy-placeholder" aria-hidden="true" />
-            )}
+            <div className="visual-deck">
+              {showNotes ? (
+                <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
+                  <BirdsEyeRadar
+                    className="birds-eye-radar--deck"
+                    currentMidi={notesSource.currentMidi}
+                    progress={notesSource.progress}
+                    activeNotes={notesSource.activeNotes}
+                    isPlaying={notesSource.isPlaying}
+                  />
+                </React.Suspense>
+              ) : showPrimaryVisual ? (
+                <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
+                  <WaveCandy />
+                </React.Suspense>
+              ) : (
+                <div className="wave-candy wave-candy-placeholder" aria-hidden="true" />
+              )}
+              <button
+                type="button"
+                className="btn btn--toggle visual-deck__switch"
+                aria-pressed={showNotes}
+                aria-label={showNotes ? 'Show the sound' : 'Show the notes'}
+                title={showNotes ? 'Show the sound' : 'Show the notes'}
+                onClick={toggleNotes}
+              >
+                {showNotes ? WAVE_ICON : NOTES_ICON}
+              </button>
+            </div>
             <div className="keyboard-surface" role="region" aria-label="Virtual keyboard">
               <div className="keyboard-region">
-                {midiPlayback.currentMidi && (
-                  <React.Suspense fallback={null}>
-                    <BirdsEyeRadar
-                      currentMidi={midiPlayback.currentMidi}
-                      progress={midiPlayback.progress}
-                      activeNotes={midiPlayback.activeNotes}
-                      isPlaying={midiPlayback.isPlaying}
-                    />
-                  </React.Suspense>
-                )}
                 <SynthKeyboard
                   onUserPlay={opening.stop}
                   waveformType={waveformType}
@@ -580,7 +634,11 @@ const App = () => {
           </main>
 
           <React.Suspense fallback={null}>
-            <SoundDial activeSoundName={activePresetName || waveformType} onChoose={handleSoundChosen} />
+            <SoundDial
+              activeSoundName={activePresetName || waveformType}
+              onChoose={handleSoundChosen}
+              artifact={dialArtifact}
+            />
           </React.Suspense>
 
         {showShortcuts && (
