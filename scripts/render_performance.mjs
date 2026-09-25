@@ -1,0 +1,267 @@
+#!/usr/bin/env node
+/**
+ * Render a sampled performance offline, the way the page plays it, to a WAV
+ * file: the piece's own arranger picks each note's recording, sample voices
+ * are emulated as SampleVoice schedules them (exponential gain ramps, linear
+ * playback-rate interpolation, release at the note's end), and the master
+ * chain runs with the values applyGlobalParams sets, including the real
+ * reverb worklet. Used to compare a performance against its source recording
+ * without a browser.
+ *
+ * Usage (needs ffmpeg):
+ *   node scripts/render_performance.mjs --piece <landing piece id> --out <file.wav>
+ *     [--from <s>] [--to <s>] [--midi <draft.mid>, played in place of the piece's file]
+ */
+
+import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import tonejsMidi from '@tonejs/midi';
+
+const SAMPLE_RATE = 48000;
+const BLOCK = 128;
+const MINIMUM_GAIN = 0.0001; // utils/audioEngine/constants.js
+// The master limiter (threshold -2.5 dB, ratio 14, knee 0) adds Chrome's
+// automatic makeup gain even when it never compresses.
+const LIMITER_THRESHOLD_DB = -2.5;
+const LIMITER_RATIO = 14;
+const LIMITER_MAKEUP_DB = 0.6 * -(LIMITER_THRESHOLD_DB - LIMITER_THRESHOLD_DB / LIMITER_RATIO);
+
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const argument = (name, fallback = null) => {
+  const index = process.argv.indexOf(`--${name}`);
+  return index >= 0 ? process.argv[index + 1] : fallback;
+};
+
+// ── Worklet and parameter plumbing, as the page sets them ──────────────────
+
+globalThis.sampleRate = SAMPLE_RATE;
+globalThis.AudioWorkletProcessor = class {
+  constructor() {
+    this.port = { onmessage: null, postMessage() {} };
+  }
+};
+const processors = {};
+globalThis.registerProcessor = (name, cls) => { processors[name] = cls; };
+await import('../src/audio/reverb-worklet.js');
+const {
+  AUDIO_PARAM_DEFAULTS, BRIGHTNESS_SHELF_HARMONIC, MUTE_ONSET_SECONDS, sanitizeAudioParams
+} = await import('../src/utils/audioParams.js');
+const { applyGlobalParams, DistortionCurveCache } = await import('../src/utils/audioEngine/effects.js');
+const { LANDING_PIECES } = await import('../src/data/landingQueue.js');
+
+/** The gains, filter settings and reverb parameters applyGlobalParams would set. */
+function captureGlobalParams(params) {
+  const captured = { gains: {}, reverb: null };
+  const param = (name) => ({
+    value: 0,
+    cancelScheduledValues() {},
+    setTargetAtTime(value) { captured.gains[name] = value; },
+    setValueAtTime(value) { captured.gains[name] = value; }
+  });
+  const node = (name) => ({ gain: param(name), frequency: param(`${name}.frequency`), Q: param(`${name}.Q`), pan: param(name), curve: null });
+  const nodes = Object.fromEntries([
+    'masterGain', 'delaySend', 'delayWet', 'reverbSend', 'reverbWet', 'warmthFilter',
+    'presenceFilter', 'postTone', 'airFilter', 'distortion', 'stereoPanner'
+  ].map((name) => [name, node(name)]));
+  applyGlobalParams({
+    params,
+    transportTempoBpm: 120,
+    ctx: { currentTime: 0 },
+    nodes,
+    distortionCache: new DistortionCurveCache(),
+    delayWorklet: { setParams() {} },
+    reverbWorklet: { setParams(value) { captured.reverb = value; } },
+    synthWorklet: { setParams() {} }
+  });
+  return captured;
+}
+
+// ── Biquads (Web Audio's formulas) ──────────────────────────────────────────
+
+function biquad(type, frequency, gainDb, q) {
+  const w0 = 2 * Math.PI * frequency / SAMPLE_RATE;
+  const A = 10 ** (gainDb / 40);
+  let b0, b1, b2, a0, a1, a2;
+  if (type === 'highpass') {
+    // Web Audio reads a highpass Q in dB.
+    const alpha = Math.sin(w0) / (2 * 10 ** (q / 20));
+    b0 = (1 + Math.cos(w0)) / 2; b1 = -(1 + Math.cos(w0)); b2 = b0;
+    a0 = 1 + alpha; a1 = -2 * Math.cos(w0); a2 = 1 - alpha;
+  } else if (type === 'peaking') {
+    const alpha = Math.sin(w0) / (2 * q);
+    b0 = 1 + alpha * A; b1 = -2 * Math.cos(w0); b2 = 1 - alpha * A;
+    a0 = 1 + alpha / A; a1 = -2 * Math.cos(w0); a2 = 1 - alpha / A;
+  } else if (type === 'lowshelf' || type === 'highshelf') {
+    const alpha = Math.sin(w0) / 2 * Math.SQRT2;
+    const sign = type === 'lowshelf' ? 1 : -1;
+    const k = 2 * Math.sqrt(A) * alpha;
+    b0 = A * ((A + 1) - sign * (A - 1) * Math.cos(w0) + k);
+    b1 = sign * 2 * A * ((A - 1) - sign * (A + 1) * Math.cos(w0));
+    b2 = A * ((A + 1) - sign * (A - 1) * Math.cos(w0) - k);
+    a0 = (A + 1) + sign * (A - 1) * Math.cos(w0) + k;
+    a1 = -sign * 2 * ((A - 1) + sign * (A + 1) * Math.cos(w0));
+    a2 = (A + 1) + sign * (A - 1) * Math.cos(w0) - k;
+  } else {
+    throw new Error(`biquad type ${type}`);
+  }
+  const c = [b0 / a0, b1 / a0, b2 / a0, a1 / a0, a2 / a0];
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  return (x) => {
+    const y = c[0] * x + c[1] * x1 + c[2] * x2 - c[3] * y1 - c[4] * y2;
+    x2 = x1; x1 = x; y2 = y1; y1 = y;
+    return y;
+  };
+}
+
+// ── Recordings ──────────────────────────────────────────────────────────────
+
+/** Decode like decodeAudioData: to the context rate, as an AudioBuffer look-alike. */
+function decode(file) {
+  const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-f', 'f32le', '-ac', '1', '-ar', String(SAMPLE_RATE), '-'], { maxBuffer: 2 ** 31 - 1 });
+  const data = new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+  return { sampleRate: SAMPLE_RATE, length: data.length, duration: data.length / SAMPLE_RATE, numberOfChannels: 1, getChannelData: () => data };
+}
+
+function readScore(midiPath) {
+  const midi = new tonejsMidi.Midi(readFileSync(midiPath));
+  const notes = midi.tracks
+    .flatMap((track) => track.notes.map((note) => ({
+      midi: note.midi, time: note.time, duration: note.duration, velocity: note.velocity, channel: track.channel
+    })))
+    .sort((a, b) => a.time - b.time);
+  return { name: midi.name, duration: midi.duration, notes };
+}
+
+async function arrange(piece, midiPath) {
+  if (piece.transcription === 'pernambuco') {
+    const { readGuitarPerformance, arrangePernambuco, pernambucoTake } = await import('../src/data/pernambuco.js');
+    const score = readGuitarPerformance(new tonejsMidi.Midi(readFileSync(midiPath)));
+    const keys = [...new Set(score.notes.map(pernambucoTake))];
+    const buffers = new Map(keys.map((key) => [key, decode(path.join(root, 'public/samples/nylon-guitar', `${key}.mp3`))]));
+    return arrangePernambuco(score, buffers);
+  }
+  const score = readScore(midiPath);
+  if (piece.instrument === 'nylon-guitar') {
+    const { assignGuitarTakes, arrangeGuitarPerformance } = await import('../src/data/nylonGuitar.js');
+    const keys = [...new Set(assignGuitarTakes(score.notes))];
+    const buffers = new Map(keys.map((key) => [key, decode(path.join(root, 'public/samples/nylon-guitar', `${key}.mp3`))]));
+    return arrangeGuitarPerformance(score, buffers);
+  }
+  throw new Error(`render_performance: no offline arranger for instrument ${piece.instrument}`);
+}
+
+// ── Render ──────────────────────────────────────────────────────────────────
+
+const pieceId = argument('piece');
+const outFile = argument('out');
+const piece = LANDING_PIECES.find((entry) => entry.id === pieceId);
+if (!piece || !outFile) {
+  console.error(`usage: node scripts/render_performance.mjs --piece <${LANDING_PIECES.map((entry) => entry.id).join('|')}> --out <file.wav> [--from <s>] [--to <s>] [--midi <file.mid>]`);
+  process.exit(1);
+}
+const arranged = await arrange(piece, path.resolve(argument('midi', path.join(root, 'public', 'midi', piece.relativePath))));
+const from = Number(argument('from', 0));
+const to = Number(argument('to', arranged.duration + 4));
+const frames = Math.ceil((to - from) * SAMPLE_RATE);
+const bus = new Float32Array(frames);
+
+let params = null;
+let voices = 0;
+for (const note of arranged.notes) {
+  const end = note.time + note.duration;
+  if (end < from || note.time > to) continue;
+  params = sanitizeAudioParams({ ...AUDIO_PARAM_DEFAULTS, ...(note.audioParams || note.audioParamOverrides) });
+  const { buffer, baseFrequency, brightness, mute, gain = 1 } = note.sample;
+  const data = buffer.getChannelData(0);
+  const frequency = 440 * 2 ** ((note.midi - 69) / 12);
+  const rate = frequency / baseFrequency * buffer.sampleRate / SAMPLE_RATE;
+  const start = (note.time - from) * SAMPLE_RATE;
+  const target = params.volume * Math.min(1, Math.max(0, note.velocity)) * gain;
+  const attack = params.attack * SAMPLE_RATE;
+  const releaseAt = (end - from) * SAMPLE_RATE;
+  const release = params.release * SAMPLE_RATE;
+  const stopAt = releaseAt + release + 0.05 * SAMPLE_RATE;
+  // SampleVoice's per-stroke high shelf and muted decay (setTargetAtTime).
+  const shelf = brightness
+    ? biquad('highshelf', Math.min(frequency * BRIGHTNESS_SHELF_HARMONIC, SAMPLE_RATE * 0.45), brightness, 0)
+    : null;
+  const muteAt = mute > 0 ? Math.max(MUTE_ONSET_SECONDS * SAMPLE_RATE, attack) : Infinity;
+  voices += 1;
+  // SampleVoice: exponential ramp from the floor to the target over the
+  // attack, hold (sustain 1), then an exponential ramp to the floor.
+  let gainAtRelease = null;
+  for (let frame = Math.max(0, Math.ceil(start)); frame < Math.min(frames, stopAt); frame++) {
+    const position = (frame - start) * rate;
+    const index = Math.floor(position);
+    if (index + 1 >= data.length) break;
+    let sample = data[index] + (data[index + 1] - data[index]) * (position - index);
+    if (shelf) sample = shelf(sample);
+    const elapsed = frame - start;
+    let gain = elapsed < attack ? MINIMUM_GAIN * (target / MINIMUM_GAIN) ** (elapsed / attack) : target;
+    if (elapsed >= muteAt) gain = MINIMUM_GAIN + (target - MINIMUM_GAIN) * Math.exp(-(elapsed - muteAt) / (mute * SAMPLE_RATE));
+    if (frame >= releaseAt) {
+      if (gainAtRelease === null) gainAtRelease = gain;
+      const t = (frame - releaseAt) / release;
+      gain = t >= 1 ? MINIMUM_GAIN : gainAtRelease * (MINIMUM_GAIN / gainAtRelease) ** t;
+    }
+    bus[frame] += sample * gain;
+  }
+}
+if (!params) throw new Error('no notes in range');
+
+// Master chain (utils/audioEngine/graph.js) with this piece's settings.
+const captured = captureGlobalParams(params);
+const g = captured.gains;
+const chain = [
+  biquad('highpass', 28, 0, 0.72),
+  biquad('lowshelf', 168, g.warmthFilter, 0.72),
+  biquad('peaking', 2400, g.presenceFilter, 0.85),
+  biquad('peaking', 540, g.postTone, 0.6),
+  biquad('highshelf', 8400, g.airFilter, 0.66)
+];
+const Reverb = processors['vangelis-reverb'];
+const reverb = new Reverb();
+reverb.port.onmessage({ data: { type: 'setParams', params: captured.reverb } });
+const left = new Float32Array(frames);
+const right = new Float32Array(frames);
+const makeup = 10 ** (LIMITER_MAKEUP_DB / 20);
+let overThreshold = 0;
+for (let offset = 0; offset < frames; offset += BLOCK) {
+  const count = Math.min(BLOCK, frames - offset);
+  const dry = new Float32Array(BLOCK);
+  const send = new Float32Array(BLOCK);
+  for (let i = 0; i < count; i++) {
+    let x = bus[offset + i] * 0.92; // headroom
+    for (const filter of chain) x = filter(x);
+    dry[i] = x;
+    send[i] = x * (g.reverbSend ?? 0);
+  }
+  const wetLeft = new Float32Array(BLOCK);
+  const wetRight = new Float32Array(BLOCK);
+  reverb.process([[send, send]], [[wetLeft, wetRight]]);
+  for (let i = 0; i < count; i++) {
+    const wet = g.reverbWet ?? 0;
+    const l = (dry[i] + wetLeft[i] * wet) * g.masterGain * makeup;
+    const r = (dry[i] + wetRight[i] * wet) * g.masterGain * makeup;
+    if (Math.max(Math.abs(l), Math.abs(r)) > 10 ** (LIMITER_THRESHOLD_DB / 20)) overThreshold += 1;
+    left[offset + i] = l;
+    right[offset + i] = r;
+  }
+}
+
+const header = Buffer.alloc(44);
+const bytes = frames * 8;
+header.write('RIFF', 0); header.writeUInt32LE(36 + bytes, 4); header.write('WAVEfmt ', 8);
+header.writeUInt32LE(16, 16); header.writeUInt16LE(3, 20); header.writeUInt16LE(2, 22);
+header.writeUInt32LE(SAMPLE_RATE, 24); header.writeUInt32LE(SAMPLE_RATE * 8, 28);
+header.writeUInt16LE(8, 32); header.writeUInt16LE(32, 34);
+header.write('data', 36); header.writeUInt32LE(bytes, 40);
+const interleaved = new Float32Array(frames * 2);
+for (let i = 0; i < frames; i++) { interleaved[2 * i] = left[i]; interleaved[2 * i + 1] = right[i]; }
+writeFileSync(outFile, Buffer.concat([header, Buffer.from(interleaved.buffer)]));
+let peak = 0;
+for (let i = 0; i < frames; i++) peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
+console.log(`${outFile}: ${voices} notes, ${(frames / SAMPLE_RATE).toFixed(1)} s, peak ${(20 * Math.log10(peak)).toFixed(2)} dBFS`
+  + (overThreshold ? `, ${overThreshold} samples over the limiter threshold (not modelled)` : ''));

@@ -194,6 +194,17 @@ src/
   `src/data/nylonGuitar.js` (samples built by `scripts/build_nylon_guitar.mjs`,
   attribution in `public/samples/nylon-guitar/README.md`). Sampled notes are
   started on the audio clock, so strums keep their string-to-string spacing
+- `Pernambuco` (Luiz Bonfá, *Solo in Rio 1959*) is a note-by-note transcription
+  of the record, not the record: `src/data/pernambuco.js` reads its MIDI file
+  (channel = string; velocity = loudness; CC 70 = which recorded stroke, CC 74 =
+  brightness, CC 75 = how fast a muted stroke dies; RPN 1 = the record's pitch,
+  +41.7 cents) and plays each note from the Iowa take of that string, fret and
+  stroke in `public/samples/nylon-guitar/pernambuco`, voiced like the record.
+  `SampleVoice` applies a stroke's `brightness` (a high shelf at 3x the note),
+  `mute` (a decay on the audio clock) and a set's `gain`
+- `node scripts/render_performance.mjs --piece <landing id> --out x.wav` renders
+  a sampled performance offline the way the page plays it (voices, master chain
+  and the real reverb worklet), for comparing against a source recording
 - Visual feedback on keyboard shows active notes
 - Play/pause/stop controls with progress bar
 

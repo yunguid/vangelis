@@ -29,6 +29,17 @@ export const LANDING_PIECES = Object.freeze([
     instrumentLabel: 'Nylon-string guitar'
   },
   {
+    // Transcribed from Bonfá's 1959 record and played from recordings voiced
+    // like it (data/pernambuco.js); the keys get the playable nylon guitar.
+    id: 'performance-pernambuco',
+    name: 'Pernambuco',
+    composer: 'Luiz Bonfá',
+    relativePath: 'performances/pernambuco.mid',
+    instrument: 'nylon-guitar',
+    transcription: 'pernambuco',
+    instrumentLabel: 'Nylon-string guitar'
+  },
+  {
     id: 'original-pocket-park',
     relativePath: 'originals/original-pocket-park.mid',
     presetId: 'lab-pocket-lead'
@@ -139,6 +150,11 @@ async function arrangeSampledPiece(context, file) {
     const { volume, pan, ...room } = OPENING_PARAMS;
     const notes = score.notes.map((note) => ({ ...note, audioParamOverrides: room }));
     return { score: { ...score, notes }, params: OPENING_PARAMS, waveformType: 'Sine' };
+  }
+
+  if (file.transcription === 'pernambuco') {
+    const { loadPernambuco } = await import('./pernambuco.js');
+    return { score: await loadPernambuco(context, file.path), params: null, waveformType: 'Sine' };
   }
 
   if (file.instrument === 'nylon-guitar') {

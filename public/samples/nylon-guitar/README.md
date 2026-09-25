@@ -44,3 +44,16 @@ rebuilds them. Per take it:
   with ffmpeg/libmp3lame quality 4, 44.1 kHz.
 
 No compression, equalisation above 70 Hz or noise reduction is applied.
+
+`pernambuco/` holds the takes "Pernambuco" plays (`public/midi/performances/
+pernambuco.mid`, a note-by-note transcription of Luiz Bonfá's 1959 recording):
+one file per string, fret and stroke the transcription uses, named like the
+others (`s5f2mf.mp3`). They come from the same Iowa guitar, taken from the
+24-bit/96 kHz mono masters (`Guitar.mono.2496.zip`), whose noise floor sits
+about 112 dB under full scale, so the pianissimo strokes are usable here.
+Each take is retuned to equal temperament, then voiced to sound like Bonfá's
+guitar on that tape: an equaliser and a faster decay of the upper partials,
+both measured by fitting the Iowa takes to the record, plus a per-pitch
+correction of the balance of partials. Every take is set on one level line,
+trimmed to the longest note that plays it and encoded as mono MP3. No audio
+from the record itself is in these files.
