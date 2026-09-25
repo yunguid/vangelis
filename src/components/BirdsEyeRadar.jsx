@@ -47,7 +47,6 @@ const createParticlePathBuckets = () => ({
 });
 
 const BirdsEyeRadar = ({
-  className = '',
   currentMidi,
   progress,
   activeNotes = EMPTY_ACTIVE_NOTES,
@@ -402,7 +401,7 @@ const BirdsEyeRadar = ({
   }, [midiRange.max, midiRange.min]);
 
   return (
-    <section className={`birds-eye-radar ${className}`.trim()} aria-label="Bird's-eye MIDI radar">
+    <section className="birds-eye-radar" aria-label="Bird's-eye MIDI radar">
       <div className="birds-eye-radar__stage">
         <canvas ref={canvasRef} className="birds-eye-radar__canvas" />
         {!currentMidi && (

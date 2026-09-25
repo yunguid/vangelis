@@ -8,9 +8,11 @@ import { AUDIO_PARAM_DEFAULTS, sanitizeAudioParams } from '../utils/audioParams.
 import { withBase } from '../utils/baseUrl.js';
 
 /**
- * Every piece that may open the page. Performances bring a sampled instrument;
- * originals name the Patch Lab sound they are voiced with. The MIDI library
- * (utils/midiParser.js) builds its rows for these from the same list.
+ * Every piece that may open the page, and the performances the MIDI library
+ * lists (utils/midiParser.js builds its rows from this list). Performances
+ * bring a sampled instrument; originals name the Patch Lab sound they are
+ * voiced with. `landing: false` keeps a performance in the library without
+ * letting it open the page.
  */
 export const LANDING_PIECES = Object.freeze([
   {
@@ -26,7 +28,8 @@ export const LANDING_PIECES = Object.freeze([
     name: 'Saudade de Triana',
     relativePath: 'performances/saudade-de-triana.mid',
     instrument: 'nylon-guitar',
-    instrumentLabel: 'Nylon-string guitar'
+    instrumentLabel: 'Nylon-string guitar',
+    landing: false
   },
   {
     // Transcribed from Bonfá's 1959 record and played from recordings voiced
@@ -40,21 +43,16 @@ export const LANDING_PIECES = Object.freeze([
     instrumentLabel: 'Nylon-string guitar',
     // Its rendered waveform (scripts/render_performance.mjs --peaks), shown in the open sound dial.
     waveform: 'performances/pernambuco.waveform.json'
-  },
-  {
-    id: 'original-pocket-park',
-    relativePath: 'originals/original-pocket-park.mid',
-    presetId: 'lab-pocket-lead'
   }
 ]);
 
 /** The landing pieces as built-in file entries (the shape the MIDI library lists). */
 export const getLandingFiles = (base = import.meta.env.BASE_URL) => LANDING_PIECES.map(
-  ({ relativePath, presetId, waveform, ...piece }) => ({
+  ({ relativePath, presetId, waveform, landing = true, ...piece }) => ({
     ...piece,
     path: withBase(`midi/${relativePath}`, base),
     ...(waveform ? { waveform: withBase(`midi/${waveform}`, base) } : {}),
-    landing: presetId ? { presetId } : {}
+    ...(landing ? { landing: presetId ? { presetId } : {} } : {})
   })
 );
 

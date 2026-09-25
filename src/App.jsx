@@ -34,6 +34,7 @@ const WaveCandy = React.lazy(() => import('./components/WaveCandy'));
 const BirdsEyeRadar = React.lazy(() => import('./components/BirdsEyeRadar'));
 
 const NOTICE_TIMEOUT_MS = 2200;
+const NOTES_SLIDE_MS = 500; // styles/layout.css .notes-panel__drawer
 const SESSION_SAVE_DELAY_MS = 200;
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
@@ -51,15 +52,9 @@ const isTextInputTarget = (target) => {
 
 const SoundDial = React.lazy(() => import('./components/SoundDial.jsx'));
 
-// The visual row's switch: notes (a few staggered bars) or the sound (a wave).
-const NOTES_ICON = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-    <path d="M4 7h7M9 12h9M6 17h6" />
-  </svg>
-);
-const WAVE_ICON = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-    <path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0" />
+const CHEVRON_ICON = (
+  <svg className="notes-panel__chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 9l6 6 6-6" />
   </svg>
 );
 
@@ -81,8 +76,10 @@ const App = () => {
     sanitizeAudioParams(initialSession.audioParams || AUDIO_PARAM_DEFAULTS)
   ));
   const [showShortcuts, setShowShortcuts] = useState(() => initialSession.showShortcuts || false);
-  // The visual row shows the sound (Wave Candy) or the notes of what is playing.
+  // The notes of what is playing, in a tall panel that slides the keyboard down.
   const [showNotes, setShowNotes] = useState(() => initialSession.showNotes || false);
+  // The notes canvas stays mounted until the panel has finished closing.
+  const [notesMounted, setNotesMounted] = useState(showNotes);
   const [isRecording, setIsRecording] = useState(false);
   // Arrival is just the keyboard playing the opening; the sidebar opens on request.
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -117,6 +114,8 @@ const App = () => {
   const playMidi = useCallback((...args) => {
     opening.stop();
     midiPlayback.play(...args);
+    // A piece started from the library opens its notes, as it always has.
+    setShowNotes(true);
   }, [opening.stop, midiPlayback.play]);
   const transportBpm = (midiPlayback.currentMidi?.bpm || 120) * midiPlayback.tempoFactor;
 
@@ -133,6 +132,15 @@ const App = () => {
   const webMidi = useWebMidiInput({ waveformType, audioParams, onUserPlay: opening.stop });
   const notesSource = midiPlayback.currentMidi ? midiPlayback : opening;
   const toggleNotes = useCallback(() => setShowNotes((shown) => !shown), []);
+  useEffect(() => {
+    if (showNotes) {
+      setNotesMounted(true);
+      return undefined;
+    }
+    // Once the panel has slid shut (styles/layout.css, .notes-panel__drawer) the canvas goes.
+    const timer = window.setTimeout(() => setNotesMounted(false), NOTES_SLIDE_MS + 50);
+    return () => window.clearTimeout(timer);
+  }, [showNotes]);
 
   // A performance that brings a still picture of its waveform shows it in the
   // open sound dial while its instrument is the sound under the keys.
@@ -578,37 +586,44 @@ const App = () => {
           <AppHeader onToggleRecording={handleRecordToggle} isRecording={isRecording} />
 
           <main className="zone-center content-primary" aria-label="Keyboard area">
-            <div className="visual-deck">
-              {showNotes ? (
-                <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
-                  <BirdsEyeRadar
-                    className="birds-eye-radar--deck"
-                    currentMidi={notesSource.currentMidi}
-                    progress={notesSource.progress}
-                    activeNotes={notesSource.activeNotes}
-                    isPlaying={notesSource.isPlaying}
-                  />
-                </React.Suspense>
-              ) : showPrimaryVisual ? (
-                <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
-                  <WaveCandy />
-                </React.Suspense>
-              ) : (
-                <div className="wave-candy wave-candy-placeholder" aria-hidden="true" />
-              )}
-              <button
-                type="button"
-                className="btn btn--toggle visual-deck__switch"
-                aria-pressed={showNotes}
-                aria-label={showNotes ? 'Show the sound' : 'Show the notes'}
-                title={showNotes ? 'Show the sound' : 'Show the notes'}
-                onClick={toggleNotes}
-              >
-                {showNotes ? WAVE_ICON : NOTES_ICON}
-              </button>
-            </div>
+            {showPrimaryVisual ? (
+              <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>
+                <WaveCandy />
+              </React.Suspense>
+            ) : (
+              <div className="wave-candy wave-candy-placeholder" aria-hidden="true" />
+            )}
             <div className="keyboard-surface" role="region" aria-label="Virtual keyboard">
               <div className="keyboard-region">
+                <div className="notes-panel">
+                  <button
+                    type="button"
+                    className="btn notes-panel__toggle"
+                    aria-expanded={showNotes}
+                    aria-controls="notes-panel-drawer"
+                    onClick={toggleNotes}
+                  >
+                    Notes
+                    {CHEVRON_ICON}
+                  </button>
+                  <div
+                    id="notes-panel-drawer"
+                    className={`notes-panel__drawer ${showNotes ? 'notes-panel__drawer--open' : ''}`}
+                  >
+                    <div className="notes-panel__content">
+                      {notesMounted && (
+                        <React.Suspense fallback={null}>
+                          <BirdsEyeRadar
+                            currentMidi={notesSource.currentMidi}
+                            progress={notesSource.progress}
+                            activeNotes={notesSource.activeNotes}
+                            isPlaying={notesSource.isPlaying}
+                          />
+                        </React.Suspense>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <SynthKeyboard
                   onUserPlay={opening.stop}
                   waveformType={waveformType}

@@ -185,7 +185,9 @@ src/
 - Landing queue (`data/landingQueue.js`): on page load the keyboard plays one
   piece picked at random from `LANDING_PIECES` (never the previous visit's
   while there is a choice); "On load" switches in the MIDI tab choose which
-  are in the queue (localStorage), and all off means a silent landing
+  are in the queue (localStorage), and all off means a silent landing. The
+  queue is Luke's choice: Pernambuco and Subwoofer Lullaby; a performance
+  with `landing: false` (Saudade de Triana) stays in the library only
 - Play MIDI through the synth with full sound engine
 - "Performances" bring their own sampled instrument instead of the loaded
   preset: `Saudade de Triana`, an original bossa/flamenco piece for nylon
@@ -216,10 +218,11 @@ src/
 - A performance with a `waveform` file (`LANDING_PIECES`) shows it as a still
   picture at the top of the open sound dial while its instrument is the loaded
   sound; the dial takes it when it opens and keeps it until it closes
-- The visual row is a deck: its corner switch (`showNotes`, saved in the
-  session) swaps Wave Candy for `BirdsEyeRadar`, the falling notes of whatever
-  is playing (the MIDI tab's piece, else the landing piece), in the same box,
-  so the keyboard never moves
+- Under the visual row a "Notes" disclosure (`showNotes`, saved in the
+  session) slides the keyboard down over 500 ms and opens `BirdsEyeRadar`, the
+  falling notes of whatever is playing (the MIDI tab's piece, else the landing
+  piece), between the visualizers and the keys. Playing a piece from the MIDI
+  tab opens it; the canvas unmounts once the panel has slid shut
 - Visual feedback on keyboard shows active notes
 - Play/pause/stop controls with progress bar
 

@@ -73,21 +73,27 @@ describe('App', () => {
     recordings.load = vi.fn();
   });
 
-  it('swaps the visual row for the notes of the opening piece, and remembers it', async () => {
+  it('slides the notes of the opening piece open under the visualizers, and remembers it', async () => {
     opening.currentMidi = { duration: 1, notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }] };
     const { unmount } = render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Show the notes' }));
+    const toggle = screen.getByRole('button', { name: 'Notes' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
-    // The landing piece feeds the notes, so there is no "load a MIDI file" prompt.
+    // The landing piece feeds the notes, so there is no "load a MIDI file" prompt,
+    // and the visualizers stay where they are.
     expect(screen.queryByText(/Load a MIDI file/)).not.toBeInTheDocument();
-    expect(screen.queryByTestId('wave-candy-mock')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Show the sound' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByTestId('wave-candy-mock', {}, { timeout: 3000 })).toBeInTheDocument();
 
     unmount(); // leaving the page saves the session
     render(<App />);
+    expect(screen.getByRole('button', { name: 'Notes' })).toHaveAttribute('aria-expanded', 'true');
     expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Show the sound' }));
-    expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+    // It slides shut first, then the canvas goes.
+    expect(screen.getByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument());
   });
 
   it('renders the app title', async () => {

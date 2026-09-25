@@ -15,13 +15,14 @@ import {
   LANDING_PIECES,
   arrangeBuiltInPiece,
   getLandingFiles,
+  isLandingEligible,
   loadLandingSelection,
   pickLandingPiece,
   saveLandingSelection
 } from './landingQueue.js';
 
 const files = getLandingFiles('/');
-const ids = files.map((file) => file.id);
+const ids = files.filter(isLandingEligible).map((file) => file.id);
 
 describe('landing queue selection', () => {
   beforeEach(() => localStorage.clear());
@@ -64,7 +65,7 @@ describe('landing queue pick', () => {
 
 describe('landing pieces', () => {
   it('voices an original through its patch on every note', async () => {
-    const original = files.find((file) => file.landing.presetId);
+    const original = { id: 'original-pocket-park', path: '/midi/originals/original-pocket-park.mid', landing: { presetId: 'lab-pocket-lead' } };
     const { score, waveformType } = await arrangeBuiltInPiece({}, original);
     expect(waveformType).toBe('Square');
     expect(score.notes).toHaveLength(2);
@@ -72,6 +73,15 @@ describe('landing pieces', () => {
       expect(note.waveformType).toBe('Square');
       expect(note.audioParams.squareDuty).toBe(0.25);
     }
+  });
+
+  it('keeps a performance switched off for landing in the library, out of the queue', () => {
+    const saudade = files.find((file) => file.id === 'performance-saudade-de-triana');
+    expect(saudade.instrument).toBe('nylon-guitar');
+    expect(isLandingEligible(saudade)).toBe(false);
+    localStorage.setItem('vangelis.landingQueue.v1', JSON.stringify([saudade.id, ...ids]));
+    expect(loadLandingSelection(files).has(saudade.id)).toBe(false);
+    localStorage.clear();
   });
 
   it('points every piece at a file that ships', async () => {
