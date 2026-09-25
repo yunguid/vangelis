@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 import { Midi } from '@tonejs/midi';
 import {
-  arrangePernambuco, pernambucoTake, readGuitarPerformance, PERNAMBUCO_PARAMS
+  arrangePernambuco, makeTapeHiss, pernambucoTake, readGuitarPerformance, PERNAMBUCO_HISS_GAIN, PERNAMBUCO_PARAMS
 } from './pernambuco.js';
 import { GUITAR_OPEN_STRINGS } from './nylonGuitar.js';
 
@@ -56,4 +56,21 @@ it('plays at the record’s pitch, one note per string, with each stroke’s sha
   // Bonfá's thumb mutes the accompaniment while the melody rings.
   expect(notes.filter((note) => note.sample.mute).length).toBeGreaterThan(100);
   expect(notes.filter((note) => !note.sample.mute).length).toBeGreaterThan(100);
+});
+
+it('lays the record\u2019s tape hiss under the piece as looping white noise', () => {
+  const context = {
+    sampleRate: 48000,
+    createBuffer: (channels, length, sampleRate) => {
+      const data = new Float32Array(length);
+      return { sampleRate, length, getChannelData: () => data };
+    }
+  };
+  const hiss = makeTapeHiss(context);
+  const samples = hiss.getChannelData(0);
+  expect(samples.length).toBe(8 * 48000);
+  const rms = Math.sqrt(samples.reduce((sum, x) => sum + x * x, 0) / samples.length);
+  expect(rms).toBeCloseTo(1 / Math.sqrt(3), 2); // uniform white noise
+  const { ambience } = arrangePernambuco(score, new Map(score.notes.map((note) => [pernambucoTake(note), {}])), hiss);
+  expect(ambience).toEqual({ buffer: hiss, gain: PERNAMBUCO_HISS_GAIN, audioParamOverrides: PERNAMBUCO_PARAMS });
 });

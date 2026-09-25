@@ -11,6 +11,8 @@
  * Usage (needs ffmpeg):
  *   node scripts/render_performance.mjs --piece <landing piece id> --out <file.wav>
  *     [--from <s>] [--to <s>] [--midi <draft.mid>, played in place of the piece's file]
+ *     [--ambience off, leaves out a piece's ambience bed (its tape hiss)]
+ *     [--params '{"reverbMix":0.5}', merged over every note's own settings, for trying a sound]
  *     [--peaks <file.json>, the render's waveform as 480 peak/RMS pairs: the
  *      still picture of the piece the sound dial shows]
  */
@@ -119,6 +121,26 @@ function biquad(type, frequency, gainDb, q) {
 
 // ── Recordings ──────────────────────────────────────────────────────────────
 
+// createBuffer for code that builds its own recordings (a piece's tape hiss).
+const bufferMaker = {
+  sampleRate: SAMPLE_RATE,
+  createBuffer: (channels, length, sampleRate) => {
+    const data = new Float32Array(length);
+    return { sampleRate, length, duration: length / sampleRate, numberOfChannels: 1, getChannelData: () => data };
+  }
+};
+
+// Deterministic noise, so renders compare exactly.
+const seededRandom = (seed) => {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
 /** Decode like decodeAudioData: to the context rate, as an AudioBuffer look-alike. */
 function decode(file) {
   const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-f', 'f32le', '-ac', '1', '-ar', String(SAMPLE_RATE), '-'], { maxBuffer: 2 ** 31 - 1 });
@@ -138,11 +160,11 @@ function readScore(midiPath) {
 
 async function arrange(piece, midiPath) {
   if (piece.transcription === 'pernambuco') {
-    const { readGuitarPerformance, arrangePernambuco, pernambucoTake } = await import('../src/data/pernambuco.js');
+    const { readGuitarPerformance, arrangePernambuco, pernambucoTake, makeTapeHiss } = await import('../src/data/pernambuco.js');
     const score = readGuitarPerformance(new tonejsMidi.Midi(readFileSync(midiPath)));
     const keys = [...new Set(score.notes.map(pernambucoTake))];
     const buffers = new Map(keys.map((key) => [key, decode(path.join(root, 'public/samples/nylon-guitar', `${key}.mp3`))]));
-    return arrangePernambuco(score, buffers);
+    return arrangePernambuco(score, buffers, argument('ambience') === 'off' ? null : makeTapeHiss(bufferMaker, seededRandom(1959)));
   }
   const score = readScore(midiPath);
   if (piece.instrument === 'nylon-guitar') {
@@ -169,12 +191,13 @@ const to = Number(argument('to', arranged.duration + 4));
 const frames = Math.ceil((to - from) * SAMPLE_RATE);
 const bus = new Float32Array(frames);
 
+const trial = JSON.parse(argument('params', '{}'));
 let params = null;
 let voices = 0;
 for (const note of arranged.notes) {
   const end = note.time + note.duration;
   if (end < from || note.time > to) continue;
-  params = sanitizeAudioParams({ ...AUDIO_PARAM_DEFAULTS, ...(note.audioParams || note.audioParamOverrides) });
+  params = sanitizeAudioParams({ ...AUDIO_PARAM_DEFAULTS, ...(note.audioParams || note.audioParamOverrides), ...trial });
   const { buffer, baseFrequency, brightness, mute, gain = 1 } = note.sample;
   const data = buffer.getChannelData(0);
   const frequency = 440 * 2 ** ((note.midi - 69) / 12);
@@ -212,6 +235,22 @@ for (const note of arranged.notes) {
   }
 }
 if (!params) throw new Error('no notes in range');
+if (arranged.ambience) {
+  // useMidiPlayback runs the bed from the start of playback to the end of the score.
+  const { buffer, gain = 1, audioParamOverrides } = arranged.ambience;
+  const bedParams = sanitizeAudioParams({ ...AUDIO_PARAM_DEFAULTS, ...audioParamOverrides, ...trial });
+  const data = buffer.getChannelData(0);
+  const target = bedParams.volume * gain;
+  const endAt = (Math.max(...arranged.notes.map((note) => note.time + note.duration)) - from) * SAMPLE_RATE;
+  const release = bedParams.release * SAMPLE_RATE;
+  const attack = bedParams.attack * SAMPLE_RATE;
+  for (let frame = Math.max(0, Math.ceil(-from * SAMPLE_RATE)); frame < Math.min(frames, endAt + release); frame++) {
+    const elapsed = frame + from * SAMPLE_RATE;
+    let level = elapsed < attack ? MINIMUM_GAIN * (target / MINIMUM_GAIN) ** (elapsed / attack) : target;
+    if (frame >= endAt) level = target * (MINIMUM_GAIN / target) ** ((frame - endAt) / release);
+    bus[frame] += data[Math.floor(elapsed) % data.length] * level;
+  }
+}
 
 // Master chain (utils/audioEngine/graph.js) with this piece's settings.
 const captured = captureGlobalParams(params);

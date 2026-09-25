@@ -24,18 +24,33 @@ export const BRIGHTNESS_DB_PER_STEP = 0.25;
 // away with a time constant of 10 ms doubling every 16 steps.
 export const muteSeconds = (value) => (value >= 127 ? null : 0.01 * 2 ** (value / 16));
 
-// Envelope and room only: volume and pan stay with the player's own settings.
+// Envelope and room only: volume and pan stay with the player's own settings. The release
+// and the room were fitted against the record (the room renders closest to it among 47
+// settings tried); the record is mono, so the room is too.
 export const PERNAMBUCO_PARAMS = {
   useADSR: true, attack: 0.005, sustain: 1,
   release: 0.1, useFilter: false, distortion: 0, delayEnabled: false,
-  reverbEnabled: true, reverbMode: 'room', reverbMix: 0.35,
-  reverbSize: 0.4, reverbDecay: 0.35, reverbTone: 0.45,
-  reverbPreDelay: 8, reverbWidth: 0.5
+  reverbEnabled: true, reverbMode: 'room', reverbMix: 0.9,
+  reverbSize: 0.6, reverbDecay: 0.8, reverbTone: 0.45,
+  reverbPreDelay: 8, reverbWidth: 0
 };
 
 // The piece's level beside the other performances: its takes sit on the same
 // level line as theirs, but Bonfá plays most notes far under his accents.
 export const PERNAMBUCO_GAIN = 10 ** (2.6 / 20);
+
+// The record's tape hiss, under the whole piece: white noise (flat from 3 to 14 kHz on the
+// record), set so its top octaves sit as far under the music as the record's do.
+export const PERNAMBUCO_HISS_GAIN = 0.0009;
+const HISS_SECONDS = 8;
+
+/** Eight seconds of white noise, looped under the piece as its tape hiss. */
+export function makeTapeHiss(context, random = Math.random) {
+  const buffer = context.createBuffer(1, Math.round(HISS_SECONDS * context.sampleRate), context.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = random() * 2 - 1;
+  return buffer;
+}
 
 const controllerValue = (event) => Math.round(event.value * 127);
 
@@ -101,8 +116,8 @@ export const pernambucoTake = (note) => (
   `${PERNAMBUCO_FOLDER}/s${note.channel + 1}f${note.midi - GUITAR_OPEN_STRINGS[note.channel]}${note.take}`
 );
 
-/** Hand each note its recording, stroke and the record's pitch. */
-export function arrangePernambuco(score, buffers) {
+/** Hand each note its recording, stroke and the record's pitch; `hiss` runs under them all. */
+export function arrangePernambuco(score, buffers, hiss = null) {
   const tuning = 2 ** (score.tuningCents / 1200);
   const nextOnString = new Map();
   const notes = [...score.notes].reverse().map((note) => {
@@ -124,7 +139,8 @@ export function arrangePernambuco(score, buffers) {
       }
     };
   }).reverse();
-  return { ...score, notes };
+  const ambience = hiss && { buffer: hiss, gain: PERNAMBUCO_HISS_GAIN, audioParamOverrides: PERNAMBUCO_PARAMS };
+  return { ...score, notes, ...(ambience ? { ambience } : {}) };
 }
 
 export async function loadPernambuco(context, path) {
@@ -132,5 +148,5 @@ export async function loadPernambuco(context, path) {
   if (!response.ok) throw new Error(`Pernambuco: HTTP ${response.status}`);
   const score = readGuitarPerformance(new Midi(await response.arrayBuffer()));
   const keys = [...new Set(score.notes.map(pernambucoTake))];
-  return arrangePernambuco(score, await loadGuitarTakes(context, keys));
+  return arrangePernambuco(score, await loadGuitarTakes(context, keys), makeTapeHiss(context));
 }

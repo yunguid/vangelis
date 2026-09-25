@@ -115,6 +115,8 @@ export function useMidiPlayback({
   if (!activeVoiceIdsRef.current) activeVoiceIdsRef.current = new Set();
   const scheduledVoiceMapRef = useRef(null);
   if (!scheduledVoiceMapRef.current) scheduledVoiceMapRef.current = new Map();
+  // A score's ambience bed (a recording's tape hiss): one looping voice under the notes.
+  const ambienceVoiceRef = useRef(null);
   const timeoutsRef = useRef(null);
   if (!timeoutsRef.current) timeoutsRef.current = new Set();
   const schedulerSequenceRef = useRef(0);
@@ -160,6 +162,8 @@ export function useMidiPlayback({
       clearAllTimeouts();
       activeVoiceIdsRef.current.forEach((voiceId) => audioEngine.stopNote(voiceId));
       activeVoiceIdsRef.current.clear();
+      if (ambienceVoiceRef.current) audioEngine.stopNote(ambienceVoiceRef.current);
+      ambienceVoiceRef.current = null;
       activeNoteCountsRef.current.clear();
       scheduledVoiceMapRef.current.clear();
       stopProgressLoopRef.current?.();
@@ -278,6 +282,10 @@ export function useMidiPlayback({
     activeVoiceIdsRef.current.forEach(voiceId => {
       audioEngine.stopNote(voiceId);
     });
+    if (ambienceVoiceRef.current) {
+      audioEngine.stopNote(ambienceVoiceRef.current);
+      ambienceVoiceRef.current = null;
+    }
     activeVoiceIdsRef.current.clear();
     activeNoteCountsRef.current.clear();
     scheduledVoiceMapRef.current.clear();
@@ -357,6 +365,35 @@ export function useMidiPlayback({
   const scheduleNotes = useCallback((notes, offset, startTime) => {
     const ctx = audioEngine.context;
     if (!ctx) return;
+
+    // The ambience bed runs whenever the notes do; it is stationary, so a restart after a
+    // pause, seek or tempo change needs no position. It never lights a key.
+    const ambience = playbackRef.current.midiData?.ambience;
+    if (ambience?.buffer && !ambienceVoiceRef.current) {
+      const started = audioEngine.playBufferedSample({
+        noteId: `ambience-${Math.round(startTime * 1000)}`,
+        buffer: ambience.buffer,
+        loop: true,
+        when: startTime,
+        velocity: 1,
+        gain: ambience.gain,
+        params: ambience.audioParamOverrides
+          ? { ...audioParamsRef.current, ...ambience.audioParamOverrides }
+          : audioParamsRef.current
+      });
+      ambienceVoiceRef.current = started?.voiceId ?? null;
+      // It ends with the score on a timer of its own: the progress loop that ends playback
+      // does not run in a hidden tab, and a bed must not hiss on after the last note.
+      if (ambienceVoiceRef.current && !playbackRef.current.loop) {
+        const bedVoice = ambienceVoiceRef.current;
+        const remaining = Math.max(0, resolveMidiDuration(playbackRef.current.midiData) - offset) / tempoFactorRef.current;
+        scheduleTrackedTimeout(() => {
+          if (ambienceVoiceRef.current !== bedVoice) return;
+          audioEngine.stopNote(bedVoice);
+          ambienceVoiceRef.current = null;
+        }, Math.max(0, (startTime + remaining - ctx.currentTime) * 1000));
+      }
+    }
 
     const sequence = schedulerSequenceRef.current + 1;
     schedulerSequenceRef.current = sequence;

@@ -170,6 +170,50 @@ describe('useMidiPlayback', () => {
     expect(call.params).toEqual({ volume: 0.4, release: 0.07 });
   });
 
+  it('runs a score\u2019s ambience bed under its notes, off the keys, and stops and restarts it with them', async () => {
+    const bed = { buffer: { hiss: true }, gain: 0.0009, audioParamOverrides: { release: 0.1 } };
+    const { result } = renderHook(() => useMidiPlayback({ waveformType: 'Sine', audioParams: { volume: 0.4 } }));
+    const bedStarts = () => audioEngine.playBufferedSample.mock.calls.filter(([options]) => options.loop);
+
+    await act(async () => {
+      result.current.play({ duration: 2, bpm: 120, ambience: bed, notes: [{ midi: 60, time: 0.5, duration: 1, velocity: 0.8 }] });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(bedStarts()).toHaveLength(1);
+    expect(bedStarts()[0][0]).toMatchObject({ buffer: bed.buffer, gain: 0.0009, loop: true, when: 0, params: { volume: 0.4, release: 0.1 } });
+    const bedVoice = bedStarts()[0][0].noteId;
+
+    await act(async () => { vi.advanceTimersByTime(600); });
+    expect([...result.current.activeNotes]).toEqual(['C4']); // the note lights its key, the bed none
+
+    act(() => result.current.pause());
+    expect(audioEngine.stopNote).toHaveBeenCalledWith(bedVoice);
+    await act(async () => {
+      result.current.resume();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(bedStarts()).toHaveLength(2);
+
+    act(() => result.current.stop());
+    expect(audioEngine.stopNote).toHaveBeenCalledWith(bedStarts()[1][0].noteId);
+  });
+
+  it('ends the ambience bed with the score even when no animation frame ever runs (a hidden tab)', async () => {
+    const { result } = renderHook(() => useMidiPlayback({ waveformType: 'Sine', audioParams: { volume: 0.4 } }));
+    await act(async () => {
+      result.current.play({ duration: 2, bpm: 120, ambience: { buffer: {}, gain: 0.001 }, notes: [{ midi: 60, time: 0, duration: 2, velocity: 0.8 }] });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const bedVoice = audioEngine.playBufferedSample.mock.calls.find(([options]) => options.loop)[0].noteId;
+    await act(async () => { vi.advanceTimersByTime(1900); });
+    expect(audioEngine.stopNote).not.toHaveBeenCalledWith(bedVoice);
+    await act(async () => { vi.advanceTimersByTime(200); });
+    expect(audioEngine.stopNote).toHaveBeenCalledWith(bedVoice);
+  });
+
   it('records opt-in MIDI startup and scheduler lateness samples', async () => {
     const recordInteraction = vi.fn();
     const completePaint = vi.fn();

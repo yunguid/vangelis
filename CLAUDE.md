@@ -201,11 +201,18 @@ src/
   +41.7 cents) and plays each note from the Iowa take of that string, fret and
   stroke in `public/samples/nylon-guitar/pernambuco`, voiced like the record.
   `SampleVoice` applies a stroke's `brightness` (a high shelf at 3x the note),
-  `mute` (a decay on the audio clock) and a set's `gain`
+  `mute` (a decay on the audio clock) and a set's `gain`. The record's recording
+  chain comes along: a mono room fitted by rendering against the record, and its
+  tape hiss as looping white noise 44 dB under the music
+- A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides }):
+  `useMidiPlayback` loops it under the notes whenever they sound (play, resume,
+  seek, tempo change) and stops it with them; it never lights a key
 - `node scripts/render_performance.mjs --piece <landing id> --out x.wav` renders
   a sampled performance offline the way the page plays it (voices, master chain
   and the real reverb worklet), for comparing against a source recording;
-  `--peaks file.json` also writes the render's waveform (480 peak/RMS pairs)
+  `--peaks file.json` also writes the render's waveform (480 peak/RMS pairs),
+  `--params '{...}'` tries other settings, `--ambience off` drops the bed.
+  `scripts/guitar-transcription/` (Python) is the pipeline that made Pernambuco
 - A performance with a `waveform` file (`LANDING_PIECES`) shows it as a still
   picture at the top of the open sound dial while its instrument is the loaded
   sound; the dial takes it when it opens and keeps it until it closes

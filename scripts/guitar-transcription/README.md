@@ -69,18 +69,23 @@ All paths below are in a scratch folder; `T=scripts/guitar-transcription`.
    rounds back with `make_midi.py ... --loudness calib_a.json,calib_b.json` and
    `build_samples.py ... --tone calib_a.json,calib_b.json` and repeat.
 
+10. The recording chain: `noise_floor.py record.wav floor.json` shows the record's floor is flat
+    tape hiss above 3 kHz (no mains hum), so the page lays looping white noise under the piece;
+    `hiss_level.py record.wav render.wav` sets its gain (44.2 dB under the music on the record).
+    `room_sweep.py` renders the opening under each reverb setting and keeps the one closest to
+    the record (mono, mix 0.9, size 0.6, decay 0.8 of 47 tried).
+
 `viz_cqt.py` draws pitch-grid spectrogram pages with notes overlaid; `viz_fit.py` draws the
 recording, the model and their difference, which is how the fit's failures were found.
 
 ## Where it stands
 
 The shipped version rendered offline and compared with the record: per-note loudness error IQR
--0.3..+0.3 dB (5-95%: -1.4..+1.8 dB), 100 ms loudness contour r = 0.924, long-term spectrum
-within 2 dB from 62 Hz to 6.3 kHz, onsets matched at 0.0 ms median (F1 0.835 against a
-detector that also hears finger noise), chroma similarity 0.954.
+-0.2..+0.3 dB (5-95%: -1.0..+1.3 dB), 100 ms loudness contour r = 0.948, long-term spectrum
+within about 2 dB from 62 Hz to 16 kHz, tape hiss 43.9 dB under the music (record 44.2), onsets
+at +2.9 ms median (F1 0.835 against a detector that also hears finger noise), log-CQT similarity
+0.940, chroma similarity 0.958.
 
-Not modelled yet: the tape's hiss (steady at about -65 dBFS above 7 kHz, 42 dB under the music),
-its flutter (about 2.4 cents at 19 Hz), finger noise on the wound strings, and the room is still
-the page's reverb rather than one fitted to the record. The pianissimo takes of the low E string
-above the 7th fret do not split cleanly (15 plucks for 12 notes) and are left out; the piece does
-not play them.
+Not modelled: the tape's flutter (about 2.4 cents at 19 Hz) and finger noise on the wound
+strings. The pianissimo takes of the low E string above the 7th fret do not split cleanly (15
+plucks for 12 notes) and are left out; the piece does not play them.
