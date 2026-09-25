@@ -221,8 +221,9 @@ src/
   piece picked at random from `LANDING_PIECES` (never the previous visit's
   while there is a choice); "On load" switches in the MIDI tab choose which
   are in the queue (localStorage), and all off means a silent landing. The
-  queue is Luke's choice: Pernambuco and Subwoofer Lullaby; a performance
-  with `landing: false` (Saudade de Triana) stays in the library only
+  queue is Luke's choice: Pernambuco, Subwoofer Lullaby and Blade Runner
+  Blues; a performance with `landing: false` (Saudade de Triana) stays in the
+  library only
 - A built-in piece can be removed from the MIDI tab (the × on a row, then
   Remove in the row's confirmation). Removed ids live in localStorage
   (`vangelis.midiRemoved.v1`); a removed piece leaves the list, its search and
@@ -254,7 +255,7 @@ src/
   A440 with its scoop and vibrato, CC 11 its loudness ((v - 127) / 2 dB); channels
   1-12 CS-80, 13-14 pad, 15 low bed. `scripts/synth-transcription/` made it from
   the record; `docs/replicas/blade-runner-blues/JOURNEY.md` logs the journey. In
-  the library with `landing: false` until Luke has heard it
+  the landing queue since v1 (the keys keep the listener's sound)
 - A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides }):
   `useMidiPlayback` loops it under the notes whenever they sound (play, resume,
   seek, tempo change) and stops it with them; it never lights a key

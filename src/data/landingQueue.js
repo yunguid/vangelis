@@ -46,13 +46,12 @@ export const LANDING_PIECES = Object.freeze([
   },
   {
     // Transcribed from Vangelis's record and played by the app's own synth, CS-80
-    // patches and all (data/bladeRunnerBlues.js); in the library while it is refined.
+    // patches and all (data/bladeRunnerBlues.js); the keys keep the listener's sound.
     id: 'performance-blade-runner-blues',
     name: 'Blade Runner Blues',
     composer: 'Vangelis',
     relativePath: 'performances/blade-runner-blues.mid',
-    transcription: 'blade-runner-blues',
-    landing: false
+    transcription: 'blade-runner-blues'
   }
 ]);
 

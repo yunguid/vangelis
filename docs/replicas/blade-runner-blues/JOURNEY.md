@@ -129,3 +129,9 @@ bed set octave by octave.
 **Not yet**: about thirty low booms (short hits under 200 Hz, unexplained), the pad's
 upper voices (the fit keeps few), the CS-80's exact filter and brilliance per note, and a
 room fitted past the first sweep. Next: Luke's ears on v1.
+
+## 2026-09-25: v1 goes live
+
+Luke: "push the blade runner blues v1 to master". v1 went to main and joined the landing
+queue beside Pernambuco and the lullaby, as he had asked for the finished piece. The page
+plays it on its own synth parts; the keys keep the listener's sound while it plays.
