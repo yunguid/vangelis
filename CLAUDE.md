@@ -223,6 +223,10 @@ src/
   are in the queue (localStorage), and all off means a silent landing. The
   queue is Luke's choice: Pernambuco and Subwoofer Lullaby; a performance
   with `landing: false` (Saudade de Triana) stays in the library only
+- A built-in piece can be removed from the MIDI tab (the × on a row, then
+  Remove in the row's confirmation). Removed ids live in localStorage
+  (`vangelis.midiRemoved.v1`); a removed piece leaves the list, its search and
+  the landing queue until "N removed · Restore" under the list brings all back
 - Play MIDI through the synth with full sound engine
 - "Performances" bring their own sampled instrument instead of the loaded
   preset: `Saudade de Triana`, an original bossa/flamenco piece for nylon

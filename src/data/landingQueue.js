@@ -77,6 +77,21 @@ const writeJson = (key, value) => {
 
 export const isLandingEligible = (file) => Boolean(file?.landing);
 
+const REMOVED_KEY = 'vangelis.midiRemoved.v1';
+
+/**
+ * Built-in pieces the listener removed from the MIDI library. They stay out of
+ * the list, its search and the landing queue until restored.
+ */
+export const loadRemovedPieces = () => {
+  const stored = readJson(REMOVED_KEY);
+  return new Set(Array.isArray(stored) ? stored.filter((id) => typeof id === 'string') : []);
+};
+
+export const saveRemovedPieces = (removed) => {
+  writeJson(REMOVED_KEY, [...removed]);
+};
+
 /**
  * Ids switched on for landing. Nothing stored means every eligible piece; an
  * empty stored list is a real choice (the page opens silent).

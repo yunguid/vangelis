@@ -10,7 +10,9 @@ import {
   arrangeBuiltInPiece,
   isLandingEligible,
   loadLandingSelection,
-  saveLandingSelection
+  loadRemovedPieces,
+  saveLandingSelection,
+  saveRemovedPieces
 } from '../../data/landingQueue.js';
 
 
@@ -39,13 +41,45 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     });
   }, []);
 
+  // Removed pieces leave the list until restored. Removing asks first, in the
+  // row itself: the piece whose confirmation is open.
+  const [removed, setRemoved] = useState(loadRemovedPieces);
+  const [confirmingId, setConfirmingId] = useState(null);
+  const keepButtonRef = useRef(null);
+  const updateRemoved = useCallback((change) => {
+    setRemoved((current) => {
+      const next = change(current);
+      saveRemovedPieces(next);
+      return next;
+    });
+  }, []);
+  const handleRemove = useCallback((fileId) => {
+    setConfirmingId(null);
+    updateRemoved((current) => new Set(current).add(fileId));
+  }, [updateRemoved]);
+  const handleRestore = useCallback(() => updateRemoved(() => new Set()), [updateRemoved]);
+  const handleConfirmKey = useCallback((event) => {
+    if (event.key === 'Escape') {
+      event.stopPropagation();
+      setConfirmingId(null);
+    }
+  }, []);
+  // Preact ignores autoFocus, so the safe answer takes focus by hand.
+  useEffect(() => {
+    if (confirmingId) keepButtonRef.current?.focus();
+  }, [confirmingId]);
+
+  const removedCount = useMemo(() => (
+    builtInFiles.filter((file) => removed.has(file.id)).length
+  ), [builtInFiles, removed]);
   const filteredFiles = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return builtInFiles;
-    return builtInFiles.filter((file) => (
+    const kept = builtInFiles.filter((file) => !removed.has(file.id));
+    if (!query) return kept;
+    return kept.filter((file) => (
       `${file.displayName} ${file.name} ${file.composer || ''}`.toLowerCase().includes(query)
     ));
-  }, [builtInFiles, searchQuery]);
+  }, [builtInFiles, removed, searchQuery]);
   const groups = useMemo(() => [
     {
       key: 'performances',
@@ -212,30 +246,64 @@ const MidiLibrary = ({ active = true, onPlay }) => {
             )}
             <ul className="midi-tab__list">
               {group.files.map((file) => (
-                <li
-                  key={file.id}
-                  className={`midi-tab__item ${isLandingEligible(file) ? 'midi-tab__item--landing' : ''}`}
-                >
-                  <button
-                    type="button"
-                    className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
-                    onClick={() => handleLoadBuiltIn(file)}
-                    onPointerEnter={handleFileIntent}
-                    onFocus={handleFileIntent}
-                    data-midi-path={file.path}
-                    disabled={isLoading}
-                  >
-                    <span className="midi-tab__file-title-row">
-                      <span className="midi-tab__file-name">{file.displayName}</span>
-                    </span>
-                    {(file.composer || file.instrumentLabel) && (
-                      <span className="midi-tab__file-composer">
-                        {file.catalogLabel
-                          ? `${file.composer} · ${file.catalogLabel}`
-                          : file.composer || file.instrumentLabel}
+                <li key={file.id} className="midi-tab__item">
+                  <div className="midi-tab__piece">
+                    <button
+                      type="button"
+                      className={`midi-tab__file-btn ${selectedFile?.id === file.id ? 'midi-tab__file-btn--active' : ''}`}
+                      onClick={() => handleLoadBuiltIn(file)}
+                      onPointerEnter={handleFileIntent}
+                      onFocus={handleFileIntent}
+                      data-midi-path={file.path}
+                      disabled={isLoading}
+                    >
+                      <span className="midi-tab__file-title-row">
+                        <span className="midi-tab__file-name">{file.displayName}</span>
                       </span>
+                      {(file.composer || file.instrumentLabel) && (
+                        <span className="midi-tab__file-composer">
+                          {file.catalogLabel
+                            ? `${file.composer} · ${file.catalogLabel}`
+                            : file.composer || file.instrumentLabel}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className="midi-tab__remove"
+                      aria-label={`Remove ${file.displayName}`}
+                      title="Remove from the list"
+                      onClick={() => setConfirmingId(file.id)}
+                    >
+                      <span aria-hidden="true">×</span>
+                    </button>
+                    {confirmingId === file.id && (
+                      // Covers the row, so nothing around it moves.
+                      <div
+                        className="midi-tab__confirm"
+                        role="group"
+                        aria-label={`Remove ${file.displayName}?`}
+                        onKeyDown={handleConfirmKey}
+                      >
+                        <span className="midi-tab__confirm-text">Remove this piece?</span>
+                        <button
+                          ref={keepButtonRef}
+                          type="button"
+                          className="midi-tab__confirm-btn"
+                          onClick={() => setConfirmingId(null)}
+                        >
+                          Keep
+                        </button>
+                        <button
+                          type="button"
+                          className="midi-tab__confirm-btn midi-tab__confirm-btn--remove"
+                          onClick={() => handleRemove(file.id)}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     )}
-                  </button>
+                  </div>
                   {isLandingEligible(file) && (
                     <button
                       type="button"
@@ -253,10 +321,18 @@ const MidiLibrary = ({ active = true, onPlay }) => {
             </ul>
           </div>
         ))}
-        {filteredFiles.length === 0 && !isLoading && (
+        {filteredFiles.length === 0 && searchQuery.trim() && !isLoading && (
           <div className="midi-tab__empty">
             No matches for “{searchQuery.trim()}”.
           </div>
+        )}
+        {removedCount > 0 && !isLoading && (
+          <p className="midi-tab__removed">
+            {removedCount} removed
+            <button type="button" className="midi-tab__restore" onClick={handleRestore}>
+              Restore
+            </button>
+          </p>
         )}
       </div>
 

@@ -69,6 +69,20 @@ describe('opening performance with the real MIDI scheduler', () => {
     expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
   });
 
+  it('opens silent when the only queued piece was removed from the MIDI library', async () => {
+    localStorage.setItem('vangelis.midiRemoved.v1', JSON.stringify(['performance-opening-piano']));
+    try {
+      const { result } = renderHook(() => useOpeningPerformance({ audioParams: {} }));
+      await flush();
+      await act(async () => { await vi.advanceTimersByTimeAsync(5000); });
+      expect(fixture.load).not.toHaveBeenCalled();
+      expect(fixture.engine.playBufferedSample).not.toHaveBeenCalled();
+      expect(result.current.sound).toBeNull();
+    } finally {
+      localStorage.removeItem('vangelis.midiRemoved.v1');
+    }
+  });
+
   it('waits for browser activation without advancing the score', async () => {
     fixture.context.state = 'suspended';
     const { result } = renderHook(() => useOpeningPerformance({ audioParams: {} }));

@@ -15,6 +15,15 @@ vi.mock('../../utils/midiParser.js', () => ({
   preloadMidiParser: vi.fn(() => Promise.resolve())
 }));
 
+const CONCERTO = {
+  id: 'rachmaninoff-concerto2-mov1',
+  name: 'Piano Concerto No. 2 - I. Moderato',
+  path: '/midi/rachmaninoff-concerto2-mov1.mid',
+  composer: 'Sergei Rachmaninoff'
+};
+const CLAIR = { id: 'debussy-clair-de-lune', name: 'Clair de lune', path: '/midi/clair.mid', composer: 'Claude Debussy' };
+const titlesInOrder = () => [...document.querySelectorAll('.midi-tab__file-name')].map((node) => node.textContent);
+
 const defaultProps = (overrides = {}) => ({
   isPlaying: false,
   isPaused: false,
@@ -32,14 +41,8 @@ const defaultProps = (overrides = {}) => ({
 describe('MidiTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getBuiltInMidiFiles.mockReturnValue([
-      {
-        id: 'rachmaninoff-concerto2-mov1',
-        name: 'Piano Concerto No. 2 - I. Moderato',
-        path: '/midi/rachmaninoff-concerto2-mov1.mid',
-        composer: 'Sergei Rachmaninoff'
-      }
-    ]);
+    window.localStorage.clear();
+    getBuiltInMidiFiles.mockReturnValue([CONCERTO]);
     parseMidiFile.mockResolvedValue({
       name: 'Embedded MIDI Name',
       duration: 1.2,
@@ -106,6 +109,46 @@ describe('MidiTab', () => {
     expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Embedded MIDI Name'
     }));
+  });
+
+  it('asks before removing a piece, and keeps it on Keep or Escape', () => {
+    getBuiltInMidiFiles.mockReturnValue([CONCERTO, CLAIR]);
+    render(<MidiTab {...defaultProps()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Clair de lune' }));
+    const keep = screen.getByRole('button', { name: 'Keep' });
+    expect(screen.getByRole('group', { name: 'Remove Clair de lune?' })).toBeInTheDocument();
+    expect(keep).toHaveFocus();
+    fireEvent.click(keep);
+    expect(screen.queryByRole('group', { name: /remove clair de lune\?/i })).not.toBeInTheDocument();
+    expect(titlesInOrder()).toEqual(['Piano Concerto No. 2 - I. Moderato', 'Clair de lune']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Clair de lune' }));
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Keep' }), { key: 'Escape' });
+    expect(screen.queryByRole('group', { name: /remove clair de lune\?/i })).not.toBeInTheDocument();
+    expect(titlesInOrder()).toHaveLength(2);
+    expect(window.localStorage.getItem('vangelis.midiRemoved.v1')).toBeNull();
+  });
+
+  it('removes a confirmed piece from the list and its search until it is restored', () => {
+    getBuiltInMidiFiles.mockReturnValue([CONCERTO, CLAIR]);
+    const view = render(<MidiTab {...defaultProps()} />);
+    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Clair de lune' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(titlesInOrder()).toEqual(['Piano Concerto No. 2 - I. Moderato']);
+
+    // Still gone on the next visit, and not found by a search either.
+    view.unmount();
+    render(<MidiTab {...defaultProps()} />);
+    fireEvent.change(screen.getByRole('searchbox', { name: /filter midi files/i }), { target: { value: 'clair' } });
+    expect(titlesInOrder()).toEqual([]);
+    expect(screen.getByText(/1 removed/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
+    expect(titlesInOrder()).toEqual(['Clair de lune']);
+    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
   });
 
   it('renders original cues with their code name, no tag badge, and no composer byline', () => {

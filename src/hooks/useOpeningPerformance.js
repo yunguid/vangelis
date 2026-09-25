@@ -6,6 +6,7 @@ import {
   getLandingFiles,
   loadLandingSelection,
   loadLastLandingId,
+  loadRemovedPieces,
   pickLandingPiece,
   saveLastLandingId
 } from '../data/landingQueue.js';
@@ -58,7 +59,9 @@ export function useOpeningPerformance({ audioParams }) {
         context = await audioEngine.ensureAudioContext();
         if (disposed || cancelled.current) return;
         context.addEventListener('statechange', tryStart);
-        const files = getLandingFiles();
+        // A piece removed from the MIDI library does not open the page either.
+        const removed = loadRemovedPieces();
+        const files = getLandingFiles().filter((file) => !removed.has(file.id));
         const piece = pickLandingPiece(files, loadLandingSelection(files), loadLastLandingId());
         // Every piece switched off in the MIDI tab: the page opens silent.
         if (!piece) return;
