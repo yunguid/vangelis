@@ -104,22 +104,29 @@ export class SynthWorklet {
     });
   }
 
-  noteOn({ noteId, frequency, waveform, velocity }) {
+  /**
+   * `when` (AudioContext seconds) starts the note on that exact sample;
+   * `expr` ({ rate, pitch, gain, cutoff, offset }) is its expression curves.
+   */
+  noteOn({ noteId, frequency, waveform, velocity, when, expr }) {
     if (!this.node) return;
     this.node.port.postMessage({
       type: 'noteOn',
       noteId,
       frequency,
       waveform,
-      velocity
+      velocity,
+      when,
+      expr
     });
   }
 
-  noteOff(noteId) {
+  noteOff(noteId, when) {
     if (!this.node) return;
     this.node.port.postMessage({
       type: 'noteOff',
-      noteId
+      noteId,
+      when
     });
   }
 
@@ -144,6 +151,16 @@ export class SynthWorklet {
       type: 'modWheel',
       value
     });
+  }
+
+  // A processor that keeps returning true from process() keeps its node alive
+  // even once disconnected: dispose has it return false, and unplugs the node.
+  dispose() {
+    if (!this.node) return;
+    this.node.port.postMessage({ type: 'dispose' });
+    this.node.disconnect();
+    this.node = null;
+    this.ready = false;
   }
 }
 

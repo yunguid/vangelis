@@ -176,12 +176,24 @@ export class LazyAudioEngineGateway {
     return this.runtime?.playBufferedSample(options) || null;
   }
 
-  stopNote(noteId) {
-    this.runtime?.stopNote(noteId);
+  stopNote(noteId, when) {
+    this.runtime?.stopNote(noteId, when);
   }
 
   stopAllNotes() {
     this.runtime?.stopAllNotes();
+  }
+
+  setParts(parts) {
+    this.runtime?.setParts(parts);
+  }
+
+  playPartNote(options) {
+    return this.runtime?.playPartNote(options) || null;
+  }
+
+  clearParts() {
+    this.runtime?.clearParts();
   }
 
   setPitchBend(semitones) {

@@ -7,6 +7,17 @@ import { Envelope } from './envelope.js';
 import { LFO } from './lfo.js';
 import { StateVariableFilter } from './svf.js';
 
+// A per-note expression curve read at a fractional position: linear between
+// points, holding its last value once the curve has run out.
+function curveAt(curve, pos) {
+  const last = curve.length - 1;
+  if (pos >= last) return curve[last];
+  const i = pos | 0;
+  return curve[i] + (curve[i + 1] - curve[i]) * (pos - i);
+}
+
+const curveOrNull = (values) => (values && values.length ? values : null);
+
 export class Voice {
   // routesBox is the processor-owned holder of the shared compiled route
   // template ({ compiled }); the processor swaps box.compiled on setParams so
@@ -165,7 +176,7 @@ export class Voice {
     }
   }
 
-  start({ noteId, frequency, waveform, velocity, params, frame, glideFrom }) {
+  start({ noteId, frequency, waveform, velocity, params, frame, glideFrom, expr }) {
     this.noteId = noteId;
     this.targetFrequency = frequency;
     this.waveform = normalizeWaveform(waveform);
@@ -191,6 +202,21 @@ export class Voice {
 
     // Key tracking: -1..+1 across +/-2 octaves around middle C
     this.keyTrack = clamp(Math.log2(frequency / 261.63) / 2.0, -1, 1);
+
+    // Per-note expression (a score's pitch scoops, swells and brightness):
+    // curves of cents, linear gain and cutoff octaves sampled at expr.rate Hz,
+    // advancing exprStep points per sample (0 = none); a note resumed mid-way
+    // enters them expr.offset seconds in. Set here before any sample is
+    // rendered, so the fields need no constructor defaults.
+    this.exprStep = 0;
+    this.exprPitch = this.exprGain = this.exprCutoff = null;
+    if (expr && expr.rate > 0) {
+      this.exprStep = expr.rate / this.sampleRate;
+      this.exprPos = Math.max(0, expr.offset || 0) * expr.rate;
+      this.exprPitch = curveOrNull(expr.pitch);
+      this.exprGain = curveOrNull(expr.gain);
+      this.exprCutoff = curveOrNull(expr.cutoff);
+    }
 
     this.applyParams(params);
     // Fresh note: no ramp-in needed, the amp envelope masks the onset.
@@ -295,6 +321,16 @@ export class Voice {
       }
     }
 
+    // --- Per-note expression, on top of the routed modulation ---
+    let exprGain = 1.0;
+    if (this.exprStep > 0) {
+      const pos = this.exprPos;
+      this.exprPos = pos + this.exprStep;
+      if (this.exprPitch) pitchSemis += curveAt(this.exprPitch, pos) / 100.0;
+      if (this.exprCutoff) cutoffOct += curveAt(this.exprCutoff, pos);
+      if (this.exprGain) exprGain = curveAt(this.exprGain, pos);
+    }
+
     // --- Oscillator section ---
     let pitchMultiplier = bendMul;
     if (pitchSemis !== 0.0) {
@@ -369,7 +405,7 @@ export class Voice {
     let sampleR = stereo ? oscR / unison : sampleL;
 
     // --- Amplitude section ---
-    let amp = envValue * this.velocity;
+    let amp = envValue * this.velocity * exprGain;
     if (ampOffset !== 0.0) {
       amp *= Math.max(0.0, 1.0 + ampOffset);
     }

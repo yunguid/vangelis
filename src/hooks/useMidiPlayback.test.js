@@ -11,7 +11,10 @@ vi.mock('../utils/audioEngine.js', () => ({
     ensureAudioContext: vi.fn(),
     playBufferedSample: vi.fn(),
     playFrequency: vi.fn(),
-    stopNote: vi.fn()
+    stopNote: vi.fn(),
+    setParts: vi.fn(),
+    playPartNote: vi.fn(),
+    clearParts: vi.fn()
   }
 }));
 
@@ -1133,5 +1136,83 @@ describe('useMidiPlayback', () => {
       vi.advanceTimersByTime(500);
     });
     expect(audioEngine.playFrequency).toHaveBeenCalledTimes(3);
+  });
+
+  it('plays a score’s part notes on the audio clock with their expression, and clears the parts when it stops', async () => {
+    audioEngine.playPartNote.mockImplementation(({ noteId }) => ({ voiceId: noteId }));
+    const parts = { lead: { layers: [{ params: { attack: 0.2 }, waveformType: 'Sawtooth' }] } };
+    const pitch = Float32Array.of(-80, 0);
+    const { result } = renderHook(() => useMidiPlayback({ waveformType: 'Sine', audioParams: { volume: 0.4, reverbMix: 0.1 } }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 3,
+        bpm: 120,
+        parts,
+        notes: [{
+          midi: 67, time: 0.5, duration: 1, velocity: 0.9, part: 'lead', expression: { rate: 200, pitch },
+          audioParamOverrides: { reverbEnabled: true, reverbMix: 0.5 }
+        }]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(audioEngine.setParts).toHaveBeenCalledWith(parts);
+
+    await act(async () => { vi.advanceTimersByTime(430); });
+    expect(audioEngine.playPartNote).not.toHaveBeenCalled();
+    await act(async () => { vi.advanceTimersByTime(15); });
+    expect(audioEngine.playPartNote).toHaveBeenCalledTimes(1);
+    const call = audioEngine.playPartNote.mock.calls[0][0];
+    expect(call).toMatchObject({
+      part: 'lead', velocity: 0.9, when: 0.5, expr: { rate: 200, pitch, offset: 0 },
+      // The piece's room comes with each note, over the player's sound.
+      params: { volume: 0.4, reverbMix: 0.5, reverbEnabled: true }
+    });
+    expect(call.frequency).toBeCloseTo(392, 0);
+    expect(audioEngine.playFrequency).not.toHaveBeenCalled();
+    expect(audioEngine.playBufferedSample).not.toHaveBeenCalled();
+
+    // Released on the clock at its end, from a timer that fires as early.
+    await act(async () => { vi.advanceTimersByTime(980); });
+    expect(audioEngine.stopNote).not.toHaveBeenCalled();
+    await act(async () => { vi.advanceTimersByTime(20); });
+    expect(audioEngine.stopNote).toHaveBeenCalledWith(call.noteId, 1.5);
+
+    act(() => result.current.stop());
+    expect(audioEngine.clearParts).toHaveBeenCalledTimes(1);
+  });
+
+  it('enters a sounding part note part-way through its curves on seek and resume, at the tempo’s rate', async () => {
+    audioEngine.playPartNote.mockImplementation(({ noteId }) => ({ voiceId: noteId }));
+    const parts = { lead: { layers: [{ params: {} }] } };
+    const note = { midi: 60, time: 0.5, duration: 2, velocity: 1, part: 'lead', expression: { rate: 200, gain: Float32Array.of(1, 0.5) } };
+    const { result } = renderHook(() => useMidiPlayback({ waveformType: 'Sine', audioParams: { volume: 0.4 } }));
+    act(() => result.current.setTempo(2));
+
+    await act(async () => {
+      result.current.play({ duration: 4, bpm: 120, parts, notes: [note] }, { startAt: 1.5 });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => { vi.advanceTimersByTime(1); });
+    // A second into the note at double speed: half a second of audio clock in,
+    // the curves read twice as fast.
+    const first = audioEngine.playPartNote.mock.calls[0][0];
+    expect(first).toMatchObject({ when: 0, expr: { rate: 400, offset: 0.5 } });
+
+    audioEngine.context.currentTime = 0.25;
+    act(() => result.current.pause());
+    expect(audioEngine.stopNote).toHaveBeenCalledWith(first.noteId);
+    expect(audioEngine.clearParts).not.toHaveBeenCalled();
+
+    await act(async () => {
+      result.current.resume();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => { vi.advanceTimersByTime(1); });
+    expect(audioEngine.setParts).toHaveBeenCalledTimes(2);
+    expect(audioEngine.playPartNote.mock.calls[1][0]).toMatchObject({ when: 0.25, expr: { rate: 400, offset: 0.75 } });
   });
 });

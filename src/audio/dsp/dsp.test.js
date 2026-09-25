@@ -442,3 +442,62 @@ describe('mod-route compiler', () => {
     expect(r.usesModEnv).toBe(true);
   });
 });
+
+describe('per-note expression', () => {
+  // One voice rendered sample by sample; `releaseAt` releases it on that sample.
+  const render = ({ params = {}, frequency = 220, waveform = 'saw', expr, count, releaseAt = -1 }) => {
+    const voiceParams = { ...DEFAULT_PARAMS, attack: 0.005, sustain: 0.8, ...params };
+    const routesBox = { compiled: compileModRoutes(voiceParams.modRoutes, voiceParams) };
+    const voice = new Voice(SR, routesBox);
+    voice.start({
+      noteId: 'expr', frequency, waveform, velocity: 1, params: voiceParams, frame: 0, glideFrom: 0, expr
+    });
+    const out = new Float64Array(count);
+    for (let i = 0; i < count; i++) {
+      if (i === releaseAt) voice.release();
+      voice.nextSample(1.0, 0.0);
+      out[i] = voice.outL;
+    }
+    return out;
+  };
+
+  it('shifts pitch by its cents: +1200 on 220 Hz renders 440 Hz exactly', () => {
+    const octaveUp = render({ frequency: 220, expr: { rate: 200, pitch: Float32Array.of(1200) }, count: 4800 });
+    expect(Array.from(octaveUp)).toEqual(Array.from(render({ frequency: 440, count: 4800 })));
+  });
+
+  it('scales amplitude by its gain, holding the last value past the end and through the release', () => {
+    // [1, 0.5] at 100 Hz: halfway down after 240 samples, at 0.5 from sample 480 on.
+    const swell = render({ expr: { rate: 100, gain: Float32Array.of(1, 0.5) }, count: 9600, releaseAt: 4800 });
+    const plain = render({ count: 9600, releaseAt: 4800 });
+    expect(swell[240]).toBeCloseTo(plain[240] * 0.75, 9);
+    for (let i = 481; i < 9600; i++) expect(swell[i]).toBe(plain[i] * 0.5);
+  });
+
+  it('adds its cutoff octaves to the routed cutoff modulation', () => {
+    const filtered = { useFilter: true, filterCutoff: 500 };
+    const velocityToCutoff = (depth) => [{ src: MOD_SRC.VELOCITY, dst: MOD_DST.CUTOFF, depth }];
+    // One octave routed (velocity 1 x 0.25 x 4 octaves) plus one from the curve...
+    const both = render({
+      params: { ...filtered, modRoutes: velocityToCutoff(0.25) },
+      expr: { rate: 200, cutoff: Float32Array.of(1) },
+      count: 4800
+    });
+    // ...is the filter two routed octaves up, and not where it was.
+    const routed = render({ params: { ...filtered, modRoutes: velocityToCutoff(0.5) }, count: 4800 });
+    expect(Array.from(both)).toEqual(Array.from(routed));
+    expect(Array.from(both)).not.toEqual(Array.from(render({ params: { ...filtered, modRoutes: velocityToCutoff(0.25) }, count: 4800 })));
+  });
+
+  it('enters its curves `offset` seconds in, as a note resumed mid-way does', () => {
+    // A 0-to-1 gain ramp over half a second, entered a quarter second in.
+    const ramp = { rate: 2, gain: Float32Array.of(0, 1), offset: 0.25 };
+    const sine = { waveform: 'sine', params: { phaseOffsetDeg: 90 }, count: 13000 };
+    const resumed = render({ ...sine, expr: ramp });
+    const plain = render(sine);
+    expect(plain[0]).toBeGreaterThan(0);
+    expect(resumed[0]).toBe(plain[0] * 0.5);
+    // A quarter second on the ramp has run out: it holds at 1.
+    for (let i = 12100; i < 13000; i++) expect(resumed[i]).toBe(plain[i]);
+  });
+});

@@ -209,11 +209,24 @@ src/
 - A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides }):
   `useMidiPlayback` loops it under the notes whenever they sound (play, resume,
   seek, tempo change) and stops it with them; it never lights a key
+- A score may carry synth `parts` ({ name: { layers: [{ params, waveformType,
+  gain }] } }): every layer is a synth worklet node of its own
+  (`audioEngine.setParts`), so several patches sound at once through the shared
+  effects chain (a CS-80's two channels are two layers). A note with `part`
+  plays there on the audio clock (`when`), with optional per-note `expression`
+  curves ({ rate, pitch in cents, gain, cutoff in octaves }: the CS-80's scoop
+  into each note, its pressure and brilliance) that the voice reads per sample
+  and holds at their last value; its `audioParamOverrides` set the effects
+  chain, as a sampled note's do. Without `when`/`expr` the synth renders
+  bit-exact to before (`audit:audio`). `stopNote(id, when)` releases a part's
+  note on the clock; `clearParts` retires the nodes once their tails ring out
 - `node scripts/render_performance.mjs --piece <landing id> --out x.wav` renders
   a sampled performance offline the way the page plays it (voices, master chain
   and the real reverb worklet), for comparing against a source recording;
   `--peaks file.json` also writes the render's waveform (480 peak/RMS pairs),
-  `--params '{...}'` tries other settings, `--ambience off` drops the bed.
+  `--params '{...}'` tries other settings, `--ambience off` drops the bed;
+  `--score <module.mjs>` (exporting `async loadScore(root)`) renders a score in
+  development, and scores with `parts` run the real synth worklet per layer.
   `scripts/guitar-transcription/` (Python) is the pipeline that made Pernambuco
 - A performance with a `waveform` file (`LANDING_PIECES`) shows it as a still
   picture at the top of the open sound dial while its instrument is the loaded
