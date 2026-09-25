@@ -66,8 +66,17 @@ src/
 │   ├── controls/
 │   │   └── ValueSlider.jsx    # Accessible slider primitive (ARIA, drag, keys, wheel)
 │   │
-│   ├── Sidebar/               # Collapsible sidebar panel
-│   │   ├── index.jsx          # Sidebar container with icon rail
+│   ├── editor/                # Piano-roll editor parts (#/editor)
+│   │   ├── VelocityLane.jsx   # Velocity stems under the grid
+│   │   ├── ProjectBrowser.jsx # Projects list (lazy)
+│   │   ├── AccountPanel.jsx   # Owner sign-in (lazy; only with Supabase env)
+│   │   └── editorIcons.jsx    # Tool and bar icons
+│   │
+│   ├── Sidebar/               # The dock and its slide-out panels
+│   │   ├── index.jsx          # Sidebar container (panels, Escape, backdrop)
+│   │   ├── SidebarRail.jsx    # The auto-hiding wave dock (icon-only controls)
+│   │   ├── DockWave.jsx       # The dock's wave, rim and rivets (lazy, desktop only)
+│   │   ├── waveDockPath.js    # The wave's outline math
 │   │   ├── Sidebar.css        # Sidebar styles
 │   │   ├── MidiTab.jsx        # MIDI file browser
 │   │   └── MidiPlayer.jsx     # MIDI playback controls
@@ -91,6 +100,10 @@ src/
 │   ├── userPresetStorage.js   # localStorage-backed user presets (+ change subscription)
 │   ├── soundCatalog.js        # Every loadable sound in browsing order (acoustic, waveforms, banks, user)
 │   ├── audioParams.js         # Audio parameter definitions and sanitization
+│   ├── pianoRollPattern.js    # Editor pattern model and note transforms (pure)
+│   ├── projectLibrary.js      # Editor projects on this device (autosaved)
+│   ├── cloudPatternStore.js   # Owner account: sign-in, project rows, .mid files
+│   ├── midiExport.js          # Pattern -> Standard MIDI File (lazy)
 │   │
 │   └── audioEngine/           # Core audio engine modules
 │       ├── constants.js       # Audio constants (sample rate, pool sizes)
@@ -108,6 +121,28 @@ src/
 ```
 
 ## Key Features
+
+### Sidebar dock
+- On desktop the sidebar is a dock that hides at the left edge: at rest only a
+  3 x 40px brass notch shows. A 10px strip down the edge brings it out; it
+  stays while the pointer is over it, keyboard focus is in it or a panel is
+  open, and goes 320ms after the pointer leaves. Escape puts it away. With no
+  hover (tablets), a tap on the notch toggles it
+- It is a wave, not a rectangle: a flat-topped bell out of the wall
+  (`waveDockPath.js`, 120 x 440, reach 74) with a brass rim, an engraved line
+  and four rivets; the rim swells under the pointer (the path is set on the
+  node, no render per move, never an rAF loop) and the current page gets a
+  brass gauge needle. It grows out with a slight overshoot; reduced motion
+  fades instead
+- Icon-only controls (sound knob, 5-pin MIDI socket, keys, piano roll) are CSS
+  masks in `Sidebar.css`, named by aria-label with a title; brass marks the
+  current page, the open panel and a playing MIDI file. `DockWave.jsx` loads
+  at idle on desktop, never on a phone, to keep every route inside its JS
+  budget. Panels open 86px from the edge. On phones the dock stays a bottom
+  bar, icons only
+- Pages no longer reserve the old 72px rail: the sound dial centres in the full
+  width, the Design page's floor is 24px, and the editor keeps a 10px gutter
+  for the hot strip
 
 ### Real-time Synthesis
 - AudioWorklet-based polyphonic synth with PolyBLEP (saw/square) and PolyBLAMP (triangle) anti-aliasing
@@ -172,7 +207,7 @@ src/
   "Your sounds" and can be removed there. The full `PresetShelf` browser
   remains on the Design page
 - The Design (`#/sound-designer`) and Studies (`#/studies`) pages are routable
-  but deliberately not linked from the sidebar rail; Design is kept for
+  but deliberately not linked from the sidebar dock; Design is kept for
   background sound design
 - `factoryPresets.test.js` pins all patches to legal engine ranges
 
@@ -234,37 +269,63 @@ src/
   manifest↔directory bijection guard). History: `docs/CATALOG_LEDGER.md`
 
 ### Piano Roll (`#/editor`)
-- Selection-first pattern editor (Ableton/Logic grammar): double-click
-  adds a note, click selects, drag on empty space marquee-selects, drag
-  moves the whole selection, right edge resizes, Delete/Backspace removes
-  the selection, Cmd/Ctrl+A selects all, Esc deselects; right-click (or
-  right-drag sweep) erases, Space toggles playback; Record loop captures one
-  audio pass of the active loop as WAV
-- Pure pattern model in `utils/pianoRollPattern.js` (beats domain, 4/4;
-  `patternToMidiData` converts to the seconds-domain shape
-  `useMidiPlayback` consumes); patterns persist via
-  `utils/patternStorage.js` (localStorage)
-- Loop transport through the current patch (`useMidiPlayback`
-  `{ loop: true }`), selectable 1/2/4/8 bars, BPM 40-240, snap
-  1/4-1/32 incl. triplets, optional key/scale row highlighting
+- Look: poured concrete (Ableton-dark, brutalist). Flat warm-grey slabs, joints
+  cut darker, 1-2px corners, hard offset shadows instead of blurred ones; the
+  tokens (`--slab-*`, `--bone`, `--signal`, `--oxide`, `--brass`) live on
+  `.piano-roll-page` in `PianoRollPage.css`, so the look is the editor's alone.
+  Colour has three jobs: tracks and notes (`TRACK_COLORS`, enamel paints; old
+  neon and muted palettes map onto them by slot), time (signal orange: play,
+  metronome, loop brace, playhead) and the record light (oxide)
+- Layout: a transport bar (Projects, name, save status, New · play, record,
+  BPM, metronome, bars · menu, account) over a tool bar (tools, grid, scale,
+  Transform, velocity lane, zoom, shortcuts); a real piano-key column; the grid
+  (alternating bar shading, a joint under every row); the velocity lane pinned
+  under the grid in the same scroller; the track column on the right. A 10px
+  left gutter is the dock's hot strip
+- Tools (FL Studio's set on Ableton-friendly keys): Select `V` (click, drag to
+  move, either edge resizes the selection, ⌥-drag copies, double-click adds or
+  removes), Draw `B` (press adds a note at the last length, drag right sets its
+  length; B again returns to Select), Paint `P` (one note per grid step along
+  the drag, pitch follows the pointer, ⇧ holds it), Slice `C` (cuts at the
+  nearest grid line; drag down to cut a stack), Erase `E` (click or sweep).
+  ⌘ while dragging ignores the grid; right-drag erases in every tool
+- Velocity: notes are as opaque as they are loud (`velocityFill`); the lane
+  (`components/editor/VelocityLane.jsx`) drags a stem (the whole selection
+  moves with it) or draws a line across stems. `0` mutes (deactivates) the
+  selected notes: they stay drawn, dashed, and `patternToMidiData` skips them
+- Transform menu (Ableton's rule: the selection, or the whole track when
+  nothing is selected): Quantize ⌘U, Legato, Reverse, Invert, Stretch ×2,
+  Squeeze ÷2; pure functions in `utils/pianoRollPattern.js` with tests
+- Projects: every edit autosaves (400 ms) to the draft (`utils/patternDraft.js`,
+  the open project and its view) and to the device's project list
+  (`utils/projectLibrary.js`, which adopted the old `vangelis.patterns.v1`
+  saved patterns once). New starts a blank project at once; the Projects
+  browser (lazy `components/editor/ProjectBrowser.jsx`) opens, duplicates and
+  deletes. ⌘S or the status text saves now. There is no unsaved-changes prompt
+- Account (dormant until `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are
+  set; without them nothing about an account renders): one owner, password
+  sign-in (lazy `components/editor/AccountPanel.jsx`), sign-ups disabled in
+  `supabase/config.toml`. Signed in, unsynced projects go to the `patterns`
+  table and each one's `.mid` (`utils/midiExport.js`, @tonejs/midi) to the
+  private `midi` bucket at `<user id>/<row id>.mid`
+  (`supabase/migrations/20260925000000_midi_files.sql`). Whether to keep this
+  on Supabase is Luke's open decision: never provision or connect it yourself,
+  and never through the Quikirr-org Supabase connector
+- Loop transport through each track's sound (`useMidiPlayback`
+  `{ loop: true }`), BPM 40-240, snap 1/4-1/32 incl. triplets, optional
+  key/scale row highlighting; the timeline grows in 4-bar chunks as it scrolls
 - Track column down the right edge of the grid (Ableton's arrangement
-  headers): one fixed-height deck per layer with an activator carrying the
-  layer number (lit = on, click mutes), the name (click to edit that layer,
-  double-click to rename in place), solo and the layer's sound. The column is
-  a fixed width and scrolls on its own, so the grid never moves; on a phone the
-  decks run as a strip above the grid
-- Instrument layers, one neon colour each (`TRACK_COLORS`): solid notes are
-  the layer being edited, outlined notes belong to other layers; clicking any
-  note (or pressing 1-9) switches to its layer. Selection actions (chord
-  builder, loop bars, snap to key) float over the grid so the grid never moves
-- Notes-first look: 20px rows and a 96px beat at 100% zoom, so a sixteenth is
-  24px; notes are solid rounded boxes in their track colour and carry their
-  name whenever it fits (`noteNameFits`). The canvas draws one ground colour,
-  lightly shaded black-key rows, octave lines, bar and beat lines; subdivision
-  lines fade in with zoom. The key column is dark (a pressed key lights in the
-  active track's colour), tempo/bars/snap/scale sit inline in the top bar, and
-  the grid opens centred on the pattern's notes. Neon is for tracks and notes,
-  orange for transport, everything else monochrome
+  headers): one deck per layer with its colour down the left edge, an
+  activator carrying the layer number (lit = on, click mutes; under the
+  pointer it shows a power mark), the name (click to edit that layer,
+  double-click to rename in place), solo and the layer's sound. Only the
+  active track opens a second row naming its sound. The column is a fixed
+  width and scrolls on its own, so the grid never moves; on a phone the decks
+  run as a strip above the grid, every card the same height
+- Solid notes are the layer being edited, outlined notes belong to other
+  layers; clicking any note (or pressing 1-9) switches to its layer. Selection
+  actions (chord builder, loop bars, snap to key) float over the grid so the
+  grid never moves
 - Metronome: the four beat cells beside BPM are its switch and its face.
   `addMetronomeClicks` (utils/pianoRollPattern.js) adds one dry square click per
   beat, accented on real downbeats even when a loop starts mid-bar, to the data
@@ -272,18 +333,14 @@ src/
   recording path and "Send to player" never get clicks; the setting is saved in
   the editor draft. The lit cell runs on `startVisibilityAwareRafLoop`, never
   raw `requestAnimationFrame` (`perf:site` caps explicit rAF sites at 12)
-- A track's numbered colour square is its on/off switch: under the pointer or
-  keyboard focus the number gives way to a power mark and a bright frame; solo
-  brightens on hover and fills with the track colour when on
-- Track cards are one row (number, name, sound chevron, solo); only the active
-  track opens a second row naming its sound. In the phone strip every card
-  keeps the fixed two-row height so a track switch cannot move the grid
-- `LayerSoundBrowser` is lazy-loaded from the editor and must not import
-  `utils/pianoRollPattern.js`: that module lives in the editor page's chunk, and
+- Lazy pieces (`LayerSoundBrowser`, `ProjectBrowser`, `AccountPanel`,
+  `midiExport`) must not import any module that lives in the editor page's
+  chunk (`utils/pianoRollPattern.js`, `components/editor/editorIcons.jsx`, ...):
   an import back into it re-keys the page in the build manifest, which breaks
-  `perf:site`'s route closure guard (the editor route is 38.5 KB of a 40 KB budget)
-- Canvas grid + DOM note layer; "Open in player" hands the pattern to the
-  home player via `utils/pendingMidiHandoff.js`
+  `perf:site`'s route closure guard. The editor route measured 44.98 KB gzip
+  against the 40 KB D12 budget after the concrete rework (was 39.0)
+- Canvas grid + DOM note layer; "Send to player" hands the pattern to the
+  home player via `utils/pendingMidiHandoff.js`; "Export MIDI file" downloads it
 
 ### Recording
 - Record button captures all audio output

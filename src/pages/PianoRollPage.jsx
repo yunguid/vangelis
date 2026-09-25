@@ -13,15 +13,15 @@ import {
   DEFAULT_WAVEFORM,
   sanitizeAudioParams
 } from '../utils/audioParams.js';
-import { loadCloudPatternId, saveCloudPatternId } from '../utils/cloudPatternLink.js';
 import {
   deleteCloudPattern,
   getSession,
   isCloudConfigured,
   listCloudPatterns,
   onAuthChange,
-  signInWithEmail,
+  signInWithPassword,
   signOut,
+  uploadPatternMidi,
   upsertCloudPattern
 } from '../utils/cloudPatternStore.js';
 import { midiNoteToFrequency, midiNoteToName } from '../utils/math.js';
@@ -52,46 +52,84 @@ import {
   deleteTrack,
   duplicateNotes,
   getSnapBeats,
+  invertNotes,
   isInChord,
   isInScale,
+  legatoNotes,
   nudgeNotes,
   normalizePattern,
+  operationTargetIds,
   pasteNotesPayload,
   patternBeats,
+  quantizeNotes,
   resizeNotes,
+  reverseNotes,
+  setNoteVelocities,
+  sliceNotes,
   snapNotesToScale,
+  stretchNotes,
   patternToMidiData,
   quantizeBeats,
   quantizeBeatsFloor,
   setPatternBars,
   toggleLoopForSelection,
+  toggleNotesMuted,
   updateTrack,
   updateNote
 } from '../utils/pianoRollPattern.js';
 import { loadEditorDraft, saveEditorDraft } from '../utils/patternDraft.js';
 import {
-  deleteSavedPattern,
-  loadSavedPatterns,
-  saveSavedPattern
-} from '../utils/patternStorage.js';
+  deleteProject,
+  findProject,
+  loadProjects,
+  markProjectSynced,
+  newProjectId,
+  nextUntitledName,
+  saveProject,
+  unsyncedProjects
+} from '../utils/projectLibrary.js';
 import { setPendingMidi } from '../utils/pendingMidiHandoff.js';
+import VelocityLane, { VELOCITY_LANE_HEIGHT, midiVelocity } from '../components/editor/VelocityLane.jsx';
 import {
-  confirmUnsavedNavigation,
-  registerUnsavedNavigationGuard
-} from '../utils/unsavedNavigationGuard.js';
+  ICON_ACCOUNT,
+  ICON_CHEVRON,
+  ICON_DRAW,
+  ICON_ERASE,
+  ICON_HELP,
+  ICON_MORE,
+  ICON_PAINT,
+  ICON_PLAY,
+  ICON_PLUS,
+  ICON_POWER,
+  ICON_PROJECTS,
+  ICON_RECORD,
+  ICON_SELECT,
+  ICON_SLICE,
+  ICON_STOP,
+  ICON_VELOCITY
+} from '../components/editor/editorIcons.jsx';
 import './PianoRollPage.css';
 
 // Tall enough that a note can carry its name and read as the layer's colour.
 const ROW_HEIGHT = 20;
-const GRID_GROUND = '#14171a';
-const GRID_BLACK_KEY_ROW = 'rgba(0, 0, 0, 0.13)';
-const GRID_IN_KEY_ROW = 'rgba(89, 160, 177, 0.16)';
+// The grid is poured concrete: one ground, every other bar a shade lighter,
+// and its lines are joints cut darker than the ground, never lighter.
+const GRID_GROUND = '#252523';
+const GRID_ALT_BAR = '#292927';
+const GRID_BLACK_KEY_ROW = 'rgba(0, 0, 0, 0.16)';
+const GRID_IN_KEY_ROW = 'rgba(228, 223, 212, 0.05)';
+const GRID_ROW_LINE = 'rgba(0, 0, 0, 0.2)';
+const GRID_OCTAVE_LINE = 'rgba(0, 0, 0, 0.62)';
+const GRID_BEAT_LINE = 'rgba(0, 0, 0, 0.42)';
+const GRID_BAR_LINE = 'rgba(8, 8, 7, 0.95)';
 // Subdivision lines stay hidden until they are this far apart, then fade in.
 const SUBDIVISION_MIN_PX = 12;
 const SUBDIVISION_FADE_PX = 16;
 const KEY_COLUMN_WIDTH = 64;
-const RULER_HEIGHT = 30;
-const RESIZE_HANDLE_PX = 7;
+const RULER_HEIGHT = 26;
+const RESIZE_HANDLE_PX = 6;
+// A drag this far from where it started is a drag, not a click.
+const DRAG_THRESHOLD_PX = 3;
 // A note shows its name once the name fits: ~6.7px per 11px monospace
 // character plus the label's padding. "C5" fits a sixteenth at 100% zoom.
 const noteNameFits = (name, widthPx) => widthPx >= name.length * 6.7 + 8;
@@ -103,7 +141,7 @@ const ROW_COUNT = PITCH_MAX - PITCH_MIN + 1;
 const GRID_HEIGHT = ROW_COUNT * ROW_HEIGHT;
 const EDIT_RESCHEDULE_DEBOUNCE_MS = 120;
 const DRAFT_SAVE_DEBOUNCE_MS = 400;
-const CLOUD_SYNC_DEBOUNCE_MS = 2000;
+const CLOUD_SYNC_DEBOUNCE_MS = 1500;
 const HISTORY_LIMIT = 100;
 // 100% zoom: a sixteenth is 24px wide, room for a note to be seen and named.
 const DEFAULT_PX_PER_BEAT = 96;
@@ -112,12 +150,13 @@ const ZOOM_MAX = 336;
 const ZOOM_STEP = 1.15;
 const ZOOM_WHEEL_STEP = 1.08;
 const MAX_GRID_BACKING_WIDTH = 16384;
-const UNSAVED_WARNING = 'These edits are not in your saved patterns yet. They stay in the editor draft — leave anyway?';
 const RECORDING_TAIL_MS = 160;
+// Beat numbers join the ruler once a beat has room for "12.4".
+const RULER_BEAT_LABEL_MIN_PX = 44;
 
-// Without Supabase env the editor never mentions the cloud at all.
+// Without Supabase env the editor never mentions an account at all.
 const CLOUD_ENABLED = isCloudConfigured();
-const NO_CLOUD_PATTERNS = Object.freeze([]);
+const NO_CLOUD_ROWS = Object.freeze([]);
 
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
@@ -127,62 +166,30 @@ const DEFAULT_CONTROL_SECTIONS = Object.freeze({
   modulation: false
 });
 
+// FL Studio's tool set, on keys an Ableton hand already knows: B draws.
+const TOOLS = [
+  { id: 'select', key: 'v', label: 'Select', hint: 'Select: click, drag to move, edges resize, ⌥-drag copies (V)', icon: ICON_SELECT },
+  { id: 'draw', key: 'b', label: 'Draw', hint: 'Draw: click for a note, drag right for its length (B)', icon: ICON_DRAW },
+  { id: 'paint', key: 'p', label: 'Paint', hint: 'Paint: drag to lay a note on every grid step, ⇧ holds the pitch (P)', icon: ICON_PAINT },
+  { id: 'slice', key: 'c', label: 'Slice', hint: 'Slice: click a note to cut it on the grid, drag down to cut a stack (C)', icon: ICON_SLICE },
+  { id: 'erase', key: 'e', label: 'Erase', hint: 'Erase: click or drag across notes (E)', icon: ICON_ERASE }
+];
+const TOOL_BY_KEY = new Map(TOOLS.map((tool) => [tool.key, tool.id]));
+
 const rowForMidi = (midi) => PITCH_MAX - midi;
 const midiForRow = (row) => PITCH_MAX - row;
 const isBlackKey = (midi) => [1, 3, 6, 8, 10].includes(((midi % 12) + 12) % 12);
 
-const ICON_PLAY = (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M8 5.5 18.5 12 8 18.5Z" />
-  </svg>
-);
-
-const ICON_STOP = (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="6.5" y="6.5" width="11" height="11" rx="1" />
-  </svg>
-);
-
-const ICON_RECORD = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="5.5" />
-  </svg>
-);
-
-const ICON_HELP = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="8.5" />
-    <path d="M9.6 9.3a2.5 2.5 0 1 1 3.3 2.4c-.7.3-1 .9-1 1.6v.3" />
-    <path d="M12 17.1h.01" />
-  </svg>
-);
-
-const ICON_MORE = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
-    <circle cx="5.6" cy="12" r="1.5" />
-    <circle cx="12" cy="12" r="1.5" />
-    <circle cx="18.4" cy="12" r="1.5" />
-  </svg>
-);
-
-const ICON_POWER = (
-  <svg className="piano-roll-deck__power-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 3v9" />
-    <path d="M6.3 7.2a8 8 0 1 0 11.4 0" />
-  </svg>
-);
-
-const ICON_CHEVRON = (
-  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M6.5 9.5 12 15l5.5-5.5" />
-  </svg>
-);
-
-const ICON_PLUS = (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M12 5.5v13M5.5 12h13" />
-  </svg>
-);
+// A note is as solid as it is loud: velocity sets how much of its colour
+// covers the concrete, Ableton's way of showing it without a number.
+const velocityFill = (color, velocity = DEFAULT_VELOCITY) => {
+  const hex = String(color || '').replace('#', '');
+  const full = hex.length === 3 ? hex.split('').map((digit) => digit + digit).join('') : hex;
+  const value = Number.parseInt(full, 16);
+  if (!Number.isFinite(value) || full.length !== 6) return color;
+  const alpha = (0.34 + 0.66 * Math.min(1, Math.max(0, velocity))).toFixed(3);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+};
 
 const PianoRollPlayhead = React.memo(({ getProgress, offsetX = 0, travelWidth }) => {
   const playheadRef = React.useRef(null);
@@ -266,10 +273,15 @@ const drawGrid = (canvas, {
   const ctx = canvas.getContext('2d');
   ctx.scale(backingWidth / width, dpr);
 
-  // The grid is a quiet stage for the notes: one ground colour, black-key rows
-  // a shade darker, and lines only where they carry rhythm or register.
+  // Ground, then every other bar a shade lighter, so bars read at a glance.
   ctx.fillStyle = GRID_GROUND;
   ctx.fillRect(0, 0, width, GRID_HEIGHT);
+  const barPx = BEATS_PER_BAR * pxPerBeat;
+  ctx.fillStyle = GRID_ALT_BAR;
+  for (let bar = 1; bar < bars; bar += 2) {
+    ctx.fillRect(bar * barPx, 0, barPx, GRID_HEIGHT);
+  }
+
   const hasScale = Boolean(scaleId);
   for (let row = 0; row < ROW_COUNT; row += 1) {
     const midi = midiForRow(row);
@@ -284,10 +296,10 @@ const drawGrid = (canvas, {
     }
   }
 
-  // Only octave boundaries (B->C) get a horizontal line.
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
-  for (let row = 0; row <= ROW_COUNT; row += 1) {
-    if ((((midiForRow(row) % 12) + 12) % 12) !== 11) continue;
+  // A joint under every row, cut deeper at each octave (B->C).
+  for (let row = 1; row < ROW_COUNT; row += 1) {
+    const octave = (((midiForRow(row - 1) % 12) + 12) % 12) === 0;
+    ctx.strokeStyle = octave ? GRID_OCTAVE_LINE : GRID_ROW_LINE;
     const y = row * ROW_HEIGHT + 0.5;
     ctx.beginPath();
     ctx.moveTo(0, y);
@@ -295,15 +307,15 @@ const drawGrid = (canvas, {
     ctx.stroke();
   }
 
-  // Bars strongest, beats faint. Subdivisions (thirds when a triplet snap is
-  // active) only appear once zoom gives them room, and fade in as it grows, so
-  // an empty grid never reads as a lattice.
+  // Bars cut deepest, beats less so. Subdivisions (thirds when a triplet snap
+  // is active) only appear once zoom gives them room, and fade in as it
+  // grows, so an empty grid never reads as a lattice.
   const subdivision = snapBeats || 0.25;
   const subdivisionPx = subdivision * pxPerBeat;
   const subdivisionAlpha = Math.min(
     Math.max((subdivisionPx - SUBDIVISION_MIN_PX) / SUBDIVISION_FADE_PX, 0),
     1
-  ) * 0.06;
+  ) * 0.22;
   const totalBeats = bars * BEATS_PER_BAR;
   for (let beat = 0; beat <= totalBeats + 1e-6; beat += subdivision) {
     const onBeat = Math.abs(beat - Math.round(beat)) < 1e-6;
@@ -311,10 +323,10 @@ const drawGrid = (canvas, {
     if (!onBeat && subdivisionAlpha === 0) continue;
     const x = Math.round(beat * pxPerBeat) + 0.5;
     ctx.strokeStyle = onBar
-      ? 'rgba(255, 255, 255, 0.22)'
+      ? GRID_BAR_LINE
       : onBeat
-        ? 'rgba(255, 255, 255, 0.08)'
-        : `rgba(255, 255, 255, ${subdivisionAlpha})`;
+        ? GRID_BEAT_LINE
+        : `rgba(0, 0, 0, ${subdivisionAlpha})`;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, GRID_HEIGHT);
@@ -322,9 +334,13 @@ const drawGrid = (canvas, {
   }
 };
 
-// Only needed once a track's sound button is pressed, so it stays out of the
-// editor's upfront JavaScript.
+// Only needed once they are opened, so they stay out of the editor's
+// upfront JavaScript. None of them may import the editor's own modules (see
+// CLAUDE.md: an import back into the page chunk breaks the route guard).
 const LayerSoundBrowser = React.lazy(() => import('../components/LayerSoundBrowser.jsx'));
+const ProjectBrowser = React.lazy(() => import('../components/editor/ProjectBrowser.jsx'));
+const AccountPanel = React.lazy(() => import('../components/editor/AccountPanel.jsx'));
+const loadMidiExport = () => import('../utils/midiExport.js');
 
 const PianoRollPage = () => {
   useAudioEngineWarmup();
@@ -334,8 +350,10 @@ const PianoRollPage = () => {
   const [draft] = React.useState(loadEditorDraft);
 
   const [pattern, setPattern] = React.useState(() => (
-    draft ? normalizePattern(draft.pattern) : createPattern()
+    draft ? normalizePattern(draft.pattern) : createPattern({ name: nextUntitledName() })
   ));
+  // A draft from before projects gets a project of its own on first save.
+  const [projectId, setProjectId] = React.useState(() => draft?.projectId || newProjectId());
   const [snapId, setSnapId] = React.useState(() => (
     SNAP_OPTIONS.some((option) => option.id === draft?.snapId) ? draft.snapId : '1/16'
   ));
@@ -356,21 +374,28 @@ const PianoRollPage = () => {
   const [metronomeOn, setMetronomeOn] = React.useState(() => draft?.metronome === true);
   const metronomeOnRef = React.useRef(metronomeOn);
   metronomeOnRef.current = metronomeOn;
+  const [velocityLaneOpen, setVelocityLaneOpen] = React.useState(() => draft?.velocityLane !== false);
+  const [laneReadout, setLaneReadout] = React.useState(null);
+  const [tool, setTool] = React.useState('select');
   // What the transport is looping right now, for the beat counter.
   const playbackShapeRef = React.useRef(null);
-  const [savedPatterns, setSavedPatterns] = React.useState(() => loadSavedPatterns());
   const [drag, setDrag] = React.useState(null);
   const [selectedIds, setSelectedIds] = React.useState(() => new Set());
   const [activeTrackId, setActiveTrackId] = React.useState(() => (
     draft?.activeTrackId || 'track-1'
   ));
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
   const [isRecordingLoop, setIsRecordingLoop] = React.useState(false);
+  const [projectsOpen, setProjectsOpen] = React.useState(false);
+  const [accountOpen, setAccountOpen] = React.useState(false);
+  // Bumped whenever the project list changes under an open browser.
+  const [libraryVersion, setLibraryVersion] = React.useState(0);
+  // Bumped when a project is opened, to re-centre the view on its notes.
+  const [viewEpoch, setViewEpoch] = React.useState(0);
+  const [deviceSaveFailed, setDeviceSaveFailed] = React.useState(false);
   const [cloudSession, setCloudSession] = React.useState(null);
-  const [cloudPatterns, setCloudPatterns] = React.useState(NO_CLOUD_PATTERNS);
-  const [cloudEmail, setCloudEmail] = React.useState('');
-  const [cloudAuthStatus, setCloudAuthStatus] = React.useState('idle');
-  const [cloudSyncPending, setCloudSyncPending] = React.useState(false);
+  const [cloudRows, setCloudRows] = React.useState(NO_CLOUD_ROWS);
+  // 'idle' | 'saving' | 'saved' | 'error' ('midi' when only the file failed).
+  const [syncState, setSyncState] = React.useState('idle');
 
   const activeTrack = pattern.tracks.find((track) => track.id === activeTrackId)
     || pattern.tracks[0];
@@ -391,6 +416,8 @@ const PianoRollPage = () => {
   // { trackId, value } while a deck's name is being edited in place.
   const [rename, setRename] = React.useState(null);
   const soundPopoverRef = React.useRef(null);
+  const projectsPopoverRef = React.useRef(null);
+  const accountPopoverRef = React.useRef(null);
   const decksRef = React.useRef(null);
   const layerSwitchAtRef = React.useRef(-Infinity);
 
@@ -403,7 +430,7 @@ const PianoRollPage = () => {
   });
 
   const scrollRef = React.useRef(null);
-  const topbarRef = React.useRef(null);
+  const chromeRef = React.useRef(null);
   const canvasRef = React.useRef(null);
   const lastLengthRef = React.useRef(getSnapBeats('1/16'));
   const auditionRef = React.useRef(null);
@@ -413,12 +440,23 @@ const PianoRollPage = () => {
   const recordingActiveRef = React.useRef(false);
   const draftRef = React.useRef(null);
   const draftSaveTimeoutRef = React.useRef(null);
-  const cloudSyncTimeoutRef = React.useRef(null);
-  const cloudPatternIdRef = React.useRef(null);
   const patternRef = React.useRef(pattern);
-  const cleanPatternRef = React.useRef(pattern);
-  const cloudSyncedPatternRef = React.useRef(pattern);
-  const hasUnsavedChangesRef = React.useRef(false);
+  const projectIdRef = React.useRef(projectId);
+  // The pattern last written to the project library; the same object means
+  // there is nothing new to save. A draft that matches its library copy has
+  // nothing new either; one from before projects, or one that got ahead of
+  // its copy (another tab, a failed write), is saved on the first pass.
+  const savedPatternRef = React.useRef(undefined);
+  if (savedPatternRef.current === undefined) {
+    const stored = draft ? findProject(draft.projectId) : null;
+    const unchanged = !draft
+      || (stored && JSON.stringify(stored.pattern) === JSON.stringify(draft.pattern));
+    savedPatternRef.current = unchanged ? pattern : null;
+  }
+  const cloudSessionRef = React.useRef(null);
+  const cloudSyncTimeoutRef = React.useRef(null);
+  const cloudSyncRunningRef = React.useRef(false);
+  const cloudSyncAgainRef = React.useRef(false);
   const historyRef = React.useRef(null);
   if (!historyRef.current) historyRef.current = { undo: [], redo: [] };
   const gestureSnapshotRef = React.useRef(null);
@@ -430,7 +468,10 @@ const PianoRollPage = () => {
   const gridWidth = totalBeats * pxPerBeat;
   const soundBrowserTrack = pattern.tracks.find((track) => track.id === soundBrowserTrackId)
     || null;
-  const activeTrackNotes = pattern.notes.filter((note) => note.trackId === activeTrack?.id);
+  const activeTrackNotes = React.useMemo(
+    () => pattern.notes.filter((note) => note.trackId === activeTrack?.id),
+    [activeTrack?.id, pattern.notes]
+  );
   const loopRange = pattern.loopRange?.enabled ? pattern.loopRange : null;
   const playheadOffsetX = (loopRange?.start || 0) * pxPerBeat;
   const playheadTravelWidth = loopRange
@@ -439,10 +480,91 @@ const PianoRollPage = () => {
 
   React.useEffect(() => {
     patternRef.current = pattern;
-    const isDirty = pattern !== cleanPatternRef.current;
-    hasUnsavedChangesRef.current = isDirty;
-    setHasUnsavedChanges(isDirty);
   }, [pattern]);
+
+  // Gestures read their own edits back before React has rendered them.
+  const setPatternNow = React.useCallback((next) => {
+    patternRef.current = next;
+    setPattern(next);
+  }, []);
+
+  // ── Saving ───────────────────────────────────────────────────────────────
+  // Every edit lands in the draft and the project library on this device; a
+  // signed-in account then receives it. Nothing waits on a Save button.
+
+  const runCloudSync = React.useCallback(async () => {
+    if (!cloudSessionRef.current) return;
+    if (cloudSyncRunningRef.current) {
+      cloudSyncAgainRef.current = true;
+      return;
+    }
+    cloudSyncRunningRef.current = true;
+    setSyncState('saving');
+    let outcome = 'saved';
+    try {
+      const pending = unsyncedProjects();
+      for (const entry of pending) {
+        if (!cloudSessionRef.current) break;
+        const saved = await upsertCloudPattern({
+          id: entry.cloudId,
+          name: entry.name,
+          pattern: entry.pattern
+        });
+        if (!saved) {
+          outcome = 'error';
+          continue;
+        }
+        const { patternToMidiBytes } = await loadMidiExport();
+        const stored = await uploadPatternMidi(saved.id, patternToMidiBytes(entry.pattern));
+        if (!stored && outcome === 'saved') outcome = 'midi';
+        // Without its file the project stays unsynced, so the next pass
+        // sends both again to the same row.
+        markProjectSynced(entry.id, {
+          cloudId: saved.id,
+          syncedAt: stored ? entry.updatedAt : entry.syncedAt
+        });
+        setCloudRows((prev) => [saved, ...prev.filter((row) => row.id !== saved.id)]);
+      }
+    } catch (error) {
+      // The MIDI writer could not load (offline); edits wait on this device.
+      console.error('[vangelis] could not sync projects', error);
+      outcome = 'error';
+    } finally {
+      cloudSyncRunningRef.current = false;
+    }
+    setSyncState(outcome);
+    setLibraryVersion((version) => version + 1);
+    if (cloudSyncAgainRef.current) {
+      cloudSyncAgainRef.current = false;
+      runCloudSync();
+    }
+  }, []);
+
+  const scheduleCloudSync = React.useCallback((delay = CLOUD_SYNC_DEBOUNCE_MS) => {
+    if (!CLOUD_ENABLED || !cloudSessionRef.current) return;
+    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+    cloudSyncTimeoutRef.current = setTimeout(() => {
+      cloudSyncTimeoutRef.current = null;
+      runCloudSync();
+    }, delay);
+  }, [runCloudSync]);
+
+  // An untouched blank project is not worth a place in the list; anything
+  // with notes is, and so is a project that is already there.
+  const persistProject = React.useCallback(() => {
+    const current = patternRef.current;
+    if (current === savedPatternRef.current) return;
+    const id = projectIdRef.current;
+    if (current.notes.length === 0 && !findProject(id)) return;
+    const entry = saveProject({ id, pattern: current });
+    if (!entry) {
+      setDeviceSaveFailed(true);
+      return;
+    }
+    savedPatternRef.current = current;
+    setDeviceSaveFailed(false);
+    scheduleCloudSync();
+  }, [scheduleCloudSync]);
 
   const flushDraft = React.useCallback(() => {
     if (draftSaveTimeoutRef.current) {
@@ -450,25 +572,41 @@ const PianoRollPage = () => {
       draftSaveTimeoutRef.current = null;
     }
     if (draftRef.current) saveEditorDraft(draftRef.current);
-  }, []);
+    persistProject();
+  }, [persistProject]);
 
   React.useEffect(() => {
     draftRef.current = {
       pattern,
+      projectId,
       snapId,
       scaleId,
       scaleRoot,
       chordTypeId,
       activeTrackId,
       pxPerBeat,
-      metronome: metronomeOn
+      metronome: metronomeOn,
+      velocityLane: velocityLaneOpen
     };
     if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current);
     draftSaveTimeoutRef.current = setTimeout(() => {
       draftSaveTimeoutRef.current = null;
       saveEditorDraft(draftRef.current);
+      persistProject();
     }, DRAFT_SAVE_DEBOUNCE_MS);
-  }, [pattern, snapId, scaleId, scaleRoot, chordTypeId, activeTrackId, pxPerBeat, metronomeOn]);
+  }, [
+    pattern,
+    projectId,
+    snapId,
+    scaleId,
+    scaleRoot,
+    chordTypeId,
+    activeTrackId,
+    pxPerBeat,
+    metronomeOn,
+    velocityLaneOpen,
+    persistProject
+  ]);
 
   // The draft outlives the page on purpose: leaving flushes it, nothing clears it.
   React.useEffect(() => {
@@ -478,29 +616,6 @@ const PianoRollPage = () => {
       flushDraft();
     };
   }, [flushDraft]);
-
-  React.useEffect(() => {
-    if (!hasUnsavedChanges) return undefined;
-    return registerUnsavedNavigationGuard(() => {
-      if (!hasUnsavedChangesRef.current) return true;
-      const shouldLeave = window.confirm(UNSAVED_WARNING);
-      if (shouldLeave) {
-        hasUnsavedChangesRef.current = false;
-        setHasUnsavedChanges(false);
-      }
-      return shouldLeave;
-    });
-  }, [hasUnsavedChanges]);
-
-  React.useEffect(() => {
-    if (!hasUnsavedChanges) return undefined;
-    const warnBeforeUnload = (event) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', warnBeforeUnload);
-    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
-  }, [hasUnsavedChanges]);
 
   React.useEffect(() => {
     if (pattern.tracks.some((track) => track.id === activeTrackId)) return;
@@ -537,19 +652,19 @@ const PianoRollPage = () => {
   }, [pattern.bars, chordTypeId, snapBeats, scaleId, scaleRoot, pxPerBeat]);
 
   // Open on the music: the middle of the pattern's notes sits mid-screen, and
-  // an empty pattern opens around C5.
+  // an empty pattern opens around C5. Runs when a project opens, never after
+  // an edit, so the grid never moves under the cursor.
   React.useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const pitches = pattern.notes.map((note) => note.midi);
+    const pitches = patternRef.current.notes.map((note) => note.midi);
     const centerMidi = pitches.length > 0
       ? (Math.min(...pitches) + Math.max(...pitches)) / 2
       : 72;
     const centerY = (rowForMidi(Math.round(centerMidi)) + 0.5) * ROW_HEIGHT + RULER_HEIGHT;
     el.scrollTop = Math.max(0, centerY - el.clientHeight / 2);
-    // Mount only: later edits must never move the grid under the cursor.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    el.scrollLeft = 0;
+  }, [viewEpoch]);
 
   React.useEffect(() => () => {
     if (auditionTimeoutRef.current) clearTimeout(auditionTimeoutRef.current);
@@ -578,18 +693,18 @@ const PianoRollPage = () => {
     const previous = history.undo.pop();
     if (!previous) return;
     history.redo.push(patternRef.current);
-    setPattern(previous);
+    setPatternNow(previous);
     setSelectedIds(new Set());
-  }, []);
+  }, [setPatternNow]);
 
   const handleRedo = React.useCallback(() => {
     const history = historyRef.current;
     const next = history.redo.pop();
     if (!next) return;
     history.undo.push(patternRef.current);
-    setPattern(next);
+    setPatternNow(next);
     setSelectedIds(new Set());
-  }, []);
+  }, [setPatternNow]);
 
   // `sound` lets a caller audition a patch it is about to apply, before the
   // state holding that patch has been committed.
@@ -677,40 +792,34 @@ const PianoRollPage = () => {
       0,
       activeTrackId
     );
-    setPattern(next);
+    setPatternNow(next);
     setSelectedIds(new Set(noteIds));
-  }, [activeTrackId, pushHistory]);
+  }, [activeTrackId, pushHistory, setPatternNow]);
 
   const handleDuplicate = React.useCallback(() => {
     if (selectedIds.size === 0) return;
-    pushHistory(patternRef.current);
     const { pattern: next, noteIds } = duplicateNotes(
       patternRef.current,
       selectedIds,
       snapBeats
     );
-    if (noteIds.length === 0) {
-      historyRef.current.undo.pop();
-      return;
-    }
-    setPattern(next);
+    if (noteIds.length === 0) return;
+    pushHistory(patternRef.current);
+    setPatternNow(next);
     setSelectedIds(new Set(noteIds));
-  }, [selectedIds, snapBeats, pushHistory]);
+  }, [selectedIds, snapBeats, pushHistory, setPatternNow]);
 
   const handleCloneInPlace = React.useCallback(() => {
     if (selectedIds.size === 0) return;
-    pushHistory(patternRef.current);
     const { pattern: next, noteIds } = cloneNotesInPlace(
       patternRef.current,
       selectedIds
     );
-    if (noteIds.length === 0) {
-      historyRef.current.undo.pop();
-      return;
-    }
-    setPattern(next);
+    if (noteIds.length === 0) return;
+    pushHistory(patternRef.current);
+    setPatternNow(next);
     setSelectedIds(new Set(noteIds));
-  }, [selectedIds, pushHistory]);
+  }, [selectedIds, pushHistory, setPatternNow]);
 
   const handleNudge = React.useCallback((deltaBeats, deltaMidi) => {
     if (selectedIds.size === 0) return;
@@ -734,8 +843,8 @@ const PianoRollPage = () => {
     const next = toggleLoopForSelection(patternRef.current, selectedIds);
     if (next === patternRef.current) return;
     pushHistory(patternRef.current);
-    setPattern(next);
-  }, [pushHistory, selectedIds]);
+    setPatternNow(next);
+  }, [pushHistory, selectedIds, setPatternNow]);
 
   const handleSnapSelectionToScale = React.useCallback(() => {
     if (!scaleId || selectedIds.size === 0) return;
@@ -744,19 +853,35 @@ const PianoRollPage = () => {
 
   const handleBuildChord = React.useCallback(() => {
     if (selectedIds.size === 0) return;
-    pushHistory(patternRef.current);
     const { pattern: next, noteIds } = buildChords(
       patternRef.current,
       selectedIds,
       chordTypeId
     );
-    if (noteIds.length === 0) {
-      historyRef.current.undo.pop();
-      return;
-    }
-    setPattern(next);
+    if (noteIds.length === 0) return;
+    pushHistory(patternRef.current);
+    setPatternNow(next);
     setSelectedIds(new Set([...selectedIds, ...noteIds]));
-  }, [chordTypeId, pushHistory, selectedIds]);
+  }, [chordTypeId, pushHistory, selectedIds, setPatternNow]);
+
+  // Ableton's Notes panel: every transform acts on the selection, or on the
+  // whole track being edited when nothing is selected.
+  const handleTransform = React.useCallback((kind) => {
+    const current = patternRef.current;
+    const targets = operationTargetIds(current, selectedIds, activeTrackId);
+    if (targets.size === 0) return;
+    let next = current;
+    if (kind === 'quantize') next = quantizeNotes(current, targets, snapBeats || 0.25);
+    else if (kind === 'legato') next = legatoNotes(current, targets);
+    else if (kind === 'reverse') next = reverseNotes(current, targets);
+    else if (kind === 'invert') next = invertNotes(current, targets);
+    else if (kind === 'double') next = stretchNotes(current, targets, 2);
+    else if (kind === 'halve') next = stretchNotes(current, targets, 0.5);
+    else if (kind === 'mute') next = toggleNotesMuted(current, targets);
+    if (next === current) return;
+    pushHistory(current);
+    setPatternNow(next);
+  }, [activeTrackId, pushHistory, selectedIds, setPatternNow, snapBeats]);
 
   const zoomTouchedRef = React.useRef(false);
 
@@ -795,36 +920,44 @@ const PianoRollPage = () => {
   }, []);
 
   // A native <details> only closes when its own summary is clicked again, so
-  // the two topbar menus need a popover's dismissal manners. Closing means
-  // clearing the `open` attribute — never unmounting — so the menu's contents
-  // stay in the accessibility tree and reachable for assistive tech.
-  const closeTopbarMenus = React.useCallback(() => {
-    const open = topbarRef.current?.querySelectorAll('details[open]');
+  // the bar's menus need a popover's dismissal manners. Closing means clearing
+  // the `open` attribute — never unmounting — so the menu's contents stay in
+  // the accessibility tree and reachable for assistive tech.
+  const closeChromeMenus = React.useCallback(() => {
+    const open = chromeRef.current?.querySelectorAll('details[open]');
     if (!open || open.length === 0) return false;
     open.forEach((node) => { node.open = false; });
     return true;
   }, []);
 
   const runMenuAction = React.useCallback((action) => () => {
-    closeTopbarMenus();
+    closeChromeMenus();
     action();
-  }, [closeTopbarMenus]);
+  }, [closeChromeMenus]);
 
   React.useEffect(() => {
     const onPointerDown = (event) => {
-      const open = topbarRef.current?.querySelectorAll('details[open]');
-      if (!open) return;
-      // Clicks inside a menu keep it open, so the cloud sign-in form can be
-      // filled in and its "Link sent" status read.
-      open.forEach((node) => {
+      const open = chromeRef.current?.querySelectorAll('details[open]');
+      open?.forEach((node) => {
         if (!node.contains(event.target)) node.open = false;
       });
+      // The projects and account panels close on any press outside them and
+      // outside the button that toggles them.
+      if (event.target.closest?.('[data-popover-toggle]')) return;
+      if (!projectsPopoverRef.current?.contains(event.target)) setProjectsOpen(false);
+      if (!accountPopoverRef.current?.contains(event.target)) setAccountOpen(false);
     };
     // Capture, so an Escape that closes a menu is consumed here and does not
     // also reach the editor's own Escape (which clears the note selection).
     const onKeyDown = (event) => {
       if (event.key !== 'Escape') return;
-      if (closeTopbarMenus()) event.stopPropagation();
+      let closed = closeChromeMenus();
+      if (projectsPopoverRef.current || accountPopoverRef.current) {
+        setProjectsOpen(false);
+        setAccountOpen(false);
+        closed = true;
+      }
+      if (closed) event.stopPropagation();
     };
     window.addEventListener('pointerdown', onPointerDown, true);
     window.addEventListener('keydown', onKeyDown, true);
@@ -832,7 +965,7 @@ const PianoRollPage = () => {
       window.removeEventListener('pointerdown', onPointerDown, true);
       window.removeEventListener('keydown', onKeyDown, true);
     };
-  }, [closeTopbarMenus]);
+  }, [closeChromeMenus]);
 
   // Prime enough bars for the timeline to scroll on wide screens. Further
   // chunks are appended by handleTimelineScroll as the right edge nears.
@@ -847,20 +980,22 @@ const PianoRollPage = () => {
     setPattern((prev) => {
       if (chunkedBars <= prev.bars) return prev;
       const next = setPatternBars(prev, Math.min(MAX_PATTERN_BARS, chunkedBars));
-      if (cleanPatternRef.current === prev) cleanPatternRef.current = next;
+      // Room to scroll is not an edit: it must not count as one to save.
+      if (savedPatternRef.current === prev) savedPatternRef.current = next;
       return next;
     });
-  }, [pxPerBeat]);
+  }, [pxPerBeat, viewEpoch]);
 
   const handleTimelineScroll = React.useCallback((event) => {
     const el = event.currentTarget;
     if (patternRef.current.bars >= MAX_PATTERN_BARS) return;
     const threshold = BEATS_PER_BAR * pxPerBeat * 2;
     if (el.scrollLeft + el.clientWidth < el.scrollWidth - threshold) return;
-    setPattern((prev) => setPatternBars(
-      prev,
-      Math.min(MAX_PATTERN_BARS, prev.bars + BAR_CHUNK)
-    ));
+    setPattern((prev) => {
+      const next = setPatternBars(prev, Math.min(MAX_PATTERN_BARS, prev.bars + BAR_CHUNK));
+      if (savedPatternRef.current === prev) savedPatternRef.current = next;
+      return next;
+    });
   }, [pxPerBeat]);
 
   // Ctrl/Cmd + wheel zoom needs a non-passive native listener.
@@ -876,9 +1011,18 @@ const PianoRollPage = () => {
     return () => el.removeEventListener('wheel', onWheel);
   }, [applyZoom]);
 
+  const handleSaveNow = React.useCallback(() => {
+    flushDraft();
+    if (cloudSessionRef.current) {
+      if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+      cloudSyncTimeoutRef.current = null;
+      runCloudSync();
+    }
+  }, [flushDraft, runCloudSync]);
+
   React.useEffect(() => {
     const onKeyDown = (event) => {
-      const nodeName = event.target?.tagName;
+      const nodeName = event.target?.nodeName;
       if (nodeName === 'INPUT' || nodeName === 'SELECT' || nodeName === 'TEXTAREA') return;
       const mod = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();
@@ -889,6 +1033,11 @@ const PianoRollPage = () => {
         return;
       }
 
+      if (mod && key === 's') {
+        event.preventDefault();
+        handleSaveNow();
+        return;
+      }
       if (mod && key === 'z') {
         event.preventDefault();
         if (event.shiftKey) handleRedo();
@@ -914,6 +1063,11 @@ const PianoRollPage = () => {
         handleLoopSelection();
         return;
       }
+      if (mod && key === 'u') {
+        event.preventDefault();
+        handleTransform('quantize');
+        return;
+      }
       if (mod && key === 'c') {
         event.preventDefault();
         handleCopy();
@@ -933,6 +1087,17 @@ const PianoRollPage = () => {
         event.preventDefault();
         if (event.shiftKey) handleCloneInPlace();
         else handleDuplicate();
+        return;
+      }
+
+      if (!mod && !event.altKey && TOOL_BY_KEY.has(key)) {
+        const next = TOOL_BY_KEY.get(key);
+        // B toggles drawing on and off, as it does in Ableton.
+        setTool((current) => (next === 'draw' && current === 'draw' ? 'select' : next));
+        return;
+      }
+      if (!mod && key === '0') {
+        if (selectedIds.size > 0) handleTransform('mute');
         return;
       }
 
@@ -970,6 +1135,7 @@ const PianoRollPage = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [
     handlePlayToggle,
+    handleSaveNow,
     handleUndo,
     handleRedo,
     handleCopy,
@@ -980,6 +1146,7 @@ const PianoRollPage = () => {
     handleNudge,
     handleLoopSelection,
     handleResizeSelection,
+    handleTransform,
     activeTrackId,
     selectedIds,
     snapBeats,
@@ -995,6 +1162,11 @@ const PianoRollPage = () => {
     const row = Math.min(Math.max(Math.floor(y / ROW_HEIGHT), 0), ROW_COUNT - 1);
     return { beat, midi: midiForRow(row), x, y };
   }, [pxPerBeat]);
+
+  // ⌘ held while drawing or dragging steps off the grid (Ableton's bypass).
+  const snapFor = React.useCallback((event) => (
+    event.metaKey || event.ctrlKey ? null : snapBeats
+  ), [snapBeats]);
 
   const handleSelectTrack = React.useCallback((trackId) => {
     const track = patternRef.current.tracks.find((entry) => entry.id === trackId);
@@ -1048,37 +1220,110 @@ const PianoRollPage = () => {
     }).map((note) => note.id);
   }, [activeTrackId, pxPerBeat]);
 
-  const beginMove = React.useCallback((anchorNote, beat, midi, selection) => {
+  // Grab a note (and the selection with it). ⌥ leaves the originals where
+  // they are and drags copies, as in Ableton.
+  const beginMove = React.useCallback((anchorNote, beat, midi, selection, copy) => {
     const ids = selection.has(anchorNote.id) ? selection : new Set([anchorNote.id]);
+    const sources = patternRef.current.notes.filter((note) => (
+      note.trackId === activeTrackId && ids.has(note.id)
+    ));
+    let anchorId = anchorNote.id;
     const origins = new Map();
-    patternRef.current.notes.forEach((note) => {
-      if (note.trackId !== activeTrackId) return;
-      if (ids.has(note.id)) origins.set(note.id, { start: note.start, midi: note.midi });
-    });
+    if (copy) {
+      const { pattern: next, noteIds } = cloneNotesInPlace(
+        patternRef.current,
+        new Set(sources.map((note) => note.id))
+      );
+      // Clones come back in the order of their sources.
+      sources.forEach((source, index) => {
+        origins.set(noteIds[index], { start: source.start, midi: source.midi });
+        if (source.id === anchorNote.id) anchorId = noteIds[index];
+      });
+      setPatternNow(next);
+      setSelectedIds(new Set(noteIds));
+    } else {
+      sources.forEach((note) => origins.set(note.id, { start: note.start, midi: note.midi }));
+    }
     setDrag({
       mode: 'move',
-      anchorId: anchorNote.id,
+      anchorId,
       grabBeats: beat - anchorNote.start,
       grabMidi: midi,
       origins,
       lastDeltaMidi: 0
     });
-  }, [activeTrackId]);
+  }, [activeTrackId, setPatternNow]);
+
+  // Press on a note with Select or Draw: an edge resizes (the selection with
+  // it), the body moves.
+  const pressNote = React.useCallback((event, hitNote, { beat, midi, x }) => {
+    gestureSnapshotRef.current = patternRef.current;
+    const noteLeftX = hitNote.start * pxPerBeat;
+    const noteWidth = hitNote.duration * pxPerBeat;
+    const edgeRoom = Math.min(RESIZE_HANDLE_PX, noteWidth / 3);
+    const edge = noteLeftX + noteWidth - x <= edgeRoom
+      ? 'right'
+      : (x - noteLeftX <= edgeRoom ? 'left' : null);
+    let selection;
+    if (event.shiftKey) {
+      selection = new Set(selectedIds);
+      if (selection.has(hitNote.id)) selection.delete(hitNote.id);
+      else selection.add(hitNote.id);
+      setSelectedIds(selection);
+      if (!selection.has(hitNote.id)) return;
+    } else {
+      selection = selectedIds.has(hitNote.id) ? selectedIds : new Set([hitNote.id]);
+      setSelectedIds(selection);
+    }
+    if (edge) {
+      setDrag({ mode: 'resize', edge, anchorId: hitNote.id, ids: selection });
+      return;
+    }
+    beginMove(hitNote, beat, midi, selection, event.altKey);
+  }, [beginMove, pxPerBeat, selectedIds]);
+
+  // Paint lays one note per grid step along the drag; moving up or down
+  // inside a step moves that step's note, so a line can be drawn like a pen.
+  const paintCell = React.useCallback((paint, cell, midi) => {
+    const start = cell * paint.step;
+    const current = patternRef.current;
+    if (start >= patternBeats(current) - 1e-6 || start < 0) return;
+    const existing = paint.cells.get(cell);
+    if (existing) {
+      const note = current.notes.find((entry) => entry.id === existing);
+      if (note && note.midi !== midi) {
+        setPatternNow(updateNote(current, existing, { midi }));
+        audition(midi);
+      }
+      return;
+    }
+    const { pattern: next, note } = addNote(current, {
+      midi,
+      start,
+      duration: paint.step,
+      trackId: activeTrackId
+    });
+    paint.cells.set(cell, note.id);
+    setPatternNow(next);
+    audition(midi);
+  }, [activeTrackId, audition, setPatternNow]);
 
   const handleLayerPointerDown = React.useCallback((event) => {
-    const { beat, midi, x, y } = pointerToGrid(event);
+    const point = pointerToGrid(event);
+    const { beat, midi, x, y } = point;
     const noteId = event.target.dataset?.noteId || null;
     const hitNote = noteId
       ? patternRef.current.notes.find((note) => note.id === noteId)
       : findNoteAt(beat, midi);
 
     const onOtherLayer = Boolean(hitNote) && hitNote.trackId !== activeTrackId;
+    const erasing = event.button === 2 || (event.button === 0 && tool === 'erase');
 
-    if (event.button === 2) {
+    if (erasing) {
       gestureSnapshotRef.current = patternRef.current;
       // Erasing stays on the layer being edited.
       if (hitNote && !onOtherLayer) {
-        setPattern((prev) => deleteNote(prev, hitNote.id));
+        setPatternNow(deleteNote(patternRef.current, hitNote.id));
         setSelectedIds((prev) => {
           if (!prev.has(hitNote.id)) return prev;
           const next = new Set(prev);
@@ -1103,38 +1348,77 @@ const PianoRollPage = () => {
       return;
     }
 
-    if (hitNote) {
-      gestureSnapshotRef.current = patternRef.current;
-      const noteEndX = (hitNote.start + hitNote.duration) * pxPerBeat;
-      const onResizeHandle = noteEndX - x <= RESIZE_HANDLE_PX;
-      if (onResizeHandle) {
-        setSelectedIds((prev) => (prev.has(hitNote.id) ? prev : new Set([hitNote.id])));
-        setDrag({ mode: 'resize', noteId: hitNote.id });
-        return;
-      }
+    const snap = snapFor(event);
 
-      let selection;
-      if (event.shiftKey) {
-        selection = new Set(selectedIds);
-        if (selection.has(hitNote.id)) selection.delete(hitNote.id);
-        else selection.add(hitNote.id);
-        setSelectedIds(selection);
-        if (!selection.has(hitNote.id)) return;
-      } else {
-        selection = selectedIds.has(hitNote.id) ? selectedIds : new Set([hitNote.id]);
-        setSelectedIds(selection);
-      }
-      beginMove(hitNote, beat, midi, selection);
+    if (tool === 'slice') {
+      gestureSnapshotRef.current = null;
+      const at = snap ? quantizeBeats(beat, snap) : beat;
+      setDrag({ mode: 'slice', at, y0: y, y1: y, hitId: hitNote?.id || null });
       return;
     }
 
-    // Empty grid: start a marquee selection. Insertion is double-click.
+    if (tool === 'paint') {
+      gestureSnapshotRef.current = patternRef.current;
+      const step = snap || snapBeats || 0.25;
+      const cell = Math.floor(beat / step + 1e-6);
+      const paint = {
+        mode: 'paint',
+        step,
+        cells: new Map(),
+        lastCell: cell,
+        lastMidi: midi,
+        lockMidi: event.shiftKey ? midi : null
+      };
+      paintCell(paint, cell, midi);
+      setSelectedIds(new Set());
+      setDrag(paint);
+      return;
+    }
+
+    if (hitNote) {
+      pressNote(event, hitNote, point);
+      return;
+    }
+
+    if (tool === 'draw') {
+      gestureSnapshotRef.current = patternRef.current;
+      const start = quantizeBeatsFloor(beat, snap);
+      const { pattern: next, note } = addNote(patternRef.current, {
+        midi,
+        start,
+        duration: lastLengthRef.current || snap || 0.25,
+        trackId: activeTrackId
+      });
+      setPatternNow(next);
+      setSelectedIds(new Set([note.id]));
+      audition(midi);
+      setDrag({ mode: 'draw', noteId: note.id, start, x0: x, stretched: false });
+      return;
+    }
+
+    // Select on empty grid: start a marquee. Insertion is double-click.
     const baseSelection = event.shiftKey ? new Set(selectedIds) : new Set();
     if (!event.shiftKey) setSelectedIds(new Set());
     setDrag({ mode: 'marquee', x0: x, y0: y, x1: x, y1: y, baseSelection });
-  }, [pointerToGrid, findNoteAt, selectedIds, beginMove, pxPerBeat, activeTrackId, handleSelectTrack]);
+  }, [
+    activeTrackId,
+    audition,
+    findNoteAt,
+    handleSelectTrack,
+    paintCell,
+    pointerToGrid,
+    pressNote,
+    selectedIds,
+    setPatternNow,
+    snapBeats,
+    snapFor,
+    tool
+  ]);
 
   const handleLayerDoubleClick = React.useCallback((event) => {
+    // Only Select adds and removes by double-click; the other tools act on
+    // the press itself, and a second press must not undo the first.
+    if (tool !== 'select') return;
     const { beat, midi } = pointerToGrid(event);
     const noteId = event.target.dataset?.noteId || null;
     const hitNote = noteId
@@ -1154,7 +1438,7 @@ const PianoRollPage = () => {
       return;
     }
 
-    const start = quantizeBeatsFloor(beat, snapBeats);
+    const start = quantizeBeatsFloor(beat, snapFor(event));
     const duration = lastLengthRef.current || snapBeats || 0.25;
     pushHistory(patternRef.current);
     const { pattern: nextPattern, note } = addNote(patternRef.current, {
@@ -1163,7 +1447,7 @@ const PianoRollPage = () => {
       duration,
       trackId: activeTrackId
     });
-    setPattern(nextPattern);
+    setPatternNow(nextPattern);
     setSelectedIds(new Set([note.id]));
     audition(midi);
   }, [
@@ -1173,16 +1457,20 @@ const PianoRollPage = () => {
     findNoteAt,
     pointerToGrid,
     pushHistory,
-    snapBeats
+    setPatternNow,
+    snapBeats,
+    snapFor,
+    tool
   ]);
 
   const handleLayerPointerMove = React.useCallback((event) => {
     if (!drag) return;
     const { beat, midi, x, y } = pointerToGrid(event);
+    const snap = snapFor(event);
 
     if (drag.mode === 'delete-sweep') {
       const hit = findNoteAt(beat, midi);
-      if (hit) setPattern((prev) => deleteNote(prev, hit.id));
+      if (hit) setPatternNow(deleteNote(patternRef.current, hit.id));
       return;
     }
 
@@ -1194,13 +1482,52 @@ const PianoRollPage = () => {
       return;
     }
 
+    if (drag.mode === 'slice') {
+      setDrag({ ...drag, y1: y });
+      return;
+    }
+
+    if (drag.mode === 'paint') {
+      const cell = Math.floor(beat / drag.step + 1e-6);
+      const targetMidi = drag.lockMidi ?? midi;
+      if (cell === drag.lastCell) {
+        paintCell(drag, cell, targetMidi);
+      } else {
+        // Fill every step the pointer skipped, on the line between the two.
+        const direction = cell > drag.lastCell ? 1 : -1;
+        const span = Math.abs(cell - drag.lastCell);
+        for (let offset = 1; offset <= span; offset += 1) {
+          const stepCell = drag.lastCell + offset * direction;
+          const stepMidi = drag.lockMidi ?? Math.round(
+            drag.lastMidi + (targetMidi - drag.lastMidi) * (offset / span)
+          );
+          paintCell(drag, stepCell, stepMidi);
+        }
+      }
+      drag.lastCell = cell;
+      drag.lastMidi = targetMidi;
+      return;
+    }
+
+    if (drag.mode === 'draw') {
+      if (!drag.stretched && Math.abs(x - drag.x0) < DRAG_THRESHOLD_PX) return;
+      const minLength = snap || MIN_NOTE_BEATS;
+      const end = snap
+        ? Math.ceil(beat / snap - 1e-6) * snap
+        : beat;
+      const duration = Math.max(end - drag.start, minLength);
+      setPatternNow(updateNote(patternRef.current, drag.noteId, { duration }));
+      if (!drag.stretched) setDrag({ ...drag, stretched: true });
+      return;
+    }
+
     if (drag.mode === 'move') {
       const anchorOrigin = drag.origins.get(drag.anchorId);
       if (!anchorOrigin) return;
-      const anchorStart = quantizeBeats(beat - drag.grabBeats, snapBeats);
+      const anchorStart = quantizeBeats(beat - drag.grabBeats, snap);
       const deltaBeats = anchorStart - anchorOrigin.start;
       const deltaMidi = midi - drag.grabMidi;
-      setPattern((prev) => applyNoteDelta(prev, drag.origins, deltaBeats, deltaMidi));
+      setPatternNow(applyNoteDelta(patternRef.current, drag.origins, deltaBeats, deltaMidi));
       if (deltaMidi !== drag.lastDeltaMidi) {
         audition(anchorOrigin.midi + deltaMidi);
         setDrag({ ...drag, lastDeltaMidi: deltaMidi });
@@ -1209,46 +1536,92 @@ const PianoRollPage = () => {
     }
 
     if (drag.mode === 'resize') {
-      const note = patternRef.current.notes.find((entry) => entry.id === drag.noteId);
-      if (!note) return;
-      const minEnd = note.start + (snapBeats || MIN_NOTE_BEATS);
-      const end = Math.max(quantizeBeats(beat, snapBeats), minEnd);
-      setPattern((prev) => updateNote(prev, drag.noteId, { duration: end - note.start }));
+      // Resize from the pattern as it was when the edge was grabbed, so the
+      // whole selection keeps the same change and nothing accumulates.
+      const origin = gestureSnapshotRef.current || patternRef.current;
+      const anchor = origin.notes.find((entry) => entry.id === drag.anchorId);
+      if (!anchor) return;
+      const edgeBeat = snap ? quantizeBeats(beat, snap) : beat;
+      const delta = drag.edge === 'right'
+        ? edgeBeat - (anchor.start + anchor.duration)
+        : edgeBeat - anchor.start;
+      setPatternNow(resizeNotes(origin, drag.ids, delta, drag.edge));
     }
-  }, [drag, pointerToGrid, findNoteAt, notesInMarquee, snapBeats, audition]);
+  }, [drag, audition, findNoteAt, notesInMarquee, paintCell, pointerToGrid, setPatternNow, snapFor]);
 
   const handleLayerPointerUp = React.useCallback(() => {
-    if (drag?.mode === 'resize') {
-      const note = patternRef.current.notes.find((entry) => entry.id === drag.noteId);
-      if (note) lastLengthRef.current = note.duration;
+    if (drag?.mode === 'resize' || drag?.mode === 'draw') {
+      const id = drag.mode === 'draw' ? drag.noteId : drag.anchorId;
+      const note = patternRef.current.notes.find((entry) => entry.id === id);
+      // A drawn note that was stretched sets the length for the next ones.
+      if (note && (drag.mode === 'resize' || drag.stretched)) lastLengthRef.current = note.duration;
+    }
+    if (drag?.mode === 'slice') {
+      const top = Math.min(drag.y0, drag.y1);
+      const bottom = Math.max(drag.y0, drag.y1);
+      const highest = midiForRow(Math.floor(top / ROW_HEIGHT));
+      const lowest = midiForRow(Math.floor(bottom / ROW_HEIGHT));
+      const ids = new Set(patternRef.current.notes
+        .filter((note) => (
+          note.trackId === activeTrackId
+          && note.midi <= highest
+          && note.midi >= lowest
+        ))
+        .map((note) => note.id));
+      if (drag.hitId) ids.add(drag.hitId);
+      const { pattern: next, noteIds } = sliceNotes(patternRef.current, ids, drag.at);
+      if (noteIds.length > 0) {
+        pushHistory(patternRef.current);
+        setPatternNow(next);
+      }
+      setDrag(null);
+      return;
     }
     // One undo step per completed gesture, and only if it changed anything.
     const snapshot = gestureSnapshotRef.current;
     gestureSnapshotRef.current = null;
     if (snapshot && snapshot !== patternRef.current) pushHistory(snapshot);
     setDrag(null);
-  }, [drag, pushHistory]);
+  }, [activeTrackId, drag, pushHistory, setPatternNow]);
 
   const handleKeyAudition = React.useCallback((midi) => {
     audition(midi);
   }, [audition]);
 
+  // ── Velocity lane ─────────────────────────────────────────────────────────
+
+  const handleLaneGestureStart = React.useCallback(() => {
+    gestureSnapshotRef.current = patternRef.current;
+  }, []);
+
+  const handleLaneVelocities = React.useCallback((velocityById) => {
+    setPatternNow(setNoteVelocities(patternRef.current, velocityById));
+  }, [setPatternNow]);
+
+  const handleLaneGestureEnd = React.useCallback(() => {
+    const snapshot = gestureSnapshotRef.current;
+    gestureSnapshotRef.current = null;
+    if (snapshot && snapshot !== patternRef.current) pushHistory(snapshot);
+  }, [pushHistory]);
+
+  // ── Tracks ────────────────────────────────────────────────────────────────
+
   const handleAddTrack = React.useCallback(() => {
     pushHistory(patternRef.current);
     const { pattern: next, track } = addTrack(patternRef.current);
-    setPattern(next);
+    setPatternNow(next);
     setActiveTrackId(track.id);
     setWaveformType(track.instrument);
     setAudioParams(sanitizeAudioParams(track.audioParams || AUDIO_PARAM_DEFAULTS));
     setActivePresetName(track.soundName || null);
     setSelectedIds(new Set());
-  }, [pushHistory]);
+  }, [pushHistory, setPatternNow]);
 
   const handleDeleteTrack = React.useCallback((trackId) => {
     if (patternRef.current.tracks.length <= 1) return;
     const next = deleteTrack(patternRef.current, trackId);
     pushHistory(patternRef.current);
-    setPattern(next);
+    setPatternNow(next);
     if (trackId === activeTrackId) {
       const fallback = next.tracks[0];
       setActiveTrackId(fallback.id);
@@ -1258,7 +1631,7 @@ const PianoRollPage = () => {
       setSelectedIds(new Set());
     }
     setSoundBrowserTrackId((current) => (current === trackId ? null : current));
-  }, [activeTrackId, pushHistory]);
+  }, [activeTrackId, pushHistory, setPatternNow]);
 
   const handleTrackPatch = React.useCallback((trackId, patch) => {
     setPattern((prev) => updateTrack(prev, trackId, patch));
@@ -1333,6 +1706,8 @@ const PianoRollPage = () => {
     return () => window.removeEventListener('pointerdown', onPointerDown, true);
   }, [soundBrowserTrackId]);
 
+  // ── Projects and the account ─────────────────────────────────────────────
+
   React.useEffect(() => {
     if (!CLOUD_ENABLED) return undefined;
     let active = true;
@@ -1348,137 +1723,160 @@ const PianoRollPage = () => {
     };
   }, []);
 
+  // A token refresh hands over a new session object for the same person; only
+  // a different person (or none) is a change worth reloading for.
+  const cloudUserId = cloudSession?.user?.id || null;
   React.useEffect(() => {
-    if (!cloudSession) return undefined;
-    if (!cloudPatternIdRef.current) cloudPatternIdRef.current = loadCloudPatternId();
+    cloudSessionRef.current = cloudSession;
+  }, [cloudSession]);
+
+  React.useEffect(() => {
+    if (!cloudUserId) {
+      if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+      cloudSyncTimeoutRef.current = null;
+      setCloudRows(NO_CLOUD_ROWS);
+      setSyncState('idle');
+      return undefined;
+    }
     let active = true;
-    listCloudPatterns().then((entries) => {
+    listCloudPatterns().then((rows) => {
       if (!active) return;
-      setCloudPatterns(entries);
-      // An empty list also means "the query failed", so only a populated
-      // library is allowed to retire a link to a row that is really gone.
-      const linkedId = cloudPatternIdRef.current;
-      if (entries.length > 0 && linkedId && !entries.some((entry) => entry.id === linkedId)) {
-        cloudPatternIdRef.current = null;
-        saveCloudPatternId(null);
-      }
+      setCloudRows(rows.filter((row) => Array.isArray(row.pattern?.notes)));
     });
+    // Whatever this device made while signed out goes to the account now.
+    scheduleCloudSync(0);
     return () => {
       active = false;
     };
-  }, [cloudSession]);
+  }, [cloudUserId, scheduleCloudSync]);
 
-  const pushPatternToCloud = React.useCallback(async (target) => {
-    const saved = await upsertCloudPattern({
-      id: cloudPatternIdRef.current,
-      name: target.name.trim().slice(0, 48) || 'Untitled loop',
-      pattern: target
-    });
-    if (!saved) {
-      setCloudSyncPending(true);
-      return;
+  const loadProjectIntoEditor = React.useCallback((id, rawPattern) => {
+    playback.stop();
+    const next = normalizePattern(rawPattern);
+    historyRef.current = { undo: [], redo: [] };
+    gestureSnapshotRef.current = null;
+    savedPatternRef.current = next;
+    projectIdRef.current = id;
+    setProjectId(id);
+    setPatternNow(next);
+    const first = next.tracks[0];
+    setActiveTrackId(first.id);
+    setWaveformType(first.instrument);
+    setAudioParams(sanitizeAudioParams(first.audioParams || AUDIO_PARAM_DEFAULTS));
+    setActivePresetName(first.soundName || null);
+    setSelectedIds(new Set());
+    setSoundBrowserTrackId(null);
+    setRename(null);
+    setDrag(null);
+    timelinePrimedRef.current = false;
+    setViewEpoch((epoch) => epoch + 1);
+  }, [playback.stop, setPatternNow]);
+
+  // New starts from nothing at once; the project being left is saved first.
+  const handleNewProject = React.useCallback(() => {
+    flushDraft();
+    loadProjectIntoEditor(newProjectId(), createPattern({ name: nextUntitledName() }));
+    setProjectsOpen(false);
+  }, [flushDraft, loadProjectIntoEditor]);
+
+  const handleOpenProject = React.useCallback((entry) => {
+    setProjectsOpen(false);
+    if (entry.localId && entry.localId === projectIdRef.current) return;
+    flushDraft();
+    const opened = { ...entry.pattern, name: entry.name };
+    let id = entry.localId;
+    if (!id) {
+      // A project from the account this device has not had before.
+      id = newProjectId();
+      const now = Date.now();
+      saveProject({
+        id,
+        pattern: normalizePattern(opened),
+        cloudId: entry.cloudId,
+        syncedAt: now,
+        updatedAt: now
+      });
     }
-    cloudPatternIdRef.current = saved.id;
-    saveCloudPatternId(saved.id);
-    cloudSyncedPatternRef.current = target;
-    setCloudSyncPending(false);
-    setCloudPatterns((prev) => [saved, ...prev.filter((entry) => entry.id !== saved.id)]);
+    loadProjectIntoEditor(id, opened);
+  }, [flushDraft, loadProjectIntoEditor]);
+
+  const handleDuplicateProject = React.useCallback((entry) => {
+    const copy = normalizePattern({ ...entry.pattern, name: `${entry.name} copy`.slice(0, 48) });
+    if (!saveProject({ id: newProjectId(), pattern: copy })) setDeviceSaveFailed(true);
+    setLibraryVersion((version) => version + 1);
+    scheduleCloudSync();
+  }, [scheduleCloudSync]);
+
+  const handleDeleteProject = React.useCallback((entry) => {
+    if (entry.localId) deleteProject(entry.localId);
+    if (entry.cloudId && cloudSessionRef.current) {
+      setCloudRows((prev) => prev.filter((row) => row.id !== entry.cloudId));
+      deleteCloudPattern(entry.cloudId);
+    }
+    if (entry.localId && entry.localId === projectIdRef.current) {
+      // The open project is gone: start a clean one without saving it back.
+      if (draftSaveTimeoutRef.current) clearTimeout(draftSaveTimeoutRef.current);
+      draftSaveTimeoutRef.current = null;
+      loadProjectIntoEditor(newProjectId(), createPattern({ name: nextUntitledName() }));
+    }
+    setLibraryVersion((version) => version + 1);
+  }, [loadProjectIntoEditor]);
+
+  const handleSignIn = React.useCallback(async (email, password) => {
+    const result = await signInWithPassword(email, password);
+    if (!result.error) setCloudSession(await getSession());
+    return result;
   }, []);
-
-  // Once a pattern has a cloud row, later edits follow it there quietly. A
-  // failed push only leaves the row behind the local draft, which still holds
-  // every edit, so the next edit simply tries again.
-  React.useEffect(() => {
-    if (!cloudSession || !cloudPatternIdRef.current) return undefined;
-    if (pattern === cloudSyncedPatternRef.current) return undefined;
-    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
-    cloudSyncTimeoutRef.current = setTimeout(() => {
-      cloudSyncTimeoutRef.current = null;
-      pushPatternToCloud(patternRef.current);
-    }, CLOUD_SYNC_DEBOUNCE_MS);
-    return undefined;
-  }, [cloudSession, pattern, pushPatternToCloud]);
-
-  const handleCloudEmailChange = React.useCallback((event) => {
-    setCloudEmail(event.target.value);
-    setCloudAuthStatus('idle');
-  }, []);
-
-  const handleSendSignInLink = React.useCallback(async (event) => {
-    event.preventDefault();
-    const email = cloudEmail.trim();
-    if (!email) return;
-    setCloudAuthStatus('sending');
-    const { error } = await signInWithEmail(email);
-    setCloudAuthStatus(error ? 'error' : 'sent');
-  }, [cloudEmail]);
 
   const handleSignOut = React.useCallback(async () => {
-    if (cloudSyncTimeoutRef.current) {
-      clearTimeout(cloudSyncTimeoutRef.current);
-      cloudSyncTimeoutRef.current = null;
-    }
-    cloudPatternIdRef.current = null;
-    saveCloudPatternId(null);
+    if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
+    cloudSyncTimeoutRef.current = null;
     await signOut();
     setCloudSession(null);
-    setCloudPatterns(NO_CLOUD_PATTERNS);
-    setCloudSyncPending(false);
-    setCloudAuthStatus('idle');
+    setAccountOpen(false);
   }, []);
 
-  const handleSave = React.useCallback(() => {
-    saveSavedPattern(patternRef.current);
-    cleanPatternRef.current = patternRef.current;
-    hasUnsavedChangesRef.current = false;
-    setHasUnsavedChanges(false);
-    setSavedPatterns(loadSavedPatterns());
-    if (cloudSession) pushPatternToCloud(patternRef.current);
-  }, [cloudSession, pushPatternToCloud]);
-
-  const handleLoad = React.useCallback((entry) => {
-    playback.stop();
-    pushHistory(patternRef.current);
-    const next = normalizePattern({ ...entry.pattern, name: entry.name });
-    const cloudId = entry.source === 'cloud' ? entry.id : null;
-    cloudPatternIdRef.current = cloudId;
-    saveCloudPatternId(cloudId);
-    cloudSyncedPatternRef.current = next;
-    cleanPatternRef.current = next;
-    hasUnsavedChangesRef.current = false;
-    setPattern(next);
-    setHasUnsavedChanges(false);
-    setActiveTrackId(next.tracks[0].id);
-    setWaveformType(next.tracks[0].instrument);
-    setAudioParams(sanitizeAudioParams(next.tracks[0].audioParams || AUDIO_PARAM_DEFAULTS));
-    setActivePresetName(next.tracks[0].soundName || null);
-    setSoundBrowserTrackId(null);
-    setSelectedIds(new Set());
-  }, [playback.stop, pushHistory]);
-
-  const handleDeleteSaved = React.useCallback((entry) => {
-    if (entry.source !== 'cloud') {
-      setSavedPatterns(deleteSavedPattern(entry.id));
-      return;
-    }
-    if (entry.id === cloudPatternIdRef.current) {
-      cloudPatternIdRef.current = null;
-      saveCloudPatternId(null);
-    }
-    setCloudPatterns((prev) => prev.filter((item) => item.id !== entry.id));
-    deleteCloudPattern(entry.id);
-  }, []);
-
-  const libraryEntries = React.useMemo(() => {
-    const local = savedPatterns.map((entry) => ({ ...entry, source: 'local' }));
-    if (cloudPatterns.length === 0) return local;
-    return [
-      ...cloudPatterns
-        .filter((entry) => Array.isArray(entry.pattern?.notes))
-        .map((entry) => ({ ...entry, source: 'cloud' })),
-      ...local
-    ];
-  }, [cloudPatterns, savedPatterns]);
+  const browserEntries = React.useMemo(() => {
+    if (!projectsOpen) return [];
+    const signedIn = Boolean(cloudUserId);
+    const local = loadProjects();
+    const linked = new Set(local.map((entry) => entry.cloudId).filter(Boolean));
+    const describe = (pattern) => ({
+      bars: pattern.bars,
+      bpm: pattern.bpm,
+      noteCount: pattern.notes.length
+    });
+    const entries = local.map((entry) => {
+      const synced = Boolean(entry.cloudId && entry.syncedAt && entry.updatedAt <= entry.syncedAt);
+      let where = entry.cloudId ? 'account' : 'device';
+      if (signedIn && !synced) where = 'pending';
+      return {
+        key: entry.id,
+        localId: entry.id,
+        cloudId: entry.cloudId,
+        name: entry.name,
+        pattern: entry.pattern,
+        updatedAt: entry.updatedAt,
+        where,
+        ...describe(entry.pattern)
+      };
+    });
+    cloudRows.filter((row) => !linked.has(row.id)).forEach((row) => {
+      entries.push({
+        key: `account-${row.id}`,
+        localId: null,
+        cloudId: row.id,
+        name: row.name,
+        pattern: row.pattern,
+        updatedAt: Date.parse(row.updatedAt) || 0,
+        where: 'account',
+        ...describe(row.pattern)
+      });
+    });
+    return entries.sort((a, b) => b.updatedAt - a.updatedAt);
+    // libraryVersion re-reads the device's list after it changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectsOpen, cloudRows, cloudUserId, libraryVersion]);
 
   const handleClear = React.useCallback(() => {
     playback.stop();
@@ -1500,11 +1898,14 @@ const PianoRollPage = () => {
   const handleOpenInPlayer = React.useCallback(() => {
     const midiData = patternToMidiData(patternRef.current);
     if (midiData.notes.length === 0) return;
-    if (!confirmUnsavedNavigation()) return;
     playback.stop();
     setPendingMidi(midiData);
     window.location.hash = '#/';
   }, [playback.stop]);
+
+  const handleExportMidi = React.useCallback(() => {
+    loadMidiExport().then(({ downloadPatternMidi }) => downloadPatternMidi(patternRef.current));
+  }, []);
 
   const handleRecordLoop = React.useCallback(async () => {
     if (recordingTimeoutRef.current) {
@@ -1591,7 +1992,6 @@ const PianoRollPage = () => {
   ]);
 
   const handleMidiHandoff = React.useCallback((midiData) => {
-    if (!confirmUnsavedNavigation()) return;
     setPendingMidi(midiData);
     window.location.hash = '#/';
   }, []);
@@ -1643,11 +2043,14 @@ const PianoRollPage = () => {
       const { noteName, octave, noteId } = midiNoteToName(midi);
       const inScale = isScaleMidi(midi);
       const inChord = isChordMidi(midi);
+      const pitchClass = ((midi % 12) + 12) % 12;
       rows.push({
         midi,
         noteId,
         label: activeScale && (inScale || inChord) ? noteId : (noteName === 'C' ? `C${octave}` : ''),
         black: isBlackKey(midi),
+        // C and F sit on B and E with no black key between: a seam.
+        seam: pitchClass === 0 || pitchClass === 5,
         inScale,
         inChord
       });
@@ -1655,9 +2058,18 @@ const PianoRollPage = () => {
     return rows;
   }, [activeScale, isChordMidi, isScaleMidi]);
 
-  const barMarkers = React.useMemo(() => (
-    Array.from({ length: pattern.bars }, (_, index) => index)
-  ), [pattern.bars]);
+  const rulerMarks = React.useMemo(() => {
+    const showBeats = pxPerBeat >= RULER_BEAT_LABEL_MIN_PX;
+    const marks = [];
+    for (let bar = 0; bar < pattern.bars; bar += 1) {
+      marks.push({ key: `bar-${bar}`, beat: bar * BEATS_PER_BAR, label: String(bar + 1), bar: true });
+      if (!showBeats) continue;
+      for (let beat = 1; beat < BEATS_PER_BAR; beat += 1) {
+        marks.push({ key: `beat-${bar}-${beat}`, beat: bar * BEATS_PER_BAR + beat, label: `${bar + 1}.${beat + 1}`, bar: false });
+      }
+    }
+    return marks;
+  }, [pattern.bars, pxPerBeat]);
 
   const outOfScaleCount = React.useMemo(() => (
     activeScale ? activeTrackNotes.filter((note) => !isScaleMidi(note.midi)).length : 0
@@ -1667,12 +2079,13 @@ const PianoRollPage = () => {
     .filter((note) => note.trackId !== activeTrack?.id)
     .map((note) => {
       const track = pattern.tracks.find((entry) => entry.id === note.trackId);
+      const name = midiNoteToName(note.midi).noteId;
       return (
         <div
           key={`ghost-${note.id}`}
           data-note-id={note.id}
-          className={`piano-roll__ghost-note ${track?.muted ? 'is-muted' : ''}`}
-          title={`${track?.name || 'Layer'} · ${midiNoteToName(note.midi).noteId} — click to edit this layer`}
+          className={`piano-roll__ghost-note${track?.muted || note.muted ? ' is-muted' : ''}`}
+          title={`${track?.name || 'Layer'} · ${name} — click to edit this layer`}
           style={{
             '--track-color': track?.color,
             left: note.start * pxPerBeat,
@@ -1681,8 +2094,8 @@ const PianoRollPage = () => {
             height: ROW_HEIGHT - 2
           }}
         >
-          {noteNameFits(midiNoteToName(note.midi).noteId, note.duration * pxPerBeat) && (
-            <span className="piano-roll__note-name">{midiNoteToName(note.midi).noteId}</span>
+          {noteNameFits(name, note.duration * pxPerBeat) && (
+            <span className="piano-roll__note-name">{name}</span>
           )}
         </div>
       );
@@ -1690,99 +2103,173 @@ const PianoRollPage = () => {
 
   const noteElements = React.useMemo(() => activeTrackNotes.map((note) => {
     const outOfScale = Boolean(activeScale) && !isScaleMidi(note.midi);
+    const name = midiNoteToName(note.midi).noteId;
     const classNames = [
       'piano-roll__note',
       selectedIds.has(note.id) ? 'is-selected' : '',
-      outOfScale ? 'is-out-of-scale' : ''
+      outOfScale ? 'is-out-of-scale' : '',
+      note.muted ? 'is-muted' : ''
     ].filter(Boolean).join(' ');
+    const velocityLabel = `velocity ${midiVelocity(note.velocity ?? DEFAULT_VELOCITY)}`;
     return (
       <div
         key={note.id}
         data-note-id={note.id}
         className={classNames}
-        title={outOfScale ? `${midiNoteToName(note.midi).noteId} is outside ${SCALE_ROOTS[scaleRoot]} ${activeScale.label}` : undefined}
+        title={outOfScale
+          ? `${name} · ${velocityLabel} · outside ${SCALE_ROOTS[scaleRoot]} ${activeScale.label}`
+          : `${name} · ${velocityLabel}${note.muted ? ' · muted (0)' : ''}`}
         style={{
           '--track-color': activeTrack?.color,
+          '--note-fill': velocityFill(activeTrack?.color, note.velocity),
           left: note.start * pxPerBeat,
           top: rowForMidi(note.midi) * ROW_HEIGHT + 1,
           width: Math.max(note.duration * pxPerBeat - 1, 4),
           height: ROW_HEIGHT - 2
         }}
       >
-        {noteNameFits(midiNoteToName(note.midi).noteId, note.duration * pxPerBeat) && (
-          <span className="piano-roll__note-name">{midiNoteToName(note.midi).noteId}</span>
+        {noteNameFits(name, note.duration * pxPerBeat) && (
+          <span className="piano-roll__note-name">{name}</span>
         )}
       </div>
     );
   }), [activeScale, activeTrack?.color, activeTrackNotes, isScaleMidi, pxPerBeat, scaleRoot, selectedIds]);
 
+  const signedIn = Boolean(cloudUserId);
+  let saveStatus;
+  if (deviceSaveFailed) {
+    saveStatus = {
+      state: 'error',
+      label: 'Not saved',
+      title: 'This device refused the save (its storage is full). Export the project as MIDI to keep it.'
+    };
+  } else if (signedIn && syncState === 'saving') {
+    saveStatus = { state: 'busy', label: 'Saving', title: 'Sending to your account' };
+  } else if (signedIn && syncState === 'error') {
+    saveStatus = {
+      state: 'error',
+      label: 'Retry save',
+      title: 'Saved on this device, but your account did not take it. Click to try again (⌘S).'
+    };
+  } else if (signedIn && syncState === 'midi') {
+    saveStatus = {
+      state: 'error',
+      label: 'Retry save',
+      title: 'The project is in your account, but its MIDI file was not stored. Click to try again (⌘S).'
+    };
+  } else if (signedIn) {
+    saveStatus = { state: 'ok', label: 'Saved', title: 'Saved to your account as you work (⌘S saves now)' };
+  } else {
+    saveStatus = {
+      state: 'ok',
+      label: 'On this device',
+      title: CLOUD_ENABLED
+        ? 'Saved on this device as you work. Sign in to keep projects in your account.'
+        : 'Saved on this device as you work (⌘S saves now)'
+    };
+  }
+
+  const syncNote = signedIn
+    ? (syncState === 'error' || syncState === 'midi'
+      ? 'The last save to your account failed. Edits wait on this device.'
+      : 'Projects save to your account as you work.')
+    : null;
+
+  const transformTargetLabel = selectedIds.size > 0
+    ? `${selectedIds.size} selected`
+    : `all of ${activeTrack?.name || 'this track'}`;
+  const gridRows = `${RULER_HEIGHT}px ${GRID_HEIGHT}px${velocityLaneOpen ? ` ${VELOCITY_LANE_HEIGHT}px` : ''}`;
+
   return (
     <div className="piano-roll-page">
-      <div className="piano-roll-topbar" ref={topbarRef}>
-        <button
-          type="button"
-          className="btn btn--accent piano-roll-topbar__play"
-          onClick={handlePlayToggle}
-          aria-label={isRolling ? 'Stop the loop' : 'Play the loop'}
-          title={isRolling ? 'Stop the loop (Space)' : 'Play the loop (Space)'}
-        >
-          {isRolling ? ICON_STOP : ICON_PLAY}
-          <span>{isRolling ? 'Stop' : 'Play'}</span>
-        </button>
-        <button
-          type="button"
-          className={`btn btn--icon piano-roll-topbar__record ${isRecordingLoop ? 'is-recording' : ''}`}
-          onClick={handleRecordLoop}
-          disabled={!isRecordingLoop && pattern.notes.length === 0}
-          aria-label={isRecordingLoop ? 'Stop recording' : 'Record loop'}
-          title={isRecordingLoop
-            ? 'Stop recording'
-            : (pattern.notes.length === 0
-              ? 'Add notes first'
-              : 'Record one pass of the loop to a WAV file')}
-        >
-          {ICON_RECORD}
-        </button>
-        <input
-          className="piano-roll-topbar__name"
-          value={pattern.name}
-          onChange={(event) => setPattern((prev) => ({ ...prev, name: event.target.value }))}
-          aria-label="Pattern name"
-        />
-        {hasUnsavedChanges && (
-          <span
-            className="piano-roll-topbar__dirty"
-            role="status"
-            aria-label="Unsaved changes"
-            title="Unsaved changes"
-          />
-        )}
-        {/* Tempo, length, snap and key live in the bar as quiet inline controls:
-            a row of their own cost the grid 50px for values that rarely change. */}
-        <div className="piano-roll-topbar__settings" role="group" aria-label="Pattern settings">
-          <label className="piano-roll-setting">
-            <span>BPM</span>
+      <div className="piano-roll-chrome" ref={chromeRef}>
+        <header className="piano-roll-bar">
+          <div className="piano-roll-bar__group">
+            <button
+              type="button"
+              className="piano-roll-button piano-roll-button--icon"
+              onClick={() => setProjectsOpen((open) => !open)}
+              aria-expanded={projectsOpen}
+              aria-label="Projects"
+              title="Projects"
+              data-popover-toggle=""
+            >
+              {ICON_PROJECTS}
+            </button>
             <input
-              type="number"
-              min={BPM_MIN}
-              max={BPM_MAX}
-              value={pattern.bpm}
+              className="piano-roll-bar__name"
+              value={pattern.name}
               onChange={(event) => {
-                const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
-                setPattern((prev) => ({ ...prev, bpm }));
+                const name = event.target.value;
+                setPattern((prev) => ({ ...prev, name }));
               }}
+              aria-label="Project name"
+              spellCheck={false}
             />
-          </label>
+            <button
+              type="button"
+              className={`piano-roll-bar__status${saveStatus.state === 'error' ? ' is-error' : ''}${saveStatus.state === 'busy' ? ' is-busy' : ''}`}
+              onClick={handleSaveNow}
+              title={saveStatus.title}
+            >
+              {saveStatus.label}
+            </button>
+            <button
+              type="button"
+              className="piano-roll-button"
+              onClick={handleNewProject}
+              title="Start a new project (this one is already saved)"
+            >
+              {ICON_PLUS}
+              <span>New</span>
+            </button>
+          </div>
 
-          <BeatCounter
-            on={metronomeOn}
-            running={isRolling}
-            getProgress={playback.getPlaybackProgress}
-            shapeRef={playbackShapeRef}
-            onToggle={() => setMetronomeOn((current) => !current)}
-          />
-
-          <div className="piano-roll-setting">
+          <div className="piano-roll-bar__group piano-roll-bar__group--transport">
+            <button
+              type="button"
+              className="piano-roll-button piano-roll-button--icon piano-roll-button--transport"
+              onClick={handlePlayToggle}
+              aria-pressed={isRolling}
+              aria-label={isRolling ? 'Stop the loop' : 'Play the loop'}
+              title={isRolling ? 'Stop (Space)' : 'Play the loop (Space)'}
+            >
+              {isRolling ? ICON_STOP : ICON_PLAY}
+            </button>
+            <button
+              type="button"
+              className={`piano-roll-button piano-roll-button--icon piano-roll-button--record${isRecordingLoop ? ' is-recording' : ''}`}
+              onClick={handleRecordLoop}
+              disabled={!isRecordingLoop && pattern.notes.length === 0}
+              aria-label={isRecordingLoop ? 'Stop recording' : 'Record loop'}
+              title={isRecordingLoop
+                ? 'Stop recording'
+                : (pattern.notes.length === 0
+                  ? 'Add notes first'
+                  : 'Record one pass of the loop to a WAV file')}
+            >
+              {ICON_RECORD}
+            </button>
+            <label className="piano-roll-field">
+              <span>BPM</span>
+              <input
+                type="number"
+                min={BPM_MIN}
+                max={BPM_MAX}
+                value={pattern.bpm}
+                onChange={(event) => {
+                  const bpm = Math.min(BPM_MAX, Math.max(BPM_MIN, Number(event.target.value) || 120));
+                  setPattern((prev) => ({ ...prev, bpm }));
+                }}
+              />
+            </label>
+            <BeatCounter
+              on={metronomeOn}
+              running={isRolling}
+              getProgress={playback.getPlaybackProgress}
+              shapeRef={playbackShapeRef}
+              onToggle={() => setMetronomeOn((current) => !current)}
+            />
             <div className="piano-roll-stepper" role="group" aria-label="Timeline bars">
               <button
                 type="button"
@@ -1806,8 +2293,78 @@ const PianoRollPage = () => {
             </div>
           </div>
 
-          <label className="piano-roll-setting">
-            <span>Snap</span>
+          <div className="piano-roll-bar__group piano-roll-bar__group--end">
+            <details className="piano-roll-menu-anchor">
+              <summary
+                className="piano-roll-button piano-roll-button--icon"
+                aria-label="More project actions"
+                title="More: export MIDI, send to the player, track actions"
+              >
+                {ICON_MORE}
+              </summary>
+              <div className="piano-roll-menu piano-roll-menu--end">
+                <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(handleExportMidi)}>
+                  Export MIDI file
+                </button>
+                <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(handleOpenInPlayer)}>
+                  Send to player
+                </button>
+                <button
+                  type="button"
+                  className="piano-roll-menu__item"
+                  onClick={runMenuAction(handleClear)}
+                  title={`Delete every note on ${activeTrack?.name || 'this track'}`}
+                >
+                  Clear track
+                </button>
+                {pattern.tracks.length > 1 && (
+                  <button
+                    type="button"
+                    className="piano-roll-menu__item"
+                    onClick={runMenuAction(() => handleDeleteTrack(activeTrack?.id))}
+                    title={`Remove ${activeTrack?.name || 'this track'} and its notes`}
+                  >
+                    Delete track
+                  </button>
+                )}
+              </div>
+            </details>
+            {CLOUD_ENABLED && (
+              <button
+                type="button"
+                className={`piano-roll-button piano-roll-button--icon piano-roll-button--account${signedIn ? ' is-signed-in' : ''}`}
+                onClick={() => setAccountOpen((open) => !open)}
+                aria-expanded={accountOpen}
+                aria-label={signedIn ? 'Account: signed in' : 'Account: sign in'}
+                title={signedIn ? `Signed in as ${cloudSession.user?.email || 'you'}` : 'Sign in'}
+                data-popover-toggle=""
+              >
+                {ICON_ACCOUNT}
+              </button>
+            )}
+          </div>
+        </header>
+
+        <div className="piano-roll-tools">
+          <div className="piano-roll-tools__set" role="radiogroup" aria-label="Tools">
+            {TOOLS.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                role="radio"
+                className="piano-roll-tool"
+                aria-checked={tool === entry.id}
+                aria-label={entry.label}
+                title={entry.hint}
+                onClick={() => setTool(entry.id)}
+              >
+                {entry.icon}
+              </button>
+            ))}
+          </div>
+
+          <label className="piano-roll-field">
+            <span>Grid</span>
             <select value={snapId} onChange={(event) => setSnapId(event.target.value)}>
               {SNAP_OPTIONS.map((option) => (
                 <option key={option.id} value={option.id}>{option.label}</option>
@@ -1815,7 +2372,7 @@ const PianoRollPage = () => {
             </select>
           </label>
 
-          <label className="piano-roll-setting">
+          <label className="piano-roll-field">
             <span>Scale</span>
             <select value={scaleId} onChange={(event) => setScaleId(event.target.value)}>
               <option value="">Off</option>
@@ -1826,7 +2383,7 @@ const PianoRollPage = () => {
           </label>
 
           {scaleId && (
-            <label className="piano-roll-setting">
+            <label className="piano-roll-field">
               <span>Key</span>
               <select
                 value={scaleRoot}
@@ -1840,191 +2397,114 @@ const PianoRollPage = () => {
           )}
 
           {activeScale && outOfScaleCount > 0 && (
-            <span className="piano-roll-setting__outside">{outOfScaleCount} outside</span>
+            <span className="piano-roll-tools__outside">{outOfScaleCount} outside</span>
           )}
-        </div>
-        <div className="piano-roll-topbar__zoom" role="group" aria-label="Zoom">
-          <button
-            type="button"
-            onClick={() => applyZoom(1 / ZOOM_STEP)}
-            disabled={pxPerBeat <= ZOOM_MIN + 0.01}
-            aria-label="Zoom out"
-            title="Zoom out"
-          >
-            −
-          </button>
-          <button
-            type="button"
-            className="piano-roll-topbar__zoom-fit"
-            onClick={fitZoom}
-            aria-label="Fit pattern to view"
-            title="Fit the whole pattern on screen"
-          >
-            {Math.round((pxPerBeat / DEFAULT_PX_PER_BEAT) * 100)}%
-          </button>
-          <button
-            type="button"
-            onClick={() => applyZoom(ZOOM_STEP)}
-            disabled={pxPerBeat >= ZOOM_MAX - 0.01}
-            aria-label="Zoom in"
-            title="Zoom in"
-          >
-            +
-          </button>
-        </div>
-        <details className="piano-roll-topbar__help">
-          <summary
-            className="btn btn--icon"
-            aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts"
-          >
-            {ICON_HELP}
-          </summary>
-          <div className="piano-roll-topbar__help-panel">
-            <h2>Shortcuts</h2>
-            <dl>
-              <dt>Double-click</dt><dd>Add / remove note</dd>
-              <dt>Click · drag</dt><dd>Select · multi-select</dd>
-              <dt>1–9 · click a note</dt><dd>Switch layer</dd>
-              <dt>Drag note</dt><dd>Move selection</dd>
-              <dt>Drag right edge</dt><dd>Resize</dd>
-              <dt>Arrows · ⇧↑↓</dt><dd>Nudge · octave</dd>
-              <dt>⇧← ⇧→</dt><dd>Shrink · grow (right edge)</dd>
-              <dt>⌥← ⌥→</dt><dd>Trim start (left edge)</dd>
-              <dt>⌘Z · ⇧⌘Z</dt><dd>Undo · redo</dd>
-              <dt>⌘C ⌘X ⌘V</dt><dd>Copy · cut · paste</dd>
-              <dt>⌘D</dt><dd>Duplicate right</dd>
-              <dt>⇧⌘D</dt><dd>Clone in place, then nudge</dd>
-              <dt>⇧⌘L</dt><dd>Loop selected bars</dd>
-              <dt>⌘A · Esc</dt><dd>Select all · none</dd>
-              <dt>Del</dt><dd>Delete selection</dd>
-              <dt>Right-click</dt><dd>Erase</dd>
-              <dt>⌘ + scroll</dt><dd>Zoom</dd>
-              <dt>Space</dt><dd>Play / stop</dd>
-            </dl>
-          </div>
-        </details>
-        <button
-          type="button"
-          className="btn btn--secondary"
-          onClick={handleSave}
-          title="Save this pattern to your library"
-        >
-          Save
-        </button>
-        <details className="piano-roll-topbar__more">
-          <summary
-            className="btn btn--icon"
-            aria-label="More editor actions"
-            title="More: open a pattern, layer actions, account"
-          >
-            {ICON_MORE}
-          </summary>
-          <div className="piano-roll-menu">
-            {libraryEntries.length > 0 && (
-              <>
-                <h2 className="piano-roll-menu__heading">Open pattern</h2>
-                <ul className="piano-roll-menu__list">
-                  {libraryEntries.map((entry) => (
-                    <li key={`${entry.source}-${entry.id}`} className="piano-roll-menu__entry">
-                      <button
-                        type="button"
-                        className="btn piano-roll-menu__load"
-                        onClick={runMenuAction(() => handleLoad(entry))}
-                        title={`Open ${entry.name} in the editor`}
-                      >
-                        {entry.name}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn piano-roll-menu__delete"
-                        onClick={() => handleDeleteSaved(entry)}
-                        aria-label={`Delete saved pattern ${entry.name}`}
-                      >
-                        Delete
-                      </button>
-                      <span className="piano-roll-menu__meta">
-                        {entry.source === 'cloud' ? 'Cloud · ' : ''}
-                        {entry.pattern.bars} bars · {entry.pattern.bpm} BPM · {entry.pattern.notes.length} notes
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-            <button
-              type="button"
-              className="btn piano-roll-menu__item"
-              onClick={runMenuAction(handleClear)}
-              title={`Delete every note on ${activeTrack?.name || 'this layer'}`}
-            >
-              Clear layer
-            </button>
-            {pattern.tracks.length > 1 && (
-              <button
-                type="button"
-                className="btn piano-roll-menu__item"
-                onClick={runMenuAction(() => handleDeleteTrack(activeTrack?.id))}
-                title={`Remove ${activeTrack?.name || 'this layer'} and its notes`}
-              >
-                Delete layer
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn piano-roll-menu__item"
-              onClick={runMenuAction(handleOpenInPlayer)}
-              title="Load this pattern in the main player"
-            >
-              Send to player
-            </button>
 
-            {CLOUD_ENABLED && (
-              <div className="piano-roll-cloud">
-                {cloudSession ? (
-                  <>
-                    <span className="piano-roll-cloud__status">
-                      Signed in · {cloudSession.user?.email}
-                    </span>
-                    {cloudSyncPending && (
-                      <i className="piano-roll-cloud__pending" title="Cloud sync pending" />
-                    )}
-                    <button type="button" className="btn btn--secondary" onClick={handleSignOut}>
-                      Sign out
-                    </button>
-                  </>
-                ) : (
-                  <form className="piano-roll-cloud__form" onSubmit={handleSendSignInLink}>
-                    <input
-                      type="email"
-                      value={cloudEmail}
-                      onChange={handleCloudEmailChange}
-                      placeholder="you@email.com"
-                      aria-label="Email address for the sign-in link"
-                    />
-                    <button
-                      type="submit"
-                      className="btn btn--secondary"
-                      disabled={!cloudEmail.trim() || cloudAuthStatus === 'sending'}
-                    >
-                      {cloudAuthStatus === 'sending' ? 'Sending…' : 'Send sign-in link'}
-                    </button>
-                    {cloudAuthStatus === 'sent' && (
-                      <span className="piano-roll-cloud__note" role="status">
-                        Link sent — check your email
-                      </span>
-                    )}
-                    {cloudAuthStatus === 'error' && (
-                      <span className="piano-roll-cloud__note" role="status">
-                        Could not send the link
-                      </span>
-                    )}
-                  </form>
-                )}
-              </div>
-            )}
+          <details className="piano-roll-menu-anchor">
+            <summary className="piano-roll-button" title="Transform notes: the selection, or the whole track">
+              <span>Transform</span>
+              {ICON_CHEVRON}
+            </summary>
+            <div className="piano-roll-menu">
+              <p className="piano-roll-menu__heading">Acts on {transformTargetLabel}</p>
+              <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(() => handleTransform('quantize'))}>
+                <span>Quantize</span><kbd>⌘U</kbd>
+              </button>
+              <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(() => handleTransform('legato'))}>
+                <span>Legato</span>
+              </button>
+              <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(() => handleTransform('reverse'))}>
+                <span>Reverse</span>
+              </button>
+              <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(() => handleTransform('invert'))}>
+                <span>Invert</span>
+              </button>
+              <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(() => handleTransform('double'))}>
+                <span>Stretch ×2</span>
+              </button>
+              <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(() => handleTransform('halve'))}>
+                <span>Squeeze ÷2</span>
+              </button>
+              {selectedIds.size > 0 && (
+                <button type="button" className="piano-roll-menu__item" onClick={runMenuAction(() => handleTransform('mute'))}>
+                  <span>Mute / unmute</span><kbd>0</kbd>
+                </button>
+              )}
+            </div>
+          </details>
+
+          <button
+            type="button"
+            className="piano-roll-button piano-roll-button--icon"
+            onClick={() => setVelocityLaneOpen((open) => !open)}
+            aria-pressed={velocityLaneOpen}
+            aria-label="Velocity lane"
+            title={velocityLaneOpen ? 'Hide the velocity lane' : 'Show the velocity lane'}
+          >
+            {ICON_VELOCITY}
+          </button>
+
+          <div className="piano-roll-tools__zoom" role="group" aria-label="Zoom">
+            <button
+              type="button"
+              onClick={() => applyZoom(1 / ZOOM_STEP)}
+              disabled={pxPerBeat <= ZOOM_MIN + 0.01}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className="piano-roll-tools__zoom-fit"
+              onClick={fitZoom}
+              aria-label="Fit pattern to view"
+              title="Fit the whole pattern on screen"
+            >
+              {Math.round((pxPerBeat / DEFAULT_PX_PER_BEAT) * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={() => applyZoom(ZOOM_STEP)}
+              disabled={pxPerBeat >= ZOOM_MAX - 0.01}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              +
+            </button>
           </div>
-        </details>
+
+          <details className="piano-roll-menu-anchor">
+            <summary
+              className="piano-roll-button piano-roll-button--icon"
+              aria-label="Keyboard shortcuts"
+              title="Keyboard shortcuts"
+            >
+              {ICON_HELP}
+            </summary>
+            <div className="piano-roll-menu piano-roll-menu--end piano-roll-help">
+              <h2 className="piano-roll-menu__heading">Shortcuts</h2>
+              <dl>
+                <dt>V B P C E</dt><dd>Select · draw · paint · slice · erase</dd>
+                <dt>Double-click</dt><dd>Add / remove a note (Select)</dd>
+                <dt>⌥-drag · ⌘-drag</dt><dd>Copy notes · ignore the grid</dd>
+                <dt>Drag an edge</dt><dd>Resize the selection</dd>
+                <dt>1–9 · click a note</dt><dd>Switch track</dd>
+                <dt>Arrows · ⇧↑↓</dt><dd>Nudge · octave</dd>
+                <dt>⇧← ⇧→ · ⌥← ⌥→</dt><dd>Resize end · trim start</dd>
+                <dt>⌘U · 0</dt><dd>Quantize · mute notes</dd>
+                <dt>⌘Z · ⇧⌘Z</dt><dd>Undo · redo</dd>
+                <dt>⌘C ⌘X ⌘V</dt><dd>Copy · cut · paste</dd>
+                <dt>⌘D · ⇧⌘D</dt><dd>Duplicate right · clone in place</dd>
+                <dt>⇧⌘L</dt><dd>Loop selected bars</dd>
+                <dt>⌘A · Esc</dt><dd>Select all · none</dd>
+                <dt>Del · right-click</dt><dd>Delete · erase</dd>
+                <dt>⌘ + scroll</dt><dd>Zoom</dd>
+                <dt>Space · ⌘S</dt><dd>Play / stop · save now</dd>
+              </dl>
+            </div>
+          </details>
+        </div>
       </div>
 
       <div className="piano-roll-stage">
@@ -2038,19 +2518,28 @@ const PianoRollPage = () => {
             className="piano-roll__content"
             style={{
               gridTemplateColumns: `${KEY_COLUMN_WIDTH}px ${gridWidth}px`,
-              gridTemplateRows: `${RULER_HEIGHT}px ${GRID_HEIGHT}px`
+              gridTemplateRows: gridRows
             }}
           >
             <div className="piano-roll__corner" />
 
             <div className="piano-roll__ruler" aria-hidden="true">
-              {barMarkers.map((bar) => (
+              {loopRange && (
                 <span
-                  key={bar}
-                  className="piano-roll__bar-marker"
-                  style={{ left: bar * BEATS_PER_BAR * pxPerBeat }}
+                  className="piano-roll__loop-brace"
+                  style={{
+                    left: loopRange.start * pxPerBeat,
+                    width: (loopRange.end - loopRange.start) * pxPerBeat
+                  }}
+                />
+              )}
+              {rulerMarks.map((mark) => (
+                <span
+                  key={mark.key}
+                  className={mark.bar ? 'piano-roll__bar-marker' : 'piano-roll__bar-marker piano-roll__bar-marker--beat'}
+                  style={{ left: mark.beat * pxPerBeat }}
                 >
-                  {bar + 1}
+                  {mark.label}
                 </span>
               ))}
             </div>
@@ -2063,15 +2552,15 @@ const PianoRollPage = () => {
                   className={[
                     'piano-roll__key',
                     key.black ? 'piano-roll__key--black' : '',
+                    key.seam ? 'piano-roll__key--seam' : '',
                     activeScale && !key.inScale ? 'is-out-of-scale' : '',
-                    key.inScale ? 'is-in-scale' : '',
-                    key.inChord ? 'is-in-chord' : '',
+                    key.inChord ? 'is-in-chord' : ''
                   ].filter(Boolean).join(' ')}
                   style={{ height: ROW_HEIGHT }}
                   onPointerDown={() => handleKeyAudition(key.midi)}
                   aria-label={`Audition ${key.noteId}`}
                 >
-                  {key.label}
+                  {key.label && <span className="piano-roll__key-label">{key.label}</span>}
                 </button>
               ))}
             </div>
@@ -2080,8 +2569,9 @@ const PianoRollPage = () => {
               <canvas ref={canvasRef} className="piano-roll__grid-canvas" />
               <div
                 className="piano-roll__notes"
+                data-tool={tool}
                 role="application"
-                aria-label="Note grid: double-click to add, drag to select, click to select, Delete to remove, right-click to erase"
+                aria-label="Note grid: draw, paint, slice or erase with the tools above; double-click adds a note when selecting"
                 onPointerDown={handleLayerPointerDown}
                 onPointerMove={handleLayerPointerMove}
                 onPointerUp={handleLayerPointerUp}
@@ -2095,9 +2585,7 @@ const PianoRollPage = () => {
                       left: loopRange.start * pxPerBeat,
                       width: (loopRange.end - loopRange.start) * pxPerBeat
                     }}
-                  >
-                    <span>Loop · bars {Math.floor(loopRange.start / BEATS_PER_BAR) + 1}–{Math.ceil(loopRange.end / BEATS_PER_BAR)}</span>
-                  </div>
+                  />
                 )}
                 {ghostNoteElements}
                 {noteElements}
@@ -2112,6 +2600,17 @@ const PianoRollPage = () => {
                     }}
                   />
                 )}
+                {drag?.mode === 'slice' && (
+                  <div
+                    className="piano-roll__knife"
+                    style={{
+                      left: drag.at * pxPerBeat,
+                      top: Math.floor(Math.min(drag.y0, drag.y1) / ROW_HEIGHT) * ROW_HEIGHT,
+                      height: (Math.floor(Math.max(drag.y0, drag.y1) / ROW_HEIGHT)
+                        - Math.floor(Math.min(drag.y0, drag.y1) / ROW_HEIGHT) + 1) * ROW_HEIGHT
+                    }}
+                  />
+                )}
                 {isRolling && (
                   <PianoRollPlayhead
                     getProgress={playback.getPlaybackProgress}
@@ -2121,6 +2620,26 @@ const PianoRollPage = () => {
                 )}
               </div>
             </div>
+
+            {velocityLaneOpen && (
+              <>
+                <div className="piano-roll__lane-label" aria-live="polite">
+                  {laneReadout ?? 'VEL'}
+                </div>
+                <div className="piano-roll__lane" style={{ '--track-color': activeTrack?.color }}>
+                  <VelocityLane
+                    notes={activeTrackNotes}
+                    selectedIds={selectedIds}
+                    pxPerBeat={pxPerBeat}
+                    onSelect={setSelectedIds}
+                    onGestureStart={handleLaneGestureStart}
+                    onVelocities={handleLaneVelocities}
+                    onGestureEnd={handleLaneGestureEnd}
+                    onReadout={setLaneReadout}
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -2175,7 +2694,7 @@ const PianoRollPage = () => {
                   {pattern.tracks.length > 1 && (
                     <button
                       type="button"
-                      className="btn btn--toggle piano-roll-deck__solo"
+                      className="piano-roll-deck__solo"
                       onClick={() => handleTrackPatch(track.id, { solo: !track.solo })}
                       aria-pressed={track.solo}
                       aria-label={`${track.solo ? 'Unsolo' : 'Solo'} ${track.name}`}
@@ -2205,7 +2724,7 @@ const PianoRollPage = () => {
 
           <button
             type="button"
-            className="btn piano-roll-decks__add"
+            className="piano-roll-decks__add"
             onClick={handleAddTrack}
             aria-label="Add track"
             title="Add track"
@@ -2227,11 +2746,14 @@ const PianoRollPage = () => {
         </aside>
       </div>
 
-      {/* Selection actions float over the bottom of the grid. Inside the tray they
+      {/* Selection actions float over the bottom of the grid. Inside the bars they
           wrapped onto a line of their own on narrower windows, which shoved the
           grid down the instant a note was selected. */}
       {(selectedIds.size > 0 || loopRange) && (
-        <div className="piano-roll-selection" aria-live="polite">
+        <div
+          className={`piano-roll-selection${velocityLaneOpen ? ' piano-roll-selection--over-lane' : ''}`}
+          aria-live="polite"
+        >
           {selectedIds.size > 0 && (
             <>
               <span className="piano-roll-selection__count">{selectedIds.size} selected</span>
@@ -2246,7 +2768,7 @@ const PianoRollPage = () => {
               </select>
               <button
                 type="button"
-                className="btn btn--secondary"
+                className="piano-roll-button"
                 onClick={handleBuildChord}
                 title="Turn each selected note into a chord"
               >
@@ -2256,7 +2778,7 @@ const PianoRollPage = () => {
           )}
           <button
             type="button"
-            className="btn btn--secondary"
+            className="piano-roll-button"
             onClick={handleLoopSelection}
             disabled={selectedIds.size === 0 && !loopRange}
             title={loopRange
@@ -2268,7 +2790,7 @@ const PianoRollPage = () => {
           {activeScale && (
             <button
               type="button"
-              className="btn btn--secondary"
+              className="piano-roll-button"
               onClick={handleSnapSelectionToScale}
               disabled={selectedIds.size === 0}
               title={`Move the selected notes onto the nearest ${SCALE_ROOTS[scaleRoot]} ${activeScale.label} note`}
@@ -2276,6 +2798,38 @@ const PianoRollPage = () => {
               Snap to key
             </button>
           )}
+        </div>
+      )}
+
+      {projectsOpen && (
+        <div className="piano-roll-popover piano-roll-popover--projects" ref={projectsPopoverRef}>
+          <React.Suspense fallback={null}>
+            <ProjectBrowser
+              entries={browserEntries}
+              currentId={projectId}
+              footnote={CLOUD_ENABLED && !signedIn
+                ? 'These live on this device. Sign in to keep them in your account.'
+                : null}
+              onOpen={handleOpenProject}
+              onDuplicate={handleDuplicateProject}
+              onDelete={handleDeleteProject}
+              onNew={handleNewProject}
+              onClose={() => setProjectsOpen(false)}
+            />
+          </React.Suspense>
+        </div>
+      )}
+
+      {CLOUD_ENABLED && accountOpen && (
+        <div className="piano-roll-popover piano-roll-popover--account" ref={accountPopoverRef}>
+          <React.Suspense fallback={null}>
+            <AccountPanel
+              session={cloudSession}
+              syncNote={syncNote}
+              onSignIn={handleSignIn}
+              onSignOut={handleSignOut}
+            />
+          </React.Suspense>
         </div>
       )}
 

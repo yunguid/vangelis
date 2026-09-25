@@ -1,9 +1,10 @@
 /**
  * The piano-roll editor's live working document, mirrored to localStorage.
  *
- * Unlike the named snapshots in `patternStorage.js`, the draft is written on
- * every edit and never cleared by navigation: leaving the editor and coming
- * back restores the pattern exactly as it was left.
+ * The draft is written on every edit and never cleared by navigation: leaving
+ * the editor and coming back restores the open project exactly as it was
+ * left, with the view around it. `projectId` names the project in
+ * `projectLibrary.js` that the draft belongs to.
  */
 const STORAGE_KEY = 'vangelis.editorDraft.v1';
 
@@ -28,6 +29,8 @@ export const loadEditorDraft = () => {
       activeTrackId: stringOrNull(parsed.activeTrackId),
       pxPerBeat: finiteOrNull(parsed.pxPerBeat),
       metronome: parsed.metronome === true,
+      velocityLane: parsed.velocityLane !== false,
+      projectId: stringOrNull(parsed.projectId),
       updatedAt: Number.isFinite(parsed.updatedAt) ? parsed.updatedAt : 0
     };
   } catch {
@@ -48,6 +51,8 @@ export const saveEditorDraft = (draft) => {
       activeTrackId: stringOrNull(draft.activeTrackId),
       pxPerBeat: finiteOrNull(draft.pxPerBeat),
       metronome: draft.metronome === true,
+      velocityLane: draft.velocityLane !== false,
+      projectId: stringOrNull(draft.projectId),
       updatedAt: Date.now()
     }));
   } catch {

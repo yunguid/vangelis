@@ -5,8 +5,9 @@ import {
   getSession,
   listCloudPatterns,
   onAuthChange,
-  signInWithEmail,
+  signInWithPassword,
   signOut,
+  uploadPatternMidi,
   upsertCloudPattern
 } from './cloudPatternStore.js';
 
@@ -15,10 +16,14 @@ vi.mock('./supabaseClient.js', () => ({
   isCloudConfigured: vi.fn(() => false)
 }));
 
-const makeQuery = (result) => {
+// `results` feeds successive terminal calls (single / maybeSingle / await),
+// so an update that finds no row can be followed by the insert it triggers.
+const makeQuery = (...results) => {
+  const next = () => Promise.resolve(results.length > 1 ? results.shift() : results[0]);
   const query = {
-    then: (onFulfilled, onRejected) => Promise.resolve(result).then(onFulfilled, onRejected),
-    single: vi.fn(() => Promise.resolve(result))
+    then: (onFulfilled, onRejected) => next().then(onFulfilled, onRejected),
+    single: vi.fn(next),
+    maybeSingle: vi.fn(next)
   };
   ['select', 'insert', 'update', 'delete', 'eq', 'order'].forEach((method) => {
     query[method] = vi.fn(() => query);
@@ -28,18 +33,26 @@ const makeQuery = (result) => {
 
 const makeSupabase = ({
   session = { user: { id: 'user-1' } },
-  result = { data: null, error: null }
+  result = { data: null, error: null },
+  results = [result],
+  fileResult = { data: {}, error: null }
 } = {}) => {
-  const query = makeQuery(result);
+  const query = makeQuery(...results);
   const subscription = { unsubscribe: vi.fn() };
+  const bucket = {
+    upload: vi.fn(async () => fileResult),
+    remove: vi.fn(async () => fileResult)
+  };
   return {
     query,
     subscription,
+    bucket,
     from: vi.fn(() => query),
+    storage: { from: vi.fn(() => bucket) },
     auth: {
       getSession: vi.fn(async () => ({ data: { session } })),
       onAuthStateChange: vi.fn(() => ({ data: { subscription } })),
-      signInWithOtp: vi.fn(async () => ({ error: null })),
+      signInWithPassword: vi.fn(async () => ({ error: null })),
       signOut: vi.fn(async () => ({ error: null }))
     }
   };
@@ -62,12 +75,13 @@ describe('cloudPatternStore without cloud config', () => {
     await expect(getSession()).resolves.toBeNull();
     await expect(listCloudPatterns()).resolves.toEqual([]);
     await expect(upsertCloudPattern({ name: 'Loop', pattern })).resolves.toBeNull();
+    await expect(uploadPatternMidi('p1', new Uint8Array([1]))).resolves.toBe(false);
     await expect(deleteCloudPattern('p1')).resolves.toBe(false);
     await expect(signOut()).resolves.toBeUndefined();
   });
 
   it('reports a sign-in error without throwing', async () => {
-    const { error } = await signInWithEmail('player@example.com');
+    const { error } = await signInWithPassword('player@example.com', 'secret');
     expect(error).toBeInstanceOf(Error);
   });
 
@@ -89,22 +103,27 @@ describe('cloudPatternStore when signed out', () => {
     getSupabase.mockResolvedValue(supabase);
   });
 
-  it('never queries the patterns table', async () => {
+  it('never queries the patterns table or the MIDI bucket', async () => {
     await expect(listCloudPatterns()).resolves.toEqual([]);
     await expect(upsertCloudPattern({ name: 'Loop', pattern })).resolves.toBeNull();
+    await expect(uploadPatternMidi('p1', new Uint8Array([1]))).resolves.toBe(false);
     await expect(deleteCloudPattern('p1')).resolves.toBe(false);
     expect(supabase.from).not.toHaveBeenCalled();
+    expect(supabase.storage.from).not.toHaveBeenCalled();
   });
 });
 
 describe('cloudPatternStore when signed in', () => {
-  const makeSignedIn = (result) => {
-    const supabase = makeSupabase({ result });
+  const makeSignedIn = (result, options = {}) => {
+    const supabase = makeSupabase({ result, ...options });
     getSupabase.mockResolvedValue(supabase);
     return supabase;
   };
 
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
 
   it('maps the data column onto the pattern field', async () => {
     const supabase = makeSignedIn({
@@ -158,16 +177,48 @@ describe('cloudPatternStore when signed in', () => {
     expect(supabase.query.insert).not.toHaveBeenCalled();
   });
 
-  it('returns null when the write fails', async () => {
-    makeSignedIn({ data: null, error: { message: 'denied' } });
-    expect(await upsertCloudPattern({ name: 'Loop', pattern })).toBeNull();
+  it('saves a project again as a new row when its row was deleted elsewhere', async () => {
+    const supabase = makeSignedIn(null, {
+      results: [
+        { data: null, error: null },
+        { data: { id: 'p2', name: 'Loop', data: pattern, created_at: 't2', updated_at: 't2' }, error: null }
+      ]
+    });
+    const saved = await upsertCloudPattern({ id: 'p1', name: 'Loop', pattern });
+    expect(saved.id).toBe('p2');
+    expect(supabase.query.update).toHaveBeenCalled();
+    expect(supabase.query.insert).toHaveBeenCalledWith({ user_id: 'user-1', name: 'Loop', data: pattern });
   });
 
-  it('deletes by id', async () => {
+  it('returns null and logs when the write fails', async () => {
+    makeSignedIn({ data: null, error: { message: 'denied' } });
+    expect(await upsertCloudPattern({ name: 'Loop', pattern })).toBeNull();
+    expect(await upsertCloudPattern({ id: 'p1', name: 'Loop', pattern })).toBeNull();
+    expect(console.error).toHaveBeenCalledTimes(2);
+  });
+
+  it('stores the MIDI file in the owner\'s folder, replacing the last one', async () => {
+    const supabase = makeSignedIn({ data: null, error: null });
+    expect(await uploadPatternMidi('p1', new Uint8Array([77, 84]))).toBe(true);
+    expect(supabase.storage.from).toHaveBeenCalledWith('midi');
+    const [path, body, options] = supabase.bucket.upload.mock.calls[0];
+    expect(path).toBe('user-1/p1.mid');
+    expect(body).toBeInstanceOf(Blob);
+    expect(options).toEqual({ upsert: true, contentType: 'audio/midi' });
+  });
+
+  it('reports a failed MIDI upload', async () => {
+    makeSignedIn({ data: null, error: null }, { fileResult: { data: null, error: { message: 'denied' } } });
+    expect(await uploadPatternMidi('p1', new Uint8Array([1]))).toBe(false);
+    expect(console.error).toHaveBeenCalled();
+  });
+
+  it('deletes by id, and the MIDI file with it', async () => {
     const supabase = makeSignedIn({ data: null, error: null });
     expect(await deleteCloudPattern('p1')).toBe(true);
     expect(supabase.query.delete).toHaveBeenCalled();
     expect(supabase.query.eq).toHaveBeenCalledWith('id', 'p1');
+    expect(supabase.bucket.remove).toHaveBeenCalledWith(['user-1/p1.mid']);
   });
 
   it('reports a failed delete', async () => {
@@ -180,13 +231,19 @@ describe('cloudPatternStore when signed in', () => {
     expect(await getSession()).toEqual({ user: { id: 'user-1' } });
   });
 
-  it('sends a magic link back to the app origin', async () => {
+  it('signs in with the account password', async () => {
     const supabase = makeSignedIn({ data: null, error: null });
-    expect(await signInWithEmail('player@example.com')).toEqual({ error: null });
-    expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
+    expect(await signInWithPassword('player@example.com', 'secret')).toEqual({ error: null });
+    expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
       email: 'player@example.com',
-      options: { emailRedirectTo: window.location.origin }
+      password: 'secret'
     });
+  });
+
+  it('passes a rejected password back as an error', async () => {
+    const supabase = makeSignedIn({ data: null, error: null });
+    supabase.auth.signInWithPassword.mockResolvedValue({ error: { message: 'Invalid login credentials' } });
+    expect((await signInWithPassword('player@example.com', 'wrong')).error).toEqual({ message: 'Invalid login credentials' });
   });
 
   it('stops forwarding auth changes after unsubscribe', async () => {
