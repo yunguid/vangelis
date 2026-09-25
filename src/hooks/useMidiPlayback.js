@@ -15,8 +15,18 @@ const PROGRESS_UPDATE_INTERVAL_MS = 40;
 const ACTIVE_NOTES_UPDATE_INTERVAL_MS = 40;
 const SCHEDULER_LOOKAHEAD_SECONDS = 2;
 const SCHEDULER_TICK_MS = 500;
-// Sampled notes are handed to the audio clock this far ahead of their start.
+// Sampled notes and a score's part notes are handed to the audio clock this
+// far ahead of their start (and part notes this far ahead of their end).
 const SAMPLE_LEAD_SECONDS = 0.06;
+
+// A note's expression curves as its part's synth takes them: the rate follows
+// the tempo, and playback that starts inside the note enters the curves that
+// far in (`offset`, in audio-clock seconds like the rate).
+const noteExpression = ({ expression, time }, offset, tempo) => expression && {
+  ...expression,
+  rate: expression.rate * tempo,
+  offset: Math.max(0, offset - time) / tempo
+};
 
 function resolveMidiDuration(midiData) {
   const declaredDuration = Number(midiData?.duration);
@@ -117,6 +127,8 @@ export function useMidiPlayback({
   if (!scheduledVoiceMapRef.current) scheduledVoiceMapRef.current = new Map();
   // A score's ambience bed (a recording's tape hiss): one looping voice under the notes.
   const ambienceVoiceRef = useRef(null);
+  // Whether the engine holds this transport's score parts, which leave with the score.
+  const usesPartsRef = useRef(false);
   const timeoutsRef = useRef(null);
   if (!timeoutsRef.current) timeoutsRef.current = new Set();
   const schedulerSequenceRef = useRef(0);
@@ -162,6 +174,7 @@ export function useMidiPlayback({
       clearAllTimeouts();
       activeVoiceIdsRef.current.forEach((voiceId) => audioEngine.stopNote(voiceId));
       activeVoiceIdsRef.current.clear();
+      clearScoreParts();
       if (ambienceVoiceRef.current) audioEngine.stopNote(ambienceVoiceRef.current);
       ambienceVoiceRef.current = null;
       activeNoteCountsRef.current.clear();
@@ -208,6 +221,16 @@ export function useMidiPlayback({
     return id;
   }, []);
 
+  /**
+   * The engine forgets a score's parts when the score stops (after its notes
+   * have been released); another transport's parts stay.
+   * @private
+   */
+  const clearScoreParts = useCallback(() => {
+    if (usesPartsRef.current) audioEngine.clearParts();
+    usesPartsRef.current = false;
+  }, []);
+
   const registerActiveVoices = useCallback((noteId, voiceIds) => {
     if (!Array.isArray(voiceIds) || voiceIds.length === 0) return;
 
@@ -238,14 +261,17 @@ export function useMidiPlayback({
     const voiceOptions = {
       noteId: voiceId, frequency, params, velocity
     };
-    const started = noteOptions.sample
-      ? audioEngine.playBufferedSample({ ...voiceOptions, ...noteOptions.sample, when: noteOptions.when })
-      : audioEngine.playFrequency({
-        ...voiceOptions,
-        waveformType: noteOptions.waveformType || waveformRef.current,
-        // A note that brings its own patch is the synth's, whatever instrument is loaded.
-        voiced: Boolean(noteOptions.audioParams || noteOptions.waveformType)
-      });
+    // A part's note plays on the part's own synth, never through the player's sound.
+    const started = noteOptions.part
+      ? audioEngine.playPartNote({ ...noteOptions, ...voiceOptions })
+      : noteOptions.sample
+        ? audioEngine.playBufferedSample({ ...voiceOptions, ...noteOptions.sample, when: noteOptions.when })
+        : audioEngine.playFrequency({
+          ...voiceOptions,
+          waveformType: noteOptions.waveformType || waveformRef.current,
+          // A note that brings its own patch is the synth's, whatever instrument is loaded.
+          voiced: Boolean(noteOptions.audioParams || noteOptions.waveformType)
+        });
     if (started?.voiceId) {
       startedVoiceIds.push(started.voiceId);
       registerActiveVoices(noteId, startedVoiceIds);
@@ -258,10 +284,11 @@ export function useMidiPlayback({
    * Trigger a note off event
    * @param {string} noteId - Display note identifier to clear from visualization
    * @param {string} voiceId - Internal voice id to release in audio engine
+   * @param {number} [when] - Audio-clock release time (a part's note is released on that sample)
    * @private
    */
-  const triggerNoteOff = useCallback((noteId, voiceId) => {
-    audioEngine.stopNote(voiceId);
+  const triggerNoteOff = useCallback((noteId, voiceId, when) => {
+    audioEngine.stopNote(voiceId, when);
     activeVoiceIdsRef.current.delete(voiceId);
 
     const counts = activeNoteCountsRef.current;
@@ -299,6 +326,7 @@ export function useMidiPlayback({
   const stopInternal = useCallback(() => {
     clearAllTimeouts();
     stopAllNotes();
+    clearScoreParts();
 
     stopProgressLoopRef.current?.();
     stopProgressLoopRef.current = null;
@@ -313,7 +341,7 @@ export function useMidiPlayback({
     setIsPaused(false);
     setIsLooping(false);
     setProgress(0);
-  }, [clearAllTimeouts, stopAllNotes]);
+  }, [clearAllTimeouts, clearScoreParts, stopAllNotes]);
 
   /**
    * Compute elapsed time in original MIDI seconds.
@@ -365,6 +393,14 @@ export function useMidiPlayback({
   const scheduleNotes = useCallback((notes, offset, startTime) => {
     const ctx = audioEngine.context;
     if (!ctx) return;
+
+    // A score's synth parts are in place whenever its notes are scheduled (play,
+    // resume, seek, tempo change); parts are updated in place.
+    const parts = playbackRef.current.midiData?.parts;
+    if (parts) {
+      audioEngine.setParts(parts);
+      usesPartsRef.current = true;
+    }
 
     // The ambience bed runs whenever the notes do; it is stationary, so a restart after a
     // pause, seek or tempo change needs no position. It never lights a key.
@@ -435,7 +471,9 @@ export function useMidiPlayback({
         const frequency = midiNoteToFrequency(note.midi);
         const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
 
-        const lead = note.sample ? SAMPLE_LEAD_SECONDS : 0;
+        // A part's note starts and ends on the audio clock (`when`), so both of
+        // its timers fire early; the keys light on those timers.
+        const lead = note.sample || note.part ? SAMPLE_LEAD_SECONDS : 0;
         const startDelay = Math.max(0, (scheduledStart - lead - now) * 1000);
         scheduleTrackedTimeout(() => {
           const startedVoiceIds = triggerNoteOn(
@@ -443,20 +481,23 @@ export function useMidiPlayback({
             voiceId,
             frequency,
             note.velocity,
-            note.sample ? { ...note, when: scheduledStart } : note
+            note.part
+              ? { ...note, when: scheduledStart, expr: noteExpression(note, offset, tempo) }
+              : note.sample ? { ...note, when: scheduledStart } : note
           );
           if (startedVoiceIds.length > 0) {
             scheduledVoiceMapRef.current.set(voiceId, startedVoiceIds);
           }
         }, startDelay);
 
-        const endDelay = Math.max(0, (scheduledEnd - now) * 1000);
+        const endLead = note.part ? SAMPLE_LEAD_SECONDS : 0;
+        const endDelay = Math.max(0, (scheduledEnd - endLead - now) * 1000);
         scheduleTrackedTimeout(() => {
           const startedVoiceIds = scheduledVoiceMapRef.current.get(voiceId);
           scheduledVoiceMapRef.current.delete(voiceId);
           if (!startedVoiceIds?.length) return;
           startedVoiceIds.forEach((activeVoiceId) => {
-            triggerNoteOff(noteId, activeVoiceId);
+            triggerNoteOff(noteId, activeVoiceId, scheduledEnd);
           });
         }, endDelay);
       }

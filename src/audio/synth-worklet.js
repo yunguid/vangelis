@@ -55,6 +55,11 @@ class SynthProcessor extends AudioWorkletProcessor {
     // lfoDepth/lfoTarget double as the legacy-LFO mapping input).
     this.routesBox = { compiled: compileModRoutes(this.params.modRoutes, this.params) };
     this.voices = Array.from({ length: MAX_VOICES }, () => new Voice(sampleRate, this.routesBox));
+    // Timed noteOn/noteOff messages, in frame order, waiting for process() to
+    // reach the sample they start on.
+    this.events = [];
+    // A retired node (a score's part): process() returns false so it can go.
+    this.disposed = false;
     this.frameCounter = 0;
     this.lastFrequency = 0; // for glide
     // Performance state (not part of presets)
@@ -83,13 +88,14 @@ class SynthProcessor extends AudioWorkletProcessor {
       if (!data || !data.type) return;
       switch (data.type) {
         case 'noteOn':
-          this.noteOn(data);
-          break;
         case 'noteOff':
-          this.noteOff(data.noteId);
+          this.schedule(data);
           break;
         case 'allNotesOff':
           this.allNotesOff();
+          break;
+        case 'dispose':
+          this.disposed = true;
           break;
         case 'setParams':
           this.setParams(data.params || {});
@@ -106,7 +112,43 @@ class SynthProcessor extends AudioWorkletProcessor {
     };
   }
 
-  noteOn({ noteId, frequency, waveform, velocity }) {
+  // A message with a `when` (AudioContext seconds) waits for its sample frame;
+  // one without, or already due, acts now.
+  schedule(data) {
+    const timed = Number.isFinite(data.when);
+    const frame = timed ? Math.round(data.when * this.sampleRate) : -Infinity;
+    const events = this.events;
+    if (data.type === 'noteOff') {
+      // A note released before its start never starts (nothing would release it).
+      let kept = 0;
+      for (const event of events) {
+        if (event.noteId !== data.noteId || event.type !== 'noteOn' || event.frame <= frame) {
+          events[kept++] = event;
+        }
+      }
+      events.length = kept;
+    }
+    if (timed && frame > currentFrame) {
+      data.frame = frame;
+      // Frame order; messages for the same frame keep their arrival order.
+      let i = events.length;
+      events.push(data);
+      while (i > 0 && events[i - 1].frame > frame) {
+        events[i] = events[i - 1];
+        i -= 1;
+      }
+      events[i] = data;
+      return;
+    }
+    this.dispatch(data);
+  }
+
+  dispatch(data) {
+    if (data.type === 'noteOn') this.noteOn(data);
+    else this.noteOff(data.noteId);
+  }
+
+  noteOn({ noteId, frequency, waveform, velocity, expr }) {
     if (!Number.isFinite(frequency) || frequency <= 0) return;
     let targetVoice = null;
     for (const voice of this.voices) {
@@ -145,7 +187,8 @@ class SynthProcessor extends AudioWorkletProcessor {
       velocity,
       params: this.params,
       frame: this.frameCounter,
-      glideFrom
+      glideFrom,
+      expr
     });
     this.lastFrequency = frequency;
   }
@@ -165,6 +208,7 @@ class SynthProcessor extends AudioWorkletProcessor {
   }
 
   allNotesOff() {
+    this.events.length = 0;
     for (const voice of this.voices) {
       voice.pendingStart = null;
       if (voice.active) {
@@ -224,8 +268,13 @@ class SynthProcessor extends AudioWorkletProcessor {
     const right = output[1] || output[0];
     const frameCount = left.length;
     const mixGain = 0.2;
+    const events = this.events;
 
     for (let i = 0; i < frameCount; i++) {
+      // Timed messages act at the start of the sample they fall on
+      while (events.length > 0 && events[0].frame <= currentFrame + i) {
+        this.dispatch(events.shift());
+      }
       // Smooth performance controllers
       this.pitchBendSmoothed = this.pitchBendTarget
         + (this.pitchBendSmoothed - this.pitchBendTarget) * this.perfSmoothCoeff;
@@ -257,7 +306,7 @@ class SynthProcessor extends AudioWorkletProcessor {
     }
 
     this.frameCounter += frameCount;
-    return true;
+    return !this.disposed;
   }
 }
 
