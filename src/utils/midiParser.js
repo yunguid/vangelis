@@ -6,7 +6,7 @@
 
 import classicalCatalog from '../data/classicalCatalog.json';
 import { ORIGINAL_CUE_IDS, getOriginalCueName } from '../data/originalCueNames.js';
-import { getLandingFiles } from '../data/landingQueue.js';
+import { getLandingFiles, isPerformance } from '../data/landingQueue.js';
 import { withBase } from './baseUrl.js';
 
 let midiLibraryPromise;
@@ -273,9 +273,10 @@ export function getBuiltInMidiFiles(base = import.meta.env.BASE_URL) {
     ...(landingById.has(id) ? { landing: landingById.get(id).landing } : {})
   }));
 
-  // Performances bring their own sampled instrument (see
-  // ../data/nylonGuitar.js) instead of playing through the loaded preset.
-  const performanceFiles = landingFiles.filter((file) => file.instrument);
+  // Performances bring their own voice (a sampled instrument, see
+  // ../data/nylonGuitar.js, or their own synth parts) instead of playing
+  // through the loaded preset.
+  const performanceFiles = landingFiles.filter(isPerformance);
 
   return [
     ...performanceFiles,

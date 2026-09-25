@@ -43,6 +43,16 @@ export const LANDING_PIECES = Object.freeze([
     instrumentLabel: 'Nylon-string guitar',
     // Its rendered waveform (scripts/render_performance.mjs --peaks), shown in the open sound dial.
     waveform: 'performances/pernambuco.waveform.json'
+  },
+  {
+    // Transcribed from Vangelis's record and played by the app's own synth, CS-80
+    // patches and all (data/bladeRunnerBlues.js); in the library while it is refined.
+    id: 'performance-blade-runner-blues',
+    name: 'Blade Runner Blues',
+    composer: 'Vangelis',
+    relativePath: 'performances/blade-runner-blues.mid',
+    transcription: 'blade-runner-blues',
+    landing: false
   }
 ]);
 
@@ -76,6 +86,9 @@ const writeJson = (key, value) => {
 };
 
 export const isLandingEligible = (file) => Boolean(file?.landing);
+
+/** A performance brings its own voice (a sampled instrument or its own arrangement) instead of the loaded sound. */
+export const isPerformance = (file) => Boolean(file?.instrument || file?.transcription);
 
 const REMOVED_KEY = 'vangelis.midiRemoved.v1';
 
@@ -131,6 +144,12 @@ export const saveLastLandingId = (id) => writeJson(LAST_PLAYED_KEY, id);
  * the page can load it for the keys too; null for a piece without one.
  */
 export async function arrangeBuiltInPiece(context, file) {
+  if (file.transcription === 'blade-runner-blues') {
+    // Its own synth parts play it; the keys keep the listener's sound.
+    const { loadBladeRunnerBlues } = await import('./bladeRunnerBlues.js');
+    return { score: await loadBladeRunnerBlues(context, file.path), params: null, waveformType: null, sound: null };
+  }
+
   if (file.instrument) {
     // Loaded with the recordings, never with the page.
     const { findSampledInstrument } = await import('./sampledInstruments.js');

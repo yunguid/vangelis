@@ -245,6 +245,16 @@ src/
   `mute` (a decay on the audio clock) and a set's `gain`. The record's recording
   chain comes along: a mono room fitted by rendering against the record, and its
   tape hiss as looping white noise 44 dB under the music
+- `Blade Runner Blues` (Vangelis, 1982; the 1994 album) is a transcription played
+  by the app's own synth (`src/data/bladeRunnerBlues.js`): four parts, a CS-80
+  (a sine layer beside a phase-aligned low-passed saw), an FM-sine pad, a low bed
+  of held sines at 30-52 Hz, and synthesized floor noise as its ambience. Its MIDI
+  file is MPE-style, a voice track per sounding note: pitch bend (RPN 0 sets the
+  range; @tonejs/midi reads bends as -1..1) is the note's pitch in cents from
+  A440 with its scoop and vibrato, CC 11 its loudness ((v - 127) / 2 dB); channels
+  1-12 CS-80, 13-14 pad, 15 low bed. `scripts/synth-transcription/` made it from
+  the record; `docs/replicas/blade-runner-blues/JOURNEY.md` logs the journey. In
+  the library with `landing: false` until Luke has heard it
 - A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides }):
   `useMidiPlayback` loops it under the notes whenever they sound (play, resume,
   seek, tempo change) and stops it with them; it never lights a key

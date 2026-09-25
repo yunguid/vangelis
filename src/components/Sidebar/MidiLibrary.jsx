@@ -9,6 +9,7 @@ import { audioEngine } from '../../utils/audioEngine.js';
 import {
   arrangeBuiltInPiece,
   isLandingEligible,
+  isPerformance,
   loadLandingSelection,
   loadRemovedPieces,
   saveLandingSelection,
@@ -84,7 +85,7 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     {
       key: 'performances',
       title: 'Performances',
-      files: filteredFiles.filter((file) => file.instrument)
+      files: filteredFiles.filter(isPerformance)
     },
     {
       key: 'originals',
@@ -99,7 +100,7 @@ const MidiLibrary = ({ active = true, onPlay }) => {
       key: 'classics',
       title: 'Classics',
       files: filteredFiles
-        .filter((file) => !file.id.startsWith('original-') && !file.instrument)
+        .filter((file) => !file.id.startsWith('original-') && !isPerformance(file))
         .sort((left, right) => (
           (left.featuredRank ?? Infinity) - (right.featuredRank ?? Infinity)
         ))
@@ -145,9 +146,9 @@ const MidiLibrary = ({ active = true, onPlay }) => {
     setSelectedFile(file);
 
     try {
-      // Performances bring their own sampled instrument; everything else
-      // plays through whatever sound is loaded.
-      const midiData = file.instrument
+      // Performances bring their own voice; everything else plays through
+      // whatever sound is loaded.
+      const midiData = isPerformance(file)
         ? (await arrangeBuiltInPiece(await audioEngine.ensureAudioContext(), file)).score
         : await loadMidiWithFallback(file);
       onPlay({
