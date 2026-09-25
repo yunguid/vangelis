@@ -122,3 +122,47 @@ describe('scored start times', () => {
     expect(voice.bufferSource.start).toHaveBeenCalledWith(2);
   });
 });
+
+describe('strokes', () => {
+  const strokeCtx = () => ({
+    ...makeCtx(),
+    sampleRate: 48000,
+    createGain: () => ({
+      gain: {
+        value: 0,
+        cancelScheduledValues: vi.fn(),
+        setValueAtTime: vi.fn(),
+        exponentialRampToValueAtTime: vi.fn(),
+        linearRampToValueAtTime: vi.fn(),
+        setTargetAtTime: vi.fn()
+      },
+      connect: vi.fn()
+    }),
+    createBiquadFilter: () => ({
+      type: 'lowpass', frequency: { value: 0 }, gain: { value: 0 }, connect: vi.fn(), disconnect: vi.fn()
+    })
+  });
+
+  it('tilts a stroke brighter or darker with a high shelf at three times its note', () => {
+    const pool = createSampleVoicePool({ ctx: strokeCtx(), inputBus: {}, poolSize: 1 });
+    const voice = pool.acquire('n1');
+    voice.startSample({ ...startArgs('n1'), brightness: -6 });
+    const shelf = voice.toneFilter;
+    expect(shelf).toMatchObject({ type: 'highshelf', frequency: { value: 1320 }, gain: { value: -6 } });
+    expect(voice.bufferSource.connect).toHaveBeenCalledWith(shelf);
+    expect(shelf.connect).toHaveBeenCalledWith(voice.gainNode);
+
+    voice.startSample(startArgs('n1')); // a plain stroke on the same voice
+    expect(shelf.disconnect).toHaveBeenCalled();
+    expect(voice.toneFilter).toBeNull();
+    expect(voice.bufferSource.connect).toHaveBeenCalledWith(voice.gainNode);
+  });
+
+  it('lets a muted stroke die away on the audio clock, 20 ms after the pluck', () => {
+    const pool = createSampleVoicePool({ ctx: strokeCtx(), inputBus: {}, poolSize: 1 });
+    const voice = pool.acquire('n1');
+    voice.startSample({ ...startArgs('n1'), when: 3, mute: 0.08 });
+    expect(voice.gainNode.gain.setTargetAtTime).toHaveBeenCalledWith(expect.any(Number), 3.02, 0.08);
+    expect(voice.gainNode.gain.setTargetAtTime.mock.calls[0][0]).toBeLessThan(0.001);
+  });
+});

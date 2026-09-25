@@ -11,6 +11,12 @@ import {
 export { MAX_MOD_ROUTES };
 
 export const MICRO_FADE_TIME = 0.005;
+// A sampled stroke's brightness is a high shelf this many times the note's
+// frequency (the shelf scripts/guitar-transcription measures each pluck with).
+export const BRIGHTNESS_SHELF_HARMONIC = 3;
+// A muted stroke (the palm or the thumb resting on the string) lets the pluck
+// through, then dies away from this long after it.
+export const MUTE_ONSET_SECONDS = 0.02;
 export const DEFAULT_TRANSPORT_TEMPO = 120;
 
 export const DELAY_MODE_OPTIONS = [

@@ -1,4 +1,6 @@
-import { AUDIO_PARAM_RANGES, MICRO_FADE_TIME } from '../audioParams.js';
+import {
+  AUDIO_PARAM_RANGES, BRIGHTNESS_SHELF_HARMONIC, MICRO_FADE_TIME, MUTE_ONSET_SECONDS
+} from '../audioParams.js';
 import { MINIMUM_GAIN, VOICE_STATE } from './constants.js';
 import { clamp } from '../math.js';
 
@@ -22,6 +24,7 @@ class SampleVoice {
     this.gainNode.connect(target);
 
     this.bufferSource = null;
+    this.toneFilter = null;
     this.noteId = null;
     this.frequency = 0;
     this.state = VOICE_STATE.IDLE;
@@ -35,7 +38,12 @@ class SampleVoice {
     this.recycleTimer = null;
   }
 
-  startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop, when }) {
+  /**
+   * `brightness` (dB) tilts a stroke brighter or darker with a high shelf;
+   * `mute` (seconds) is the time constant a muted stroke dies away with;
+   * `gain` scales a recording set's own level against the player's volume.
+   */
+  startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop, when, brightness, mute, gain = 1 }) {
     this.cleanup();
 
     const ctx = this.ctx;
@@ -51,7 +59,16 @@ class SampleVoice {
       this.bufferSource.playbackRate.value = frequency / baseFrequency;
     }
 
-    this.bufferSource.connect(this.gainNode);
+    if (brightness && frequency) {
+      this.toneFilter = ctx.createBiquadFilter();
+      this.toneFilter.type = 'highshelf';
+      this.toneFilter.frequency.value = Math.min(frequency * BRIGHTNESS_SHELF_HARMONIC, ctx.sampleRate * 0.45);
+      this.toneFilter.gain.value = brightness;
+      this.bufferSource.connect(this.toneFilter);
+      this.toneFilter.connect(this.gainNode);
+    } else {
+      this.bufferSource.connect(this.gainNode);
+    }
 
     this.noteId = noteId;
     this.frequency = frequency;
@@ -62,7 +79,8 @@ class SampleVoice {
     const decay = clamp(params.decay ?? 0.1, AUDIO_PARAM_RANGES.decay.min, AUDIO_PARAM_RANGES.decay.max);
     const sustain = clamp(params.sustain ?? 0.7, AUDIO_PARAM_RANGES.sustain.min, AUDIO_PARAM_RANGES.sustain.max);
     const useADSR = params.useADSR !== false;
-    const targetGain = clamp(params.volume ?? 0.7, AUDIO_PARAM_RANGES.volume.min, AUDIO_PARAM_RANGES.volume.max) * this.velocity;
+    const targetGain = clamp(params.volume ?? 0.7, AUDIO_PARAM_RANGES.volume.min, AUDIO_PARAM_RANGES.volume.max)
+      * this.velocity * gain;
 
     const gainParam = this.gainNode.gain;
     gainParam.cancelScheduledValues(now);
@@ -76,6 +94,9 @@ class SampleVoice {
         const sustainGain = Math.max(targetGain * sustain, MINIMUM_GAIN);
         safeExponentialRamp(gainParam, sustainGain, now + attack + decay);
       }
+    }
+    if (mute > 0) {
+      gainParam.setTargetAtTime(MINIMUM_GAIN, now + Math.max(MUTE_ONSET_SECONDS, attack), mute);
     }
 
     this.state = VOICE_STATE.ATTACK;
@@ -173,6 +194,10 @@ class SampleVoice {
         // Ignore
       }
       this.bufferSource = null;
+    }
+    if (this.toneFilter) {
+      this.toneFilter.disconnect();
+      this.toneFilter = null;
     }
 
     this.noteId = null;
