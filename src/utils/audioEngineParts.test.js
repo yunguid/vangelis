@@ -33,7 +33,7 @@ describe('audioEngine parts', () => {
   const saved = {};
 
   beforeEach(() => {
-    for (const key of ['context', 'globalNodes', 'worklet', 'delayWorklet', 'reverbWorklet', 'lastParamSignature', 'currentParams']) {
+    for (const key of ['context', 'globalNodes', 'worklet', 'delayWorklet', 'reverbWorklet', 'lastParamSignature', 'currentParams', 'samplePool']) {
       saved[key] = audioEngine[key];
     }
     created = [];
@@ -130,6 +130,44 @@ describe('audioEngine parts', () => {
     expect(created[0].messages.at(-1)).toEqual({
       type: 'setParams', params: toWorkletParams(sanitizeAudioParams({ attack: 0.7 }))
     });
+  });
+
+  it('plays the keys on a layered sound’s layers from one sample, and keeps them past a score’s parts', async () => {
+    audioEngine.samplePool = {};
+    audioEngine.worklet = { ...audioEngine.worklet, ready: true, setPitchBend: vi.fn() };
+    audioEngine.setKeyLayers([
+      { waveformType: 'sine', gain: 0.42, audioParams: { attack: 0.08 } },
+      { waveformType: 'sawtooth', gain: 0.77, audioParams: { phaseOffset: 180, useFilter: true } }
+    ]);
+    await flush();
+    expect(created).toHaveLength(2);
+
+    audioEngine.playFrequency({ noteId: 'k1', frequency: 440, velocity: 0.8, params: { reverbMix: 0.5 } });
+    await flush();
+    const [sine, saw] = lastMessages();
+    expect(sine).toMatchObject({ type: 'noteOn', noteId: 'k1', waveform: 'sine', velocity: 0.8 });
+    expect(saw).toMatchObject({ type: 'noteOn', noteId: 'k1', waveform: 'sawtooth', velocity: 0.8 });
+    // The same start, ahead of now by more than the messages take to arrive.
+    expect(sine.when).toBe(saw.when);
+    expect(sine.when).toBeGreaterThan(audioEngine.context.currentTime);
+    expect(audioEngine.worklet.noteOn).not.toHaveBeenCalled();
+
+    audioEngine.setPitchBend(2);
+    await flush();
+    expect(lastMessages()).toEqual([{ type: 'pitchBend', value: 2 }, { type: 'pitchBend', value: 2 }]);
+
+    // A piece's parts leave when it stops; the keys' layers and their sounding note stay.
+    audioEngine.setPart('lead', { layers: [{ params: {} }] });
+    audioEngine.clearParts();
+    audioEngine.stopNote('k1');
+    await flush();
+    expect(created[0].messages.at(-1)).toEqual({ type: 'noteOff', noteId: 'k1', when: undefined });
+    expect(created[1].messages.at(-1)).toEqual({ type: 'noteOff', noteId: 'k1', when: undefined });
+
+    // Without layers the keys are the main synth's again.
+    audioEngine.setKeyLayers(null);
+    audioEngine.playFrequency({ noteId: 'k2', frequency: 220, params: {} });
+    expect(audioEngine.worklet.noteOn).toHaveBeenCalledWith(expect.objectContaining({ noteId: 'k2', frequency: 220 }));
   });
 
   it('stops every part with stopAllNotes, and clearParts retires them once released notes ring out', async () => {

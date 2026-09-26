@@ -51,8 +51,9 @@ it('gives each channel range its part, and long notes coarser curves', () => {
   add(0, 69, 0, 1);
   add(12, 54, 0, 10);
   add(14, 31, 12, 516);
+  add(15, 30, 54.47, 1.6);
   const byPart = Object.fromEntries(roundTrip(midi).notes.map((note) => [note.part, note]));
-  expect(Object.keys(byPart).sort()).toEqual(['cs80', 'pad', 'rumble']);
+  expect(Object.keys(byPart).sort()).toEqual(['bass', 'cs80', 'pad', 'rumble']);
   expect(byPart.pad.expression.pitch[0]).toBeCloseTo(11.6, 0);
   // A bed held for minutes still hands the synth a curve of bounded size.
   expect(byPart.rumble.expression.pitch.length).toBeLessThanOrEqual(12002);

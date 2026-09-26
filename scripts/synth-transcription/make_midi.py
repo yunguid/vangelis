@@ -11,6 +11,7 @@ Velocity is the note's peak level. Everything is on the record's own timeline at
 (a beat is half a second).
 
 usage: make_midi.py notes.json out.mid [--tuning 11.6] [--release 1.2] [--loudness corrections.json]
+       [--bed bed.json] [--bass bass.json] [--pad-fix pad_fix.json]
 """
 import argparse, json, os
 import numpy as np
@@ -20,7 +21,9 @@ from scipy.ndimage import median_filter, uniform_filter1d
 ap = argparse.ArgumentParser(); ap.add_argument('notes'); ap.add_argument('out')
 ap.add_argument('--tuning', type=float, default=11.6); ap.add_argument('--release', type=float, default=1.2)
 ap.add_argument('--loudness', help='closed-loop corrections: dB per CS-80 note, keyed by start')
-ap.add_argument('--rumble', help='the low bed: rumble_lines.json')
+ap.add_argument('--bed', help='the low bed: bed.json (bed_lines.py), lines with their own level nodes')
+ap.add_argument('--bass', help='the bass line: bass.json (bass_notes.py), notes {time, duration, midi, cents, velocity, gain}')
+ap.add_argument('--pad-fix', help='closed-loop cuts to low pad notes: dB keyed "start:midi" (pad_fix.py)')
 a = ap.parse_args()
 TPB = 960; SEC = TPB * 2
 BEND_RANGE = 12
@@ -29,6 +32,7 @@ LEVEL_TOL = 1.5   # dB
 CS80_CHANNELS = 8
 PAD_CHANNEL = 12
 RUMBLE_CHANNEL = 14
+BASS_CHANNEL = 15
 
 
 def simplify(t, v, tol):
@@ -95,38 +99,48 @@ for n in cs:
     tr['events'].append((off, 0, mido.Message('note_off', channel=ch, note=n['midi'], velocity=0)))
 
 pads = sorted([n for n in notes if n['part'] == 'pad'], key=lambda n: n['start'])
+pad_fix = json.load(open(a.pad_fix)) if a.pad_fix else {}
 for n in pads:
     tr = slot([PAD_CHANNEL], n['start']); tr['free_at'] = n['end'] + a.release
     c = n['curve']; db = np.array(c['db']); t = c['t0'] + np.arange(len(db)) / c['rate']
     tr['events'].append((n['start'] - 0.001, 0, mido.Message('pitchwheel', channel=PAD_CHANNEL, pitch=bend(a.tuning))))
     curve_events(tr, n['start'], t, smooth(db, 3), LEVEL_TOL, lambda v: mido.Message('control_change', channel=PAD_CHANNEL, control=11, value=cc11(v)))
-    vel = int(np.clip(round(127 * 10 ** (n['level'] / 20)), 1, 127))
+    vel = int(np.clip(round(127 * 10 ** ((n['level'] + pad_fix.get(f"{n['start']:.2f}:{n['midi']}", 0.0)) / 20)), 1, 127))
     tr['events'].append((n['start'], 2, mido.Message('note_on', channel=PAD_CHANNEL, note=n['midi'], velocity=vel)))
     tr['events'].append((n['end'], 0, mido.Message('note_off', channel=PAD_CHANNEL, note=n['midi'], velocity=0)))
 
-# The low bed under everything (from 0:12 to the end): steady tones between 30 and 52 Hz,
-# each held as one note at its exact frequency (a steady bend from the nearest key) whose
-# loudness moves between the levels measured over six spans of the record.
-if a.rumble:
-    rum = json.load(open(a.rumble))
-    centres = [(s0 + s1) / 2 for s0, s1 in rum['spans']]
-    start, end = 12.0, rum['spans'][-1][1]
-    top = max(max(v) for v in rum['levels'].values())
-    for hz in rum['lines']:
-        levels = np.array(rum['levels'][str(hz)])
-        key = 69 + 12 * np.log2(hz / 440); note = int(round(key)); cents = (key - note) * 100
-        tr = dict(channel=RUMBLE_CHANNEL, events=[], free_at=end); tracks.append(tr)
-        for num, val in ((101, 0), (100, 0), (6, BEND_RANGE), (38, 0)):
-            tr['events'].append((0.0, 0, mido.Message('control_change', channel=RUMBLE_CHANNEL, control=num, value=val)))
-        tr['events'].append((start - 0.001, 0, mido.Message('pitchwheel', channel=RUMBLE_CHANNEL, pitch=bend(cents))))
-        t = np.array([start] + centres + [end]); db = np.concatenate([[levels[0] - 30], levels, [levels[-1]]]) - levels.max()
-        # the bed fades in over the record's first seconds
-        t[1] = max(t[1], start + 6)
-        for ti, v in zip(t, db):
-            tr['events'].append((ti if ti > start else start - 0.001, 1, mido.Message('control_change', channel=RUMBLE_CHANNEL, control=11, value=cc11(v))))
-        vel = int(np.clip(round(127 * 10 ** ((levels.max() - top) / 20)), 1, 127))
-        tr['events'].append((start, 2, mido.Message('note_on', channel=RUMBLE_CHANNEL, note=note, velocity=vel)))
-        tr['events'].append((end, 0, mido.Message('note_off', channel=RUMBLE_CHANNEL, note=note, velocity=0)))
+# The low bed under everything (from 0:12 to the end): the lines of a sound that repeats every
+# 1.692 s, 30-57 Hz, each held as one note at its exact frequency (a steady bend from the
+# nearest key) whose loudness follows the record every few seconds.
+def bed_track(hz, times, dbs):
+    key = 69 + 12 * np.log2(hz / 440); note = int(round(key)); cents = (key - note) * 100
+    tr = dict(channel=RUMBLE_CHANNEL, events=[], free_at=times[-1]); tracks.append(tr)
+    for num, val in ((101, 0), (100, 0), (6, BEND_RANGE), (38, 0)):
+        tr['events'].append((0.0, 0, mido.Message('control_change', channel=RUMBLE_CHANNEL, control=num, value=val)))
+    start = times[0]
+    tr['events'].append((start - 0.001, 0, mido.Message('pitchwheel', channel=RUMBLE_CHANNEL, pitch=bend(cents))))
+    curve_events(tr, start, np.asarray(times, float), np.asarray(dbs, float), LEVEL_TOL,
+                 lambda v: mido.Message('control_change', channel=RUMBLE_CHANNEL, control=11, value=cc11(v)))
+    tr['events'].append((start, 2, mido.Message('note_on', channel=RUMBLE_CHANNEL, note=note, velocity=127)))
+    tr['events'].append((times[-1], 0, mido.Message('note_off', channel=RUMBLE_CHANNEL, note=note, velocity=0)))
+
+
+bed = json.load(open(a.bed))['lines'] if a.bed else []
+for line in bed:
+    bed_track(line['hz'], line['t'], line['db'])
+
+# The bass line: centred low notes that start abruptly (the record's "booms"), each on a voice
+# track of channel 16 with its tuning as a steady bend and its gain curve as CC 11 nodes.
+bass = json.load(open(a.bass)) if a.bass else dict(rate=100, notes=[])
+for n in sorted(bass['notes'], key=lambda n: n['time']):
+    on, off = n['time'], n['time'] + n['duration']
+    tr = slot([BASS_CHANNEL], on); tr['free_at'] = off + a.release
+    tr['events'].append((on - 0.001, 0, mido.Message('pitchwheel', channel=BASS_CHANNEL, pitch=bend(n.get('cents', a.tuning)))))
+    g = np.maximum(np.asarray(n['gain'], float), 1e-4); t = on + np.arange(len(g)) / bass['rate']
+    curve_events(tr, on, t, 20 * np.log10(g), LEVEL_TOL, lambda v: mido.Message('control_change', channel=BASS_CHANNEL, control=11, value=cc11(v)))
+    vel = int(np.clip(round(127 * n['velocity']), 1, 127))
+    tr['events'].append((on, 2, mido.Message('note_on', channel=BASS_CHANNEL, note=n['midi'], velocity=vel)))
+    tr['events'].append((off, 0, mido.Message('note_off', channel=BASS_CHANNEL, note=n['midi'], velocity=0)))
 
 mid = mido.MidiFile(ticks_per_beat=TPB)
 meta = mido.MidiTrack(); mid.tracks.append(meta)
@@ -134,11 +148,13 @@ meta.append(mido.MetaMessage('track_name', name='Blade Runner Blues (Vangelis, 1
 meta.append(mido.MetaMessage('set_tempo', tempo=500000, time=0))
 for i, tr in enumerate(tracks):
     mt = mido.MidiTrack(); mid.tracks.append(mt)
-    name = 'cs80' if tr['channel'] < CS80_CHANNELS else 'pad' if tr['channel'] == PAD_CHANNEL else 'rumble'
+    name = ('cs80' if tr['channel'] < CS80_CHANNELS else 'pad' if tr['channel'] == PAD_CHANNEL
+            else 'bass' if tr['channel'] == BASS_CHANNEL else 'rumble')
     mt.append(mido.MetaMessage('track_name', name=f'{name} voice {i + 1}', time=0))
     now = 0
     for sec, _, msg in sorted(tr['events'], key=lambda e: (round(e[0] * SEC), e[1])):
         tick = max(0, int(round(sec * SEC)))
         mt.append(msg.copy(time=tick - now)); now = tick
 mid.save(a.out)
-print(a.out, os.path.getsize(a.out), 'bytes;', len(tracks), 'voice tracks;', len(cs), 'cs80 notes,', len(pads), 'pad notes')
+print(a.out, os.path.getsize(a.out), 'bytes;', len(tracks), 'voice tracks;', len(cs), 'cs80 notes,', len(pads), 'pad notes,',
+      len(bed), 'bed lines,', len(bass['notes']), 'bass notes')

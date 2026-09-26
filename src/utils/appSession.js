@@ -27,6 +27,15 @@ const coerceSampleSelection = (value) => {
   return normalized;
 };
 
+// A sound in layers: its layers ({ waveformType, gain, audioParams }) and its own settings.
+const coerceLayeredSound = (value) => {
+  if (!value || typeof value !== 'object' || !Array.isArray(value.layers) || !value.layers.length) return null;
+  if (!value.audioParams || typeof value.audioParams !== 'object') return null;
+  const valid = value.layers.every((layer) => layer && typeof layer.waveformType === 'string'
+    && Number.isFinite(layer.gain) && layer.audioParams && typeof layer.audioParams === 'object');
+  return valid ? { layers: value.layers, audioParams: value.audioParams } : null;
+};
+
 const coerceControlSections = (value) => {
   if (!value || typeof value !== 'object') {
     return DEFAULT_CONTROL_SECTIONS;
@@ -48,6 +57,7 @@ export const getDefaultSessionState = () => ({
   sidebarTab: 'sound',
   activePresetName: null,
   instrument: null,
+  layeredSound: null,
   activeSampleId: null,
   sampleSelection: null,
   showShortcuts: false,
@@ -79,6 +89,7 @@ export function loadAppSession() {
       sidebarTab: coerceSidebarTab(parsed.sidebarTab),
       activePresetName: typeof parsed.activePresetName === 'string' ? parsed.activePresetName : null,
       instrument: typeof parsed.instrument === 'string' ? parsed.instrument : null,
+      layeredSound: coerceLayeredSound(parsed.layeredSound),
       activeSampleId: typeof parsed.activeSampleId === 'string' ? parsed.activeSampleId : null,
       sampleSelection: coerceSampleSelection(parsed.sampleSelection),
       showShortcuts: !!parsed.showShortcuts,

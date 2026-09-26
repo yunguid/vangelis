@@ -202,6 +202,18 @@ src/
   bands. Drag, scroll, arrow keys, the steppers or a click on the ring turn it;
   `/` opens it and typing finds sounds by name, category or description.
   Resting on a sound loads it, and the loaded sound persists in the session
+- The "Blade Runner" band (`data/bladeRunnerSounds.js`, after Acoustic) holds
+  the replica's sounds for the keys, built from its own patches: CS-80 Blues,
+  Blues Pad, Offworld Drone and Blade Runner Boom. The CS-80 and the pad are
+  sounds in layers: a catalog entry with `layers` ([{ waveformType, gain,
+  audioParams }]) plays every key that brings no voice of its own on the
+  engine's key layers (`audioEngine.setKeyLayers`, a part the score's
+  `clearParts` leaves alone), all layers started on one sample 10 ms ahead
+  (skewed, the sine and the saw's fundamental cancel in part); pitch bend and
+  the mod wheel reach them too. Its `audioParams` is what the Sound tab shows
+  and sets the room; an edit there (a setting that differs from the sound's
+  own) reaches every layer. The layers persist in the session and in saved
+  sounds; choosing a waveform leaves them
 - The sidebar's Sound tab shapes the sound and keeps a save row (`PresetShelf`
   with `saveOnly`); saved sounds persist in localStorage, join the dial as
   "Your sounds" and can be removed there. The full `PresetShelf` browser
@@ -248,17 +260,24 @@ src/
   tape hiss as looping white noise 44 dB under the music
 - `Blade Runner Blues` (Vangelis, 1982; the 1994 album) is a transcription played
   by the app's own synth (`src/data/bladeRunnerBlues.js`): four parts, a CS-80
-  (a sine layer beside a phase-aligned low-passed saw), an FM-sine pad, a low bed
-  of held sines at 30-52 Hz, and synthesized floor noise as its ambience. Its MIDI
+  (a sine layer, louder up the keyboard, beside a phase-aligned saw low-passed at
+  9.5 kHz), a pad (a sine beside a half-cycle-shifted saw low-passed at 5 kHz),
+  the bass (the record's "booms": struck FM sines), a low bed of held sines on a
+  0.591 Hz grid at 30-57 Hz, and synthesized floor noise as its ambience (fading
+  in over 3 s and out over the last 4.2 s), all in one ambient room. Its MIDI
   file is MPE-style, a voice track per sounding note: pitch bend (RPN 0 sets the
   range; @tonejs/midi reads bends as -1..1) is the note's pitch in cents from
   A440 with its scoop and vibrato, CC 11 its loudness ((v - 127) / 2 dB); channels
-  1-12 CS-80, 13-14 pad, 15 low bed. `scripts/synth-transcription/` made it from
-  the record; `docs/replicas/blade-runner-blues/JOURNEY.md` logs the journey. In
-  the landing queue since v1 (the keys keep the listener's sound)
-- A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides }):
-  `useMidiPlayback` loops it under the notes whenever they sound (play, resume,
-  seek, tempo change) and stops it with them; it never lights a key
+  1-12 CS-80, 13-14 pad, 15 low bed, 16 bass. `scripts/synth-transcription/` made
+  it from the record; `docs/replicas/blade-runner-blues/JOURNEY.md` logs the
+  journey. In the landing queue since v1 (the keys keep the listener's sound)
+- A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides,
+  fadeIn, fadeOut }): `useMidiPlayback` loops it under the notes whenever they
+  sound (play, resume, seek, tempo change) and stops it with them; it never
+  lights a key. It holds at its own level, never the player's decay and sustain
+  (the envelope reaches that voice alone, not the keys' synth), rising over
+  `fadeIn` seconds (else its attack); with `fadeOut` it falls linearly to
+  silence by the score's end, scheduled on the audio clock when it starts
 - A score may carry synth `parts` ({ name: { layers: [{ params, waveformType,
   gain }] } }): every layer is a synth worklet node of its own
   (`audioEngine.setParts`), so several patches sound at once through the shared

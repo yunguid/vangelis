@@ -41,9 +41,10 @@ class SampleVoice {
   /**
    * `brightness` (dB) tilts a stroke brighter or darker with a high shelf;
    * `mute` (seconds) is the time constant a muted stroke dies away with;
-   * `gain` scales a recording set's own level against the player's volume.
+   * `gain` scales a recording set's own level against the player's volume;
+   * `fadeOut` ({ from, to }, audio-clock seconds) falls linearly to silence by `to`.
    */
-  startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop, when, brightness, mute, gain = 1 }) {
+  startSample({ noteId, buffer, frequency, baseFrequency, velocity, params, loop, when, brightness, mute, gain = 1, fadeOut }) {
     this.cleanup();
 
     const ctx = this.ctx;
@@ -86,17 +87,29 @@ class SampleVoice {
     gainParam.cancelScheduledValues(now);
     gainParam.setValueAtTime(MINIMUM_GAIN, now);
 
+    let heldGain = targetGain;
+    let heldFrom = now + MICRO_FADE_TIME;
     if (!useADSR) {
       safeExponentialRamp(gainParam, targetGain, now + MICRO_FADE_TIME);
     } else {
       safeExponentialRamp(gainParam, targetGain, now + attack);
+      heldFrom = now + attack;
       if (decay > 0 && sustain < 1) {
-        const sustainGain = Math.max(targetGain * sustain, MINIMUM_GAIN);
-        safeExponentialRamp(gainParam, sustainGain, now + attack + decay);
+        heldGain = Math.max(targetGain * sustain, MINIMUM_GAIN);
+        heldFrom += decay;
+        safeExponentialRamp(gainParam, heldGain, heldFrom);
       }
     }
     if (mute > 0) {
       gainParam.setTargetAtTime(MINIMUM_GAIN, now + Math.max(MUTE_ONSET_SECONDS, attack), mute);
+    }
+    // Scheduled on the audio clock, so a hidden tab's throttled timers cannot make it late.
+    if (fadeOut) {
+      const fadeFrom = Math.max(fadeOut.from, heldFrom);
+      if (fadeOut.to > fadeFrom) {
+        gainParam.setValueAtTime(heldGain, fadeFrom);
+        gainParam.linearRampToValueAtTime(0, fadeOut.to);
+      }
     }
 
     this.state = VOICE_STATE.ATTACK;

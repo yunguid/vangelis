@@ -196,6 +196,10 @@ export class LazyAudioEngineGateway {
     this.runtime?.clearParts();
   }
 
+  setKeyLayers(layers) {
+    this.runtime?.setKeyLayers(layers);
+  }
+
   setPitchBend(semitones) {
     this.runtime?.setPitchBend(semitones);
   }

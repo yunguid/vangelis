@@ -34,6 +34,7 @@ vi.mock('./utils/audioEngine.js', () => ({
     subscribeActivity: vi.fn(() => () => {}),
     getAnalysisNodes: vi.fn(() => null),
     setInstrument: vi.fn(() => Promise.resolve()),
+    setKeyLayers: vi.fn(),
     loadCustomSample: vi.fn(() => Promise.resolve({ duration: 1, channels: 2 })),
     clearCustomSample: vi.fn(),
     setCustomSampleBaseNote: vi.fn(),
@@ -181,6 +182,28 @@ describe('App', () => {
     expect(audioEngine.setInstrument).toHaveBeenLastCalledWith(null);
     const saved = JSON.parse(window.localStorage.getItem('vangelis-ui-session-v2'));
     expect(saved).toMatchObject({ instrument: 'opening-piano', activePresetName: 'Grand Piano' });
+  });
+
+  it('plays a sound in layers on the engine’s key layers, keeping what each layer has of its own, and remembers it', async () => {
+    const { audioEngine } = await import('./utils/audioEngine.js');
+    const layers = [
+      { waveformType: 'sine', gain: 0.42, audioParams: { attack: 0.08, useFilter: false } },
+      { waveformType: 'sawtooth', gain: 0.77, audioParams: { attack: 0.08, useFilter: true, filterCutoff: 9500, phaseOffset: 180 } }
+    ];
+    opening.sound = { name: 'CS-80 Blues', waveformType: 'Sawtooth', audioParams: { attack: 0.08, reverbMix: 1 }, layers };
+    engineStatus.current = { wasmReady: true, contextReady: true, graphWarmed: true };
+    const { unmount } = render(<App />);
+    await waitFor(() => expect(audioEngine.setKeyLayers).toHaveBeenLastCalledWith(expect.any(Array)));
+    const handed = audioEngine.setKeyLayers.mock.calls.at(-1)[0];
+    expect(handed.map(({ waveformType, gain }) => [waveformType, gain])).toEqual([['sine', 0.42], ['sawtooth', 0.77]]);
+    // The sound's shared settings leave each layer's own as they are: the sine stays unfiltered.
+    expect(handed[0].audioParams).toMatchObject({ useFilter: false, attack: 0.08 });
+    expect(handed[1].audioParams).toMatchObject({ useFilter: true, filterCutoff: 9500, phaseOffset: 180 });
+
+    unmount(); // the editor shares the engine, so the layers leave with the page
+    expect(audioEngine.setKeyLayers).toHaveBeenLastCalledWith(null);
+    const saved = JSON.parse(window.localStorage.getItem('vangelis-ui-session-v2'));
+    expect(saved).toMatchObject({ activePresetName: 'CS-80 Blues', layeredSound: { layers } });
   });
 
   it('says so and returns to the synth when an instrument cannot be loaded', async () => {

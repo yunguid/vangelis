@@ -403,9 +403,14 @@ export function useMidiPlayback({
     }
 
     // The ambience bed runs whenever the notes do; it is stationary, so a restart after a
-    // pause, seek or tempo change needs no position. It never lights a key.
+    // pause, seek or tempo change needs no position. It never lights a key. It holds at its
+    // own level (never the player's decay and sustain), rising over its fade-in; with a
+    // fade-out it falls silent by the score's end on the audio clock.
     const ambience = playbackRef.current.midiData?.ambience;
     if (ambience?.buffer && !ambienceVoiceRef.current) {
+      const { loop } = playbackRef.current;
+      const tempo = tempoFactorRef.current;
+      const endTime = startTime + Math.max(0, resolveMidiDuration(playbackRef.current.midiData) - offset) / tempo;
       const started = audioEngine.playBufferedSample({
         noteId: `ambience-${Math.round(startTime * 1000)}`,
         buffer: ambience.buffer,
@@ -415,19 +420,20 @@ export function useMidiPlayback({
         gain: ambience.gain,
         params: ambience.audioParamOverrides
           ? { ...audioParamsRef.current, ...ambience.audioParamOverrides }
-          : audioParamsRef.current
+          : audioParamsRef.current,
+        envelope: { useADSR: true, sustain: 1, ...(ambience.fadeIn !== undefined && { attack: ambience.fadeIn }) },
+        fadeOut: ambience.fadeOut && !loop ? { from: endTime - ambience.fadeOut / tempo, to: endTime } : undefined
       });
       ambienceVoiceRef.current = started?.voiceId ?? null;
       // It ends with the score on a timer of its own: the progress loop that ends playback
       // does not run in a hidden tab, and a bed must not hiss on after the last note.
-      if (ambienceVoiceRef.current && !playbackRef.current.loop) {
+      if (ambienceVoiceRef.current && !loop) {
         const bedVoice = ambienceVoiceRef.current;
-        const remaining = Math.max(0, resolveMidiDuration(playbackRef.current.midiData) - offset) / tempoFactorRef.current;
         scheduleTrackedTimeout(() => {
           if (ambienceVoiceRef.current !== bedVoice) return;
           audioEngine.stopNote(bedVoice);
           ambienceVoiceRef.current = null;
-        }, Math.max(0, (startTime + remaining - ctx.currentTime) * 1000));
+        }, Math.max(0, (endTime - ctx.currentTime) * 1000));
       }
     }
 

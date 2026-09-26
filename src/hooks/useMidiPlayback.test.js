@@ -217,6 +217,28 @@ describe('useMidiPlayback', () => {
     expect(audioEngine.stopNote).toHaveBeenCalledWith(bedVoice);
   });
 
+  it('holds the ambience bed at its own level and fades it out by the score’s end, at any tempo', async () => {
+    // The player's sound would otherwise decay the bed to its sustain (0.3 here).
+    const { result } = renderHook(() => useMidiPlayback({ waveformType: 'Sine', audioParams: { volume: 0.4, decay: 0.2, sustain: 0.3 } }));
+    const bed = { buffer: {}, gain: 0.05, fadeIn: 3, fadeOut: 0.5 };
+    await act(async () => {
+      result.current.play({ duration: 2, bpm: 120, ambience: bed, notes: [{ midi: 60, time: 0, duration: 2, velocity: 0.8 }] });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const bedStarts = () => audioEngine.playBufferedSample.mock.calls.filter(([options]) => options.loop);
+    expect(bedStarts()[0][0]).toMatchObject({
+      params: { volume: 0.4, decay: 0.2, sustain: 0.3 },
+      envelope: { sustain: 1, attack: 3 },
+      fadeOut: { from: 1.5, to: 2 }
+    });
+
+    act(() => result.current.setTempo(2));
+    expect(bedStarts()).toHaveLength(2);
+    expect(bedStarts()[1][0].fadeOut.from).toBeCloseTo(0.75, 6);
+    expect(bedStarts()[1][0].fadeOut.to).toBeCloseTo(1, 6);
+  });
+
   it('records opt-in MIDI startup and scheduler lateness samples', async () => {
     const recordInteraction = vi.fn();
     const completePaint = vi.fn();

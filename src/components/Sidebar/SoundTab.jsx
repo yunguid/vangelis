@@ -8,6 +8,7 @@ const SoundTab = ({
   currentWaveform,
   onWaveformChange,
   instrument,
+  layers,
   audioParams,
   onParamChange,
   onParamsChange,
@@ -26,6 +27,7 @@ const SoundTab = ({
       <PresetShelf
         waveformType={currentWaveform}
         instrument={instrument}
+        layers={layers}
         audioParams={audioParams}
         saveOnly
       />

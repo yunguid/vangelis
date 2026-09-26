@@ -29,6 +29,10 @@ fmin = librosa.midi_to_hz(LO) * 2 ** (a.tuning / 1200)
 hop = int(0.05 * sr)
 V = np.abs(librosa.cqt(x, sr=sr, hop_length=hop, fmin=fmin, n_bins=(HI - LO) * BPS, bins_per_octave=12 * BPS, filter_scale=1.0)).astype(np.float64)
 B, F = V.shape
+# librosa's scaled constant-Q reads a sine of fixed amplitude 3.01 dB lower for every octave up;
+# undo it, so activations, the template and pad_notes' levels compare across registers (with the
+# tilt, the fit kept a tenth of the pad's voices above C5)
+V *= np.sqrt(librosa.cqt_frequencies(B, fmin=fmin, bins_per_octave=12 * BPS) / fmin)[:, None]
 t = a.start + np.arange(F) * hop / sr
 bin_midi = LO + np.arange(B) / BPS
 

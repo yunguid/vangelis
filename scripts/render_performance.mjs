@@ -258,18 +258,22 @@ for (const note of arranged.notes) {
   }
 }
 if (arranged.ambience && argument('ambience') !== 'off') {
-  // useMidiPlayback runs the bed from the start of playback to the end of the score.
-  const { buffer, gain = 1, audioParamOverrides } = arranged.ambience;
+  // useMidiPlayback runs the bed from the start of playback to the end of the score: it rises
+  // over its fade-in (else its attack) and holds at its gain; with a fade-out it falls
+  // linearly to silence by the score's end, else it releases from there.
+  const { buffer, gain = 1, audioParamOverrides, fadeIn, fadeOut } = arranged.ambience;
   const bedParams = sanitizeAudioParams({ ...AUDIO_PARAM_DEFAULTS, ...audioParamOverrides, ...trial });
   const data = buffer.getChannelData(0);
   const target = bedParams.volume * gain;
   const endAt = (Math.max(...arranged.notes.map((note) => note.time + note.duration)) - from) * SAMPLE_RATE;
   const release = bedParams.release * SAMPLE_RATE;
-  const attack = bedParams.attack * SAMPLE_RATE;
-  for (let frame = Math.max(0, Math.ceil(-from * SAMPLE_RATE)); frame < Math.min(frames, endAt + release); frame++) {
+  const attack = (fadeIn ?? bedParams.attack) * SAMPLE_RATE;
+  const fadeFrom = fadeOut ? endAt - fadeOut * SAMPLE_RATE : Infinity;
+  for (let frame = Math.max(0, Math.ceil(-from * SAMPLE_RATE)); frame < Math.min(frames, fadeOut ? endAt : endAt + release); frame++) {
     const elapsed = frame + from * SAMPLE_RATE;
     let level = elapsed < attack ? MINIMUM_GAIN * (target / MINIMUM_GAIN) ** (elapsed / attack) : target;
-    if (frame >= endAt) level = target * (MINIMUM_GAIN / target) ** ((frame - endAt) / release);
+    if (frame >= fadeFrom) level *= (endAt - frame) / (endAt - fadeFrom);
+    else if (frame >= endAt) level = target * (MINIMUM_GAIN / target) ** ((frame - endAt) / release);
     const value = data[Math.floor(elapsed) % data.length] * level;
     busL[frame] += value;
     busR[frame] += value;

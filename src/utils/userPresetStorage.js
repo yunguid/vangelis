@@ -37,7 +37,7 @@ const persist = (presets) => {
   listeners.forEach((listener) => listener());
 };
 
-export const saveUserPreset = ({ name, waveformType, instrument, audioParams }) => {
+export const saveUserPreset = ({ name, waveformType, instrument, layers, audioParams }) => {
   const trimmed = (name || '').trim().slice(0, 48) || 'Untitled';
   const preset = {
     id: makeId(),
@@ -45,6 +45,8 @@ export const saveUserPreset = ({ name, waveformType, instrument, audioParams }) 
     waveformType,
     // Set when the sound is a sampled instrument (data/sampledInstruments.js).
     ...(instrument ? { instrument } : {}),
+    // Set when the sound plays in layers (data/bladeRunnerSounds.js).
+    ...(layers ? { layers } : {}),
     audioParams,
     createdAt: Date.now()
   };

@@ -29,6 +29,14 @@ import {
 } from './audioEngine/worklets.js';
 import { clamp } from './math.js';
 
+// A sound in layers (data/bladeRunnerSounds.js) plays the keys on this part. Its layers
+// must start each note on the same sample, or the sine and the saw's fundamental cancel
+// in part (the CS-80's saw started 32 samples late cost a 440 Hz fundamental 12 dB in the
+// browser), so a key's note is handed to every layer for a start this far ahead, past the
+// messages' transit.
+const KEYS_PART = 'keys';
+const KEY_LAYER_LEAD = 0.01;
+
 class AudioEngine {
   constructor() {
     this.context = null;
@@ -472,8 +480,13 @@ class AudioEngine {
 
   // ============ Note Playback ============
 
+  /**
+   * `envelope` (attack, decay, sustain...) shapes this voice alone, not the player's sound
+   * (an ambience bed's own); `fadeOut` ({ from, to }, audio-clock seconds) silences it by `to`.
+   */
   playBufferedSample({
-    noteId, buffer, frequency, baseFrequency, params = {}, velocity = 1, loop = false, when, brightness, mute, gain
+    noteId, buffer, frequency, baseFrequency, params = {}, velocity = 1, loop = false, when, brightness, mute, gain,
+    envelope, fadeOut
   }) {
     if (!buffer) return null;
     if (!this.context) {
@@ -496,12 +509,13 @@ class AudioEngine {
       frequency,
       baseFrequency,
       velocity,
-      params: sanitized,
+      params: envelope ? { ...sanitized, ...envelope } : sanitized,
       loop,
       when,
       brightness,
       mute,
-      gain
+      gain,
+      fadeOut
     });
     this.markVoiceStarted(voiceId);
 
@@ -529,6 +543,12 @@ class AudioEngine {
         frequency,
         params,
         ...this.instrument.pick(frequency, velocity, this.context.currentTime)
+      });
+    }
+
+    if (this.parts.has(KEYS_PART) && !voiced) {
+      return this.playPartNote({
+        part: KEYS_PART, noteId, frequency, velocity, params, when: this.context.currentTime + KEY_LAYER_LEAD
       });
     }
 
@@ -593,10 +613,16 @@ class AudioEngine {
 
   setPitchBend(semitones) {
     this.worklet.setPitchBend(semitones);
+    this.forKeyLayers((worklet) => worklet.setPitchBend(semitones));
   }
 
   setModWheel(value) {
     this.worklet.setModWheel(value);
+    this.forKeyLayers((worklet) => worklet.setModWheel(value));
+  }
+
+  forKeyLayers(send) {
+    for (const layer of this.parts.get(KEYS_PART) || []) layer.ready.then(() => send(layer.worklet));
   }
 
   stopAllNotes() {
@@ -690,13 +716,34 @@ class AudioEngine {
     };
   }
 
-  /** Forget every part (a piece that used them has stopped). */
-  clearParts() {
-    for (const layers of this.parts.values()) {
-      layers.forEach((layer) => this.retirePartLayer(layer));
+  /**
+   * The loaded sound's layers ({ waveformType, gain, audioParams }), or null: while it has
+   * some, every key that brings no voice of its own plays on all of them (see
+   * playFrequency). Setting them again updates the layers in place.
+   */
+  setKeyLayers(layers) {
+    if (layers?.length) {
+      this.setPart(KEYS_PART, {
+        layers: layers.map(({ waveformType, gain, audioParams }) => ({ waveformType, gain, params: audioParams }))
+      });
+    } else {
+      this.retirePart(KEYS_PART);
     }
-    this.parts.clear();
-    this.partVoices.clear();
+  }
+
+  /** Forget every part of a score (a piece that used them has stopped); the keys' layers stay. */
+  clearParts() {
+    for (const name of [...this.parts.keys()]) {
+      if (name !== KEYS_PART) this.retirePart(name);
+    }
+  }
+
+  retirePart(name) {
+    (this.parts.get(name) || []).forEach((layer) => this.retirePartLayer(layer));
+    this.parts.delete(name);
+    for (const [voiceId, part] of this.partVoices) {
+      if (part === name) this.partVoices.delete(voiceId);
+    }
   }
 
   // A retired layer releases its notes and leaves the graph once they have

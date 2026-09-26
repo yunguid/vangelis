@@ -51,7 +51,9 @@ const LayerSoundBrowser = ({ track, onChoose, onClose }) => {
     ])
       .then(([factory, lab]) => {
         if (!mountedRef.current) return;
-        const userSounds = loadUserPresets().map((preset) => ({
+        // A sound saved in layers (data/bladeRunnerSounds.js) plays from the keys only: a
+        // track has one patch, and one of its layers alone is not the sound.
+        const userSounds = loadUserPresets().filter((preset) => !preset.layers).map((preset) => ({
           ...preset,
           category: 'Your sounds',
           description: preset.description || 'A sound saved from the Vangelis sound workspace.',

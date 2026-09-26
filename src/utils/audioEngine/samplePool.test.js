@@ -113,6 +113,20 @@ describe('scored start times', () => {
     expect(voice.startTime).toBe(2.06);
   });
 
+  it('fades a bed out to silence on the audio clock, from the level it holds after its envelope', () => {
+    const pool = createSampleVoicePool({ ctx: makeCtx(), inputBus: {}, poolSize: 1 });
+    const voice = pool.acquire('bed');
+    const params = { attack: 3, decay: 0.1, sustain: 0.5, volume: 0.8 };
+    voice.startSample({ ...startArgs('bed'), velocity: 1, params, loop: true, fadeOut: { from: 529.5, to: 533.7 } });
+    const { gain } = voice.gainNode;
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.4, 529.5);
+    expect(gain.linearRampToValueAtTime).toHaveBeenLastCalledWith(0, 533.7);
+
+    // Started too close to the end, the fade waits for the envelope to reach its level.
+    voice.startSample({ ...startArgs('bed'), velocity: 1, params, loop: true, fadeOut: { from: 2, to: 5 } });
+    expect(gain.setValueAtTime).toHaveBeenLastCalledWith(0.4, 3.1);
+  });
+
   it('plays at once when the requested time has already passed', () => {
     const ctx = makeCtx();
     ctx.currentTime = 2;

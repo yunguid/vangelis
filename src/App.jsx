@@ -90,6 +90,8 @@ const App = () => {
   const [activePresetName, setActivePresetName] = useState(() => initialSession.activePresetName || null);
   // A sampled instrument under the keys (data/sampledInstruments.js), or null for the synth.
   const [instrument, setInstrument] = useState(() => initialSession.instrument || null);
+  // A sound in layers (data/bladeRunnerSounds.js): its layers and its own settings.
+  const [layeredSound, setLayeredSound] = useState(() => initialSession.layeredSound || null);
   const [controlSections, setControlSections] = useState(() => (
     initialSession.controlSections || DEFAULT_CONTROL_SECTIONS
   ));
@@ -397,6 +399,7 @@ const App = () => {
       audioParams,
       activePresetName,
       instrument,
+      layeredSound,
       controlSections,
       sidebarTab,
       activeSampleId,
@@ -412,6 +415,7 @@ const App = () => {
     activeSampleId,
     audioParams,
     instrument,
+    layeredSound,
     controlSections,
     midiPlayback.tempoFactor,
     sampleSelection,
@@ -460,6 +464,7 @@ const App = () => {
     if (sound.waveformType) setWaveformType(sound.waveformType);
     if (sound.audioParams) handleAudioParamsChange(sound.audioParams);
     setInstrument(sound.instrument || null);
+    setLayeredSound(sound.layers ? { layers: sound.layers, audioParams: sound.audioParams } : null);
     setActivePresetName(sound.name);
   }, [handleAudioParamsChange]);
 
@@ -506,18 +511,35 @@ const App = () => {
     };
   }, [contextReady, instrument, pushNotice]);
 
-  // The editor and the other pages share the engine; the instrument stays here.
+  // A sound in layers plays the keys on the engine's key layers. An edit in the Sound tab (a
+  // setting that differs from the sound's own) reaches every layer; what the layers do not
+  // share (the CS-80's sine is never filtered) stays as the sound has it.
+  const keyLayers = useMemo(() => {
+    if (!layeredSound) return null;
+    const own = sanitizeAudioParams(layeredSound.audioParams);
+    const edits = Object.fromEntries(Object.entries(audioParams)
+      .filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(own[key])));
+    return layeredSound.layers.map((layer) => ({ ...layer, audioParams: { ...layer.audioParams, ...edits } }));
+  }, [audioParams, layeredSound]);
+  useEffect(() => {
+    if (!keyLayers) audioEngine.setKeyLayers(null);
+    else if (contextReady) audioEngine.setKeyLayers(keyLayers);
+  }, [contextReady, keyLayers]);
+
+  // The editor and the other pages share the engine; the instrument and the key layers stay here.
   useEffect(() => () => {
     audioEngine.setInstrument(null);
+    audioEngine.setKeyLayers(null);
   }, []);
 
   // Choosing a waveform is choosing the synth again.
   const handleWaveformChange = useCallback((nextWaveform) => {
     setWaveformType(nextWaveform);
-    if (!instrument) return;
+    if (!instrument && !layeredSound) return;
     setInstrument(null);
+    setLayeredSound(null);
     setActivePresetName(null);
-  }, [instrument]);
+  }, [instrument, layeredSound]);
 
   const handleControlSectionToggle = useCallback((section) => {
     if (!Object.prototype.hasOwnProperty.call(DEFAULT_CONTROL_SECTIONS, section)) return;
@@ -531,6 +553,7 @@ const App = () => {
     waveformType,
     onWaveformChange: handleWaveformChange,
     instrument,
+    layers: keyLayers,
     audioParams,
     onParamChange: handleAudioParamChange,
     onParamsChange: handleAudioParamsChange,
@@ -540,6 +563,7 @@ const App = () => {
   }), [
     waveformType,
     instrument,
+    keyLayers,
     audioParams,
     transportBpm,
     controlSections,
