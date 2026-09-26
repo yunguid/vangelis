@@ -97,6 +97,35 @@ describe('App', () => {
     await waitFor(() => expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument());
   });
 
+  it('draws the notes in the style picked, remembers it, and shows the radar without WebGL2', async () => {
+    opening.currentMidi = { duration: 1, notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }] };
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockImplementation(function getContextWithoutWebGl2(type) {
+        return type === 'webgl2' ? null : originalGetContext.call(this, type);
+      });
+    try {
+      const { unmount } = render(<App />);
+      expect(screen.queryByRole('group', { name: 'Notes style' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+      expect(screen.getByRole('button', { name: 'Radar' })).toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(screen.getByRole('button', { name: 'Embers' }));
+      expect(screen.getByRole('button', { name: 'Embers' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Radar' })).toHaveAttribute('aria-pressed', 'false');
+      // No WebGL2 here: the view says so and the radar takes its place.
+      await waitFor(() => expect(errors).toHaveBeenCalledWith(expect.stringContaining('WebGL2 is unavailable')));
+      expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
+
+      unmount(); // leaving the page saves the session
+      render(<App />);
+      expect(screen.getByRole('button', { name: 'Embers' })).toHaveAttribute('aria-pressed', 'true');
+    } finally {
+      getContext.mockRestore();
+      errors.mockRestore();
+    }
+  });
+
   it('renders the app title', async () => {
     render(<App />);
     expect(screen.getByText('Vangelis')).toBeInTheDocument();

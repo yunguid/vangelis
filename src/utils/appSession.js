@@ -1,4 +1,5 @@
 import { sanitizeAudioParams, upgradeLegacyAudioParams } from './audioParams.js';
+import { DEFAULT_NOTES_STYLE, coerceNotesStyle } from '../components/notes/notesStyles.js';
 
 const STORAGE_KEY = 'vangelis-ui-session-v2';
 const DEFAULT_CONTROL_SECTIONS = Object.freeze({
@@ -62,6 +63,7 @@ export const getDefaultSessionState = () => ({
   sampleSelection: null,
   showShortcuts: false,
   showNotes: false,
+  notesStyle: DEFAULT_NOTES_STYLE,
   tempoFactor: 1
 });
 
@@ -94,6 +96,7 @@ export function loadAppSession() {
       sampleSelection: coerceSampleSelection(parsed.sampleSelection),
       showShortcuts: !!parsed.showShortcuts,
       showNotes: !!parsed.showNotes,
+      notesStyle: coerceNotesStyle(parsed.notesStyle),
       tempoFactor: typeof parsed.tempoFactor === 'number' && Number.isFinite(parsed.tempoFactor)
         ? Math.max(0.25, Math.min(2, parsed.tempoFactor))
         : 1

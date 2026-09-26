@@ -27,11 +27,13 @@ import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { consumePendingMidi } from './utils/pendingMidiHandoff.js';
 import { getLandingFiles } from './data/landingQueue.js';
 import { createTrailingDeadlineScheduler } from './utils/trailingDeadlineScheduler.js';
+import { NOTES_STYLES } from './components/notes/notesStyles.js';
 import './styles/overlays.css';
 
 const Scene = React.lazy(() => import('./components/Scene'));
 const WaveCandy = React.lazy(() => import('./components/WaveCandy'));
 const BirdsEyeRadar = React.lazy(() => import('./components/BirdsEyeRadar'));
+const GlNotesView = React.lazy(() => import('./components/notes/GlNotesView.jsx'));
 
 const NOTICE_TIMEOUT_MS = 2200;
 const NOTES_SLIDE_MS = 500; // styles/layout.css .notes-panel__drawer
@@ -80,6 +82,8 @@ const App = () => {
   const [showNotes, setShowNotes] = useState(() => initialSession.showNotes || false);
   // The notes canvas stays mounted until the panel has finished closing.
   const [notesMounted, setNotesMounted] = useState(showNotes);
+  // Which look the notes take (components/notes/notesStyles.js).
+  const [notesStyle, setNotesStyle] = useState(() => initialSession.notesStyle);
   const [isRecording, setIsRecording] = useState(false);
   // Arrival is just the keyboard playing the opening; the sidebar opens on request.
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -406,6 +410,7 @@ const App = () => {
       sampleSelection,
       showShortcuts,
       showNotes,
+      notesStyle,
       tempoFactor: midiPlayback.tempoFactor
     };
     sessionSnapshotRef.current = snapshot;
@@ -420,6 +425,7 @@ const App = () => {
     midiPlayback.tempoFactor,
     sampleSelection,
     showNotes,
+    notesStyle,
     showShortcuts,
     sidebarTab,
     waveformType
@@ -620,16 +626,33 @@ const App = () => {
             <div className="keyboard-surface" role="region" aria-label="Virtual keyboard">
               <div className="keyboard-region">
                 <div className="notes-panel">
-                  <button
-                    type="button"
-                    className="btn notes-panel__toggle"
-                    aria-expanded={showNotes}
-                    aria-controls="notes-panel-drawer"
-                    onClick={toggleNotes}
-                  >
-                    Notes
-                    {CHEVRON_ICON}
-                  </button>
+                  <div className="notes-panel__bar">
+                    <button
+                      type="button"
+                      className="btn notes-panel__toggle"
+                      aria-expanded={showNotes}
+                      aria-controls="notes-panel-drawer"
+                      onClick={toggleNotes}
+                    >
+                      Notes
+                      {CHEVRON_ICON}
+                    </button>
+                    {showNotes && (
+                      <div className="notes-panel__styles" role="group" aria-label="Notes style">
+                        {NOTES_STYLES.map(({ id, name }) => (
+                          <button
+                            key={id}
+                            type="button"
+                            className="btn notes-panel__style"
+                            aria-pressed={notesStyle === id}
+                            onClick={() => setNotesStyle(id)}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div
                     id="notes-panel-drawer"
                     className={`notes-panel__drawer ${showNotes ? 'notes-panel__drawer--open' : ''}`}
@@ -637,12 +660,24 @@ const App = () => {
                     <div className="notes-panel__content">
                       {notesMounted && (
                         <React.Suspense fallback={null}>
-                          <BirdsEyeRadar
-                            currentMidi={notesSource.currentMidi}
-                            progress={notesSource.progress}
-                            activeNotes={notesSource.activeNotes}
-                            isPlaying={notesSource.isPlaying}
-                          />
+                          {notesStyle === 'radar' ? (
+                            <BirdsEyeRadar
+                              currentMidi={notesSource.currentMidi}
+                              progress={notesSource.progress}
+                              activeNotes={notesSource.activeNotes}
+                              isPlaying={notesSource.isPlaying}
+                            />
+                          ) : (
+                            <GlNotesView
+                              styleId={notesStyle}
+                              styleName={NOTES_STYLES.find(({ id }) => id === notesStyle).name}
+                              currentMidi={notesSource.currentMidi}
+                              progress={notesSource.progress}
+                              activeNotes={notesSource.activeNotes}
+                              isPlaying={notesSource.isPlaying}
+                              getPlaybackProgress={notesSource.getPlaybackProgress}
+                            />
+                          )}
                         </React.Suspense>
                       )}
                     </div>

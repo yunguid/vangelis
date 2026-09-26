@@ -98,6 +98,7 @@ export function useOpeningPerformance({ audioParams }) {
     currentMidi: playback.currentMidi,
     progress: playback.progress,
     isPlaying: playback.isPlaying,
+    getPlaybackProgress: playback.getPlaybackProgress,
     stop,
     sound: pieceSound?.sound ?? null,
     piece: pieceSound?.piece ?? null

@@ -66,6 +66,13 @@ src/
 │   ├── controls/
 │   │   └── ValueSlider.jsx    # Accessible slider primitive (ARIA, drag, keys, wheel)
 │   │
+│   ├── notes/                 # The Notes panel's WebGL2 styles
+│   │   ├── notesStyles.js     # Style ids and names (all the home page carries)
+│   │   ├── GlNotesView.jsx    # Host: one WebGL2 context, frame pacing, radar fallback (lazy)
+│   │   ├── noteFrame.js       # What a style draws from: score, song clock, pitch span
+│   │   ├── glKit.js           # Programs, instanced quads, offscreen targets, GLSL noise
+│   │   └── styles/            # paperRoll, stars, embers, rain, phosphor (a chunk each)
+│   │
 │   ├── editor/                # Piano-roll editor parts (#/editor)
 │   │   ├── VelocityLane.jsx   # Velocity stems under the grid
 │   │   ├── ProjectBrowser.jsx # Projects list (lazy)
@@ -319,6 +326,32 @@ src/
   falling notes of whatever is playing (the MIDI tab's piece, else the landing
   piece), between the visualizers and the keys. Playing a piece from the MIDI
   tab opens it; the canvas unmounts once the panel has slid shut
+- The open panel's row names its looks on the right (`notesStyle`, saved in the
+  session; opening it adds no height): Radar, the original Canvas 2D
+  `BirdsEyeRadar`, and five WebGL2 styles in `components/notes/styles/`, each
+  a chunk of its own fetched when picked. Paper roll: a player-piano roll whose
+  punched slots run down into a brass tracker bar, lamplight through the ones
+  sounding (its paper is a tile drawn once per size and scrolled). Stars: every
+  note a star trail turning around a pole below the panel. Embers: cinders fall
+  to the keys and burst into rising sparks. Rain: drops fall to a night pond and
+  ring out. Phosphor: an amber vector monitor with phosphor persistence
+- The WebGL2 styles are raw WebGL2, no library (Raylib's web build draws through
+  WebGL anyway; the Raylib visualizer this repo once had weighed 107 KB gzip).
+  `GlNotesView` keeps one context for the life of the panel and swaps styles on
+  it, renders up to 60 fps while music plays (30 paused, 20 with no score) on
+  the audio clock (`getPlaybackProgress`, which the opening now passes along
+  too), DPR capped at 1.5, through `startVisibilityAwareRafLoop`. Without
+  WebGL2, or when a style fails to start or throws, it logs a console error and
+  shows the radar in its place. A style is `{ id, create(gl) }` returning
+  `{ resize(frame), render(frame), dispose() }` and reads the frame from
+  `noteFrame.js` (notes sorted with `end` and a stable `seed`, `songTime`,
+  `jumped` on seeks and loops, the piece's own pitch span of at least three
+  octaves). Its render allocates nothing, sets every GL state it uses, draws in
+  a handful of instanced calls and stays under 0.5 ms of GPU a frame at
+  1400x430, dpr 1.5 on an M3 Max, about 5x an M1 Air (measured 0.18-0.42 ms
+  p50 with timer queries; the radar's Canvas 2D costs 0.16-1.1 ms of main
+  thread a frame, the styles 0.002-0.012 ms). Shaders are scanned by `audit:ui` too: no
+  "glow" identifiers, and `1.0 - dot(a, b)` with spaces (`/\.[\w-]*dot/`)
 - Visual feedback on keyboard shows active notes
 - Play/pause/stop controls with progress bar
 
