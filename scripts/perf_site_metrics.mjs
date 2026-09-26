@@ -141,8 +141,11 @@ const songStudyFile = manifest['src/pages/SongStudyPage.jsx']?.file || null;
 const waveCandyManifestRecord = manifest['src/components/WaveCandy.jsx'] || null;
 const waveCandyFile = waveCandyManifestRecord?.file || null;
 const sceneFile = manifest['src/components/Scene.jsx']?.file || null;
-const birdsEyeRadarManifestRecord = manifest['src/components/BirdsEyeRadar.jsx'] || null;
-const birdsEyeRadarFile = birdsEyeRadarManifestRecord?.file || null;
+// The notes view's chunk also carries the helpers its styles share, so the
+// manifest keys it by chunk name rather than by its source path.
+const [notesViewManifestKey = null, notesViewManifestRecord = null] = Object.entries(manifest)
+  .find(([, record]) => record.name === 'GlNotesView') || [];
+const notesViewFile = notesViewManifestRecord?.file || null;
 const advancedSoundDesignerStagesFile = manifest['src/pages/SoundDesignerAdvancedStages.jsx']?.file || null;
 const audioControlPrimitivesFile = Object.entries(manifest)
   .find(([key]) => key.includes('audioControlPrimitives'))?.[1]?.file || null;
@@ -186,7 +189,7 @@ function collectRouteClosure(entryKeys) {
     includesSongStudyPlayer: songStudyFile ? jsFiles.has(songStudyFile) : false,
     includesWaveCandy: waveCandyFile ? jsFiles.has(waveCandyFile) : false,
     includesScene: sceneFile ? jsFiles.has(sceneFile) : false,
-    includesBirdsEyeRadar: birdsEyeRadarFile ? jsFiles.has(birdsEyeRadarFile) : false,
+    includesNotesView: notesViewFile ? jsFiles.has(notesViewFile) : false,
     includesAdvancedSoundDesignerStages: advancedSoundDesignerStagesFile
       ? jsFiles.has(advancedSoundDesignerStagesFile)
       : false,
@@ -226,7 +229,7 @@ const advancedSoundDesignerStagesChunk = advancedSoundDesignerStagesFile
 const deferredWaveCandyCss = (waveCandyManifestRecord?.css || [])
   .map((file) => assetMetricByFile.get(file))
   .filter(Boolean);
-const deferredBirdsEyeRadarCss = (birdsEyeRadarManifestRecord?.css || [])
+const deferredNotesViewCss = (notesViewManifestRecord?.css || [])
   .map((file) => assetMetricByFile.get(file))
   .filter(Boolean);
 const appManifestEntry = manifest['src/App.jsx'];
@@ -238,8 +241,8 @@ const songStudyManifestEntry = manifest['src/pages/SongStudyPage.jsx'];
 const songStudyDefersMidiParser = (
   songStudyManifestEntry?.dynamicImports?.includes('src/utils/midiParser.js') || false
 );
-const songStudyDefersBirdsEyeRadar = (
-  songStudyManifestEntry?.dynamicImports?.includes('src/components/BirdsEyeRadar.jsx') || false
+const songStudyDefersNotesView = Boolean(
+  notesViewManifestKey && songStudyManifestEntry?.dynamicImports?.includes(notesViewManifestKey)
 );
 const soundDesignerDefersWaveCandy = (
   soundDesignerManifestEntry?.dynamicImports?.includes('src/components/WaveCandy.jsx') || false
@@ -429,82 +432,6 @@ const goniometerDesktopPointCount = (
   Math.floor((getStereoPairEvaluationsPerFrame() - 1) / goniometerDesktopTraceStride)
   + 1
   + Number((getStereoPairEvaluationsPerFrame() - 1) % goniometerDesktopTraceStride !== 0)
-);
-const birdsEyeRadarSource = await readFile(
-  path.join(sourceDir, 'components', 'BirdsEyeRadar.jsx'),
-  'utf8'
-);
-const radarPaletteSource = await readFile(
-  path.join(sourceDir, 'utils', 'radarPalette.js'),
-  'utf8'
-);
-const radarGradientCacheSource = await readFile(
-  path.join(sourceDir, 'utils', 'radarGradientCache.js'),
-  'utf8'
-);
-const radarParticleColorSource = await readFile(
-  path.join(sourceDir, 'utils', 'radarParticleColor.js'),
-  'utf8'
-);
-const radarUsesBoundedPaletteCache = (
-  /getRadarMidiPalette\(note\.midi, isActive\)/.test(birdsEyeRadarSource)
-  && /const paletteCache = new Map\(\)/.test(radarPaletteSource)
-  && /normalizedMidi \* 2 \+ Number\(active\)/.test(radarPaletteSource)
-);
-const radarCachesStaticGradients = (
-  /getRadarStaticGradients\(\s*ctx,\s*staticGradientCache,/.test(birdsEyeRadarSource)
-  && /sizeController\.acknowledgeResize\(\)/.test(birdsEyeRadarSource)
-  && /cache\.width === width && cache\.height === height/.test(radarGradientCacheSource)
-  && (radarGradientCacheSource.match(/context\.create(?:Linear|Radial)Gradient\s*\(/g) || []).length === 4
-);
-const radarCachesParticleColors = (
-  /getRadarParticleBatchColor\(bucket\)/.test(birdsEyeRadarSource)
-  && /const particleColors = Array\.from\(/.test(radarParticleColorSource)
-  && /const particleBatchColors = Array\.from\(/.test(radarParticleColorSource)
-  && /RADAR_PARTICLE_COLOR_COUNT/.test(radarParticleColorSource)
-);
-const radarBatchesParticlePaths = (
-  /RADAR_PARTICLE_ALPHA_BUCKET_COUNT = 12/.test(radarParticleColorSource)
-  && /counts: new Uint8Array\(RADAR_PARTICLE_ALPHA_BUCKET_COUNT\)/
-    .test(birdsEyeRadarSource)
-  && /new Float64Array\(PARTICLE_COUNT \* 3\)/.test(birdsEyeRadarSource)
-  && /pathBuckets\.counts\.fill\(0\)/.test(birdsEyeRadarSource)
-  && /ctx\.moveTo\(x \+ size, y\)/.test(birdsEyeRadarSource)
-  && /for \(let particleIndex = 0; particleIndex < count; particleIndex \+= 1\)/
-    .test(birdsEyeRadarSource)
-);
-const radarLazilyInitializesParticleState = (
-  /const particlesRef = useRef\(null\)/.test(birdsEyeRadarSource)
-  && /if \(!particlesRef\.current\) particlesRef\.current = createParticles\(PARTICLE_COUNT\)/
-    .test(birdsEyeRadarSource)
-  && /const particlePathBucketsRef = useRef\(null\)/.test(birdsEyeRadarSource)
-  && /particlePathBucketsRef\.current = createParticlePathBuckets\(\)/.test(birdsEyeRadarSource)
-  && /const noteIdCacheRef = useRef\(null\)/.test(birdsEyeRadarSource)
-  && /noteIdCacheRef\.current = new Map\(\)/.test(birdsEyeRadarSource)
-  && /const propsRef = useRef\(null\)/.test(birdsEyeRadarSource)
-  && !/useRef\(createParticles\(/.test(birdsEyeRadarSource)
-  && !/useRef\(createParticlePathBuckets\(/.test(birdsEyeRadarSource)
-  && !/useRef\(new Map\(\)\)/.test(birdsEyeRadarSource)
-);
-const midiBirdsEyeMathSource = await readFile(
-  path.join(sourceDir, 'components', 'midiBirdsEyeMath.js'),
-  'utf8'
-);
-const radarReusesFrameContainers = (
-  /const visibleNoteRange = \{ startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 \}/
-    .test(birdsEyeRadarSource)
-  && /const activeLabelPositions = \[\]/.test(birdsEyeRadarSource)
-  && /activeLabelPositions\.length = 0/.test(birdsEyeRadarSource)
-  && /drawParticles\(nowSeconds, trackTop, trackBottom, centerX, playfieldWidth\)/
-    .test(birdsEyeRadarSource)
-  && /out\.startIndex = lowerBound/.test(midiBirdsEyeMathSource)
-  && /return out;/.test(midiBirdsEyeMathSource)
-);
-const radarUsesAllocationFreeLabelCollision = (
-  /for \(let labelIndex = 0; labelIndex < activeLabelPositions\.length; labelIndex \+= 1\)/
-    .test(birdsEyeRadarSource)
-  && /Math\.abs\(activeLabelPositions\[labelIndex\] - x\) <= 28/.test(birdsEyeRadarSource)
-  && !/activeLabelPositions\.every\(/.test(birdsEyeRadarSource)
 );
 const sceneSource = await readFile(path.join(sourceDir, 'components', 'Scene.jsx'), 'utf8');
 const sceneBandAnalysisSource = await readFile(
@@ -745,14 +672,18 @@ const synthKeyboardSource = await readFile(
   path.join(sourceDir, 'components', 'SynthKeyboard', 'index.jsx'),
   'utf8'
 );
+const glNotesViewSource = await readFile(
+  path.join(sourceDir, 'components', 'notes', 'GlNotesView.jsx'),
+  'utf8'
+);
 const sharedVisualRenderIsolation = (
   /const EMPTY_ACTIVE_NOTES = new Set\(\)/.test(synthKeyboardSource)
   && /const whiteKeyElements = useMemo\(\(\) =>/.test(synthKeyboardSource)
   && /const blackKeyElements = useMemo\(\(\) =>/.test(synthKeyboardSource)
   && /const whiteKeyGridStyle = useMemo\(\(\) =>/.test(synthKeyboardSource)
-  && /if \(!propsRef\.current\) propsRef\.current = \{\}/.test(birdsEyeRadarSource)
-  && /propsRef\.current\.noteRenderWindow = noteRenderWindow/.test(birdsEyeRadarSource)
-  && /export default React\.memo\(BirdsEyeRadar\)/.test(birdsEyeRadarSource)
+  && /if \(!inputRef\.current\) inputRef\.current = \{\}/.test(glNotesViewSource)
+  && /input\.getPlaybackProgress = getPlaybackProgress/.test(glNotesViewSource)
+  && /export default React\.memo\(GlNotesView\)/.test(glNotesViewSource)
 );
 const valueSliderSource = await readFile(
   path.join(sourceDir, 'components', 'controls', 'ValueSlider.jsx'),
@@ -1060,10 +991,10 @@ const report = {
       kb: roundKb(sum(deferredWaveCandyCss, 'bytes')),
       gzipKb: roundKb(sum(deferredWaveCandyCss, 'gzipBytes'))
     },
-    deferredBirdsEyeRadarCss: {
-      assetCount: deferredBirdsEyeRadarCss.length,
-      kb: roundKb(sum(deferredBirdsEyeRadarCss, 'bytes')),
-      gzipKb: roundKb(sum(deferredBirdsEyeRadarCss, 'gzipBytes'))
+    deferredNotesViewCss: {
+      assetCount: deferredNotesViewCss.length,
+      kb: roundKb(sum(deferredNotesViewCss, 'bytes')),
+      gzipKb: roundKb(sum(deferredNotesViewCss, 'gzipBytes'))
     },
     deferredKeyboardCss: keyboardCssAsset ? {
       file: keyboardCssAsset.file,
@@ -1079,7 +1010,7 @@ const report = {
     appDefersScene,
     appDefersWaveCandy,
     songStudyDefersMidiParser,
-    songStudyDefersBirdsEyeRadar,
+    songStudyDefersNotesView,
     soundDesignerDefersWaveCandy,
     soundDesignerDefersAdvancedStages,
     deferredVisualClosures,
@@ -1163,27 +1094,6 @@ const report = {
         : getStereoPairEvaluationsPerFrame(),
     waveCandyGoniometerMeterEvaluationsPerFrame: getStereoPairEvaluationsPerFrame(),
     waveCandyDecimatesGoniometerTrace,
-    radarPaletteConstructionsPerSteadyStateNote: radarUsesBoundedPaletteCache ? 0 : 1,
-    radarPaletteStateLimit: 256,
-    radarUsesBoundedPaletteCache,
-    radarStaticGradientCreationsPerSteadyStateFrame: radarCachesStaticGradients ? 0 : 4,
-    radarCachesStaticGradients,
-    radarParticleColorStringAllocationsPerSteadyStateFrame:
-      radarCachesParticleColors ? 0 : 32,
-    radarParticleColorStateLimit: 121,
-    radarCachesParticleColors,
-    radarParticleAlphaBucketCount: 12,
-    radarParticlePathBoundaryCallsPerFrameMaximum: radarBatchesParticlePaths ? 24 : 64,
-    radarParticleTotalPathCommandsPerFrameMaximum: radarBatchesParticlePaths ? 88 : 96,
-    radarBatchesParticlePaths,
-    radarRedundantInitializationAllocationsPerReactRender:
-      radarLazilyInitializesParticleState ? 0 : 35,
-    radarLazilyInitializesParticleState,
-    radarExplicitFrameContainers: radarReusesFrameContainers ? 0 : 8,
-    radarReusesFrameContainers,
-    radarLabelCollisionCallbackAllocationsPerCheck:
-      radarUsesAllocationFreeLabelCollision ? 0 : 1,
-    radarUsesAllocationFreeLabelCollision,
     waveCandyActiveFrameRateHz: 1000 / WAVE_CANDY_FRAME_INTERVAL_MS,
     waveCandyMonoFftSize: MONO_ANALYSER_FFT_SIZE,
     waveCandyStereoFftSize: STEREO_ANALYSER_FFT_SIZE,
@@ -1261,9 +1171,9 @@ const report = {
       sharedVisualRenderIsolation ? 0 : 18,
     keyboardGridStyleObjectsPerAudioParamFrame:
       sharedVisualRenderIsolation ? 0 : 1,
-    radarPropsSnapshotObjectsPerReactRender:
+    notesViewPropsSnapshotObjectsPerReactRender:
       sharedVisualRenderIsolation ? 0 : 1,
-    radarUnchangedParentRendersPerUpdate:
+    notesViewUnchangedParentRendersPerUpdate:
       sharedVisualRenderIsolation ? 0 : 1,
     sharedVisualRenderIsolation,
     valueSliderLayoutReadsPer240HzFrame:
@@ -1659,55 +1569,6 @@ if (!waveCandyDecimatesGoniometerTrace) {
     expected: 'bounded Canvas points while every pair still contributes to meter statistics'
   });
 }
-if (!radarUsesBoundedPaletteCache) {
-  failures.push({
-    name: 'Guard bounded radar palette cache',
-    actual: 'per-note palette construction in active render path',
-    expected: 'numeric-key cache with at most 256 MIDI/active states'
-  });
-}
-if (!radarCachesStaticGradients) {
-  failures.push({
-    name: 'Guard resize-scoped radar gradients',
-    actual: 'static backdrop/grid gradients recreated in active frame path',
-    expected: 'four cached gradients invalidated only by canvas dimensions'
-  });
-}
-if (!radarCachesParticleColors) {
-  failures.push({
-    name: 'Guard bounded radar particle colors',
-    actual: 'per-particle RGBA string formatting in active frame path',
-    expected: '121-entry three-decimal alpha lookup table'
-  });
-}
-if (!radarBatchesParticlePaths) {
-  failures.push({
-    name: 'Guard batched radar particle paths',
-    actual: 'one Canvas path boundary pair per ambient particle',
-    expected: 'at most 12 reusable alpha-bucket paths for all 32 particles'
-  });
-}
-if (!radarLazilyInitializesParticleState) {
-  failures.push({
-    name: 'Guard lazy radar particle state initialization',
-    actual: 'particle factories evaluated during React renders',
-    expected: 'particle objects and typed path buffers allocated only on first mount'
-  });
-}
-if (!radarReusesFrameContainers) {
-  failures.push({
-    name: 'Guard reusable radar frame containers',
-    actual: 'argument, visible-range, or active-label containers allocated in playing frames',
-    expected: 'positional draw calls with reusable range and label buffers'
-  });
-}
-if (!radarUsesAllocationFreeLabelCollision) {
-  failures.push({
-    name: 'Guard allocation-free radar label collision scan',
-    actual: 'per-active-note callback allocation',
-    expected: 'indexed early-exit scan over reusable label positions'
-  });
-}
 if (!sceneCachesBandRanges) {
   failures.push({
     name: 'Guard configuration-scoped scene band ranges',
@@ -1892,28 +1753,28 @@ if (!songStudyDefersMidiParser) {
 if (songStudyClosure?.includesMidiParser) {
   failures.push({ name: 'Guard Song Study parser isolation', actual: 'eager', expected: 'deferred' });
 }
-if (!songStudyDefersBirdsEyeRadar) {
-  failures.push({ name: 'Guard Song Study radar import', actual: 'static', expected: 'dynamic' });
+if (!songStudyDefersNotesView) {
+  failures.push({ name: 'Guard Song Study notes view import', actual: 'static', expected: 'dynamic' });
 }
-if (songStudyClosure?.includesBirdsEyeRadar) {
-  failures.push({ name: 'Guard Song Study loading-shell radar isolation', actual: 'eager', expected: 'score-gated' });
+if (songStudyClosure?.includesNotesView) {
+  failures.push({ name: 'Guard Song Study loading-shell notes view isolation', actual: 'eager', expected: 'score-gated' });
 }
 if (!soundDesignerDefersWaveCandy) {
   failures.push({ name: 'Guard Sound Designer visualizer import', actual: 'static', expected: 'dynamic' });
 }
-if (deferredWaveCandyCss.length !== 1 || deferredBirdsEyeRadarCss.length !== 1) {
+if (deferredWaveCandyCss.length !== 1 || deferredNotesViewCss.length !== 1) {
   failures.push({
     name: 'Guard deferred visual CSS chunks',
     waveCandy: deferredWaveCandyCss.length,
-    birdsEyeRadar: deferredBirdsEyeRadarCss.length,
+    notesView: deferredNotesViewCss.length,
     expected: 1
   });
 }
-if (initialCssText.includes('.wave-candy-grid') || initialCssText.includes('.birds-eye-radar__canvas')) {
+if (initialCssText.includes('.wave-candy-grid') || initialCssText.includes('.notes-view__canvas')) {
   failures.push({
     name: 'Guard visual CSS critical-path isolation',
     waveCandy: initialCssText.includes('.wave-candy-grid') ? 'eager' : 'deferred',
-    birdsEyeRadar: initialCssText.includes('.birds-eye-radar__canvas') ? 'eager' : 'deferred',
+    notesView: initialCssText.includes('.notes-view__canvas') ? 'eager' : 'deferred',
     expected: 'deferred'
   });
 }
@@ -2108,9 +1969,9 @@ if (!keyboardCoalescesPointerMovesByFrame) {
 }
 if (!sharedVisualRenderIsolation) {
   failures.push({
-    name: 'Guard shared keyboard and radar render isolation',
-    actual: 'unchanged key elements or radar snapshots rebuild on unrelated parent state',
-    expected: 'visually keyed element caches, reusable radar props, and a radar memo boundary'
+    name: 'Guard shared keyboard and notes view render isolation',
+    actual: 'unchanged key elements or notes view snapshots rebuild on unrelated parent state',
+    expected: 'visually keyed element caches, the notes view\'s props in one reused ref, and its memo boundary'
   });
 }
 if (!valueSliderCoalescesPointerMovesByFrame) {

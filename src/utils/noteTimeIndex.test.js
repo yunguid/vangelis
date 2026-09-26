@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildNoteRenderWindow,
-  getVisibleNoteRange,
   lowerBound,
   upperBound
-} from './midiBirdsEyeMath.js';
+} from './noteTimeIndex.js';
 
-describe('midiBirdsEyeMath', () => {
+describe('noteTimeIndex', () => {
   it('resolves lower and upper bounds correctly', () => {
     const values = [0, 1, 1, 4, 8, 10];
     expect(lowerBound(values, -1)).toBe(0);
@@ -28,29 +27,5 @@ describe('midiBirdsEyeMath', () => {
     expect(renderWindow.maxDuration).toBe(1.5);
     expect(renderWindow.notes[0].endTime).toBe(0.75);
     expect(renderWindow.notes[2].endTime).toBe(3.9);
-  });
-
-  it('returns narrowed visible note range using longest note lookback', () => {
-    const renderWindow = buildNoteRenderWindow([
-      { midi: 60, time: 0, duration: 0.5 },
-      { midi: 62, time: 3, duration: 2.5 },
-      { midi: 64, time: 6, duration: 1 }
-    ]);
-
-    const out = { startIndex: -1, endIndex: -1, windowStart: -1, windowEnd: -1 };
-    const visible = getVisibleNoteRange(
-      renderWindow.startTimes,
-      4,
-      1.5,
-      2,
-      renderWindow.maxDuration,
-      out
-    );
-
-    expect(visible).toBe(out);
-    expect(visible.windowStart).toBe(2.5);
-    expect(visible.windowEnd).toBe(6);
-    expect(visible.startIndex).toBe(0);
-    expect(visible.endIndex).toBe(3);
   });
 });

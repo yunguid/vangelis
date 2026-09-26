@@ -24,17 +24,6 @@ import {
   createSpectrogramRowRuns
 } from '../src/utils/spectrogramRendering.js';
 import {
-  RADAR_PALETTE_STATE_LIMIT,
-  getRadarMidiPalette
-} from '../src/utils/radarPalette.js';
-import {
-  RADAR_PARTICLE_ALPHA_BUCKET_COUNT,
-  RADAR_PARTICLE_COLOR_COUNT,
-  getRadarParticleAlphaBucket,
-  getRadarParticleBatchAlpha,
-  getRadarParticleColor
-} from '../src/utils/radarParticleColor.js';
-import {
   SCENE_FREQUENCY_BANDS,
   createSceneBandBinRanges,
   sampleSceneBandEnergies
@@ -45,11 +34,6 @@ import {
   lagrangeEnvelope,
   sampleLagrangeEnvelope
 } from '../src/utils/vizPhysics.js';
-import {
-  getVisibleNoteRange,
-  lowerBound,
-  upperBound
-} from '../src/components/midiBirdsEyeMath.js';
 import { drawWaveCandyMeterGrid } from '../src/utils/waveCandyMeterGrid.js';
 import { loadAppSession } from '../src/utils/appSession.js';
 import { normalizeMidiNotes } from '../src/utils/midiPlaybackNotes.js';
@@ -74,9 +58,6 @@ const RAYLIB_FREQ_BINS = 512;
 const RAYLIB_WAVE_SAMPLES = 1024;
 const RAYLIB_STEREO_SAMPLES = 1024;
 
-const MIDI_NOTE_COUNT = 720;
-const VISIBLE_NOTE_COUNT = 260;
-const ACTIVE_NOTE_RATIO = 0.12;
 const SCENARIO_WARMUP_SAMPLES = 5;
 const SCENARIO_MEASURED_SAMPLES = 21;
 const SCENARIO_ITERATIONS_PER_SAMPLE = 25;
@@ -474,53 +455,6 @@ const resampleByteToFloat = (src, dst) => {
   }
 };
 
-const midiNotes = Array.from({ length: MIDI_NOTE_COUNT }, (_, index) => {
-  const time = index * 0.08 + random() * 0.04;
-  const duration = 0.08 + random() * 0.9;
-  return {
-    midi: 24 + Math.floor(random() * 72),
-    time,
-    duration,
-    endTime: time + duration
-  };
-});
-
-const simulateRadarFrame = ({ frameIndex, particleCount }) => {
-  const nowTime = (frameIndex / 30) % 64;
-  const nowSeconds = frameIndex * 0.033;
-
-  for (let i = 0; i < particleCount; i += 1) {
-    const lane = (i * 0.07 + 0.13) % 1;
-    const depth = (i * 0.11 + nowSeconds * 0.08) % 1;
-    const spread = 0.16 + depth * 0.84;
-    const laneX = 18 + lane * 340;
-    const x = 188 + (laneX - 188) * spread;
-    const y = 18 + depth * 170;
-    if (x + y < -1) {
-      throw new Error('unreachable guard');
-    }
-  }
-
-  const from = frameIndex % Math.max(1, midiNotes.length - VISIBLE_NOTE_COUNT);
-  const to = from + VISIBLE_NOTE_COUNT;
-  for (let i = from; i < to; i += 1) {
-    const note = midiNotes[i];
-    if (note.endTime < nowTime - 1.6 || note.time > nowTime + 12) continue;
-    const depthNorm = clamp((note.time - nowTime + 1.6) / (12 + 1.6), 0, 1);
-    const farRatio = clamp(1 - depthNorm, 0, 1);
-    const nearRatio = 1 - farRatio;
-    const laneNorm = note.midi / 127;
-    const perspectiveSpread = 0.18 + nearRatio * 0.82;
-    const x = 18 + laneNorm * 340 * perspectiveSpread;
-    const noteWidth = Math.max(2.5, (340 / 88) * (0.18 + nearRatio * 0.64));
-    const bodyLen = clamp(12 + note.duration * 78 * (0.44 + nearRatio * 0.82), 10, 180);
-    const tailLen = clamp(bodyLen * (0.9 + nearRatio * 2.3), 12, 220);
-    if (x + noteWidth + bodyLen + tailLen < -1) {
-      throw new Error('unreachable guard');
-    }
-  }
-};
-
 const simulateRaylibFrame = ({ includeStereo }) => {
   resampleByteToFloat(srcFreq, dstFreq);
   resampleFloat(srcWave, dstWave);
@@ -563,14 +497,11 @@ const runScenario = ({
   label,
   seconds,
   raylibHz,
-  radarHz,
   sceneHz,
   cacheSceneRanges,
-  includeStereo,
-  particleCount
+  includeStereo
 }) => {
   const raylibFrames = Math.round(seconds * raylibHz);
-  const radarFrames = Math.round(seconds * radarHz);
   const sceneFrames = Math.round(seconds * sceneHz);
 
   const simulateSceneFrame = cacheSceneRanges
@@ -582,12 +513,6 @@ const runScenario = ({
         simulateRaylibFrame({ includeStereo });
       }
       for (let i = 0; i < sceneFrames; i += 1) simulateSceneFrame();
-      for (let i = 0; i < radarFrames; i += 1) {
-        simulateRadarFrame({
-          frameIndex: i,
-          particleCount
-        });
-      }
     }
   };
   for (let sample = 0; sample < SCENARIO_WARMUP_SAMPLES; sample += 1) runWorkload();
@@ -609,12 +534,9 @@ const runScenario = ({
     timingSampleCount: SCENARIO_MEASURED_SAMPLES,
     timingIterationsPerSample: SCENARIO_ITERATIONS_PER_SAMPLE,
     raylibFrames,
-    radarFrames,
     sceneFrames,
     analyserSamples: raylibFrames * analyserSamplesPerRaylibFrame,
     resampleSamples: raylibFrames * resampleSamplesPerRaylibFrame,
-    radarNoteEvaluations: radarFrames * VISIBLE_NOTE_COUNT,
-    activeNoteEvaluations: Math.round(radarFrames * VISIBLE_NOTE_COUNT * ACTIVE_NOTE_RATIO),
     sceneBandEvaluations: sceneFrames * SCENE_FREQUENCY_BANDS.length,
     sceneBoundaryEvaluations: cacheSceneRanges
       ? SCENE_FREQUENCY_BANDS.length * 2
@@ -626,22 +548,18 @@ const baseline = runScenario({
   label: 'baseline_before_raylib_optimization',
   seconds: SECONDS,
   raylibHz: 30,
-  radarHz: 20,
   sceneHz: 60,
   cacheSceneRanges: false,
-  includeStereo: true,
-  particleCount: 20
+  includeStereo: true
 });
 
 const optimized = runScenario({
   label: 'optimized_current',
   seconds: SECONDS,
   raylibHz: 24,
-  radarHz: 20,
   sceneHz: 1000 / SCENE_ACTIVE_FRAME_INTERVAL_MS,
   cacheSceneRanges: true,
-  includeStereo: false,
-  particleCount: 20
+  includeStereo: false
 });
 
 const reduction = (before, after) => ((before - after) / before) * 100;
@@ -802,78 +720,8 @@ const cachedSpectrogramBenchmark = runSpectrumBenchmark(
   spectrogramBenchmarkIterations
 );
 
-const createLegacyRadarPalette = (midi, isActive) => {
-  const mix = clamp((midi - 21) / (108 - 21), 0, 1);
-  const blue = [108, 168, 232];
-  const orange = [255, 164, 112];
-  const red = Math.round(blue[0] + (orange[0] - blue[0]) * mix);
-  const green = Math.round(blue[1] + (orange[1] - blue[1]) * mix * 0.8);
-  const blueChannel = Math.round(blue[2] + (orange[2] - blue[2]) * mix);
-  return {
-    glow: `rgba(${red}, ${green}, ${blueChannel}, ${isActive ? 0.28 : 0.12})`,
-    trail: `rgba(${red}, ${green}, ${blueChannel}, ${isActive ? 0.12 : 0.08})`,
-    core: `rgba(${Math.min(255, red + 18)}, ${Math.min(255, green + 16)}, ${Math.min(255, blueChannel + 14)}, ${isActive ? 0.9 : 0.72})`,
-    edge: `rgba(245, 248, 252, ${isActive ? 0.86 : 0.46})`
-  };
-};
-const radarPaletteBenchmarkIterations = 200000;
-const runRadarPaletteBenchmark = (factory) => {
-  let checksum = 0;
-  const startedAt = performance.now();
-  for (let i = 0; i < radarPaletteBenchmarkIterations; i += 1) {
-    const palette = factory(i % 128, Boolean((i >> 7) & 1));
-    checksum += palette.core.length;
-  }
-  return { elapsedMs: performance.now() - startedAt, checksum };
-};
-const legacyRadarPaletteBenchmark = runRadarPaletteBenchmark(createLegacyRadarPalette);
-const cachedRadarPaletteBenchmark = runRadarPaletteBenchmark(getRadarMidiPalette);
-const radarPlayingFrames = Math.round(SECONDS * 25);
-const radarParticleColorBenchmarkIterations = 200000;
-const runRadarParticleColorBenchmark = (formatter) => {
-  let checksum = 0;
-  const startedAt = performance.now();
-  for (let i = 0; i < radarParticleColorBenchmarkIterations; i += 1) {
-    const alpha = 0.015 + ((i % 1000) / 999) * 0.12;
-    checksum += formatter(alpha).length;
-  }
-  return { elapsedMs: performance.now() - startedAt, checksum };
-};
-const legacyRadarParticleColorBenchmark = runRadarParticleColorBenchmark(
-  (alpha) => `rgba(255, 176, 110, ${alpha.toFixed(3)})`
-);
-const cachedRadarParticleColorBenchmark = runRadarParticleColorBenchmark(getRadarParticleColor);
-
-let radarParticleAlphaSquaredError = 0;
-let radarParticleAlphaSignalEnergy = 0;
-let radarParticleAlphaMaximumError = 0;
-for (let alphaMilli = 15; alphaMilli <= 135; alphaMilli += 1) {
-  const alpha = alphaMilli / 1000;
-  const batchedAlpha = getRadarParticleBatchAlpha(getRadarParticleAlphaBucket(alpha));
-  const error = alpha - batchedAlpha;
-  radarParticleAlphaSquaredError += error * error;
-  radarParticleAlphaSignalEnergy += alpha * alpha;
-  radarParticleAlphaMaximumError = Math.max(radarParticleAlphaMaximumError, Math.abs(error));
-}
-const radarParticleAlphaRelativeRmse = Math.sqrt(
-  radarParticleAlphaSquaredError / radarParticleAlphaSignalEnergy
-);
-let radarParticleOccupiedBucketsOverBenchmark = 0;
-const radarParticleBucketCounts = new Uint8Array(RADAR_PARTICLE_ALPHA_BUCKET_COUNT);
-for (let frame = 0; frame < radarPlayingFrames; frame += 1) {
-  radarParticleBucketCounts.fill(0);
-  for (let particle = 0; particle < 32; particle += 1) {
-    const flow = (particle * 0.137 + frame * 0.0037 + particle * 0.019) % 1;
-    const alpha = 0.015 + (1 - flow) * 0.12;
-    radarParticleBucketCounts[getRadarParticleAlphaBucket(alpha)] += 1;
-  }
-  for (let bucket = 0; bucket < radarParticleBucketCounts.length; bucket += 1) {
-    radarParticleOccupiedBucketsOverBenchmark += Number(radarParticleBucketCounts[bucket] > 0);
-  }
-}
-if (radarParticleAlphaMaximumError > 0.006) {
-  throw new Error('Radar particle alpha batching exceeded its visual-fidelity budget');
-}
+// The transport's progress renders over the benchmark (25 Hz).
+const playbackFrames = Math.round(SECONDS * 25);
 
 const sceneBandBenchmarkIterations = 20000;
 const runSceneBandBenchmark = (work) => {
@@ -1422,98 +1270,6 @@ if (
   throw new Error('Goniometer decimation exceeded its visual-fidelity or point-density budget');
 }
 
-const radarStartTimes = Float64Array.from(midiNotes, (note) => note.time);
-const radarRangeBenchmarkIterations = 500000;
-const reusableRadarRange = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 };
-const getLegacyVisibleNoteRange = ({
-  startTimes,
-  nowTime,
-  lookBehindSeconds,
-  lookAheadSeconds,
-  maxDuration
-}) => {
-  const windowStart = nowTime - lookBehindSeconds;
-  const windowEnd = nowTime + lookAheadSeconds;
-  const earliestRelevantStart = windowStart - maxDuration;
-  return {
-    startIndex: lowerBound(startTimes, earliestRelevantStart),
-    endIndex: upperBound(startTimes, windowEnd),
-    windowStart,
-    windowEnd
-  };
-};
-const runRadarRangeBenchmark = (sample) => {
-  let checksum = 0;
-  const startedAt = performance.now();
-  for (let iteration = 0; iteration < radarRangeBenchmarkIterations; iteration += 1) {
-    const range = sample((iteration % 5000) * 0.01);
-    checksum += range.startIndex + range.endIndex + range.windowStart + range.windowEnd;
-  }
-  return { elapsedMs: performance.now() - startedAt, checksum };
-};
-const legacyRadarRangeBenchmark = runRadarRangeBenchmark((nowTime) => (
-  getLegacyVisibleNoteRange({
-    startTimes: radarStartTimes,
-    nowTime,
-    lookBehindSeconds: 1.8,
-    lookAheadSeconds: 14,
-    maxDuration: 0.98
-  })
-));
-const reusableRadarRangeBenchmark = runRadarRangeBenchmark((nowTime) => (
-  getVisibleNoteRange(
-    radarStartTimes,
-    nowTime,
-    1.8,
-    14,
-    0.98,
-    reusableRadarRange
-  )
-));
-
-if (Math.abs(legacyRadarRangeBenchmark.checksum - reusableRadarRangeBenchmark.checksum) > 1e-6) {
-  throw new Error('Reusable radar range calculation changed the benchmark result');
-}
-
-const radarLabelPositions = [42, 87, 134, 203, 248, 302, 361, 418];
-const radarLabelBenchmarkIterations = 1000000;
-const runLegacyRadarLabelBenchmark = (iterations) => {
-  let accepted = 0;
-  for (let iteration = 0; iteration < iterations; iteration += 1) {
-    const candidateX = (iteration % 640) * 0.75;
-    accepted += Number(
-      radarLabelPositions.every((placedX) => Math.abs(placedX - candidateX) > 28)
-    );
-  }
-  return accepted;
-};
-const runIndexedRadarLabelBenchmark = (iterations) => {
-  let accepted = 0;
-  for (let iteration = 0; iteration < iterations; iteration += 1) {
-    const candidateX = (iteration % 640) * 0.75;
-    let canPlace = true;
-    for (let index = 0; index < radarLabelPositions.length; index += 1) {
-      if (Math.abs(radarLabelPositions[index] - candidateX) <= 28) {
-        canPlace = false;
-        break;
-      }
-    }
-    accepted += Number(canPlace);
-  }
-  return accepted;
-};
-runLegacyRadarLabelBenchmark(10000);
-runIndexedRadarLabelBenchmark(10000);
-let radarLabelStartedAt = performance.now();
-const legacyRadarLabelAccepted = runLegacyRadarLabelBenchmark(radarLabelBenchmarkIterations);
-const legacyRadarLabelBenchmark = { elapsedMs: performance.now() - radarLabelStartedAt };
-radarLabelStartedAt = performance.now();
-const indexedRadarLabelAccepted = runIndexedRadarLabelBenchmark(radarLabelBenchmarkIterations);
-const indexedRadarLabelBenchmark = { elapsedMs: performance.now() - radarLabelStartedAt };
-if (legacyRadarLabelAccepted !== indexedRadarLabelAccepted) {
-  throw new Error('Indexed radar label collision scan changed placement decisions');
-}
-
 const sceneDebugBenchmarkIterations = 2000000;
 const legacySceneDebugHost = { current: null };
 const reusableSceneDebugHost = {
@@ -1558,7 +1314,6 @@ if (Math.abs(legacySceneDebugChecksum - reusableSceneDebugChecksum) > 1e-6) {
 const elapsedReduction = reduction(baseline.elapsedMs, optimized.elapsedMs);
 const analyserReduction = reduction(baseline.analyserSamples, optimized.analyserSamples);
 const resampleReduction = reduction(baseline.resampleSamples, optimized.resampleSamples);
-const radarReduction = reduction(baseline.radarNoteEvaluations, optimized.radarNoteEvaluations);
 const sceneFrameReduction = reduction(baseline.sceneFrames, optimized.sceneFrames);
 const sceneBandReduction = reduction(
   baseline.sceneBandEvaluations,
@@ -1578,7 +1333,6 @@ const output = {
     elapsedMsPercent: Number(elapsedReduction.toFixed(2)),
     analyserSamplesPercent: Number(analyserReduction.toFixed(2)),
     resampleSamplesPercent: Number(resampleReduction.toFixed(2)),
-    radarNoteEvaluationsPercent: Number(radarReduction.toFixed(2)),
     sceneFramesPercent: Number(sceneFrameReduction.toFixed(2)),
     sceneBandEvaluationsPercent: Number(sceneBandReduction.toFixed(2))
   },
@@ -1588,16 +1342,16 @@ const output = {
     sceneReducedMotionHz: 0
   },
   reactInitializationPolicy: {
-    standardPlaybackRenders: radarPlayingFrames,
+    standardPlaybackRenders: playbackFrames,
     productionEagerMutableHookInitializersBefore: 31,
     productionEagerMutableHookInitializersAfter: 0,
     hotPlaybackContainerAllocationsPerRenderBefore: 14,
     hotPlaybackContainerAllocationsPerRenderAfter: 0,
-    hotPlaybackContainerAllocationsOverBenchmarkBefore: radarPlayingFrames * 14,
+    hotPlaybackContainerAllocationsOverBenchmarkBefore: playbackFrames * 14,
     hotPlaybackContainerAllocationsOverBenchmarkAfter: 0,
-    appSessionStorageReadsOverBenchmarkBefore: radarPlayingFrames,
+    appSessionStorageReadsOverBenchmarkBefore: playbackFrames,
     appSessionStorageReadsOverBenchmarkAfter: 1,
-    appSessionJsonParsesOverBenchmarkBefore: radarPlayingFrames,
+    appSessionJsonParsesOverBenchmarkBefore: playbackFrames,
     appSessionJsonParsesOverBenchmarkAfter: 1,
     sessionBenchmarkIterations,
     eagerSessionReadElapsedMs: Number(eagerSessionReadBenchmark.elapsedMs.toFixed(2)),
@@ -1864,15 +1618,15 @@ const output = {
     keyMapCallbackInvocationsAfter: 0,
     keyboardGridStyleObjectsBefore: 600,
     keyboardGridStyleObjectsAfter: 0,
-    unrelatedRadarReactRendersBefore: 600,
-    unrelatedRadarReactRendersAfter: 0,
+    unrelatedNotesViewReactRendersBefore: 600,
+    unrelatedNotesViewReactRendersAfter: 0,
     activePlaybackSeconds: 60,
-    radarProgressUpdateRateHz: 25,
-    radarProgressReactRenders: 1500,
-    radarPropsSnapshotObjectsBefore: 1500,
-    radarPropsSnapshotObjectsAfter: 0,
+    notesViewProgressUpdateRateHz: 25,
+    notesViewProgressReactRenders: 1500,
+    notesViewPropsSnapshotObjectsBefore: 1500,
+    notesViewPropsSnapshotObjectsAfter: 0,
     keyUpdatesWhenActiveSetChanges: true,
-    radarUpdatesWhenVisualPropsChange: true,
+    notesViewUpdatesWhenVisualPropsChange: true,
     keyboardAudioRefSynchronizationPreserved: true
   },
   hiddenSidebarContextPolicy: {
@@ -2049,78 +1803,6 @@ const output = {
       legacySpectrogramBenchmark.elapsedMs,
       cachedSpectrogramBenchmark.elapsedMs
     ).toFixed(2))
-  },
-  radarPalettePolicy: {
-    paletteConstructionsOverBenchmarkBefore: optimized.radarNoteEvaluations,
-    paletteConstructionsOverBenchmarkAfterMaximum: RADAR_PALETTE_STATE_LIMIT,
-    constructionReductionPercent: Number(reduction(
-      optimized.radarNoteEvaluations,
-      RADAR_PALETTE_STATE_LIMIT
-    ).toFixed(2)),
-    benchmarkIterations: radarPaletteBenchmarkIterations,
-    legacyElapsedMs: Number(legacyRadarPaletteBenchmark.elapsedMs.toFixed(2)),
-    cachedElapsedMs: Number(cachedRadarPaletteBenchmark.elapsedMs.toFixed(2)),
-    elapsedReductionPercent: Number(reduction(
-      legacyRadarPaletteBenchmark.elapsedMs,
-      cachedRadarPaletteBenchmark.elapsedMs
-    ).toFixed(2))
-  },
-  radarStaticGradientPolicy: {
-    playingFrames: radarPlayingFrames,
-    staticGradientCreationsOverBenchmarkBefore: radarPlayingFrames * 4,
-    staticGradientCreationsOverBenchmarkAfter: 4,
-    staticGradientReductionPercent: Number(reduction(
-      radarPlayingFrames * 4,
-      4
-    ).toFixed(2)),
-    allBackdropAndGridGradientCreationsBefore: radarPlayingFrames * 5,
-    allBackdropAndGridGradientCreationsAfter: radarPlayingFrames + 4,
-    allGradientReductionPercent: Number(reduction(
-      radarPlayingFrames * 5,
-      radarPlayingFrames + 4
-    ).toFixed(2))
-  },
-  radarParticleColorPolicy: {
-    particleCount: 32,
-    colorStringsOverBenchmarkBefore: radarPlayingFrames * 32,
-    colorStringsOverBenchmarkAfter: RADAR_PARTICLE_COLOR_COUNT,
-    colorStringReductionPercent: Number(reduction(
-      radarPlayingFrames * 32,
-      RADAR_PARTICLE_COLOR_COUNT
-    ).toFixed(2)),
-    benchmarkIterations: radarParticleColorBenchmarkIterations,
-    legacyElapsedMs: Number(legacyRadarParticleColorBenchmark.elapsedMs.toFixed(2)),
-    cachedElapsedMs: Number(cachedRadarParticleColorBenchmark.elapsedMs.toFixed(2)),
-    elapsedReductionPercent: Number(reduction(
-      legacyRadarParticleColorBenchmark.elapsedMs,
-      cachedRadarParticleColorBenchmark.elapsedMs
-    ).toFixed(2))
-  },
-  radarParticlePathBatchPolicy: {
-    playingFrames: radarPlayingFrames,
-    particleCount: 32,
-    alphaBucketCount: RADAR_PARTICLE_ALPHA_BUCKET_COUNT,
-    redundantInitializationAllocationsPerReactRenderBefore: 35,
-    redundantInitializationAllocationsPerReactRenderAfter: 0,
-    redundantInitializationAllocationsOverBenchmarkBefore: radarPlayingFrames * 35,
-    redundantInitializationAllocationsOverBenchmarkAfter: 0,
-    occupiedBucketsOverBenchmark: radarParticleOccupiedBucketsOverBenchmark,
-    pathBoundaryCallsOverBenchmarkBefore: radarPlayingFrames * 32 * 2,
-    pathBoundaryCallsOverBenchmarkAfter: radarParticleOccupiedBucketsOverBenchmark * 2,
-    pathBoundaryCallReductionPercent: Number(reduction(
-      radarPlayingFrames * 32 * 2,
-      radarParticleOccupiedBucketsOverBenchmark * 2
-    ).toFixed(2)),
-    totalCanvasPathCommandsOverBenchmarkBefore: radarPlayingFrames * 32 * 3,
-    totalCanvasPathCommandsOverBenchmarkAfter:
-      radarPlayingFrames * 32 * 2 + radarParticleOccupiedBucketsOverBenchmark * 2,
-    totalCanvasPathCommandReductionPercent: Number(reduction(
-      radarPlayingFrames * 32 * 3,
-      radarPlayingFrames * 32 * 2 + radarParticleOccupiedBucketsOverBenchmark * 2
-    ).toFixed(2)),
-    particleGeometryDelta: 0,
-    alphaMaximumAbsoluteError: radarParticleAlphaMaximumError,
-    alphaRelativeRmse: radarParticleAlphaRelativeRmse
   },
   sceneBandRangePolicy: {
     bandCount: SCENE_FREQUENCY_BANDS.length,
@@ -2299,33 +1981,6 @@ const output = {
     elapsedReductionPercent: Number(reduction(
       legacyGoniometerTraceBenchmark.elapsedMs,
       decimatedGoniometerTraceBenchmark.elapsedMs
-    ).toFixed(2))
-  },
-  radarFrameContainerPolicy: {
-    playingFrames: radarPlayingFrames,
-    explicitContainersPerFrameBefore: 8,
-    explicitContainersPerFrameAfter: 0,
-    explicitContainersOverBenchmarkBefore: radarPlayingFrames * 8,
-    explicitContainersOverBenchmarkAfter: 0,
-    rangeBenchmarkIterations: radarRangeBenchmarkIterations,
-    legacyRangeElapsedMs: Number(legacyRadarRangeBenchmark.elapsedMs.toFixed(2)),
-    reusableRangeElapsedMs: Number(reusableRadarRangeBenchmark.elapsedMs.toFixed(2)),
-    rangeElapsedReductionPercent: Number(reduction(
-      legacyRadarRangeBenchmark.elapsedMs,
-      reusableRadarRangeBenchmark.elapsedMs
-    ).toFixed(2))
-  },
-  radarLabelCollisionPolicy: {
-    activeNoteChecksOverBenchmark: optimized.activeNoteEvaluations,
-    callbackAllocationsOverBenchmarkBefore: optimized.activeNoteEvaluations,
-    callbackAllocationsOverBenchmarkAfter: 0,
-    callbackAllocationReductionPercent: 100,
-    benchmarkIterations: radarLabelBenchmarkIterations,
-    legacyElapsedMs: Number(legacyRadarLabelBenchmark.elapsedMs.toFixed(2)),
-    indexedElapsedMs: Number(indexedRadarLabelBenchmark.elapsedMs.toFixed(2)),
-    elapsedReductionPercent: Number(reduction(
-      legacyRadarLabelBenchmark.elapsedMs,
-      indexedRadarLabelBenchmark.elapsedMs
     ).toFixed(2))
   },
   sceneDebugStatePolicy: {

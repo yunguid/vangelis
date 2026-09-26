@@ -1,3 +1,8 @@
+/**
+ * A score's notes sorted by start time, and binary searches over those start
+ * times: the study page finds what sounds at a moment, the notes view what is
+ * in sight (components/notes/noteFrame.js).
+ */
 const EMPTY_RENDER_WINDOW = Object.freeze({
   notes: [],
   startTimes: [],
@@ -60,31 +65,4 @@ export const buildNoteRenderWindow = (notes = []) => {
     startTimes,
     maxDuration
   };
-};
-
-export const getVisibleNoteRange = (
-  startTimes,
-  nowTime,
-  lookBehindSeconds,
-  lookAheadSeconds,
-  maxDuration,
-  out = { startIndex: 0, endIndex: 0, windowStart: 0, windowEnd: 0 }
-) => {
-  if (!startTimes?.length) {
-    out.startIndex = 0;
-    out.endIndex = 0;
-    out.windowStart = nowTime;
-    out.windowEnd = nowTime;
-    return out;
-  }
-
-  const windowStart = nowTime - lookBehindSeconds;
-  const windowEnd = nowTime + lookAheadSeconds;
-  const earliestRelevantStart = windowStart - maxDuration;
-
-  out.startIndex = lowerBound(startTimes, earliestRelevantStart);
-  out.endIndex = upperBound(startTimes, windowEnd);
-  out.windowStart = windowStart;
-  out.windowEnd = windowEnd;
-  return out;
 };

@@ -3,18 +3,20 @@ import { getCappedDevicePixelRatio } from '../../utils/canvasPerformance.js';
 import { startVisibilityAwareRafLoop } from '../../utils/visibilityRaf.js';
 import { resetGlState } from './glKit.js';
 import { applyScore, createNoteFrame, prepareScore } from './noteFrame.js';
-import '../../styles/birds-eye-radar.css';
-
-const BirdsEyeRadar = React.lazy(() => import('../BirdsEyeRadar.jsx'));
+import '../../styles/notes-view.css';
 
 // Every style is a chunk of its own, fetched when it is picked.
 const STYLE_LOADERS = {
   paper: () => import('./styles/paperRoll.js'),
   stars: () => import('./styles/stars.js'),
-  embers: () => import('./styles/embers.js'),
   rain: () => import('./styles/rain.js'),
-  phosphor: () => import('./styles/phosphor.js')
+  phosphor: () => import('./styles/phosphor.js'),
+  lamp: () => import('./styles/phosphorLamp.js'),
+  pencil: () => import('./styles/phosphorPencil.js')
 };
+
+// Styles drawn on paper: a message over them is written in dark ink.
+const PAPER_STYLES = new Set(['paper', 'pencil']);
 
 // Smooth while the music moves; slower when only the ambience does.
 const PLAYING_FRAME_MS = 1000 / 60;
@@ -28,14 +30,13 @@ const DPR_CAP = 1.5;
  * The Notes panel drawn by one of the WebGL2 styles. One context lives as long
  * as the view; picking another style disposes the old one and starts the new
  * one on the same context. Without WebGL2, or when a style fails, the view
- * says so in the console and shows the Canvas 2D radar instead.
+ * logs why and says so on the stage; the canvas stays for the next style.
  */
 const GlNotesView = ({
   styleId,
   styleName,
   currentMidi,
   progress = 0,
-  activeNotes,
   isPlaying = false,
   getPlaybackProgress
 }) => {
@@ -76,7 +77,7 @@ const GlNotesView = ({
       gl = null;
     }
     if (!gl) {
-      console.error('Notes: WebGL2 is unavailable, so the Radar view is shown instead.');
+      console.error('Notes: WebGL2 is unavailable, so no notes can be drawn.');
       setGlUnavailable(true);
       return undefined;
     }
@@ -145,7 +146,7 @@ const GlNotesView = ({
       try {
         style.instance.render(frame);
       } catch (error) {
-        console.error(`Notes: the ${style.id} style stopped drawing, so the Radar view is shown instead.`, error);
+        console.error(`Notes: the ${style.id} style stopped drawing.`, error);
         styleRef.current = null;
         setFailedStyle(style.id);
       }
@@ -182,7 +183,7 @@ const GlNotesView = ({
     if (!gl || failedStyle === styleId) return undefined;
     const load = STYLE_LOADERS[styleId];
     if (!load) {
-      console.error(`Notes: there is no "${styleId}" style, so the Radar view is shown instead.`);
+      console.error(`Notes: there is no "${styleId}" style.`);
       setFailedStyle(styleId);
       return undefined;
     }
@@ -197,7 +198,7 @@ const GlNotesView = ({
       styleRef.current = started;
     }).catch((error) => {
       if (cancelled) return;
-      console.error(`Notes: the ${styleId} style could not start, so the Radar view is shown instead.`, error);
+      console.error(`Notes: the ${styleId} style could not start.`, error);
       setFailedStyle(styleId);
     });
     return () => {
@@ -208,29 +209,25 @@ const GlNotesView = ({
     };
   }, [styleId, contextGeneration, failedStyle]);
 
-  const showRadar = glUnavailable || failedStyle === styleId;
+  let message = null;
+  let onPaper = false;
+  if (glUnavailable) message = 'These notes need WebGL2, which this browser does not have.';
+  else if (failedStyle === styleId) message = `${styleName} could not start here.`;
+  else if (!currentMidi) {
+    message = 'Play a MIDI file to see its notes.';
+    onPaper = PAPER_STYLES.has(styleId);
+  }
   return (
-    <>
-      {showRadar && (
-        <BirdsEyeRadar
-          currentMidi={currentMidi}
-          progress={progress}
-          activeNotes={activeNotes}
-          isPlaying={isPlaying}
-        />
-      )}
-      {/* Stays mounted behind the radar: its context serves the next style picked. */}
-      <section className="birds-eye-radar notes-view" aria-label={`Notes: ${styleName}`} hidden={showRadar}>
-        <div className="birds-eye-radar__stage">
-          <canvas ref={canvasRef} className="birds-eye-radar__canvas" />
-          {!currentMidi && (
-            <div className="birds-eye-radar__empty">
-              Play a MIDI file to see its notes.
-            </div>
-          )}
-        </div>
-      </section>
-    </>
+    <section className="notes-view" aria-label={`Notes: ${styleName}`}>
+      <div className="notes-view__stage">
+        <canvas ref={canvasRef} className="notes-view__canvas" />
+        {message && (
+          <div className={`notes-view__message${onPaper ? ' notes-view__message--on-paper' : ''}`}>
+            {message}
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 

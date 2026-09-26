@@ -4,7 +4,7 @@
  * span to lay them out across. GlNotesView fills one frame object in place on
  * every animation frame; styles only read it.
  */
-import { lowerBound, upperBound } from '../midiBirdsEyeMath.js';
+import { lowerBound, upperBound } from '../../utils/noteTimeIndex.js';
 
 // A piece is laid out across its own range, never narrower than three octaves.
 export const MIN_PITCH_SPAN = 36;

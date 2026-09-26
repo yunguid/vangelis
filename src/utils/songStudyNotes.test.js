@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildNoteRenderWindow } from '../components/midiBirdsEyeMath.js';
+import { buildNoteRenderWindow } from './noteTimeIndex.js';
 import { getStudyNotesAroundTime } from './songStudyNotes.js';
 
 describe('getStudyNotesAroundTime', () => {

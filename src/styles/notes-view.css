@@ -1,9 +1,9 @@
 /**
- * Bird's-eye MIDI radar styles.
- * Loaded with the deferred canvas component rather than the route shell.
+ * The Notes panel's stage (components/notes/GlNotesView.jsx).
+ * Loaded with the deferred view rather than the route shell.
  */
 
-.birds-eye-radar {
+.notes-view {
   width: 100%;
   padding: 0;
   background: transparent;
@@ -11,7 +11,7 @@
   box-shadow: none;
 }
 
-.birds-eye-radar__stage {
+.notes-view__stage {
   position: relative;
   min-height: clamp(240px, 38vh, 430px);
   border-radius: 2px;
@@ -21,7 +21,7 @@
   box-shadow: none;
 }
 
-.birds-eye-radar__canvas {
+.notes-view__canvas {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -29,7 +29,8 @@
   display: block;
 }
 
-.birds-eye-radar__empty {
+/* "Play a MIDI file", or why nothing can be drawn here. */
+.notes-view__message {
   position: absolute;
   inset: 0;
   display: flex;
@@ -45,20 +46,20 @@
   text-shadow: 0 0 20px rgba(1, 5, 10, 0.92);
 }
 
-@media (max-width: 900px) {
-  .birds-eye-radar {
-    padding: 0;
-  }
+/* Over the paper styles the message is dark ink with a pale halo. */
+.notes-view__message--on-paper {
+  color: rgba(52, 46, 40, 0.8);
+  text-shadow: 0 0 14px rgba(246, 239, 222, 0.95);
+}
 
-  .birds-eye-radar__stage {
+@media (max-width: 900px) {
+  .notes-view__stage {
     min-height: clamp(210px, 30vh, 290px);
-    border-radius: 2px;
   }
 }
 
 @media (max-width: 520px) {
-  .birds-eye-radar__stage {
+  .notes-view__stage {
     min-height: clamp(144px, 25vh, 194px);
   }
 }
-

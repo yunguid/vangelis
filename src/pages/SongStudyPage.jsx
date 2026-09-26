@@ -17,11 +17,12 @@ import { audioEngine } from '../utils/audioEngine.js';
 import { sanitizeAudioParams } from '../utils/audioParams.js';
 import { midiNoteToName } from '../utils/math.js';
 import { setPendingMidi } from '../utils/pendingMidiHandoff.js';
-import { buildNoteRenderWindow } from '../components/midiBirdsEyeMath.js';
+import { buildNoteRenderWindow } from '../utils/noteTimeIndex.js';
 import { getStudyNotesAroundTime } from '../utils/songStudyNotes.js';
+import { DEFAULT_NOTES_STYLE, notesStyleName } from '../components/notes/notesStyles.js';
 import './SongStudyPage.css';
 
-const BirdsEyeRadar = React.lazy(() => import('../components/BirdsEyeRadar.jsx'));
+const GlNotesView = React.lazy(() => import('../components/notes/GlNotesView.jsx'));
 
 const DEFAULT_STUDY_CONTROL_SECTIONS = Object.freeze({
   essentials: true,
@@ -520,9 +521,6 @@ const SongStudyPageContent = ({ study }) => {
   const chordTones = React.useMemo(() => (
     [...new Set(visibleNotes.map((note) => formatPitchClass(note.midi % 12)))].join(' / ') || 'Ready'
   ), [visibleNotes]);
-  const radarActiveNotes = React.useMemo(() => (
-    new Set(visibleNotes.map((note) => midiNoteToName(note.midi).noteId))
-  ), [visibleNotes]);
   const foldedKeyboardNotes = React.useMemo(
     () => foldNotesToKeyboard(visibleNotes),
     [visibleNotes]
@@ -780,22 +778,23 @@ const SongStudyPageContent = ({ study }) => {
             {displayMidi ? (
               <React.Suspense
                 fallback={(
-                  <section className="birds-eye-radar-placeholder" aria-hidden="true">
-                    <div className="birds-eye-radar-placeholder__stage" />
+                  <section className="notes-view-placeholder" aria-hidden="true">
+                    <div className="notes-view-placeholder__stage" />
                   </section>
                 )}
               >
-                <BirdsEyeRadar
+                <GlNotesView
+                  styleId={DEFAULT_NOTES_STYLE}
+                  styleName={notesStyleName(DEFAULT_NOTES_STYLE)}
                   currentMidi={displayMidi}
                   progress={playback.progress}
-                  activeNotes={radarActiveNotes}
                   isPlaying={playback.isPlaying}
-                  noteRenderWindow={studyNoteWindow}
+                  getPlaybackProgress={playback.getPlaybackProgress}
                 />
               </React.Suspense>
             ) : (
-              <section className="birds-eye-radar-placeholder" aria-hidden="true">
-                <div className="birds-eye-radar-placeholder__stage" />
+              <section className="notes-view-placeholder" aria-hidden="true">
+                <div className="notes-view-placeholder__stage" />
               </section>
             )}
 

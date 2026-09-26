@@ -87,13 +87,13 @@ body {
 .wave-candy,
 .candy-tile,
 .keyboard-surface,
-.birds-eye-radar {
+.notes-view {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
 }
 
-.birds-eye-radar__stage {
+.notes-view__stage {
   border: 0 !important;
   box-shadow: none !important;
 }

@@ -43,8 +43,8 @@ vi.mock('../components/Sidebar/SidebarNavigation.jsx', () => ({
   BrandHeader: () => <div>Vangelis</div>
 }));
 
-vi.mock('../components/BirdsEyeRadar.jsx', () => ({
-  default: () => <div data-testid="radar" />
+vi.mock('../components/notes/GlNotesView.jsx', () => ({
+  default: ({ styleId }) => <div data-testid="notes" data-style={styleId} />
 }));
 
 vi.mock('../components/SynthKeyboard', () => ({
@@ -95,12 +95,13 @@ describe('SongStudyPage deferred MIDI loading', () => {
     render(<SongStudyPage study={study} />);
     expect(screen.getByText('Loading MIDI')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled();
-    expect(screen.queryByTestId('radar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('notes')).not.toBeInTheDocument();
 
     expect(await screen.findByText('120 BPM')).toBeInTheDocument();
     expect(parseMidiFile).toHaveBeenCalledWith('/midi/test.mid');
     expect(screen.getByRole('button', { name: 'Play' })).toBeEnabled();
-    expect(await screen.findByTestId('radar')).toBeInTheDocument();
+    // The study's notes are drawn in the default style, Phosphor.
+    expect(await screen.findByTestId('notes')).toHaveAttribute('data-style', 'phosphor');
   });
 
   it('preserves the existing load error state when deferred parsing fails', async () => {

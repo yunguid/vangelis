@@ -17,6 +17,24 @@
  * shader moves them with the song clock, so most frames upload nothing. Five
  * draws a frame: the fade, the boxes, the lines and letters, the halation's
  * copy and the composite.
+ *
+ * The highway, the boxes, the names and their timing are the same in every
+ * look; a look (AMBER here, others in phosphor*.js) only finishes the light
+ * onto the canvas. createPhosphor(gl, look) takes:
+ *   composite    the last pass's fragment shader. It reads uPersist (r: this
+ *                frame's light, fills included; g: the tail; b: this frame's
+ *                fills alone, when the look keeps fills), uBloom (a quarter-size
+ *                copy of the light, when the look blooms), uMaterial (its
+ *                material, when it has one), uRes, uDpr, uLook (gain, bloom
+ *                gain, the front line 0..1 up, seconds) and uMotion (0 under
+ *                reduced motion).
+ *   material     optional: a fragment shader drawn once per size into the
+ *                canvas-sized uMaterial (paper, slate: whatever never moves).
+ *   fills        keep sounding fills apart from lines in b.
+ *   bloom        make the quarter-size copy.
+ *   beamSigma    the lines' gaussian sigma, css px.
+ *   tailSeconds  how long a moving line's trail takes to fade by 1/e.
+ *   flicker      the light wavers a little (never under reduced motion).
  */
 import {
   FULLSCREEN_VERTEX,
@@ -34,8 +52,7 @@ const DEPTH_SCALE = 2.4;
 const AHEAD_SECONDS = 12;
 // The beam loses 1/e of its light every this many seconds out.
 const FADE_SECONDS = 6.5;
-// The phosphor's tail: how fast it decays and how much of it shows.
-const TAIL_SECONDS = 0.2;
+// How much of the phosphor's tail shows.
 const TAIL_WEIGHT = 0.5;
 // A struck note flares, then settles over about this long.
 const FLASH_SECONDS = 0.14;
@@ -51,8 +68,6 @@ const FILL_SECONDS = 0.9;
 const RUNG_SECONDS = 1;
 // With no score the rungs drift this many seconds per second.
 const IDLE_DRIFT = 0.3;
-// The beam's gaussian sigma, css px.
-const BEAM_SIGMA = 0.62;
 // Notes held on the GPU at once; the window moves on when the music leaves it.
 const NOTE_WINDOW = 1024;
 const MAX_LINES = 1024;
@@ -289,7 +304,9 @@ void main() {
   // How this frame's beam and the tail it leaves fall off around the segment.
   float now = 1.0;
   float tail = 1.0;
+  float fill = 1.0;
   if (sigma > 0.0) {
+    fill = 0.0;
     // A gaussian across the segment; its ends ramp so that segments meeting
     // end to end draw one even line.
     vec2 ap = vPixel - vSeg.xy;
@@ -327,7 +344,8 @@ void main() {
     vec2 q = (vPixel - uQuiet.xy) / uQuiet.zw;
     energy *= 1.0 - 0.85 * exp(-2.0 * dot(q, q));
   }
-  outColor = vec4(energy * now * uDeposit.x, energy * tail * 0.5 * uDeposit.y, 0.0, 0.0);
+  float light = energy * now * uDeposit.x;
+  outColor = vec4(light, energy * tail * 0.5 * uDeposit.y, light * fill, 0.0);
 }
 `;
 
@@ -363,7 +381,7 @@ void main() {
 }
 `;
 
-const COMPOSITE_FRAGMENT = `#version 300 es
+const AMBER_COMPOSITE = `#version 300 es
 precision highp float;
 uniform sampler2D uPersist;
 uniform sampler2D uBloom;
@@ -415,6 +433,16 @@ void main() {
 }
 `;
 
+// The original look: amber phosphor on curved glass, halation, scanlines, grain.
+export const AMBER = Object.freeze({
+  composite: AMBER_COMPOSITE,
+  fills: false,
+  bloom: true,
+  beamSigma: 0.62,
+  tailSeconds: 0.2,
+  flicker: true
+});
+
 // The persistence buffer needs two channels (this frame, the tail): RG16F
 // moves half the bytes of RGBA16F through the passes that touch every pixel.
 // Without float rendering the shared target stands in (RGBA16F or RGBA8).
@@ -459,7 +487,8 @@ const createPersistTarget = (gl) => {
   return target;
 };
 
-function createPhosphor(gl) {
+export function createPhosphor(gl, look) {
+  const beamSigma = look.beamSigma;
   const emptyVao = createEmptyVao(gl);
   const boxProgram = createProgram(gl, BOX_VERTEX, BEAM_FRAGMENT, [
     'uSize', 'uView', 'uBox', 'uSigma', 'uDeposit', 'uQuiet'
@@ -469,13 +498,18 @@ function createPhosphor(gl) {
   ]);
   const fade = createProgram(gl, FULLSCREEN_VERTEX, FADE_FRAGMENT, ['uFloor']);
   const down = createProgram(gl, FULLSCREEN_VERTEX, DOWN_FRAGMENT, ['uSource', 'uTexel']);
-  const composite = createProgram(gl, FULLSCREEN_VERTEX, COMPOSITE_FRAGMENT, [
-    'uPersist', 'uBloom', 'uRes', 'uDpr', 'uLook', 'uBloomTexel', 'uMotion'
+  const composite = createProgram(gl, FULLSCREEN_VERTEX, look.composite, [
+    'uPersist', 'uBloom', 'uMaterial', 'uRes', 'uDpr', 'uLook', 'uBloomTexel', 'uMotion'
   ]);
+  const materialProgram = look.material
+    ? createProgram(gl, FULLSCREEN_VERTEX, look.material, ['uRes', 'uDpr'])
+    : null;
   const boxes = createInstances(gl, boxProgram.program, [['aNote', 4], ['aTrait', 2]], NOTE_WINDOW);
   const lines = createInstances(gl, lineProgram.program, [['aEnds', 4], ['aBeam', 4]], MAX_LINES);
-  const persist = createPersistTarget(gl);
-  const bloom = createTarget(gl, { hdr: true });
+  // Keeping fills apart takes a third channel: the shared RGBA target.
+  const persist = look.fills ? createTarget(gl, { hdr: true }) : createPersistTarget(gl);
+  const bloom = look.bloom ? createTarget(gl, { hdr: true }) : null;
+  const material = materialProgram ? createTarget(gl) : null;
   // Half floats hold the energy as it is; 8 bits hold it divided by this.
   const storeScale = persist.hdr ? 1 : LOW_RANGE;
 
@@ -484,6 +518,7 @@ function createPhosphor(gl) {
   gl.useProgram(composite.program);
   gl.uniform1i(composite.uniforms.uPersist, 0);
   gl.uniform1i(composite.uniforms.uBloom, 1);
+  gl.uniform1i(composite.uniforms.uMaterial, 2);
   gl.useProgram(null);
 
   const visible = { start: 0, end: 0 };
@@ -523,20 +558,20 @@ function createPhosphor(gl) {
     const { width, low, high } = frame;
     const span = high - low + 1;
     let count = 0;
-    count = pushLine(count, 0, 0, width, 0, 0.62, 1, NEVER, BEAM_SIGMA);
-    count = pushLine(count, 0, 0, 0, AHEAD_SECONDS, 0.42, 1, NEVER, BEAM_SIGMA);
-    count = pushLine(count, width, 0, width, AHEAD_SECONDS, 0.42, 1, NEVER, BEAM_SIGMA);
+    count = pushLine(count, 0, 0, width, 0, 0.62, 1, NEVER, beamSigma);
+    count = pushLine(count, 0, 0, 0, AHEAD_SECONDS, 0.42, 1, NEVER, beamSigma);
+    count = pushLine(count, width, 0, width, AHEAD_SECONDS, 0.42, 1, NEVER, beamSigma);
     // A lane line up the highway at every C clear of the edges, and a tick
     // under the front line.
     for (let midi = low + 1; midi <= high; midi += 1) {
       const x = ((midi - low) / span) * width;
       if (midi % 12 !== 0 || x < width * 0.04 || x > width * 0.96) continue;
-      count = pushLine(count, x, 0, x, AHEAD_SECONDS, 0.26, 1, NEVER, BEAM_SIGMA);
-      count = pushLine(count, x, frontY, x, frontY + 3.5, 0.5, 0, NEVER, BEAM_SIGMA * 0.9);
+      count = pushLine(count, x, 0, x, AHEAD_SECONDS, 0.26, 1, NEVER, beamSigma);
+      count = pushLine(count, x, frontY, x, frontY + 3.5, 0.5, 0, NEVER, beamSigma * 0.9);
     }
     // Rungs across the highway, one every RUNG_SECONDS; the shader moves them.
     for (let z = RUNG_SECONDS; z <= AHEAD_SECONDS; z += RUNG_SECONDS) {
-      count = pushLine(count, 0, z, width, z, 0.12, 3, NEVER, BEAM_SIGMA);
+      count = pushLine(count, 0, z, width, z, 0.12, 3, NEVER, beamSigma);
     }
     lines.uploadRange(0, count);
     highway.count = count;
@@ -597,7 +632,7 @@ function createPhosphor(gl) {
     const capHeight = Math.min(10, gap * 0.38);
     const unit = capHeight / 6;
     const top = frontY + (gap - capHeight) * 0.55;
-    const sigma = Math.min(BEAM_SIGMA, unit * 0.36);
+    const sigma = Math.min(beamSigma, unit * 0.36);
     const segments = LABELS.segments;
     let count = highway.count;
     let cursor = -1e9;
@@ -675,7 +710,7 @@ function createPhosphor(gl) {
     }
 
     // 1. Fade the phosphor: this frame's beam goes, the tail decays.
-    const tailKeep = Math.exp(-frame.dt / TAIL_SECONDS);
+    const tailKeep = Math.exp(-frame.dt / look.tailSeconds);
     persist.bind();
     gl.bindVertexArray(emptyVao);
     gl.disable(gl.SCISSOR_TEST);
@@ -707,7 +742,7 @@ function createPhosphor(gl) {
       gl.uniform2f(boxProgram.uniforms.uSize, width, height);
       gl.uniform4f(boxProgram.uniforms.uView, width * 0.5, horizonY, frontY, DEPTH_SCALE);
       gl.uniform3f(boxProgram.uniforms.uBox, songTime, boxHalf, thin);
-      gl.uniform1f(boxProgram.uniforms.uSigma, BEAM_SIGMA);
+      gl.uniform1f(boxProgram.uniforms.uSigma, beamSigma);
       gl.uniform2f(boxProgram.uniforms.uDeposit, nowShare, tailShare);
       gl.uniform4f(boxProgram.uniforms.uQuiet, 0, 0, 0, 1);
       gl.bindVertexArray(boxes.vao);
@@ -726,56 +761,84 @@ function createPhosphor(gl) {
 
     // 3. The halation's copy. This pass and the next cover every pixel, so
     // clearing first spares the GPU loading what was there.
-    bloom.bind();
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.useProgram(down.program);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, persist.texture);
-    gl.uniform2f(down.uniforms.uTexel, 1 / persist.width, 1 / persist.height);
     gl.bindVertexArray(emptyVao);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.activeTexture(gl.TEXTURE0);
+    if (bloom) {
+      bloom.bind();
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(down.program);
+      gl.bindTexture(gl.TEXTURE_2D, persist.texture);
+      gl.uniform2f(down.uniforms.uTexel, 1 / persist.width, 1 / persist.height);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
 
-    // 4. Onto the glass.
+    // 4. Onto the glass (or whatever the look puts the light on).
     bindCanvas(gl, frame);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(composite.program);
     gl.bindTexture(gl.TEXTURE_2D, persist.texture);
     gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, bloom.texture);
+    gl.bindTexture(gl.TEXTURE_2D, bloom ? bloom.texture : null);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, material ? material.texture : null);
     gl.activeTexture(gl.TEXTURE0);
     const t = frame.time;
-    const flicker = frame.reducedMotion ? 1 : 1 + 0.02 * Math.sin(t * 43.7) * Math.sin(t * 5.9 + 1.3);
+    const flicker = !look.flicker || frame.reducedMotion
+      ? 1
+      : 1 + 0.02 * Math.sin(t * 43.7) * Math.sin(t * 5.9 + 1.3);
     gl.uniform2f(composite.uniforms.uRes, frame.pixelWidth, frame.pixelHeight);
     gl.uniform1f(composite.uniforms.uDpr, frame.dpr);
     gl.uniform4f(composite.uniforms.uLook, flicker * storeScale, 0.9, 1 - frontY / height, t);
-    gl.uniform2f(composite.uniforms.uBloomTexel, 1 / bloom.width, 1 / bloom.height);
+    if (bloom) gl.uniform2f(composite.uniforms.uBloomTexel, 1 / bloom.width, 1 / bloom.height);
     gl.uniform1f(composite.uniforms.uMotion, frame.reducedMotion ? 0 : 1);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindVertexArray(null);
+  };
+
+  // The look's material, drawn once for each size of canvas.
+  const drawMaterial = (frame) => {
+    if (!material.resize(frame.pixelWidth, frame.pixelHeight)) return;
+    material.bind();
+    gl.disable(gl.BLEND);
+    gl.useProgram(materialProgram.program);
+    gl.uniform2f(materialProgram.uniforms.uRes, material.width, material.height);
+    gl.uniform1f(materialProgram.uniforms.uDpr, frame.dpr);
+    gl.bindVertexArray(emptyVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindVertexArray(null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   };
 
   return {
     resize(frame) {
       persist.resize(frame.pixelWidth, frame.pixelHeight);
-      bloom.resize(Math.ceil(frame.pixelWidth / 4), Math.ceil(frame.pixelHeight / 4));
+      bloom?.resize(Math.ceil(frame.pixelWidth / 4), Math.ceil(frame.pixelHeight / 4));
+      if (material) drawMaterial(frame);
     },
     render,
     dispose() {
       boxes.dispose();
       lines.dispose();
       persist.dispose();
-      bloom.dispose();
+      bloom?.dispose();
+      material?.dispose();
       gl.deleteVertexArray(emptyVao);
       gl.deleteProgram(boxProgram.program);
       gl.deleteProgram(lineProgram.program);
       gl.deleteProgram(fade.program);
       gl.deleteProgram(down.program);
       gl.deleteProgram(composite.program);
+      if (materialProgram) gl.deleteProgram(materialProgram.program);
     }
   };
 }
 
 export default {
   id: 'phosphor',
-  create: createPhosphor
+  create: (gl) => createPhosphor(gl, AMBER)
 };

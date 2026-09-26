@@ -108,55 +108,74 @@ describe('App', () => {
     expect(opening.resume).not.toHaveBeenCalled();
   });
 
-  it('slides the notes of the opening piece open under the visualizers, and remembers it', async () => {
-    opening.currentMidi = { duration: 1, notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }] };
-    const { unmount } = render(<App />);
-    const toggle = screen.getByRole('button', { name: 'Notes' });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
-    // The landing piece feeds the notes, so there is no "load a MIDI file" prompt,
-    // and the visualizers stay where they are.
-    expect(screen.queryByText(/Load a MIDI file/)).not.toBeInTheDocument();
-    expect(await screen.findByTestId('wave-candy-mock', {}, { timeout: 3000 })).toBeInTheDocument();
-
-    unmount(); // leaving the page saves the session
-    render(<App />);
-    expect(screen.getByRole('button', { name: 'Notes' })).toHaveAttribute('aria-expanded', 'true');
-    expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
-    // It slides shut first, then the canvas goes.
-    expect(screen.getByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument());
-  });
-
-  it('draws the notes in the style picked, remembers it, and shows the radar without WebGL2', async () => {
-    opening.currentMidi = { duration: 1, notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }] };
+  // jsdom has no WebGL2 (the setup's partial stand-in cannot run a style): the
+  // notes view says so on its stage and in the console, which these tests hush.
+  const withoutWebGl2 = () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
       .mockImplementation(function getContextWithoutWebGl2(type) {
         return type === 'webgl2' ? null : originalGetContext.call(this, type);
       });
+    return {
+      errors,
+      restore() {
+        getContext.mockRestore();
+        errors.mockRestore();
+      }
+    };
+  };
+
+  it('slides the notes of the opening piece open under the visualizers, and remembers it', async () => {
+    const webGl = withoutWebGl2();
     try {
+      opening.currentMidi = { duration: 1, notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }] };
       const { unmount } = render(<App />);
-      expect(screen.queryByRole('group', { name: 'Notes style' })).not.toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
-      expect(screen.getByRole('button', { name: 'Radar' })).toHaveAttribute('aria-pressed', 'true');
-      fireEvent.click(screen.getByRole('button', { name: 'Embers' }));
-      expect(screen.getByRole('button', { name: 'Embers' })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByRole('button', { name: 'Radar' })).toHaveAttribute('aria-pressed', 'false');
-      // No WebGL2 here: the view says so and the radar takes its place.
-      await waitFor(() => expect(errors).toHaveBeenCalledWith(expect.stringContaining('WebGL2 is unavailable')));
-      expect(await screen.findByRole('region', { name: "Bird's-eye MIDI radar" })).toBeInTheDocument();
+      const toggle = screen.getByRole('button', { name: 'Notes' });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(await screen.findByRole('region', { name: 'Notes: Phosphor' })).toBeInTheDocument();
+      // The landing piece feeds the notes, so there is no "play a MIDI file" prompt,
+      // and the visualizers stay where they are.
+      expect(screen.queryByText(/Play a MIDI file/)).not.toBeInTheDocument();
+      expect(await screen.findByTestId('wave-candy-mock', {}, { timeout: 3000 })).toBeInTheDocument();
 
       unmount(); // leaving the page saves the session
       render(<App />);
-      expect(screen.getByRole('button', { name: 'Embers' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Notes' })).toHaveAttribute('aria-expanded', 'true');
+      expect(await screen.findByRole('region', { name: 'Notes: Phosphor' })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+      // It slides shut first, then the canvas goes.
+      expect(screen.getByRole('region', { name: 'Notes: Phosphor' })).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('region', { name: 'Notes: Phosphor' })).not.toBeInTheDocument());
     } finally {
-      getContext.mockRestore();
-      errors.mockRestore();
+      webGl.restore();
+    }
+  });
+
+  it('draws the notes in the style picked, remembers it, and says so without WebGL2', async () => {
+    const webGl = withoutWebGl2();
+    try {
+      opening.currentMidi = { duration: 1, notes: [{ midi: 60, time: 0, duration: 1, velocity: 0.8 }] };
+      const { unmount } = render(<App />);
+      expect(screen.queryByRole('group', { name: 'Phosphor versions' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Notes' }));
+      expect(screen.getByRole('group', { name: 'Phosphor versions' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Phosphor' })).toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(screen.getByRole('button', { name: 'Stars' }));
+      expect(screen.getByRole('button', { name: 'Stars' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Phosphor' })).toHaveAttribute('aria-pressed', 'false');
+      // No WebGL2 here: the view says so in the console and on its stage.
+      await waitFor(() => expect(webGl.errors).toHaveBeenCalledWith(expect.stringContaining('WebGL2 is unavailable')));
+      const view = await screen.findByRole('region', { name: 'Notes: Stars' });
+      expect(view).toHaveTextContent('These notes need WebGL2');
+
+      unmount(); // leaving the page saves the session
+      render(<App />);
+      expect(screen.getByRole('button', { name: 'Stars' })).toHaveAttribute('aria-pressed', 'true');
+    } finally {
+      webGl.restore();
     }
   });
 
@@ -195,9 +214,9 @@ describe('App', () => {
     expect(screen.queryByRole('tab', { name: "Bird's-Eye" })).not.toBeInTheDocument();
   });
 
-  it('does not render birds-eye radar when midi is not playing', () => {
+  it('does not mount the notes view while the notes panel is shut', () => {
     render(<App />);
-    expect(screen.queryByRole('region', { name: "Bird's-eye MIDI radar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /^Notes:/ })).not.toBeInTheDocument();
   });
 
   it('does not show keyboard waveform label', () => {

@@ -71,7 +71,7 @@ src/
 │   │   ├── GlNotesView.jsx    # Host: one WebGL2 context, frame pacing, radar fallback (lazy)
 │   │   ├── noteFrame.js       # What a style draws from: score, song clock, pitch span
 │   │   ├── glKit.js           # Programs, instanced quads, offscreen targets, GLSL noise
-│   │   └── styles/            # paperRoll, stars, embers, rain, phosphor (a chunk each)
+│   │   └── styles/            # phosphor (+ Lamp, Pencil looks), paperRoll, stars, rain
 │   │
 │   ├── editor/                # Piano-roll editor parts (#/editor)
 │   │   ├── VelocityLane.jsx   # Velocity stems under the grid
@@ -338,36 +338,59 @@ src/
   picture at the top of the open sound dial while its instrument is the loaded
   sound; the dial takes it when it opens and keeps it until it closes
 - Under the visual row a "Notes" disclosure (`showNotes`, saved in the
-  session) slides the keyboard down over 500 ms and opens `BirdsEyeRadar`, the
-  falling notes of whatever is playing (the MIDI tab's piece, else the landing
-  piece), between the visualizers and the keys. Playing a piece from the MIDI
-  tab opens it; the canvas unmounts once the panel has slid shut
-- The open panel's row names its looks on the right (`notesStyle`, saved in the
-  session; opening it adds no height): Radar, the original Canvas 2D
-  `BirdsEyeRadar`, and five WebGL2 styles in `components/notes/styles/`, each
-  a chunk of its own fetched when picked. Paper roll: a player-piano roll whose
-  punched slots run down into a brass tracker bar, lamplight through the ones
-  sounding (its paper is a tile drawn once per size and scrolled). Stars: every
-  note a star trail turning around a pole below the panel. Embers: cinders fall
-  to the keys and burst into rising sparks. Rain: drops fall to a night pond and
-  ring out. Phosphor: an amber vector monitor with phosphor persistence
-- The WebGL2 styles are raw WebGL2, no library (Raylib's web build draws through
+  session) slides the keyboard down over 500 ms and opens the notes view
+  (`components/notes/GlNotesView.jsx`), the notes of whatever is playing (the
+  MIDI tab's piece, else the landing piece), between the visualizers and the
+  keys. Playing a piece from the MIDI tab opens it; the canvas unmounts once the
+  panel has slid shut. The study page (`#/studies`) shows the same view in the
+  default style (reading the session there would add 1 KB gzip to a route
+  already over D12)
+- The open panel's row names its looks (`notesStyle`, saved in the session;
+  opening it adds no height on desktop and one row under the toggle on narrow
+  screens, never two: a phone's page does not scroll, and a second row pushed
+  the notes' front line under the sound dial):
+  Phosphor, the default, and its versions at the left edge, the other styles at
+  the right. Each style is a chunk of its own, fetched when picked. Phosphor: an
+  amber vector monitor, a perspective highway whose outlined boxes reach the
+  front line as their notes start, with phosphor persistence and the sounding
+  notes' names under the line. Its versions keep that highway and change only
+  the finish, because Luke loves the layout but wanted it "a little less
+  cyberpunk": Lamp (the same light without the tube: no scanlines, curvature or
+  flicker, warm tungsten in a dim room; Luke's pick of the versions) and Pencil
+  (graphite on drafting paper, a watercolour wash where notes sound). A Chalk
+  version (a slate board) was tried and dropped at his word.
+  Paper roll: a player-piano roll whose punched slots run down into a brass
+  tracker bar, lamplight through the ones sounding. Stars: every note a star
+  trail turning around a pole below the panel. Rain: drops fall to a night pond
+  and ring out. Embers (cinders falling to the keys) was dropped at his word
+- Luke removed the original Canvas 2D radar (`BirdsEyeRadar`) on 2026-09-26,
+  with its palette, gradient and particle caches and the perf guards on them;
+  the note index it shared with the study page lives on in
+  `utils/noteTimeIndex.js`
+- The styles are raw WebGL2, no library (Raylib's web build draws through
   WebGL anyway; the Raylib visualizer this repo once had weighed 107 KB gzip).
   `GlNotesView` keeps one context for the life of the panel and swaps styles on
   it, renders up to 60 fps while music plays (30 paused, 20 with no score) on
-  the audio clock (`getPlaybackProgress`, which the opening now passes along
-  too), DPR capped at 1.5, through `startVisibilityAwareRafLoop`. Without
-  WebGL2, or when a style fails to start or throws, it logs a console error and
-  shows the radar in its place. A style is `{ id, create(gl) }` returning
-  `{ resize(frame), render(frame), dispose() }` and reads the frame from
-  `noteFrame.js` (notes sorted with `end` and a stable `seed`, `songTime`,
-  `jumped` on seeks and loops, the piece's own pitch span of at least three
-  octaves). Its render allocates nothing, sets every GL state it uses, draws in
-  a handful of instanced calls and stays under 0.5 ms of GPU a frame at
-  1400x430, dpr 1.5 on an M3 Max, about 5x an M1 Air (measured 0.18-0.42 ms
-  p50 with timer queries; the radar's Canvas 2D costs 0.16-1.1 ms of main
-  thread a frame, the styles 0.002-0.012 ms). Shaders are scanned by `audit:ui` too: no
-  "glow" identifiers, and `1.0 - dot(a, b)` with spaces (`/\.[\w-]*dot/`)
+  the audio clock (`getPlaybackProgress`, which the opening passes along too),
+  DPR capped at 1.5, through `startVisibilityAwareRafLoop`. Without WebGL2, or
+  when a style fails to start or throws, it logs a console error and says so
+  on the stage. A style is `{ id, create(gl) }` returning `{ resize(frame),
+  render(frame), dispose() }` and reads the frame from `noteFrame.js` (notes
+  sorted with `end` and a stable `seed`, `songTime`, `jumped` on seeks and
+  loops, the piece's own pitch span of at least three octaves). Its render
+  allocates nothing, sets every GL state it uses, draws in a handful of
+  instanced calls and stays under 0.5 ms of GPU a frame at 1400x430, dpr 1.5
+  on an M3 Max, about 5x an M1 Air (measured 0.18-0.42 ms p50 with timer
+  queries; main thread 0.002-0.012 ms a frame, against the old radar's
+  0.16-1.1 ms of Canvas 2D). Shaders are scanned by `audit:ui` too: no "glow"
+  identifiers, and `1.0 - dot(a, b)` with spaces (`/\.[\w-]*dot/`)
+- Phosphor's versions share one core: `createPhosphor(gl, look)` in
+  `styles/phosphor.js` draws the highway, boxes and names into a persistence
+  buffer, and a look (`AMBER` there, `LAMP` and `PENCIL` in `phosphor*.js`)
+  only finishes that light onto the canvas: its composite shader, an optional
+  material drawn once per size (Pencil's paper), whether
+  sounding fills get a channel of their own, bloom, line softness, trail
+  length and flicker. The refactor left Phosphor's own frames pixel-identical
 - Visual feedback on keyboard shows active notes
 - Play/pause/stop controls with progress bar
 

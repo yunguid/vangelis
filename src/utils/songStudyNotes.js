@@ -1,4 +1,4 @@
-import { lowerBound, upperBound } from '../components/midiBirdsEyeMath.js';
+import { lowerBound, upperBound } from './noteTimeIndex.js';
 
 const LOOK_BEHIND_SECONDS = 0.08;
 const LOOK_AHEAD_SECONDS = 0.24;

@@ -28,12 +28,11 @@ import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { consumePendingMidi } from './utils/pendingMidiHandoff.js';
 import { getLandingFiles, isLandingEligible, loadRemovedPieces, stepPiece } from './data/landingQueue.js';
 import { createTrailingDeadlineScheduler } from './utils/trailingDeadlineScheduler.js';
-import { NOTES_STYLES } from './components/notes/notesStyles.js';
+import { NOTES_STYLES, notesStyleName } from './components/notes/notesStyles.js';
 import './styles/overlays.css';
 
 const Scene = React.lazy(() => import('./components/Scene'));
 const WaveCandy = React.lazy(() => import('./components/WaveCandy'));
-const BirdsEyeRadar = React.lazy(() => import('./components/BirdsEyeRadar'));
 const GlNotesView = React.lazy(() => import('./components/notes/GlNotesView.jsx'));
 
 const NOTICE_TIMEOUT_MS = 2200;
@@ -60,6 +59,10 @@ const CHEVRON_ICON = (
     <path d="M6 9l6 6 6-6" />
   </svg>
 );
+
+// Phosphor and its versions sit left of the Notes toggle, the other styles right.
+const PHOSPHOR_STYLES = NOTES_STYLES.filter(({ family }) => family === 'phosphor');
+const OTHER_STYLES = NOTES_STYLES.filter(({ family }) => family !== 'phosphor');
 
 const SOUND_OFF_ICON = (
   <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -711,17 +714,24 @@ const App = () => {
                       {CHEVRON_ICON}
                     </button>
                     {showNotes && (
-                      <div className="notes-panel__styles" role="group" aria-label="Notes style">
-                        {NOTES_STYLES.map(({ id, name }) => (
-                          <button
-                            key={id}
-                            type="button"
-                            className="btn notes-panel__style"
-                            aria-pressed={notesStyle === id}
-                            onClick={() => setNotesStyle(id)}
-                          >
-                            {name}
-                          </button>
+                      <div className="notes-panel__picker">
+                        {[
+                          ['Phosphor versions', 'notes-panel__styles--phosphor', PHOSPHOR_STYLES],
+                          ['Other notes styles', 'notes-panel__styles--other', OTHER_STYLES]
+                        ].map(([label, placement, styles]) => (
+                          <div key={placement} className={`notes-panel__styles ${placement}`} role="group" aria-label={label}>
+                            {styles.map(({ id, name }) => (
+                              <button
+                                key={id}
+                                type="button"
+                                className="btn notes-panel__style"
+                                aria-pressed={notesStyle === id}
+                                onClick={() => setNotesStyle(id)}
+                              >
+                                {name}
+                              </button>
+                            ))}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -733,24 +743,14 @@ const App = () => {
                     <div className="notes-panel__content">
                       {notesMounted && (
                         <React.Suspense fallback={null}>
-                          {notesStyle === 'radar' ? (
-                            <BirdsEyeRadar
-                              currentMidi={notesSource.currentMidi}
-                              progress={notesSource.progress}
-                              activeNotes={notesSource.activeNotes}
-                              isPlaying={notesSource.isPlaying}
-                            />
-                          ) : (
-                            <GlNotesView
-                              styleId={notesStyle}
-                              styleName={NOTES_STYLES.find(({ id }) => id === notesStyle).name}
-                              currentMidi={notesSource.currentMidi}
-                              progress={notesSource.progress}
-                              activeNotes={notesSource.activeNotes}
-                              isPlaying={notesSource.isPlaying}
-                              getPlaybackProgress={notesSource.getPlaybackProgress}
-                            />
-                          )}
+                          <GlNotesView
+                            styleId={notesStyle}
+                            styleName={notesStyleName(notesStyle)}
+                            currentMidi={notesSource.currentMidi}
+                            progress={notesSource.progress}
+                            isPlaying={notesSource.isPlaying}
+                            getPlaybackProgress={notesSource.getPlaybackProgress}
+                          />
                         </React.Suspense>
                       )}
                     </div>
