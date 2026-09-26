@@ -233,9 +233,9 @@ src/
   piece picked at random from `LANDING_PIECES` (never the previous visit's
   while there is a choice); "On load" switches in the MIDI tab choose which
   are in the queue (localStorage), and all off means a silent landing. The
-  queue is Luke's choice: Pernambuco, Subwoofer Lullaby and Blade Runner
-  Blues; a performance with `landing: false` (Saudade de Triana) stays in the
-  library only
+  queue is Luke's choice: Pernambuco, The Shade of the Mango Tree, Subwoofer
+  Lullaby and Blade Runner Blues; a performance with `landing: false`
+  (Saudade de Triana) stays in the library only
 - A built-in piece can be removed from the MIDI tab (the × on a row, then
   Remove in the row's confirmation). Removed ids live in localStorage
   (`vangelis.midiRemoved.v1`); a removed piece leaves the list, its search and
@@ -249,7 +249,7 @@ src/
   attribution in `public/samples/nylon-guitar/README.md`). Sampled notes are
   started on the audio clock, so strums keep their string-to-string spacing
 - `Pernambuco` (Luiz Bonfá, *Solo in Rio 1959*) is a note-by-note transcription
-  of the record, not the record: `src/data/pernambuco.js` reads its MIDI file
+  of the record, not the record: `src/data/guitarTranscriptions.js` reads its MIDI file
   (channel = string; velocity = loudness; CC 70 = which recorded stroke, CC 74 =
   brightness, CC 75 = how fast a muted stroke dies; RPN 1 = the record's pitch,
   +41.7 cents) and plays each note from the Iowa take of that string, fret and
@@ -258,6 +258,19 @@ src/
   `mute` (a decay on the audio clock) and a set's `gain`. The record's recording
   chain comes along: a mono room fitted by rendering against the record, and its
   tape hiss as looping white noise 44 dB under the music
+- `The Shade of the Mango Tree` (Luiz Bonfá with Don Burrows and George Golla,
+  *Bonfa Burrows Brazil*, 1978; the record Nujabes sampled for "Lady Brown") is
+  the same kind of transcription of a band record's guitar alone: Demucs lifts
+  the guitar out of the band (`scripts/guitar-transcription/separate.py`,
+  eight seeded offsets), and the flute, bass, drums and strings are not
+  played. Its voice (`GUITAR_TRANSCRIPTIONS` in `guitarTranscriptions.js`,
+  takes in `public/samples/nylon-guitar/shade-of-the-mango-tree`, RPN 1 =
+  +7.5 cents) was set against the record's first 20 seconds, where the guitar
+  plays alone: an ambient room chosen by how it fills the intro's pauses, the
+  hiss 48.7 dB under the music, and each take's pluck voiced apart from its
+  ring (`build_samples.py --attack`), since the Iowa player's attack is far
+  brighter than Bonfá's on this record. Journey:
+  `docs/replicas/shade-of-the-mango-tree/JOURNEY.md`
 - `Blade Runner Blues` (Vangelis, 1982; the 1994 album) is a transcription played
   by the app's own synth (`src/data/bladeRunnerBlues.js`): four parts, a CS-80
   (a sine layer, louder up the keyboard, beside a phase-aligned saw low-passed at
@@ -297,6 +310,7 @@ src/
   `--score <module.mjs>` (exporting `async loadScore(root)`) renders a score in
   development, and scores with `parts` run the real synth worklet per layer.
   `scripts/guitar-transcription/` (Python) is the pipeline that made Pernambuco
+  and The Shade of the Mango Tree
 - A performance with a `waveform` file (`LANDING_PIECES`) shows it as a still
   picture at the top of the open sound dial while its instrument is the loaded
   sound; the dial takes it when it opens and keeps it until it closes

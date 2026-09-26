@@ -171,12 +171,14 @@ function readScore(midiPath) {
 }
 
 async function arrange(piece, midiPath) {
-  if (piece.transcription === 'pernambuco') {
-    const { readGuitarPerformance, arrangePernambuco, pernambucoTake, makeTapeHiss } = await import('../src/data/pernambuco.js');
+  if (piece.instrument === 'nylon-guitar' && piece.transcription) {
+    const { GUITAR_TRANSCRIPTIONS, readGuitarPerformance, arrangeGuitarTranscription, transcriptionTake, makeTapeHiss } = await import('../src/data/guitarTranscriptions.js');
+    const voice = GUITAR_TRANSCRIPTIONS[piece.transcription];
     const score = readGuitarPerformance(new tonejsMidi.Midi(readFileSync(midiPath)));
-    const keys = [...new Set(score.notes.map(pernambucoTake))];
+    const keys = [...new Set(score.notes.map((note) => transcriptionTake(voice, note)))];
     const buffers = new Map(keys.map((key) => [key, decode(path.join(root, 'public/samples/nylon-guitar', `${key}.mp3`))]));
-    return arrangePernambuco(score, buffers, argument('ambience') === 'off' ? null : makeTapeHiss(bufferMaker, seededRandom(1959)));
+    const hiss = voice.hissGain && argument('ambience') !== 'off' ? makeTapeHiss(bufferMaker, seededRandom(1959)) : null;
+    return arrangeGuitarTranscription(score, buffers, voice, hiss);
   }
   const score = readScore(midiPath);
   if (piece.instrument === 'nylon-guitar') {

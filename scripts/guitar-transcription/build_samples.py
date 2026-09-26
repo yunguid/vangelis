@@ -7,7 +7,14 @@ the recording's faster decay of high partials alpha(f)), all measured by the ana
 fit. Then it trims each take to the longest note that plays it, fades the tail, sets every take's
 attack level on one line and encodes mono MP3.
 
-usage: build_samples.py <iowa 2496mono dir> <fit.pkl> <performance.mid> <out dir> [--tone a.json,b.json] [--verbose]
+With --attack (calibration rounds from calibrate.py), the first moments of each take are voiced
+apart: the pluck's own brightness, which the ring's voicing does not reach, gets the measured
+correction in full for ATTACK_SECONDS after the pluck, fading out over ATTACK_FADE.
+
+usage: build_samples.py <iowa 2496mono dir> <fit.pkl> <performance.mid> <out dir> [--tone a.json,b.json]
+       [--attack a.json,b.json] [--clip 18] [--verbose]
+       (--clip: the most any voicing may lift or cut, dB; The Shade of the Mango Tree's record is
+       more than 18 dB darker than the Iowa takes above 8 kHz)
 """
 import sys, os, pickle, subprocess, tempfile, numpy as np, scipy.signal as ss, soundfile as sf, mido
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -46,6 +53,8 @@ def needed_takes(midi_path):
     return need
 
 TONE_CORRECTION = None     # (Hz, dB) the last render measured over the record (calibrate.py)
+ATTACK_CORRECTION = None   # (Hz, dB) its strokes' attacks measured against their ring (calibrate.py)
+ATTACK_SECONDS, ATTACK_FADE = 0.02, 0.03
 
 def voicing_curve(fit, midi, freqs):
     """Gain (linear) per STFT bin: H * E_p, from CQT bins to Hz, clipped to +-CLIP_DB, minus the
@@ -75,6 +84,12 @@ def voice(audio, fit, midi):
     n = 2048; hop = 256
     f, tt, Z = ss.stft(audio, fs=SR, window='hann', nperseg=n, noverlap=n - hop, boundary='zeros', padded=True)
     G = voicing_curve(fit, midi, f)[:, None] * np.exp(-decay_curve(fit, f)[:, None] * np.maximum(0, tt - PRE_ROLL)[None, :])
+    if ATTACK_CORRECTION is not None:
+        hz, db = ATTACK_CORRECTION
+        cut = np.clip(np.interp(np.log(np.maximum(f, 1)), np.log(hz), db, left=db[0], right=db[-1]), -CLIP_DB, CLIP_DB)
+        # frames by their centre: the whole correction up to ATTACK_SECONDS past the pluck, none past the fade
+        w = np.clip(1 - (np.maximum(0, tt - PRE_ROLL) - ATTACK_SECONDS) / ATTACK_FADE, 0, 1)
+        G = G * 10 ** (-cut[:, None] * w[None, :] / 20)
     _, y = ss.istft(Z * G, fs=SR, window='hann', nperseg=n, noverlap=n - hop, boundary=True)
     return y[:len(audio)].astype(np.float32)
 
@@ -120,10 +135,16 @@ def main(src, fit_path, midi_path, out_dir):
     print(f'{len(built)} takes, {total / 1048576:.2f} MiB, shared gain {shared:+.1f} dB, trims {np.min([b["trim"] for b in built]):+.1f}..{np.max([b["trim"] for b in built]):+.1f} dB')
 
 if __name__ == '__main__':
+    if '--clip' in sys.argv:
+        CLIP_DB = float(sys.argv[sys.argv.index('--clip') + 1])
     if '--tone' in sys.argv:
         # one or more calibration rounds (comma-separated), each measured on the previous build
         import json
         curves = [json.load(open(f))['tone'] for f in sys.argv[sys.argv.index('--tone') + 1].split(',')]
         hz = np.array([t[0] for t in curves[0]])
         TONE_CORRECTION = (hz, np.sum([[t[1] for t in c] for c in curves], axis=0))
+    if '--attack' in sys.argv:
+        import json
+        curves = [json.load(open(f))['attack'] for f in sys.argv[sys.argv.index('--attack') + 1].split(',')]
+        ATTACK_CORRECTION = (np.array([t[0] for t in curves[0]]), np.sum([[t[1] for t in c] for c in curves], axis=0))
     main(*sys.argv[1:5])

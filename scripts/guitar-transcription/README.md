@@ -1,10 +1,13 @@
 # Guitar transcription
 
-How "Pernambuco" (`public/midi/performances/pernambuco.mid`) and its recordings
-(`public/samples/nylon-guitar/pernambuco/`) were made from Luiz Bonfá's 1959 record
-(*Solo in Rio 1959*, Smithsonian Folkways SFW40483; one nylon-strung Do Souto guitar, recorded
-live in Rio on a mono Nagra III). The record itself is never committed: it is fetched into a
-scratch folder, analysed there, and only the notes and the measured tone leave it.
+How Luiz Bonfá's guitar on two records became MIDI files and recordings that play it:
+"Pernambuco" (`public/midi/performances/pernambuco.mid`, `public/samples/nylon-guitar/pernambuco/`)
+from his 1959 record (*Solo in Rio 1959*, Smithsonian Folkways SFW40483; one nylon-strung Do
+Souto guitar, recorded live in Rio on a mono Nagra III), and "The Shade of the Mango Tree"
+(`shade-of-the-mango-tree.mid`, `nylon-guitar/shade-of-the-mango-tree/`) from *Bonfa Burrows
+Brazil* (1978), a band record from which only his guitar is taken. A record itself is never
+committed: it is fetched into a scratch folder, analysed there, and only the notes and the
+measured tone leave it.
 
 The approach is analysis by synthesis. Three published guitar-transcription models propose the
 notes; a model of the recording then explains its spectrogram as the sum of those notes, each
@@ -24,7 +27,10 @@ Python 3.11 and ffmpeg (7.1 here). Three environments, since the models pin thei
 uv venv analysis -p 3.11 && VIRTUAL_ENV=analysis uv pip install -r requirements.txt
 uv venv models -p 3.11 && VIRTUAL_ENV=models uv pip install "git+https://github.com/xavriley/hf_midi_transcription.git@96f6797881e9497cbfc8f8e5deccea9c1f2f7adc"
 uv venv bp -p 3.11 && VIRTUAL_ENV=bp uv pip install basic-pitch==0.4.0 onnxruntime==1.30.0 "setuptools<70"
+uv venv sep -p 3.11 && VIRTUAL_ENV=sep uv pip install demucs==4.0.1 torch==2.14.0 "numpy<2" soundfile
 ```
+
+(`sep` is only for band records, whose guitar has to be separated first.)
 
 The QMUL checkpoints (MIT) come from `huggingface.co/xavriley/midi-transcription-models`:
 `guitar-gaps.pth`, `guitar-gaps-paper-version-12200_iterations.pth` (GAPS, classical guitar)
@@ -57,30 +63,82 @@ All paths below are in a scratch folder; `T=scripts/guitar-transcription`.
    `stage2_prune.py features.pkl stage1.pkl onsets.json stage2.pkl`,
    `stage3_room.py features.pkl stage2.pkl stage3.pkl`. Each prints the model's cost and the
    fraction of the recording's energy it misses and adds.
-7. First MIDI and samples: `make_midi.py features.pkl stage3.pkl beats.json pernambuco.mid`,
+7. First MIDI and samples: `make_midi.py features.pkl stage3.pkl beats.json pernambuco.mid
+   --cents 41.7 --title "Pernambuco (Luiz Bonfá, 1959)" --source "Transcribed from Luiz Bonfá,
+   Solo in Rio 1959 (Smithsonian Folkways SFW40483); strings = channels"`,
    `build_samples.py <2496mono dir> stage3.pkl pernambuco.mid public/samples/nylon-guitar/pernambuco`
    (the renderer and the page read them there), then render it the way the page plays it:
    `node scripts/render_performance.mjs --piece performance-pernambuco --midi pernambuco.mid --out render.wav`.
-8. Ghost strokes: `compare.py record.wav render.wav cmp --unmatched unmatched.json` lists the
-   record's plucks the render lacks; `stage4_ghosts.py features.pkl stage3.pkl unmatched.json stage4.pkl`
+8. Ghost strokes: `compare.py record.wav render.wav cmp --span 0.5,92 --unmatched unmatched.json`
+   lists the record's plucks the render lacks; `stage4_ghosts.py features.pkl stage3.pkl
+   unmatched.json stage4.pkl --cents 41.7`
    adds the heavily muted thumb strokes the audio supports.
-9. Closed loop: render, then `calibrate.py record.wav render.wav stage4.pkl features.pkl calib.json`
+9. Closed loop: render, then `calibrate.py record.wav render.wav stage4.pkl features.pkl calib.json
+   --cents 41.7 --span 0.5,92`
    measures the long-term spectrum and every note's loudness against the record; feed the
    rounds back with `make_midi.py ... --loudness calib_a.json,calib_b.json` and
    `build_samples.py ... --tone calib_a.json,calib_b.json` and repeat.
 
-10. The recording chain: `noise_floor.py record.wav floor.json` shows the record's floor is flat
-    tape hiss above 3 kHz (no mains hum), so the page lays looping white noise under the piece;
-    `hiss_level.py record.wav render.wav` sets its gain (44.2 dB under the music on the record).
-    `room_sweep.py` renders the opening under each reverb setting and keeps the one closest to
-    the record (mono, mix 0.9, size 0.6, decay 0.8 of 47 tried).
+10. The recording chain: `noise_floor.py record.wav floor.json --span 0.6,92.5` shows the record's
+    floor is flat tape hiss above 3 kHz (no mains hum), so the page lays looping white noise under
+    the piece; `hiss_level.py record.wav render.wav --span 0.6,92.5` sets its gain (44.2 dB under
+    the music on the record).
+    `room_sweep.py ... --piece performance-pernambuco --span 0.5,45` renders the opening under
+    each reverb setting and keeps the one closest to the record (mono, mix 0.9, size 0.6, decay
+    0.8 of 47 tried).
 
 `viz_cqt.py` draws pitch-grid spectrogram pages with notes overlaid; `viz_fit.py` draws the
 recording, the model and their difference, which is how the fit's failures were found.
 
+## Steps, as run for The Shade of the Mango Tree
+
+A band record (*Bonfa Burrows Brazil*, 1978: Bonfá's guitar with flute, bass, drums and
+strings), so its guitar is lifted out of the band first, and the piece plays the guitar alone.
+The journey is `docs/replicas/shade-of-the-mango-tree/JOURNEY.md`.
+
+1. The record: `yt-dlp -f 251` from `youtube.com/watch?v=PJ4XqEqMM1A` (the label's upload),
+   resampled (soxr) to 44.1 kHz stereo `rec44.wav`.
+2. Stems: `separate.py rec44.wav sep htdemucs_6s --shifts 8`. The guitar plays alone until
+   0:33, and there Demucs files part of its thumb bass under "bass"; after it the bass stem is
+   the bass player's. The fit explains `guitar_target.py target.wav sep/htdemucs_6s_guitar.wav
+   sep/htdemucs_6s_bass.wav@0-32.6`.
+3. Pitch: `tuning.py` on the guitar stem finds +7.5 cents, steady (the flute and the bass sit
+   elsewhere: the guitar's own tuning, not tape speed); `speed_correct.py target.wav fixed.wav
+   7.5`, and the same for a mono mix of the record (`mix_fixed.wav`), whose drums give the beats.
+4. Timing, notes, takes and features as for Pernambuco (steps 3-5) on `fixed.wav`, with
+   `beats_and_form.py mix_fixed.wav`.
+5. The fit as for Pernambuco, with a larger room grid (this record's room is bigger):
+   `stage3_room.py features.pkl stage2.pkl stage3.pkl --levels 0,0.05,0.1,0.18,0.3,0.45,0.65
+   --taus 0.05,0.1,0.2,0.35` (level 0.45, 0.1 s won).
+6. The room, width and hiss were set against the record's first 20 seconds, where nothing but
+   the guitar plays (the stems cannot be trusted for tone: Demucs splits the guitar's low end
+   and its thumps across "bass" and "drums"). `room_sweep.py <repo> rec44.wav work 0.5,0.65,0.8,0.9,1.0
+   0.4,0.6,0.8 0.4,0.6,0.8,1.0 on --piece performance-shade-of-the-mango-tree --span 0.4,20
+   --width 0.5 --mode ambient` (and room, plate, hall). The four reverbs scored alike, so the
+   choice, and then the reverb's tone and pre-delay, went by how deep the render's tails fill the
+   intro's four pauses; the width by the left/right correlation per band (those two measures
+   were scratch scripts; the journey has their numbers); the tape hiss by `hiss_level.py
+   record.wav render.wav --span 0.4,20` (48.7 dB under the solo guitar; `noise_floor.py` over the
+   same span shows it steady in both channels, falling about 3.5 dB an octave above 5 kHz).
+7. Closed loop, twice: `make_midi.py features.pkl stage3.pkl beats.json shade-of-the-mango-tree.mid
+   --cents 7.5 --title "The Shade of the Mango Tree (Luiz Bonfá, 1978)" --source "..."
+   [--loudness r0.json,r1.json]`, `build_samples.py <2496mono dir> stage3.pkl
+   shade-of-the-mango-tree.mid public/samples/nylon-guitar/shade-of-the-mango-tree --clip 30
+   [--tone r0.json,r1.json --attack r0.json,r1.json]`, render with
+   `--piece performance-shade-of-the-mango-tree --midi ...`, then `calibrate.py rec44.wav
+   render.wav stage3.pkl features.pkl rN.json --cents 7.5 --span 0.4,20`. Two things differ
+   from Pernambuco: the record is more than 18 dB darker than the Iowa takes above 8 kHz
+   (hence `--clip 30`), and the Iowa player's pluck is far brighter than Bonfá's on this record
+   (15-18 dB above 10 kHz in the first 25 ms), which no correction of the whole note reaches;
+   `calibrate.py` measures the attack against the ring, and `build_samples.py --attack` voices
+   each take's first 20-50 ms apart.
+
+Ghost strokes (step 8 for Pernambuco) were not tried: the thumps they would explain are the
+ones Demucs moved into its drums stem, so the fit's target does not hold them.
+
 ## Where it stands
 
-The shipped version rendered offline and compared with the record: per-note loudness error IQR
+**Pernambuco.** The shipped version rendered offline and compared with the record: per-note loudness error IQR
 -0.2..+0.3 dB (5-95%: -1.0..+1.3 dB), 100 ms loudness contour r = 0.948, long-term spectrum
 within about 2 dB from 62 Hz to 16 kHz, tape hiss 43.9 dB under the music (record 44.2), onsets
 at +2.9 ms median (F1 0.835 against a detector that also hears finger noise), log-CQT similarity
@@ -89,3 +147,12 @@ at +2.9 ms median (F1 0.835 against a detector that also hears finger noise), lo
 Not modelled: the tape's flutter (about 2.4 cents at 19 Hz) and finger noise on the wound
 strings. The pianissimo takes of the low E string above the 7th fret do not split cleanly (15
 plucks for 12 notes) and are left out; the piece does not play them.
+
+**The Shade of the Mango Tree.** 2,486 notes from 215 takes (2.1 MB). Against the record's solo
+intro (0:00-0:20): long-term spectrum within 1 dB from 44 Hz to 8 kHz (1/6 octave, smoothed;
+11-16 kHz 2-3 dB dark), the attacks against their ring within 1.2 dB up to 6 kHz (1.6-2.3 dB
+bright above), tape hiss 48.6 dB under the music (record 48.7), loudness contour r 0.920,
+log-CQT similarity 0.941, chroma 0.964. Every note's loudness against the fit: IQR -0.3..+0.3 dB
+(5-95%: -1.5..+1.4 dB). Over the whole song against the separated guitar: loudness contour
+r 0.941, log-CQT 0.937, chroma 0.960, onsets at +2.9 ms median (F1 0.80). Not played: the
+flute, bass, drums and strings.

@@ -6,7 +6,8 @@ attack energy (its first 60 ms, dry, through the recording channel) at 25 dB per
 the loudest 1% of strokes at 127. `--loudness` applies closed-loop corrections measured by
 calibrate.py (one or more rounds, comma-separated; at most 4 dB per round and note).
 
-usage: make_midi.py features.pkl fit.pkl beats.json out.mid [--loudness a.json,b.json] [--cents 41.7]
+usage: make_midi.py features.pkl fit.pkl beats.json out.mid --cents 41.7 --title "..." --source "..."
+       [--loudness a.json,b.json]
 """
 import json
 import pickle
@@ -29,7 +30,7 @@ def note_key(n):
 
 
 features_path, fit_path, beats_path, out = sys.argv[1:5]
-cents = float(option('--cents', 41.7))
+cents = float(option('--cents'))
 speed = 2 ** (cents / 1200)
 M = Model.resume(pickle.load(open(features_path, 'rb')), pickle.load(open(fit_path, 'rb')))
 M.room_level = 0.0  # loudness is the dry stroke's
@@ -57,8 +58,7 @@ for n, v in zip(notes, velocity):
         time=t, end=max(end, t + 0.03), midi=n['midi'], string=n['s'], velocity=int(np.clip(round(v * 127), 1, 127)),
         take=n['d'], tilt=n.get('tilt', 0), mute_s=n['mute'] * FRAME_SECONDS / speed if n.get('mute') else None))
 beats = np.array(json.load(open(beats_path))['beats']) / speed
-export(performance, beats, out, cents, 'Pernambuco (Luiz Bonfá, 1959)',
-       'Transcribed from Luiz Bonfá, Solo in Rio 1959 (Smithsonian Folkways SFW40483); strings = channels')
+export(performance, beats, out, cents, option('--title'), option('--source'))
 takes = {d: sum(1 for p in performance if p['take'] == d) for d in ('pp', 'mf', 'ff')}
 print(f'{out}: {len(performance)} notes; velocity 5/50/95%: {np.percentile([p["velocity"] for p in performance], [5, 50, 95])}; '
       f'muted {sum(1 for p in performance if p["mute_s"])}; takes {takes}')

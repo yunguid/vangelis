@@ -4,7 +4,7 @@ At the record's plucks that a render of the transcription does not reproduce
 (compare.py --unmatched), tries a heavily muted stroke (15-30 ms decay) of every pitch on
 every free string and keeps the ones the audio supports (cost reduction above --penalty).
 
-usage: stage4_ghosts.py features.pkl stage3.pkl unmatched.json stage4.pkl [--penalty 40] [--cents 41.7]
+usage: stage4_ghosts.py features.pkl stage3.pkl unmatched.json stage4.pkl --cents 41.7 [--penalty 40]
 """
 import json
 import pickle
@@ -23,7 +23,7 @@ def option(name, default):
 
 features_path, fit_path, unmatched_path, out = sys.argv[1:5]
 penalty = option('--penalty', 40)
-speed = 2 ** (option('--cents', 41.7) / 1200)   # the record's timeline runs this much faster
+speed = 2 ** (float(sys.argv[sys.argv.index('--cents') + 1]) / 1200)   # the record's timeline runs this much faster
 M = Model.resume(pickle.load(open(features_path, 'rb')), pickle.load(open(fit_path, 'rb')))
 set_natural_ends(M)
 M.build()

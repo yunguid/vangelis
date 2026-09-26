@@ -2,11 +2,12 @@
 plays (the gaps between strokes), against the band's median; plus any steady tones (mains hum).
 On Pernambuco it is flat tape hiss above about 3 kHz and there is no 50/60 Hz hum.
 
-usage: noise_floor.py record.wav noise_floor.json
+usage: noise_floor.py record.wav noise_floor.json --span 0.6,92.5   (the seconds of music to measure)
 """
 import numpy as np, soundfile as sf, scipy.signal as ss, json, sys
 x, sr = sf.read(sys.argv[1], dtype='float64'); x = x.mean(axis=1)
-music = x[int(0.6 * sr):int(92.5 * sr)]
+T0, T1 = (float(v) for v in sys.argv[sys.argv.index('--span') + 1].split(','))
+music = x[int(T0 * sr):int(T1 * sr)]
 n = 4096; hop = 1024
 frames = np.lib.stride_tricks.sliding_window_view(music, n)[::hop] * np.hanning(n)
 P = np.abs(np.fft.rfft(frames, axis=1)) ** 2

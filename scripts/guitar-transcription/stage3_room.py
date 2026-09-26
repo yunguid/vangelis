@@ -4,7 +4,8 @@ Grid-searches the room's tail (level against the dry note, and its time constant
 release time the page uses at a note's end, and re-fits every note's stop, brightness, take
 and the per-pitch timbre under them.
 
-usage: stage3_room.py features.pkl stage2.pkl stage3.pkl
+usage: stage3_room.py features.pkl stage2.pkl stage3.pkl [--levels 0,0.02,0.05,0.1,0.18,0.3]
+       [--taus 0.05,0.1,0.2,0.35,0.6]   (the room grid; the defaults are Pernambuco's)
 """
 import pickle
 import sys
@@ -14,6 +15,9 @@ from model import FRAME_SECONDS, Model
 from refine import damp_pass, dyn_pass, set_natural_ends, tilt_pass
 
 features_path, fit_path, out = sys.argv[1:4]
+grid = lambda name, default: tuple(float(v) for v in (sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default).split(','))
+LEVELS = grid('--levels', '0,0.02,0.05,0.1,0.18,0.3')
+TAUS = grid('--taus', '0.05,0.1,0.2,0.35,0.6')
 M = Model.resume(pickle.load(open(features_path, 'rb')), pickle.load(open(fit_path, 'rb')))
 M.release_frames = 0.05 / FRAME_SECONDS
 set_natural_ends(M)
@@ -27,8 +31,8 @@ def report(tag):
 
 report('stage 2, release 50 ms')
 rooms = {}
-for level in (0.0, 0.02, 0.05, 0.1, 0.18, 0.3):
-    for seconds in ((0.05,) if level == 0 else (0.05, 0.1, 0.2, 0.35, 0.6)):
+for level in LEVELS:
+    for seconds in (TAUS[:1] if level == 0 else TAUS):
         M.room_level, M.room_frames = level, seconds / FRAME_SECONDS
         M.fit_gains(iters=3, fit_H=False, fit_N=False)
         rooms[(level, seconds)] = M.cost()

@@ -1,6 +1,7 @@
 """Record vs render: level-matched loudness contour, 1/3-octave long-term spectrum, onset timing
 agreement, CQT similarity, and side-by-side spectrogram pages.
-usage: compare.py original.wav render.wav out_prefix [--pages t0,t1,...] [--unmatched unmatched.json]
+usage: compare.py original.wav render.wav out_prefix --span 0.5,92 [--pages t0,t1,...] [--unmatched unmatched.json]
+(--span: the seconds of music to measure)
 (--unmatched writes the record's plucks with no render pluck within 30 ms, for stage4_ghosts.py)"""
 import sys, json, numpy as np, soundfile as sf, librosa, scipy.signal as ss, scipy.ndimage as nd, matplotlib
 matplotlib.use('Agg'); import matplotlib.pyplot as plt
@@ -10,14 +11,15 @@ def load(p):
     return librosa.resample(x, orig_sr=sr, target_sr=SR) if sr != SR else x
 a = load(sys.argv[1]); b = load(sys.argv[2]); out = sys.argv[3]
 n = min(len(a), len(b)); a, b = a[:n], b[:n]
+T0, T1 = (float(v) for v in sys.argv[sys.argv.index('--span') + 1].split(','))
 # level match on the music section
-act = slice(int(0.5 * SR), int(92 * SR))
+act = slice(int(T0 * SR), int(T1 * SR))
 g = np.sqrt(np.mean(a[act] ** 2) / np.mean(b[act] ** 2)); b = b * g
 print(f'render level offset {20 * np.log10(g):+.1f} dB (applied)')
 # 1. loudness contour
 hop = int(0.1 * SR)
 def rms_db(x): k = len(x) // hop; return 10 * np.log10(np.mean(x[:k * hop].reshape(k, hop) ** 2, axis=1) + 1e-12)
-la, lb = rms_db(a), rms_db(b); sel = (la > -50) & (np.arange(len(la)) * 0.1 < 92)
+la, lb = rms_db(a), rms_db(b); sel = (la > -50) & (np.arange(len(la)) * 0.1 > T0) & (np.arange(len(la)) * 0.1 < T1)
 print(f'loudness contour (100 ms): r = {np.corrcoef(la[sel], lb[sel])[0, 1]:.3f}, mean |diff| = {np.mean(np.abs(la[sel] - lb[sel])):.2f} dB')
 # 2. third-octave LTAS
 f, Pa = ss.welch(a[act], SR, nperseg=8192); _, Pb = ss.welch(b[act], SR, nperseg=8192)
@@ -53,7 +55,7 @@ Ca, Cb = cqt(a), cqt(b)
 A = np.log1p(Ca / Ca.max() * 1000); B = np.log1p(Cb / Cb.max() * 1000)
 k = min(A.shape[1], B.shape[1]); A, B = A[:, :k], B[:, :k]
 cos = np.sum(A * B, axis=0) / (np.linalg.norm(A, axis=0) * np.linalg.norm(B, axis=0) + 1e-9)
-act_f = (np.arange(k) * 448 / SR > 0.5) & (np.arange(k) * 448 / SR < 92)
+act_f = (np.arange(k) * 448 / SR > T0) & (np.arange(k) * 448 / SR < T1)
 ch_a = librosa.feature.chroma_cqt(C=Ca[:, :k], sr=SR, hop_length=448, bins_per_octave=36); ch_b = librosa.feature.chroma_cqt(C=Cb[:, :k], sr=SR, hop_length=448, bins_per_octave=36)
 chroma_cos = np.sum(ch_a * ch_b, axis=0) / (np.linalg.norm(ch_a, axis=0) * np.linalg.norm(ch_b, axis=0) + 1e-9)
 print(f'CQT log-magnitude cosine: mean {cos[act_f].mean():.3f} (10th pct {np.percentile(cos[act_f], 10):.3f}); chroma cosine mean {chroma_cos[act_f].mean():.3f}')

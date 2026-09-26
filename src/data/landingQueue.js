@@ -33,7 +33,7 @@ export const LANDING_PIECES = Object.freeze([
   },
   {
     // Transcribed from Bonfá's 1959 record and played from recordings voiced
-    // like it (data/pernambuco.js); the keys get the playable nylon guitar.
+    // like it (data/guitarTranscriptions.js); the keys get the playable nylon guitar.
     id: 'performance-pernambuco',
     name: 'Pernambuco',
     composer: 'Luiz Bonfá',
@@ -43,6 +43,18 @@ export const LANDING_PIECES = Object.freeze([
     instrumentLabel: 'Nylon-string guitar',
     // Its rendered waveform (scripts/render_performance.mjs --peaks), shown in the open sound dial.
     waveform: 'performances/pernambuco.waveform.json'
+  },
+  {
+    // Bonfá's guitar on the 1978 record with Don Burrows, lifted out of the band
+    // and transcribed the same way (data/guitarTranscriptions.js).
+    id: 'performance-shade-of-the-mango-tree',
+    name: 'The Shade of the Mango Tree',
+    composer: 'Luiz Bonfá',
+    relativePath: 'performances/shade-of-the-mango-tree.mid',
+    instrument: 'nylon-guitar',
+    transcription: 'shade-of-the-mango-tree',
+    instrumentLabel: 'Nylon-string guitar',
+    waveform: 'performances/shade-of-the-mango-tree.waveform.json'
   },
   {
     // Transcribed from Vangelis's record and played by the app's own synth, CS-80
@@ -186,9 +198,9 @@ async function arrangeSampledPiece(context, file) {
     return { score: { ...score, notes }, params: OPENING_PARAMS, waveformType: 'Sine' };
   }
 
-  if (file.transcription === 'pernambuco') {
-    const { loadPernambuco } = await import('./pernambuco.js');
-    return { score: await loadPernambuco(context, file.path), params: null, waveformType: 'Sine' };
+  if (file.instrument === 'nylon-guitar' && file.transcription) {
+    const { loadGuitarTranscription } = await import('./guitarTranscriptions.js');
+    return { score: await loadGuitarTranscription(context, file.transcription, file.path), params: null, waveformType: 'Sine' };
   }
 
   if (file.instrument === 'nylon-guitar') {

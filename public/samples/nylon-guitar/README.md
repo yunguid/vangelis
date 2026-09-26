@@ -57,3 +57,12 @@ both measured by fitting the Iowa takes to the record, plus a per-pitch
 correction of the balance of partials. Every take is set on one level line,
 trimmed to the longest note that plays it and encoded as mono MP3. No audio
 from the record itself is in these files.
+
+`shade-of-the-mango-tree/` holds the takes "The Shade of the Mango Tree" plays
+(`public/midi/performances/shade-of-the-mango-tree.mid`, a note-by-note
+transcription of Luiz Bonfá's guitar on the 1978 record *Bonfa Burrows
+Brazil*), made the same way from the same 24-bit/96 kHz masters and voiced to
+sound like his guitar on that record. The voicing was measured against the
+guitar alone, lifted out of the band by source separation
+(`scripts/guitar-transcription/separate.py`). No audio from the record itself
+is in these files.
