@@ -27,12 +27,19 @@ export function useOpeningPerformance({ audioParams }) {
     waveformType: pieceSound?.waveformType || 'Sine',
     audioParams: pieceParams
   });
+  // A piece the listener chose (the now-playing arrows), while its recordings load.
+  const [pendingPiece, setPendingPiece] = useState(null);
   const cancelled = useRef(openingClaimed);
   const started = useRef(false);
+  // Every start, stop and choice takes a new ticket; a load holding an older one is dropped.
+  const request = useRef(0);
+  const wasPlaying = useRef(false);
   const userParams = useRef(audioParams);
   userParams.current = audioParams;
 
   const stop = useCallback(() => {
+    request.current += 1;
+    setPendingPiece(null);
     if (cancelled.current) return;
     cancelled.current = true;
     openingClaimed = true;
@@ -40,13 +47,40 @@ export function useOpeningPerformance({ audioParams }) {
     if (started.current) audioEngine.setGlobalParams(userParams.current);
   }, [playback.stop]);
 
+  // Any piece from the queue, from its start, whatever the landing did before it.
+  const playPiece = useCallback(async (piece) => {
+    const ticket = ++request.current;
+    setPendingPiece(piece);
+    // What sounds now stops at once; this is a change of piece, not the end of one.
+    wasPlaying.current = false;
+    playback.stop();
+    try {
+      const context = await audioEngine.ensureAudioContext();
+      const arranged = await arrangeBuiltInPiece(context, piece);
+      if (ticket !== request.current) return;
+      setPieceSound({ params: arranged.params, waveformType: arranged.waveformType, sound: arranged.sound, piece });
+      await audioEngine.ensureWasm();
+      if (ticket !== request.current) return;
+      openingClaimed = true;
+      cancelled.current = false;
+      started.current = true;
+      setPendingPiece(null);
+      playback.play(arranged.score);
+    } catch (error) {
+      if (ticket !== request.current) return;
+      setPendingPiece(null);
+      console.error(`Could not play ${piece.name}:`, error);
+    }
+  }, [playback.play, playback.stop]);
+
   useEffect(() => {
     if (cancelled.current) return undefined;
+    const ticket = request.current;
     let disposed = false;
     let context;
     let score;
     const tryStart = () => {
-      if (disposed || cancelled.current || started.current || !score) return;
+      if (disposed || cancelled.current || started.current || !score || ticket !== request.current) return;
       if (context.state !== 'running') {
         return;
       }
@@ -66,7 +100,7 @@ export function useOpeningPerformance({ audioParams }) {
         // Every piece switched off in the MIDI tab: the page opens silent.
         if (!piece) return;
         const arranged = await arrangeBuiltInPiece(context, piece);
-        if (disposed || cancelled.current) return;
+        if (disposed || cancelled.current || ticket !== request.current) return;
         saveLastLandingId(piece.id);
         setPieceSound({ params: arranged.params, waveformType: arranged.waveformType, sound: arranged.sound, piece });
         score = arranged.score;
@@ -85,21 +119,27 @@ export function useOpeningPerformance({ audioParams }) {
     };
   }, [playback.play]);
 
-  const wasPlaying = useRef(false);
+  // The piece ending by itself hands the listener's sound back; a pause does not.
   useEffect(() => {
     if (playback.isPlaying) wasPlaying.current = true;
-    else if (wasPlaying.current) stop();
-  }, [playback.isPlaying, stop]);
+    else if (wasPlaying.current && !playback.isPaused) stop();
+  }, [playback.isPlaying, playback.isPaused, stop]);
 
   // `sound` is what the piece is played with, for the page to load under the keys;
-  // `piece` is the landing file, and the rest is its transport for the notes view.
+  // `piece` is the landing file, and the rest is its transport for the notes view and
+  // the now-playing bar (`pendingPiece` while a chosen piece loads).
   return {
     activeNotes: playback.activeNotes,
     currentMidi: playback.currentMidi,
     progress: playback.progress,
     isPlaying: playback.isPlaying,
     getPlaybackProgress: playback.getPlaybackProgress,
+    isPaused: playback.isPaused,
+    pause: playback.pause,
+    resume: playback.resume,
     stop,
+    playPiece,
+    pendingPiece,
     sound: pieceSound?.sound ?? null,
     piece: pieceSound?.piece ?? null
   };

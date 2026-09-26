@@ -1,5 +1,7 @@
 # Blade Runner Blues: the journey
 
+*Rebuilt by Claude Opus 5.5 with Luke, 25 September 2026.*
+
 Rebuilding Vangelis's "Blade Runner Blues" inside Vangelis (the app), with sounds we design
 ourselves on the app's own synthesizer rather than borrowed samples. Every entry says what was
 done, what was measured and what it changed; numbers come from the commands named beside them.

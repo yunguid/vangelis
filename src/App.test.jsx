@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import App from './App';
 import { parseMidiFile } from './utils/midiParser.js';
+import { getLandingFiles } from './data/landingQueue.js';
 
 // Opening lifecycle is exercised with the real MIDI scheduler in its integration tests.
-// `opening.sound` stands in for the sound of whichever landing piece was picked.
-const opening = vi.hoisted(() => ({ sound: null, currentMidi: null }));
+// `opening.sound` stands in for the sound of whichever landing piece was picked, `opening.piece`
+// for the piece itself (the now-playing bar's), and the functions for its transport.
+const opening = vi.hoisted(() => ({
+  sound: null, currentMidi: null, piece: null, isPlaying: false, pause: null, resume: null, playPiece: null
+}));
 vi.mock('./hooks/useOpeningPerformance.js', () => ({
   useOpeningPerformance: () => ({
-    activeNotes: new Set(), stop: vi.fn(), sound: opening.sound, currentMidi: opening.currentMidi, piece: null
+    activeNotes: new Set(), stop: vi.fn(), sound: opening.sound, currentMidi: opening.currentMidi,
+    piece: opening.piece, pendingPiece: null, isPlaying: opening.isPlaying, isPaused: false,
+    pause: opening.pause, resume: opening.resume, playPiece: opening.playPiece
   })
 }));
 
@@ -71,7 +77,35 @@ describe('App', () => {
     engineStatus.current = { wasmReady: false, graphWarmed: false };
     opening.sound = null;
     opening.currentMidi = null;
+    opening.piece = null;
+    opening.isPlaying = false;
+    opening.pause = vi.fn();
+    opening.resume = vi.fn();
+    opening.playPiece = vi.fn();
     recordings.load = vi.fn();
+  });
+
+  it('shows what the landing plays in the top bar, and its arrows step through the queue', () => {
+    opening.piece = getLandingFiles().find((file) => file.id === 'performance-shade-of-the-mango-tree');
+    opening.isPlaying = true;
+    render(<App />);
+    const bar = screen.getByRole('group', { name: 'Now playing' });
+    expect(within(bar).getByText('The Shade of the Mango Tree')).toBeInTheDocument();
+    expect(within(bar).getByRole('button', { name: 'How The Shade of the Mango Tree was rebuilt' })).toBeInTheDocument();
+    fireEvent.click(within(bar).getByRole('button', { name: 'Pause' }));
+    expect(opening.pause).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(bar).getByRole('button', { name: 'Next piece' }));
+    expect(opening.playPiece).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'performance-blade-runner-blues' }));
+    fireEvent.click(within(bar).getByRole('button', { name: 'Previous piece' }));
+    expect(opening.playPiece).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'performance-pernambuco' }));
+  });
+
+  it('starts the landing piece again once it has ended', () => {
+    opening.piece = getLandingFiles().find((file) => file.id === 'performance-pernambuco');
+    render(<App />);
+    fireEvent.click(within(screen.getByRole('group', { name: 'Now playing' })).getByRole('button', { name: 'Play' }));
+    expect(opening.playPiece).toHaveBeenCalledWith(opening.piece);
+    expect(opening.resume).not.toHaveBeenCalled();
   });
 
   it('slides the notes of the opening piece open under the visualizers, and remembers it', async () => {

@@ -1,0 +1,112 @@
+/* A replica's journey, read in a pop-up over the page (components/JourneyDialog.jsx). Loaded
+   with the pop-up, never with the page. It sits outside #root (a portal on the body), where the
+   global heading rule would set its titles in capitals. */
+.journey-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 48px);
+  background: color-mix(in srgb, var(--color-bg-deep) 72%, transparent);
+  animation: dissolveIn var(--transition-dissolve) forwards;
+}
+
+.journey-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  max-height: min(84vh, 820px);
+  max-height: min(84dvh, 820px);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-medium);
+  background: color-mix(in srgb, var(--color-core-ink) 96%, var(--color-core-paper));
+  box-shadow: var(--shadow-floating);
+  overflow: hidden;
+}
+
+.journey-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 24px;
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.journey-dialog__header h2 {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--color-text-primary);
+}
+
+.journey-dialog__body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 24px 24px;
+  font-size: var(--text-body);
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+
+.journey-dialog__body h3 {
+  margin: 22px 0 6px;
+  font-size: var(--text-title);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--color-text-primary);
+}
+
+.journey-dialog__body p,
+.journey-dialog__body ul {
+  margin: 10px 0;
+}
+
+.journey-dialog__body ul {
+  padding-left: 18px;
+}
+
+.journey-dialog__body li + li {
+  margin-top: 6px;
+}
+
+.journey-dialog__body strong {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.journey-dialog__body code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--color-text-primary);
+}
+
+.journey-dialog__table {
+  margin: 12px 0;
+  overflow-x: auto;
+}
+
+.journey-dialog__table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-label);
+  line-height: 1.5;
+}
+
+.journey-dialog__table th,
+.journey-dialog__table td {
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--border-hairline);
+  text-align: left;
+  vertical-align: top;
+}
+
+.journey-dialog__table th {
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}

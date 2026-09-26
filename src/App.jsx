@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useOpeningPerformance } from './hooks/useOpeningPerformance.js';
 import AppHeader from './components/AppHeader.jsx';
+import NowPlaying from './components/NowPlaying.jsx';
 import SynthKeyboard from './components/SynthKeyboard';
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
@@ -25,7 +26,7 @@ import {
 } from './context/SynthContexts.jsx';
 import { loadAppSession, saveAppSession } from './utils/appSession.js';
 import { consumePendingMidi } from './utils/pendingMidiHandoff.js';
-import { getLandingFiles } from './data/landingQueue.js';
+import { getLandingFiles, isLandingEligible, loadRemovedPieces, stepPiece } from './data/landingQueue.js';
 import { createTrailingDeadlineScheduler } from './utils/trailingDeadlineScheduler.js';
 import { NOTES_STYLES } from './components/notes/notesStyles.js';
 import './styles/overlays.css';
@@ -117,12 +118,17 @@ const App = () => {
   // MIDI playback hook
   const midiPlayback = useMidiPlayback({ waveformType, audioParams });
   const opening = useOpeningPerformance({ audioParams });
+  // Which player the now-playing bar follows: the landing piece (and the pieces its arrows
+  // step to), or one started from the MIDI tab.
+  const [nowSource, setNowSource] = useState('opening');
   const playMidi = useCallback((...args) => {
     opening.stop();
+    setNowSource('library');
     midiPlayback.play(...args);
     // A piece started from the library opens its notes, as it always has.
     setShowNotes(true);
   }, [opening.stop, midiPlayback.play]);
+  const libraryCurrent = nowSource === 'library' ? midiPlayback.currentMidi : null;
   const transportBpm = (midiPlayback.currentMidi?.bpm || 120) * midiPlayback.tempoFactor;
 
   // A MIDI file picked on another page (Design, a study) lands here to play.
@@ -136,7 +142,7 @@ const App = () => {
 
   // Hardware MIDI input (notes + pitch bend + mod wheel)
   const webMidi = useWebMidiInput({ waveformType, audioParams, onUserPlay: opening.stop });
-  const notesSource = midiPlayback.currentMidi ? midiPlayback : opening;
+  const notesSource = libraryCurrent ? midiPlayback : opening;
   const toggleNotes = useCallback(() => setShowNotes((shown) => !shown), []);
   useEffect(() => {
     if (showNotes) {
@@ -151,9 +157,63 @@ const App = () => {
   // A performance that brings a still picture of its waveform shows it in the
   // open sound dial while its instrument is the sound under the keys.
   const shownPiece = useMemo(() => {
-    const id = midiPlayback.currentMidi?.sourceFileId;
+    const id = libraryCurrent?.sourceFileId;
     return id ? getLandingFiles().find((file) => file.id === id) || null : opening.piece;
-  }, [midiPlayback.currentMidi, opening.piece]);
+  }, [libraryCurrent, opening.piece]);
+
+  // The now-playing bar: what plays (a chosen piece while it loads), its transport, and the
+  // queue's pieces for its arrows.
+  const nowPlaying = useMemo(() => {
+    if (libraryCurrent) {
+      const file = getLandingFiles().find((entry) => entry.id === libraryCurrent.sourceFileId);
+      return {
+        id: libraryCurrent.sourceFileId || null,
+        title: libraryCurrent.name || 'MIDI file',
+        composer: libraryCurrent.composer || file?.composer || null,
+        journey: file?.journey || null,
+        isPlaying: midiPlayback.isPlaying,
+        isLoading: false
+      };
+    }
+    const piece = opening.pendingPiece || opening.piece;
+    return piece && {
+      id: piece.id,
+      title: piece.name,
+      composer: piece.composer || null,
+      journey: piece.journey || null,
+      isPlaying: opening.isPlaying,
+      isLoading: Boolean(opening.pendingPiece)
+    };
+  }, [libraryCurrent, midiPlayback.isPlaying, opening.isPlaying, opening.pendingPiece, opening.piece]);
+  const playLandingPiece = useCallback((file) => {
+    midiPlayback.stop();
+    setNowSource('opening');
+    opening.playPiece(file);
+  }, [midiPlayback.stop, opening.playPiece]);
+  const nowPlayingId = nowPlaying?.id;
+  const stepNowPlaying = useCallback((direction) => {
+    const removed = loadRemovedPieces();
+    const files = getLandingFiles().filter((file) => isLandingEligible(file) && !removed.has(file.id));
+    const next = stepPiece(files, nowPlayingId, direction);
+    if (next) playLandingPiece(next);
+  }, [nowPlayingId, playLandingPiece]);
+  const playPreviousPiece = useCallback(() => stepNowPlaying(-1), [stepNowPlaying]);
+  const playNextPiece = useCallback(() => stepNowPlaying(1), [stepNowPlaying]);
+  const toggleNowPlaying = useCallback(() => {
+    if (libraryCurrent) {
+      if (midiPlayback.isPlaying) midiPlayback.pause();
+      else if (midiPlayback.isPaused) midiPlayback.resume();
+      else midiPlayback.play(libraryCurrent);
+      return;
+    }
+    if (opening.isPlaying) opening.pause();
+    else if (opening.isPaused) opening.resume();
+    else if (opening.piece) playLandingPiece(opening.piece); // ended, or stopped by a key
+  }, [
+    libraryCurrent, midiPlayback.isPlaying, midiPlayback.isPaused, midiPlayback.pause, midiPlayback.resume,
+    midiPlayback.play, opening.isPlaying, opening.isPaused, opening.pause, opening.resume, opening.piece,
+    playLandingPiece
+  ]);
   const noteCount = notesSource.currentMidi?.notes?.length ?? 0;
   const dialArtifact = useMemo(() => (
     shownPiece?.waveform && instrument === shownPiece.instrument
@@ -612,9 +672,22 @@ const App = () => {
           </React.Suspense>
         )}
         
-        <div className="app-shell">
-          <AppHeader onToggleRecording={handleRecordToggle} isRecording={isRecording} />
+        <AppHeader onToggleRecording={handleRecordToggle} isRecording={isRecording}>
+          {nowPlaying && (
+            <NowPlaying
+              title={nowPlaying.title}
+              composer={nowPlaying.composer}
+              journey={nowPlaying.journey}
+              isPlaying={nowPlaying.isPlaying}
+              isLoading={nowPlaying.isLoading}
+              onToggle={toggleNowPlaying}
+              onPrevious={playPreviousPiece}
+              onNext={playNextPiece}
+            />
+          )}
+        </AppHeader>
 
+        <div className="app-shell">
           <main className="zone-center content-primary" aria-label="Keyboard area">
             {showPrimaryVisual ? (
               <React.Suspense fallback={<div className="wave-candy wave-candy-placeholder" aria-hidden="true" />}>

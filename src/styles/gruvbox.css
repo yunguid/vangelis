@@ -157,10 +157,3 @@ h4,
   background: transparent !important;
   border: 0 !important;
 }
-
-@media (max-width: 900px) {
-  .header-actions {
-    border-left: 0;
-    border-top: 1px solid rgba(168, 153, 132, 0.18);
-  }
-}

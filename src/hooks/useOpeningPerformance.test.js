@@ -69,6 +69,53 @@ describe('opening performance with the real MIDI scheduler', () => {
     expect(fixture.engine.playBufferedSample).toHaveBeenCalledTimes(1);
   });
 
+  it('pauses and resumes the piece without handing the listener their sound back', async () => {
+    const { result } = renderHook(() => useOpeningPerformance({ audioParams: { volume: 0.6 } }));
+    await flush();
+    act(() => result.current.pause());
+    await flush();
+    expect(result.current.isPaused).toBe(true);
+    expect(result.current.isPlaying).toBe(false);
+    expect(fixture.engine.setGlobalParams).not.toHaveBeenCalled();
+    act(() => result.current.resume());
+    await flush();
+    expect(result.current.isPlaying).toBe(true);
+    expect(result.current.isPaused).toBe(false);
+  });
+
+  it('plays a piece the listener chooses from its start, after the landing piece was stopped', async () => {
+    const { getLandingFiles } = await import('../data/landingQueue.js');
+    const lullaby = getLandingFiles('/').find((file) => file.id === 'performance-opening-piano');
+    const { result } = renderHook(() => useOpeningPerformance({ audioParams: {} }));
+    await flush();
+    act(() => result.current.stop());
+    expect(result.current.isPlaying).toBe(false);
+    await act(async () => { await result.current.playPiece(lullaby); });
+    await flush();
+    expect(fixture.load).toHaveBeenCalledTimes(2);
+    expect(result.current.pendingPiece).toBeNull();
+    expect(result.current.piece.id).toBe('performance-opening-piano');
+    expect(result.current.isPlaying).toBe(true);
+    expect(result.current.activeNotes.has('C4')).toBe(true);
+  });
+
+  it('drops a chosen piece still loading when a key takes over', async () => {
+    const { getLandingFiles } = await import('../data/landingQueue.js');
+    const lullaby = getLandingFiles('/').find((file) => file.id === 'performance-opening-piano');
+    const { result } = renderHook(() => useOpeningPerformance({ audioParams: {} }));
+    await flush();
+    let resolve;
+    fixture.load.mockReturnValue(new Promise((done) => { resolve = done; }));
+    let choice;
+    act(() => { choice = result.current.playPiece(lullaby); });
+    expect(result.current.pendingPiece.id).toBe('performance-opening-piano');
+    act(() => result.current.stop());
+    await act(async () => { resolve(score()); await choice; });
+    await flush();
+    expect(result.current.pendingPiece).toBeNull();
+    expect(result.current.isPlaying).toBe(false);
+  });
+
   it('opens silent when the only queued piece was removed from the MIDI library', async () => {
     localStorage.setItem('vangelis.midiRemoved.v1', JSON.stringify(['performance-opening-piano']));
     try {

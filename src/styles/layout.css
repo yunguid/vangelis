@@ -25,7 +25,7 @@
   flex-direction: column;
 }
 
-/* App Shell - Main content wrapper */
+/* App Shell - Main content wrapper, right under the top bar */
 .app-shell {
   position: relative;
   width: var(--max-shell-width);
@@ -34,9 +34,75 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-xl);
-  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
-  min-height: 100vh;
-  min-height: 100dvh;
+  padding: 0 var(--space-lg) var(--space-2xl);
+  flex: 1 0 auto;
+}
+
+/* The home page's top bar: the name in the top left corner, what is playing in the
+   middle, recording at the right. It takes one control's height, so the page under it
+   starts high and the sound dial has the bottom to itself. */
+.top-bar {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-lg) 0 var(--space-xl);
+}
+
+.top-bar .brand-title {
+  justify-self: start;
+}
+
+.top-bar__center {
+  min-width: 0;
+}
+
+.top-bar .header-actions {
+  justify-self: end;
+  padding-left: 0;
+  border-left: 0;
+}
+
+/* What is playing: back, play or pause, forward, the name and how it was made. */
+.now-playing {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.now-playing__button {
+  flex: 0 0 auto;
+  color: var(--color-text-tertiary);
+}
+
+.now-playing__button:hover:not(:disabled) {
+  color: var(--color-text-primary);
+}
+
+.now-playing__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  max-width: 420px;
+  margin: 0 6px;
+  font-size: var(--text-body);
+  white-space: nowrap;
+}
+
+.now-playing__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--color-text-primary);
+}
+
+.now-playing__composer {
+  flex: 0 0 auto;
+  color: var(--color-text-tertiary);
 }
 
 .app-shell > * {
@@ -94,7 +160,7 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-lg);
-  padding: var(--space-lg) 0;
+  padding: var(--space-md) 0 var(--space-lg);
 }
 
 /* The notes of what is playing: a quiet disclosure above the keys. Opening it slides
@@ -238,16 +304,6 @@
   text-shadow: none;
   margin: 0;
   padding-left: 1px;
-}
-
-/* Header Controls */
-.header-controls {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px 18px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  max-width: none;
 }
 
 .header-actions {

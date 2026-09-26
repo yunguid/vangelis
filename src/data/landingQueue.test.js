@@ -18,7 +18,8 @@ import {
   isLandingEligible,
   loadLandingSelection,
   pickLandingPiece,
-  saveLandingSelection
+  saveLandingSelection,
+  stepPiece
 } from './landingQueue.js';
 
 const files = getLandingFiles('/');
@@ -60,6 +61,22 @@ describe('landing queue pick', () => {
       reached.add(pickLandingPiece(files, new Set(ids), null, () => step / 50).id);
     }
     expect([...reached].sort()).toEqual([...ids].sort());
+  });
+});
+
+describe('now-playing arrows', () => {
+  const queue = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+
+  it('step to the next or previous piece, round the end', () => {
+    expect(stepPiece(queue, 'a', 1).id).toBe('b');
+    expect(stepPiece(queue, 'c', 1).id).toBe('a');
+    expect(stepPiece(queue, 'a', -1).id).toBe('c');
+  });
+
+  it('go to the first or the last piece from one outside the queue, and nowhere from an empty one', () => {
+    expect(stepPiece(queue, 'a-classical-piece', 1).id).toBe('a');
+    expect(stepPiece(queue, null, -1).id).toBe('c');
+    expect(stepPiece([], 'a', 1)).toBeNull();
   });
 });
 

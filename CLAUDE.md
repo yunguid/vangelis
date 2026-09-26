@@ -243,6 +243,22 @@ src/
   queue is Luke's choice: Pernambuco, The Shade of the Mango Tree, Subwoofer
   Lullaby and Blade Runner Blues; a performance with `landing: false`
   (Saudade de Triana) stays in the library only
+- The home page's top bar (`components/AppHeader.jsx`) holds the name in the
+  top left corner, recording at the right and, between them, `NowPlaying`:
+  back, play/pause and forward for whatever plays (the landing piece, or the
+  piece started in the MIDI tab), its name, and for a replica a page icon that
+  opens `JourneyDialog`, the piece's `docs/replicas/<journey>/JOURNEY.md`
+  (`journey` in `LANDING_PIECES`) read in a pop-up. The pop-up, its Markdown
+  reader (`utils/journeyMarkdown.js`) and each journey are lazy chunks; the
+  pop-up is a portal on the body, so it covers the sound dial, and sets its
+  headings' case itself (outside `#root` the global heading rule is capitals).
+  The arrows step through the landing pieces not removed from the library
+  (`stepPiece`), played by the landing player (`useOpeningPerformance`'s
+  `playPiece`; a newer choice or a key press drops a slower load); pause keeps
+  the place and does not hand the listener's sound back, the end of a piece
+  does. The bar sits above the page column (`.top-bar`), so the page starts
+  right under it and the sound dial clears the keys; the other pages keep
+  their own header (`BrandHeader`, `.zone-top`)
 - A built-in piece can be removed from the MIDI tab (the × on a row, then
   Remove in the row's confirmation). Removed ids live in localStorage
   (`vangelis.midiRemoved.v1`); a removed piece leaves the list, its search and

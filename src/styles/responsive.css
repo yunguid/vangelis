@@ -7,7 +7,7 @@
 @media (max-width: 1200px) {
   .app-shell {
     width: min(100%, 1100px);
-    padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+    padding: 0 var(--space-lg) var(--space-2xl);
     gap: var(--space-lg);
   }
 
@@ -29,9 +29,37 @@
   .app-shell {
     width: 100%;
     max-width: none;
-    padding: max(12px, calc(env(safe-area-inset-top, 0px) + 8px)) var(--space-sm)
-      calc(88px + env(safe-area-inset-bottom, 0px));
+    padding: 0 var(--space-sm) calc(88px + env(safe-area-inset-bottom, 0px));
     gap: var(--space-md);
+  }
+
+  /* The name and recording share the first row; what is playing takes the second. */
+  .top-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'brand actions'
+      'playing playing';
+    row-gap: 4px;
+    padding: max(8px, calc(env(safe-area-inset-top, 0px) + 4px)) var(--space-sm) 0;
+  }
+
+  .top-bar .brand-title {
+    grid-area: brand;
+  }
+
+  .top-bar .header-actions {
+    grid-area: actions;
+  }
+
+  .top-bar__center {
+    grid-area: playing;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* The name of the piece needs the width more than its composer does. */
+  .now-playing__composer {
+    display: none;
   }
 
   .zone-top,
@@ -55,23 +83,6 @@
   .brand-title {
     font-size: 1rem;
     letter-spacing: 0.02em;
-  }
-
-  .header-controls {
-    width: 100%;
-    align-items: flex-start;
-    gap: 10px;
-    justify-content: flex-start;
-  }
-
-  .header-actions {
-    width: 100%;
-    padding-left: 0;
-    padding-top: 10px;
-    border-left: 0;
-    border-top: 1px solid rgba(244, 241, 232, 0.08);
-    justify-content: flex-start;
-    flex-wrap: wrap;
   }
 
   .zone-center {
@@ -122,12 +133,6 @@
     width: auto;
     text-align: left;
   }
-
-  .header-controls {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
 }
 
 /* Mobile portrait */

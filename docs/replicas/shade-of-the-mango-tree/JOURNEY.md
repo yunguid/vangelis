@@ -1,5 +1,7 @@
 # The Shade of the Mango Tree: the journey
 
+*Rebuilt by Claude Opus 5.5 with Luke, 26 September 2026.*
+
 Rebuilding Luiz Bonfá's guitar on "The Shade of the Mango Tree" ("Na Sombra da Mangueira")
 inside Vangelis, note by note, from the University of Iowa guitar recordings, the way
 Pernambuco was rebuilt. Luke asked for the song to open the page as another option, without

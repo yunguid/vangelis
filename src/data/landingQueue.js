@@ -42,7 +42,9 @@ export const LANDING_PIECES = Object.freeze([
     transcription: 'pernambuco',
     instrumentLabel: 'Nylon-string guitar',
     // Its rendered waveform (scripts/render_performance.mjs --peaks), shown in the open sound dial.
-    waveform: 'performances/pernambuco.waveform.json'
+    waveform: 'performances/pernambuco.waveform.json',
+    // How it was rebuilt (docs/replicas/<journey>/JOURNEY.md), read from the now-playing bar.
+    journey: 'pernambuco'
   },
   {
     // Bonfá's guitar on the 1978 record with Don Burrows, lifted out of the band
@@ -54,7 +56,8 @@ export const LANDING_PIECES = Object.freeze([
     instrument: 'nylon-guitar',
     transcription: 'shade-of-the-mango-tree',
     instrumentLabel: 'Nylon-string guitar',
-    waveform: 'performances/shade-of-the-mango-tree.waveform.json'
+    waveform: 'performances/shade-of-the-mango-tree.waveform.json',
+    journey: 'shade-of-the-mango-tree'
   },
   {
     // Transcribed from Vangelis's record and played by the app's own synth, CS-80
@@ -63,7 +66,8 @@ export const LANDING_PIECES = Object.freeze([
     name: 'Blade Runner Blues',
     composer: 'Vangelis',
     relativePath: 'performances/blade-runner-blues.mid',
-    transcription: 'blade-runner-blues'
+    transcription: 'blade-runner-blues',
+    journey: 'blade-runner-blues'
   }
 ]);
 
@@ -129,6 +133,17 @@ export const loadLandingSelection = (files) => {
 
 export const saveLandingSelection = (selection) => {
   writeJson(SELECTION_KEY, [...selection]);
+};
+
+/**
+ * Where the now-playing arrows go: the next (direction 1) or previous (-1) of `files` from the
+ * piece playing, round the end; from a piece that is not among them, the first or the last.
+ */
+export const stepPiece = (files, currentId, direction) => {
+  if (files.length === 0) return null;
+  const at = files.findIndex((file) => file.id === currentId);
+  if (at < 0) return direction > 0 ? files[0] : files[files.length - 1];
+  return files[(at + direction + files.length) % files.length];
 };
 
 /** Random pick that never repeats the previous visit while there is a choice. */
