@@ -316,8 +316,14 @@ src/
   (`pedalledNotes`: a note sounds until its key or the pedal comes up, a re-struck key cuts
   its earlier note); RPN 1 is the record's pitch, 32.1 cents flat, already built into the
   samples. Stereo recordings (the renderer decodes this piece's in stereo), a hall room, and
-  stereo pink hiss 53.2 dB under the music as its ambience. The record's other layers (glides,
-  chirps, a buzz, a whoosh) are not played yet. `scripts/piano-transcription/` made it;
+  stereo pink hiss 53.2 dB under the music as its ambience. The record's glides are a
+  chromatic cluster (a pure tone on every semitone, bent together): channel 2 carries them as
+  64 notes per span on one synth part (`parts.glides`, sines), sharing the channel's pitch
+  bend (RPN 0 = 24 semitones, cents from A440's grid) and CC 11 as each note's expression
+  (`bendRangeCents`/`sampleCurve` from bladeRunnerBlues.js). They are `unlit` notes: a score
+  note with `unlit` lights no key and stays out of the notes view (`useMidiPlayback`,
+  `noteFrame.prepareScore`), since 64 lit keys would bury the piano. Its chirps, buzz, whoosh and
+  single sine arches are not played. `scripts/piano-transcription/` made it;
   `docs/replicas/memories-of-green/JOURNEY.md` logs the journey
 - A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides,
   fadeIn, fadeOut }): `useMidiPlayback` loops it under the notes whenever they

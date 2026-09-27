@@ -53,7 +53,7 @@ where it dominates everything after 0:18; the stems are used to find the other l
 | Layer | When | What it is | Where |
 |---|---|---|---|
 | Piano | 0:02 to 4:52 | an acoustic grand, pedalled almost throughout (the pedal model hears it down for 285 of 305 s); B0 to F#7, most notes C4 to B5 | leaning left in the bass (6 dB at 63 Hz), level from 500 Hz, a little right at the top |
-| Glides | all through | tones with a full row of harmonics whose pitch sweeps up and down over 6 to 10 s, several at once; one plain sine glide (0:09 to 0:14) | wide |
+| Glides | all through, as first read (later: 0:00-0:57, 3:15-3:36, 4:02 to the end) | rows of lines whose pitch sweeps up and down over 6 to 10 s, read at first as harmonics (later: a chromatic cluster, below); one plain sine glide (0:09 to 0:14) | wide |
 | Chirps | the intro, then here and there | short tonal blips at about 1.75, 3 and 5 kHz, a second or so apart | |
 | Buzz | 3:24 to 3:32 | a pulsing, rattling band from about 2 to 4 kHz (Demucs files it as "drums") | |
 | Whoosh | 4:16 to 4:21 | a broadband sound sweeping down, like something passing (Demucs files it as "vocals") | |
@@ -152,49 +152,102 @@ plays it (`render_performance.mjs`), then measure it against the record from 0:1
   on average and the lean within 1.5 dB.
 - **Level.** Active level -32.1 dBFS against the record's -32.3.
 
-## 2026-09-27: the other layers
+## 2026-09-27: the other layers, first pass
 
-Luke asked to push on the other sounds too. After the piano, none of them stood next to the
-record yet, so none is played; what was learned:
+Luke asked to push on the other sounds too. The first pass, while the piano shipped on its own
+(9d4a4a5):
 
 - **The glides** are the biggest of them: whole rows of lines, 100 Hz to about 2.5 kHz, bending
-  up and down together over about 16 s, often two at once, plus one plain sine arch from 500 to
-  750 Hz and back (0:09.8-0:12.8). A tracker that assumed one buzzy tone and followed its
-  fundamental by harmonic sum (35-140 Hz, the piano's steady partials taken out with a 3 s
-  median) failed: it pinned to the top of its range. Measured directly on exposed moments of the
-  intro, the lines' spacing wanders from 23 to 34 Hz and is smallest where the arcs are highest,
-  which one harmonic tone cannot do. It is either several tones interleaved or a sound swept
-  through a comb filter; telling which, and rebuilding it on the synth, is the next step.
+  up and down together, often two at once, plus one plain sine arch from 500 to 750 Hz and back
+  (0:09.8-0:12.8). A tracker that assumed one buzzy tone and followed its fundamental by
+  harmonic sum (35-140 Hz, the piano's steady partials taken out with a 3 s median;
+  `glide_track.py`) failed: it pinned to the top of its range. Measured directly on the intro,
+  the lines' spacing wandered from 23 to 34 Hz, smallest where the arcs are highest, which one
+  harmonic tone cannot do.
 - **The chirps** (short blips at 1.75, 3 and 5 kHz), **the buzz** at 3:24-3:32 and **the whoosh**
   at 4:16-4:21 were located and described (the table above) but not measured further.
-- Without them the replica is silent where the record holds only these sounds: its first two
-  seconds, most of 3:26-3:32 and the last 12 seconds.
+
+## 2026-09-27: the glides are a chromatic cluster
+
+Two neighbouring arcs, tracked from 0.2 to 4 s with a 16384-point FFT, settled it. From 588 to
+992 Hz successive lines stand in a constant ratio, 1.056 to 1.065: a semitone (1.0595), not a
+harmonic series (constant spacing). And every line moves by the same ratio (0.92-0.95 of its
+height at 1.5 s, a few seconds either side). So the glides are a cluster of pure tones, one on
+every semitone, bent up and down together, as a chord would be under one pitch wheel.
+
+**Tracking it** (`cluster_track.py`). The spectrogram's moving part (each bin minus its median
+over 3 s) against a comb of semitone-spaced lines, for every offset from 0 to 99 cents, every
+50 ms; the best path through the offsets (circular, at most 25 cents a frame) unwrapped is the
+cluster's pitch. With 12 cents a frame it lost the faster sweeps near the end; with 25 it holds.
+What it found:
+
+- 0:00-0:57: a clean triangle, about 16 semitones down over 8.5 s and back up, every 17 s or so,
+  the comb standing 3.7-3.8 dB over the other offsets;
+- 3:15-3:36 and 4:02 to the end: the same sweeps, faster in places;
+- in between, under the dense piano, the comb stands no higher than elsewhere (about 1.3 dB,
+  the noise), so the cluster is weak or absent there and is not played.
+
+**Building it** (`cluster_notes.py`, `make_midi.py --glides`). On the app's synth: one sine per
+semitone from C2 to D#7 (64 notes), all on one synth part, sharing one pitch curve (the tracked
+path, a 0.5 s median) and one level curve, which the MIDI file carries as channel 2's pitch bend
+(a range of 24 semitones) and CC 11. The page reads them as each note's expression, as Blade
+Runner Blues's CS-80 notes are read. Two things had to change after the first render:
+
+- *Where it sits.* Each line's level was first read only over the tracker's band (262 Hz to
+  2.5 kHz), and the render's fan sat more than an octave above the record's. Read on the raw
+  spectrum over the intro's first 18 s instead (the level half a semitone off the line cannot
+  serve as the reference: below about 200 Hz the lines are closer than the FFT resolves), the
+  levels are within about 10 dB from C2 to C6 and fall above; the fan now sits at 100 Hz to
+  1.2 kHz, as the record's does.
+- *Its level.* Set from the comb's salience, the cluster fell silent wherever the glide turns
+  (its lines stand still there, and the 3 s median takes them), while the record's fan is as
+  bright at its turns as anywhere. It now holds one level within each span (gaps under 6 s
+  bridged, 1 s fades at the edges), each span's level set against the record on the comb lines:
+  0:03-0:58 at -8.7 dB, 3:15-3:36 at -2.2 dB, 4:02 to the end at 0 dB. On the comb lines the
+  render is now within 0.4, 0.5 and 1.4 dB of the record in the three spans.
+- *The end.* From 4:44 the record's fan dies away into single sine arches, while the tracker's
+  path wanders. Fading the cluster out there took the loudness contour's correlation from 0.846
+  to 0.733: the record still holds fan and arches at about -40 dBFS, and the replica without
+  them fell far below it. So the cluster plays on to the end; its motion in those 17 seconds is
+  approximate.
+
+On the page the first build lit every key on the keyboard for as long as the cluster sounds and
+filled the notes view with 64 lines, burying the piano. The glide notes are now marked as a
+sound under the music: they light no key and the notes view leaves them out (a new `unlit`
+flag on a score's notes, with a test that a glide note beside a piano note on the same key
+neither lights it nor, when it ends, puts it out).
+
+The glides took the loudness contour's correlation from 0.754 to 0.846 and filled the replica's
+quiet moments: at 250 and 500 Hz they are now 2.0 and 0.7 dB emptier than the record's, where
+the piano alone left them 11 and 10 dB emptier. The single sine arches, the chirps, the buzz
+and the whoosh are still not played.
 
 ## 2026-09-27: where it stands
 
 The piano, rendered offline the way the page plays it, against the record from 0:18 to 5:00:
 
-| | first render | shipped |
-|---|---|---|
-| notes | 1,206 (ByteDance, mix) | 1,385 (two ByteDance runs, disputed notes settled by synthesis) |
-| notes checked by eye, 0:18.3-0:25 | | 12 of 15 right, 3 uncertain, none missing |
-| loudness per note, record minus render | IQR -3.4..+3.7 dB, 5-95% -9.0..+9.1 | IQR -0.2..+0.2 dB, 5-95% -1.1..+3.8 |
-| loudness contour, 100 ms (the record's other layers included) | r 0.679 | r 0.754 |
-| long-term spectrum, 63 Hz-8 kHz, per third octave | 4.07 dB | 1.96 dB |
-| the strike at 2, 4, 8 and 12 kHz, record minus render | +4.6, -3.4, +8.1, +27.1 dB | +2.0, +0.9, +2.3, +2.2 dB |
-| the ring, 2-8 kHz | 6-21 dB dark | 2.6-6.8 dB dark |
-| quiet moments, 250 Hz-8 kHz, render minus record | 10-32 dB emptier | 6-11 dB emptier, 7 dB fuller at 8 kHz |
-| width, left/right correlation per octave, mean error | 0.40 | 0.06 |
-| lean, left minus right per octave, mean error | 2.6 dB | 1.4 dB |
-| hiss under the music | none | 53.2 dB (record 53.2) |
-| active level | -34.0 dBFS | -32.1 dBFS (record -32.3) |
+| | first render | the piano (9d4a4a5) | with the glides |
+|---|---|---|---|
+| notes | 1,206 (ByteDance, mix) | 1,385 (two ByteDance runs, disputed notes settled by synthesis) | the same, and 320 glide notes |
+| notes checked by eye, 0:18.3-0:25 | | 12 of 15 right, 3 uncertain, none missing | the same |
+| loudness per note, record minus render | IQR -3.4..+3.7 dB, 5-95% -9.0..+9.1 | IQR -0.2..+0.2 dB, 5-95% -1.1..+3.8 | IQR -0.2..+0.2 dB, 5-95% -1.3..+3.8 |
+| loudness contour, 100 ms | r 0.679 | r 0.754 | r 0.846 |
+| long-term spectrum, 63 Hz-8 kHz, per third octave | 4.07 dB | 1.96 dB | 1.95 dB |
+| the strike at 2, 4, 8 and 12 kHz, record minus render | +4.6, -3.4, +8.1, +27.1 dB | +2.0, +0.9, +2.3, +2.2 dB | +2.7, +1.0, +2.8, +3.1 dB |
+| the ring at 2, 4 and 8 kHz, record minus render | +6.3, +7.2, +21.4 dB | +4.0, +2.6, +6.8 dB | +3.9, +2.6, +7.6 dB |
+| quiet moments at 250 Hz, 500 Hz, 1, 2, 4 and 8 kHz, render minus record | -11.9, -11.7, -10.4, -11.6, -15.4, -31.8 dB | -11.2, -9.9, -8.8, -9.4, -6.0, +6.8 dB | -2.0, -0.7, -4.8, -8.0, -5.8, +7.0 dB |
+| width, left/right correlation per octave, mean error | 0.40 | 0.06 | 0.06 |
+| lean, left minus right per octave, mean error | 2.6 dB | 1.4 dB | 1.4 dB |
+| hiss under the music | none | 53.2 dB (record 53.2) | 53.2 dB |
+| active level | -34.0 dBFS | -32.1 dBFS (record -32.3) | -32.1 dBFS |
 
 On the site the piece loads only the 48 recordings it plays (27 positions, two layers), 3.5 MB,
 when it starts.
 
-**Still open.** The glides, chirps, buzz and whoosh (above). The ring is still a few dB darker
-than the record's above 2 kHz. The render's quiet moments stay emptier than the record's, most
-likely because the glides fill the record's. Three of fifteen notes in the checked excerpt are
+**Still open.** The single sine arches, the chirps, the buzz and the whoosh; the glides' motion
+in the last 17 seconds; a cluster in the middle of the piece, if one is there under the piano;
+the fan's brightness moving across its lines, which the record's does and one fixed set of line
+levels cannot. The ring is still a few dB darker than the record's above 2 kHz. Three of fifteen notes in the checked excerpt are
 uncertain, and nothing past that excerpt was checked by eye. Decay by register and chorus in
 the partials were not measured, so a CP-80 is ruled out by inharmonicity alone. Nobody has
 listened to it yet: that is next, with the A/B files.
@@ -219,5 +272,7 @@ listened to it yet: that is next, with the A/B files.
 | room_score.py | ring against attack, quiet-moment fill, tone per reverb | the hall at 0.9 |
 | width.py | correlation and lean per octave | samples at 0.3 width, leaned; reverb width 0.3 |
 | hiss_level.py, noise_floor.py | the floor above 7 kHz, hum lines | pink hiss 53.2 dB under; the 51.93 Hz tone left out |
-| glide_track.py | the glides' fundamental | failed; the glides left open |
+| glide_track.py | the glides' fundamental, as if one buzzy tone | failed: they are not one tone |
+| cluster_track.py | the glides as a semitone comb: pitch path, salience, line levels | a chromatic cluster; where it plays |
+| cluster_notes.py | the cluster's spans and level against the record | 64 sines on one part, three span levels |
 | render_performance.mjs | the piece as the page plays it | every number above |

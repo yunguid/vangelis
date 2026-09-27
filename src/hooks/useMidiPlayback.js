@@ -234,9 +234,11 @@ export function useMidiPlayback({
   const registerActiveVoices = useCallback((noteId, voiceIds) => {
     if (!Array.isArray(voiceIds) || voiceIds.length === 0) return;
 
+    voiceIds.forEach((id) => activeVoiceIdsRef.current.add(id));
+    // A score's `unlit` notes (a sound under the music, not its notes) light no key.
+    if (noteId === null) return;
     const counts = activeNoteCountsRef.current;
     counts.set(noteId, (counts.get(noteId) || 0) + voiceIds.length);
-    voiceIds.forEach((id) => activeVoiceIdsRef.current.add(id));
     publishActiveNotes();
   }, [publishActiveNotes]);
 
@@ -290,6 +292,7 @@ export function useMidiPlayback({
   const triggerNoteOff = useCallback((noteId, voiceId, when) => {
     audioEngine.stopNote(voiceId, when);
     activeVoiceIdsRef.current.delete(voiceId);
+    if (noteId === null) return;
 
     const counts = activeNoteCountsRef.current;
     const nextCount = (counts.get(noteId) || 0) - 1;
@@ -473,7 +476,7 @@ export function useMidiPlayback({
         const noteDuration = remainingOriginalDuration / tempo;
         const scheduledStart = startTime + noteTime;
         const scheduledEnd = scheduledStart + noteDuration;
-        const { noteId } = midiNoteToName(note.midi);
+        const noteId = note.unlit ? null : midiNoteToName(note.midi).noteId;
         const frequency = midiNoteToFrequency(note.midi);
         const voiceId = `midi-${note.midi}-${Math.round(note.time * 1000)}-${index}-${Math.round(offset * 1000)}`;
 

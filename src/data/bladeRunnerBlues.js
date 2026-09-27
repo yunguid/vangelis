@@ -172,7 +172,7 @@ export function makeRecordNoise(context, random = Math.random) {
 }
 
 /** RPN 0 (pitch bend range) of a channel's track, in cents per full bend. */
-function bendRangeCents(track) {
+export function bendRangeCents(track) {
   const events = [101, 100, 6]
     .flatMap((number) => (track.controlChanges[number] || []).map((event) => ({ number, event })))
     .sort((a, b) => a.event.ticks - b.event.ticks);
@@ -193,7 +193,7 @@ function bendRangeCents(track) {
  * lines between its events (they are a simplified curve's vertices), flat before the first
  * and after the last.
  */
-function sampleCurve(points, from, seconds, rate) {
+export function sampleCurve(points, from, seconds, rate) {
   const count = Math.max(1, Math.ceil(seconds * rate) + 1);
   const out = new Float32Array(count);
   let j = 0;

@@ -1205,6 +1205,33 @@ describe('useMidiPlayback', () => {
     expect(audioEngine.clearParts).toHaveBeenCalledTimes(1);
   });
 
+  it('lights no key for an unlit note, even beside a lit one on the same key, and still releases it', async () => {
+    audioEngine.playPartNote.mockImplementation(({ noteId }) => ({ voiceId: noteId }));
+    const { result } = renderHook(() => useMidiPlayback({ waveformType: 'Sine', audioParams: { volume: 0.4 } }));
+
+    await act(async () => {
+      result.current.play({
+        duration: 3,
+        bpm: 120,
+        parts: { glides: { layers: [{ params: {}, waveformType: 'sine' }] } },
+        notes: [
+          { midi: 60, time: 0.1, duration: 0.5, velocity: 0.5, part: 'glides', unlit: true },
+          { midi: 60, time: 0.2, duration: 1, velocity: 0.8 }
+        ]
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await act(async () => { vi.advanceTimersByTime(100); });
+    expect(audioEngine.playPartNote).toHaveBeenCalledTimes(1);
+    expect(result.current.activeNotes.size).toBe(0);
+    await act(async () => { vi.advanceTimersByTime(600); }); // the unlit note has ended
+    expect([...result.current.activeNotes]).toEqual(['C4']);
+
+    act(() => result.current.stop());
+    expect(audioEngine.stopNote).toHaveBeenCalledWith(audioEngine.playPartNote.mock.calls[0][0].noteId, expect.anything());
+  });
+
   it('enters a sounding part note part-way through its curves on seek and resume, at the tempo’s rate', async () => {
     audioEngine.playPartNote.mockImplementation(({ noteId }) => ({ voiceId: noteId }));
     const parts = { lead: { layers: [{ params: {} }] } };

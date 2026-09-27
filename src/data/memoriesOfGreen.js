@@ -9,9 +9,15 @@
  * 1, key-down to key-up as its notes; velocity is loudness (gain (velocity / 127) ** 2);
  * CC 70 before a note names the velocity layer it plays; CC 64 is the sustain pedal; RPN 1
  * is the record's pitch below A440 (the samples are built at that pitch).
+ *
+ * Channel 2 carries the glides: a chromatic cluster of pure tones, a note on every semitone,
+ * bent together by the channel's pitch bend (RPN 0 sets the range; the bend is the cluster's
+ * pitch in cents from A440's grid) and shaped by its CC 11 ((value - 127) / 2 dB); velocity
+ * is each line's level. They play on a synth part of their own.
  */
 import { withBase } from '../utils/baseUrl.js';
 import { midiNoteToFrequency } from '../utils/math.js';
+import { bendRangeCents, sampleCurve } from './bladeRunnerBlues.js';
 
 // The piano's envelope and room. The recorded decay is the envelope; the release is the
 // damper stopping the string. Of nine rooms rendered against the record, the hall brings the
@@ -102,6 +108,33 @@ export function pedalledNotes(notes, pedal) {
   return sounding;
 }
 
+// The glides: sines, their swells and pitch all in the curves.
+const GLIDE_SINE = { attack: 0.3, decay: 0.1, sustain: 1, release: 1.5, useFilter: false, unisonVoices: 1 };
+export const MOG_GLIDE_GAIN = 0.0169;
+const GLIDE_RATE = 50;
+
+/** The glide cluster's notes (channel 2): a part note each, all sharing one pitch and one gain curve per span. */
+function readGlides(track) {
+  if (!track) return [];
+  const range = bendRangeCents(track);
+  // @tonejs/midi hands pitch bends over as -1..1 of the full bend
+  const bends = track.pitchBends.map((bend) => ({ time: bend.time, value: bend.value * range }));
+  const levels = (track.controlChanges[11] || []).map((event) => ({ time: event.time, value: 10 ** ((event.value * 127 - 127) / 40) }));
+  const curves = new Map();
+  return track.notes.map((note) => {
+    const key = `${note.time}:${note.duration}`;
+    if (!curves.has(key)) {
+      curves.set(key, {
+        rate: GLIDE_RATE,
+        pitch: sampleCurve(bends, note.time, note.duration, GLIDE_RATE),
+        gain: sampleCurve(levels, note.time, note.duration, GLIDE_RATE)
+      });
+    }
+    // A sound under the piano, not notes played: no key lights and the notes view leaves them out.
+    return { midi: note.midi, time: note.time, duration: note.duration, velocity: note.velocity, part: 'glides', unlit: true, expression: curves.get(key) };
+  });
+}
+
 /** The piano in a Memories of Green MIDI file (a @tonejs/midi Midi): notes with their layer, the pedal, the pitch. */
 export function readMemoriesOfGreen(midi) {
   const track = midi.tracks.find((candidate) => candidate.channel === 0 && candidate.notes.length);
@@ -113,7 +146,8 @@ export function readMemoriesOfGreen(midi) {
     velocity: note.velocity,
     layer: controllerAt(layers, note.ticks, 8)
   }));
-  return { name: midi.name, duration: midi.duration, tuningCents: fineTuningCents(track), notes: pedalledNotes(notes, pedalSpans(track)) };
+  const glides = readGlides(midi.tracks.find((candidate) => candidate.channel === 1 && candidate.notes.length));
+  return { name: midi.name, duration: midi.duration, tuningCents: fineTuningCents(track), notes: pedalledNotes(notes, pedalSpans(track)), glides };
 }
 
 // The record's floor: its quietest moments above 7 kHz sit 53.2 dB under the music
@@ -150,7 +184,8 @@ export function makeStereoHiss(context, random = Math.random) {
  * pitch; `hiss` runs under them all.
  */
 export function arrangeMemoriesOfGreen(score, buffers, hiss = null) {
-  const notes = score.notes.map((note) => ({
+  const { glides = [], ...rest } = score;
+  const piano = score.notes.map((note) => ({
     ...note,
     velocity: note.velocity ** 2,
     audioParamOverrides: MOG_PIANO_PARAMS,
@@ -162,8 +197,11 @@ export function arrangeMemoriesOfGreen(score, buffers, hiss = null) {
       gain: MOG_PIANO_GAIN
     }
   }));
+  const notes = [...piano, ...glides.map((note) => ({ ...note, audioParamOverrides: MOG_PIANO_PARAMS }))]
+    .sort((a, b) => a.time - b.time || a.midi - b.midi);
+  const parts = glides.length ? { glides: { layers: [{ params: GLIDE_SINE, waveformType: 'sine', gain: MOG_GLIDE_GAIN }] } } : undefined;
   const ambience = hiss && { buffer: hiss, gain: MOG_HISS_GAIN, audioParamOverrides: MOG_PIANO_PARAMS };
-  return { ...score, notes, ...(ambience ? { ambience } : {}) };
+  return { ...rest, notes, ...(parts ? { parts } : {}), ...(ambience ? { ambience } : {}) };
 }
 
 /** The piano samples a score plays, decoded. */

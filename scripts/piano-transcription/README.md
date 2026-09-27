@@ -9,7 +9,8 @@ with what each step decided and every number, is `docs/replicas/memories-of-gree
 
 The approach: two runs of ByteDance's piano transcription propose the notes and the pedal,
 per-note synthesis settles where they disagree, and closed loops of offline renders against
-the record set each note's loudness and the samples' tone, room, width and floor.
+the record set each note's loudness and the samples' tone, room, width and floor. The record's
+glides, a chromatic cluster, are tracked as a semitone comb and played by the app's synth.
 
 ## Setup
 
@@ -63,9 +64,14 @@ In a scratch folder, `T=scripts/piano-transcription`, `G=scripts/guitar-transcri
    over renders made with `--from 60 --to 150 --params '{...}'` (the room), `width.py` (the
    width and lean), `$G/hiss_level.py rec48.wav render.wav --span 18,300` and `$G/noise_floor.py`
    (the hiss), `overlay.py` (notes over the picture, the check by eye).
-10. The page's waveform: `node scripts/render_performance.mjs --piece
+10. The glides: `cluster_track.py rec48.wav cluster.json --step 25` (the chromatic cluster's
+    pitch path, salience and line levels), `cluster_notes.py cluster.json glides.json
+    --span-db -8.7,-2.2,0` (spans and levels; the span levels from a render compared with the
+    record on the comb lines), then `make_midi.py ... --glides glides.json`. Glide gain on the
+    page: `MOG_GLIDE_GAIN`.
+11. The page's waveform: `node scripts/render_performance.mjs --piece
     performance-memories-of-green --out x.wav --peaks public/midi/performances/memories-of-green.waveform.json`.
 
 `piano_score.py` holds the pedal rule and the sample positions every script shares; the page
 (`src/data/memoriesOfGreen.js`) keeps the same rule. `glide_track.py` was the first try at the
-glides and failed (see the journey).
+glides, as one buzzy tone, and failed (see the journey).

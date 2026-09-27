@@ -67,7 +67,7 @@ export const prepareScore = (midi) => {
     const time = Number(note?.time);
     const duration = Math.max(0, Number(note?.duration) || 0);
     const pitch = Math.round(Number(note?.midi));
-    if (!Number.isFinite(time) || !Number.isFinite(pitch)) continue;
+    if (!Number.isFinite(time) || !Number.isFinite(pitch) || note.unlit) continue;
     notes.push({
       midi: Math.min(127, Math.max(0, pitch)),
       time,

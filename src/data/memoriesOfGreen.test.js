@@ -25,13 +25,23 @@ it('reads the piece as the transcription wrote it, with a recording for every no
   for (const key of new Set(score.notes.map(pianoSampleKey))) {
     expect(existsSync(`public/samples/memories-of-green/${key}.mp3`), key).toBe(true);
   }
-  const { notes, ambience } = arrangeMemoriesOfGreen(score, new Map(score.notes.map((note) => [pianoSampleKey(note), {}])), {});
-  for (const note of notes) {
+  const { notes, parts, ambience } = arrangeMemoriesOfGreen(score, new Map(score.notes.map((note) => [pianoSampleKey(note), {}])), {});
+  const piano = notes.filter((note) => note.sample);
+  const glides = notes.filter((note) => note.part === 'glides');
+  expect(piano.length + glides.length).toBe(notes.length);
+  for (const note of piano) {
     expect(note.duration).toBeGreaterThan(0);
     expect(Math.abs(note.midi - nearestPosition(note.midi))).toBeLessThanOrEqual(1); // never pitch-shifted further
     expect(note.sample.buffer).toBeDefined();
     expect(note.audioParamOverrides).toBe(MOG_PIANO_PARAMS);
   }
+  // The glides: every semitone line of a span bends along one curve, read from the channel's bends.
+  expect(Object.keys(parts)).toEqual(['glides']);
+  expect(glides.length).toBeGreaterThan(100);
+  const span = glides.filter((note) => note.time === glides[0].time);
+  expect(new Set(span.map((note) => note.expression)).size).toBe(1);
+  const { pitch } = span[0].expression;
+  expect(Math.max(...pitch) - Math.min(...pitch)).toBeGreaterThan(1000); // the intro sweeps more than ten semitones
   expect(ambience.audioParamOverrides).toBe(MOG_PIANO_PARAMS);
 });
 
