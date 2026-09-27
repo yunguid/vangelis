@@ -241,7 +241,7 @@ src/
   while there is a choice); "On load" switches in the MIDI tab choose which
   are in the queue (localStorage), and all off means a silent landing. The
   queue is Luke's choice: Pernambuco, The Shade of the Mango Tree, Subwoofer
-  Lullaby and Blade Runner Blues; a performance with `landing: false`
+  Lullaby, Blade Runner Blues and Memories of Green; a performance with `landing: false`
   (Saudade de Triana) stays in the library only
 - The home page's top bar (`components/AppHeader.jsx`) holds the name in the
   top left corner, recording at the right and, between them, `NowPlaying`:
@@ -307,6 +307,18 @@ src/
   1-12 CS-80, 13-14 pad, 15 low bed, 16 bass. `scripts/synth-transcription/` made
   it from the record; `docs/replicas/blade-runner-blues/JOURNEY.md` logs the
   journey. In the landing queue since v1 (the keys keep the listener's sound)
+- `Memories of Green` (Vangelis, 1980; track 8 of the same 1994 album) is a transcription
+  of the record's piano played from Salamander Grand V3 recordings (a Yamaha C5, CC-BY 3.0)
+  voiced like it (`src/data/memoriesOfGreen.js`, samples in `public/samples/memories-of-green`,
+  only the 48 recordings it plays, 3.5 MB, loaded when it starts). Its MIDI file: the piano
+  on channel 1, key-down to key-up; velocity is loudness (gain (v / 127) ** 2); CC 70 names
+  the velocity layer (8 or 10); CC 64 is the pedal, and the page plays it as a piano does
+  (`pedalledNotes`: a note sounds until its key or the pedal comes up, a re-struck key cuts
+  its earlier note); RPN 1 is the record's pitch, 32.1 cents flat, already built into the
+  samples. Stereo recordings (the renderer decodes this piece's in stereo), a hall room, and
+  stereo pink hiss 53.2 dB under the music as its ambience. The record's other layers (glides,
+  chirps, a buzz, a whoosh) are not played yet. `scripts/piano-transcription/` made it;
+  `docs/replicas/memories-of-green/JOURNEY.md` logs the journey
 - A score may carry an `ambience` bed ({ buffer, gain, audioParamOverrides,
   fadeIn, fadeOut }): `useMidiPlayback` loops it under the notes whenever they
   sound (play, resume, seek, tempo change) and stops it with them; it never

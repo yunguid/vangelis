@@ -68,6 +68,17 @@ export const LANDING_PIECES = Object.freeze([
     relativePath: 'performances/blade-runner-blues.mid',
     transcription: 'blade-runner-blues',
     journey: 'blade-runner-blues'
+  },
+  {
+    // Transcribed from Vangelis's record: the piano plays from grand-piano recordings
+    // voiced like the record's (data/memoriesOfGreen.js); the keys keep the listener's sound.
+    id: 'performance-memories-of-green',
+    name: 'Memories of Green',
+    composer: 'Vangelis',
+    relativePath: 'performances/memories-of-green.mid',
+    transcription: 'memories-of-green',
+    waveform: 'performances/memories-of-green.waveform.json',
+    journey: 'memories-of-green'
   }
 ]);
 
@@ -174,6 +185,12 @@ export async function arrangeBuiltInPiece(context, file) {
     // Its own synth parts play it; the keys keep the listener's sound.
     const { loadBladeRunnerBlues } = await import('./bladeRunnerBlues.js');
     return { score: await loadBladeRunnerBlues(context, file.path), params: null, waveformType: null, sound: null };
+  }
+
+  if (file.transcription === 'memories-of-green') {
+    // Its own piano recordings play it; the keys keep the listener's sound.
+    const { loadMemoriesOfGreen } = await import('./memoriesOfGreen.js');
+    return { score: await loadMemoriesOfGreen(context, file.path), params: null, waveformType: null, sound: null };
   }
 
   if (file.instrument) {

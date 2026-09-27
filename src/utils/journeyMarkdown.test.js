@@ -41,7 +41,7 @@ describe('journey markdown', () => {
   it('reads every journey the landing queue names, titled, credited and with no markup left over', () => {
     const journeys = LANDING_PIECES.filter((piece) => piece.journey);
     expect(journeys.map((piece) => piece.journey).sort())
-      .toEqual(['blade-runner-blues', 'pernambuco', 'shade-of-the-mango-tree']);
+      .toEqual(['blade-runner-blues', 'memories-of-green', 'pernambuco', 'shade-of-the-mango-tree']);
     for (const { journey } of journeys) {
       const blocks = parseJourney(readFileSync(`docs/replicas/${journey}/JOURNEY.md`, 'utf8'));
       expect(blocks[0]).toMatchObject({ type: 'heading', level: 1 });

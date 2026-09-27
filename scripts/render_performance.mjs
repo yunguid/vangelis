@@ -137,8 +137,8 @@ function biquad(type, frequency, gainDb, q) {
 const bufferMaker = {
   sampleRate: SAMPLE_RATE,
   createBuffer: (channels, length, sampleRate) => {
-    const data = new Float32Array(length);
-    return { sampleRate, length, duration: length / sampleRate, numberOfChannels: 1, getChannelData: () => data };
+    const data = Array.from({ length: channels }, () => new Float32Array(length));
+    return { sampleRate, length, duration: length / sampleRate, numberOfChannels: channels, getChannelData: (c = 0) => data[c] };
   }
 };
 
@@ -153,11 +153,13 @@ const seededRandom = (seed) => {
   };
 };
 
-/** Decode like decodeAudioData: to the context rate, as an AudioBuffer look-alike. */
-function decode(file) {
-  const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-f', 'f32le', '-ac', '1', '-ar', String(SAMPLE_RATE), '-'], { maxBuffer: 2 ** 31 - 1 });
-  const data = new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
-  return { sampleRate: SAMPLE_RATE, length: data.length, duration: data.length / SAMPLE_RATE, numberOfChannels: 1, getChannelData: () => data };
+/** Decode like decodeAudioData: to the context rate, as an AudioBuffer look-alike (mono unless asked). */
+function decode(file, channels = 1) {
+  const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-f', 'f32le', '-ac', String(channels), '-ar', String(SAMPLE_RATE), '-'], { maxBuffer: 2 ** 31 - 1 });
+  const interleaved = new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+  const length = interleaved.length / channels;
+  const data = Array.from({ length: channels }, (_, c) => Float32Array.from({ length }, (_, i) => interleaved[i * channels + c]));
+  return { sampleRate: SAMPLE_RATE, length, duration: length / SAMPLE_RATE, numberOfChannels: channels, getChannelData: (c = 0) => data[c] };
 }
 
 function readScore(midiPath) {
@@ -171,6 +173,15 @@ function readScore(midiPath) {
 }
 
 async function arrange(piece, midiPath) {
+  if (piece.transcription === 'memories-of-green') {
+    // Stereo recordings: the page plays them as they are, left and right.
+    const { readMemoriesOfGreen, arrangeMemoriesOfGreen, pianoSampleKey, makeStereoHiss } = await import('../src/data/memoriesOfGreen.js');
+    const score = readMemoriesOfGreen(new tonejsMidi.Midi(readFileSync(midiPath)));
+    const keys = [...new Set(score.notes.map(pianoSampleKey))];
+    const buffers = new Map(keys.map((key) => [key, decode(path.join(root, 'public/samples/memories-of-green', `${key}.mp3`), 2)]));
+    const hiss = argument('ambience') !== 'off' ? makeStereoHiss(bufferMaker, seededRandom(1980)) : null;
+    return arrangeMemoriesOfGreen(score, buffers, hiss);
+  }
   if (piece.instrument === 'nylon-guitar' && piece.transcription) {
     const { GUITAR_TRANSCRIPTIONS, readGuitarPerformance, arrangeGuitarTranscription, transcriptionTake, makeTapeHiss } = await import('../src/data/guitarTranscriptions.js');
     const voice = GUITAR_TRANSCRIPTIONS[piece.transcription];
@@ -223,6 +234,7 @@ for (const note of arranged.notes) {
   params = noteParams(note);
   const { buffer, baseFrequency, brightness, mute, gain = 1 } = note.sample;
   const data = buffer.getChannelData(0);
+  const dataRight = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : data;
   const frequency = 440 * 2 ** ((note.midi - 69) / 12);
   const rate = frequency / baseFrequency * buffer.sampleRate / SAMPLE_RATE;
   const start = (note.time - from) * SAMPLE_RATE;
@@ -232,8 +244,8 @@ for (const note of arranged.notes) {
   const release = params.release * SAMPLE_RATE;
   const stopAt = releaseAt + release + 0.05 * SAMPLE_RATE;
   // SampleVoice's per-stroke high shelf and muted decay (setTargetAtTime).
-  const shelf = brightness
-    ? biquad('highshelf', Math.min(frequency * BRIGHTNESS_SHELF_HARMONIC, SAMPLE_RATE * 0.45), brightness, 0)
+  const shelves = brightness
+    ? [0, 1].map(() => biquad('highshelf', Math.min(frequency * BRIGHTNESS_SHELF_HARMONIC, SAMPLE_RATE * 0.45), brightness, 0))
     : null;
   const muteAt = mute > 0 ? Math.max(MUTE_ONSET_SECONDS * SAMPLE_RATE, attack) : Infinity;
   voices += 1;
@@ -244,8 +256,13 @@ for (const note of arranged.notes) {
     const position = (frame - start) * rate;
     const index = Math.floor(position);
     if (index + 1 >= data.length) break;
-    let sample = data[index] + (data[index + 1] - data[index]) * (position - index);
-    if (shelf) sample = shelf(sample);
+    const fraction = position - index;
+    let sample = data[index] + (data[index + 1] - data[index]) * fraction;
+    let sampleRight = dataRight === data ? sample : dataRight[index] + (dataRight[index + 1] - dataRight[index]) * fraction;
+    if (shelves) {
+      sample = shelves[0](sample);
+      sampleRight = dataRight === data ? sample : shelves[1](sampleRight);
+    }
     const elapsed = frame - start;
     let gain = elapsed < attack ? MINIMUM_GAIN * (target / MINIMUM_GAIN) ** (elapsed / attack) : target;
     if (elapsed >= muteAt) gain = MINIMUM_GAIN + (target - MINIMUM_GAIN) * Math.exp(-(elapsed - muteAt) / (mute * SAMPLE_RATE));
@@ -254,9 +271,8 @@ for (const note of arranged.notes) {
       const t = (frame - releaseAt) / release;
       gain = t >= 1 ? MINIMUM_GAIN : gainAtRelease * (MINIMUM_GAIN / gainAtRelease) ** t;
     }
-    const value = sample * gain;
-    busL[frame] += value;
-    busR[frame] += value;
+    busL[frame] += sample * gain;
+    busR[frame] += sampleRight * gain;
   }
 }
 if (arranged.ambience && argument('ambience') !== 'off') {
@@ -266,6 +282,7 @@ if (arranged.ambience && argument('ambience') !== 'off') {
   const { buffer, gain = 1, audioParamOverrides, fadeIn, fadeOut } = arranged.ambience;
   const bedParams = sanitizeAudioParams({ ...AUDIO_PARAM_DEFAULTS, ...audioParamOverrides, ...trial });
   const data = buffer.getChannelData(0);
+  const dataRight = buffer.numberOfChannels > 1 ? buffer.getChannelData(1) : data;
   const target = bedParams.volume * gain;
   const endAt = (Math.max(...arranged.notes.map((note) => note.time + note.duration)) - from) * SAMPLE_RATE;
   const release = bedParams.release * SAMPLE_RATE;
@@ -276,9 +293,9 @@ if (arranged.ambience && argument('ambience') !== 'off') {
     let level = elapsed < attack ? MINIMUM_GAIN * (target / MINIMUM_GAIN) ** (elapsed / attack) : target;
     if (frame >= fadeFrom) level *= (endAt - frame) / (endAt - fadeFrom);
     else if (frame >= endAt) level = target * (MINIMUM_GAIN / target) ** ((frame - endAt) / release);
-    const value = data[Math.floor(elapsed) % data.length] * level;
-    busL[frame] += value;
-    busR[frame] += value;
+    const at = Math.floor(elapsed) % data.length;
+    busL[frame] += data[at] * level;
+    busR[frame] += dataRight[at] * level;
   }
 }
 

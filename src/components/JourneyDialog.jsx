@@ -8,7 +8,8 @@ import '../styles/journey-dialog.css';
 const JOURNEYS = {
   pernambuco: () => import('../../docs/replicas/pernambuco/JOURNEY.md?raw'),
   'shade-of-the-mango-tree': () => import('../../docs/replicas/shade-of-the-mango-tree/JOURNEY.md?raw'),
-  'blade-runner-blues': () => import('../../docs/replicas/blade-runner-blues/JOURNEY.md?raw')
+  'blade-runner-blues': () => import('../../docs/replicas/blade-runner-blues/JOURNEY.md?raw'),
+  'memories-of-green': () => import('../../docs/replicas/memories-of-green/JOURNEY.md?raw')
 };
 
 const CLOSE_ICON = (
