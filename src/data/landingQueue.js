@@ -12,7 +12,7 @@ import { withBase } from '../utils/baseUrl.js';
  * lists (utils/midiParser.js builds its rows from this list). Performances
  * bring a sampled instrument; originals name the Patch Lab sound they are
  * voiced with. `landing: false` keeps a performance in the library without
- * letting it open the page.
+ * letting it open the page. `learn` names its piano lesson (#/learn/<slug>, data/learnPieces.js).
  */
 export const LANDING_PIECES = Object.freeze([
   {
@@ -21,7 +21,8 @@ export const LANDING_PIECES = Object.freeze([
     composer: 'C418',
     relativePath: 'subwoofer-lullaby.mid',
     instrument: 'opening-piano',
-    instrumentLabel: 'Grand piano'
+    instrumentLabel: 'Grand piano',
+    learn: 'subwoofer-lullaby'
   },
   {
     id: 'performance-saudade-de-triana',
@@ -44,7 +45,8 @@ export const LANDING_PIECES = Object.freeze([
     // Its rendered waveform (scripts/render_performance.mjs --peaks), shown in the open sound dial.
     waveform: 'performances/pernambuco.waveform.json',
     // How it was rebuilt (docs/replicas/<journey>/JOURNEY.md), read from the now-playing bar.
-    journey: 'pernambuco'
+    journey: 'pernambuco',
+    learn: 'pernambuco'
   },
   {
     // Bonfá's guitar on the 1978 record with Don Burrows, lifted out of the band
@@ -57,7 +59,8 @@ export const LANDING_PIECES = Object.freeze([
     transcription: 'shade-of-the-mango-tree',
     instrumentLabel: 'Nylon-string guitar',
     waveform: 'performances/shade-of-the-mango-tree.waveform.json',
-    journey: 'shade-of-the-mango-tree'
+    journey: 'shade-of-the-mango-tree',
+    learn: 'shade-of-the-mango-tree'
   },
   {
     // Transcribed from Vangelis's record and played by the app's own synth, CS-80
@@ -67,7 +70,8 @@ export const LANDING_PIECES = Object.freeze([
     composer: 'Vangelis',
     relativePath: 'performances/blade-runner-blues.mid',
     transcription: 'blade-runner-blues',
-    journey: 'blade-runner-blues'
+    journey: 'blade-runner-blues',
+    learn: 'blade-runner-blues'
   },
   {
     // Transcribed from Vangelis's record: the piano plays from grand-piano recordings
@@ -78,7 +82,8 @@ export const LANDING_PIECES = Object.freeze([
     relativePath: 'performances/memories-of-green.mid',
     transcription: 'memories-of-green',
     waveform: 'performances/memories-of-green.waveform.json',
-    journey: 'memories-of-green'
+    journey: 'memories-of-green',
+    learn: 'memories-of-green'
   }
 ]);
 

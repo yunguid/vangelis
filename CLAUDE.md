@@ -429,6 +429,23 @@ src/
   completeness, featured rank) and a perf-budget line (D00b ≤ 384 KiB +
   manifest↔directory bijection guard). History: `docs/CATALOG_LEDGER.md`
 
+### Learn (`#/learn/<slug>`)
+- A piano lesson for each landing piece (`data/learnPieces.js`: which tracks
+  each hand plays, bars per phrase for metered files); the now-playing bar's
+  music-stand button opens the current piece's lesson, bare `#/learn` the last
+  landing piece
+- `utils/learn/lesson.js` (pure, tested): steps (notes struck together),
+  phrases (bars when metered, else cut at breaths), per-phrase key (only a
+  lasting change of key signature counts), chords per bar / bass change, a
+  core-chord vocabulary, pitch spelling in key, hand rebalancing
+- `components/learn/GrandStaff.jsx`: proportional-notation grand staff
+  (SVG clefs, key signature, 8va for high passages, letter noteheads);
+  `LearnKeyboard.jsx`: teaching keyboard
+- Wait-mode practice (`utils/learn/practice.js`) from the learner's own piano
+  via `hooks/useMidiListener.js` (listen-only Web MIDI) or the on-screen keys;
+  Listen plays the phrase on the recorded grand; progress per phrase/hands in
+  localStorage (`utils/learn/progress.js`)
+
 ### Piano Roll (`#/editor`)
 - Look: poured concrete (Ableton-dark, brutalist). Flat warm-grey slabs, joints
   cut darker, 1-2px corners, hard offset shadows instead of blurred ones; the

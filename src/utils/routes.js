@@ -16,6 +16,18 @@ export const getStudySongHref = (slug) => `#${getStudySongRoute(slug)}`;
 export const TO_THE_UNKNOWN_MAN_STUDY_ROUTE = getStudySongRoute('to-the-unknown-man');
 export const TO_THE_UNKNOWN_MAN_STUDY_HREF = `#${TO_THE_UNKNOWN_MAN_STUDY_ROUTE}`;
 
+export const LEARN_ROUTE = '/learn';
+export const getLearnRoute = (slug) => `${LEARN_ROUTE}/${slug}`;
+export const getLearnHref = (slug) => `#${getLearnRoute(slug)}`;
+
+/** `/learn` and `/learn/<slug>`: the slug, or '' for the bare route; null for any other route. */
+export const getLearnRouteSlug = (route) => {
+  const normalized = route.length > 1 ? route.replace(/\/+$/, '') : route;
+  if (normalized === LEARN_ROUTE) return '';
+  if (normalized.startsWith(`${LEARN_ROUTE}/`)) return normalized.slice(LEARN_ROUTE.length + 1).trim();
+  return null;
+};
+
 export const getActiveRoute = () => {
   if (typeof window === 'undefined') return HOME_ROUTE;
 

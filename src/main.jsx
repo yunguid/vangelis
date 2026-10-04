@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import './style.css';
 import {
   getActiveRoute,
+  getLearnRouteSlug,
   getStudyRouteMatch,
   isPianoRollRoute,
   isSoundDesignerRoute,
@@ -10,6 +11,7 @@ import {
 } from './utils/routes.js';
 
 const App = React.lazy(() => import('./App.jsx'));
+const LearnPage = React.lazy(() => import('./pages/LearnPage.jsx'));
 const PianoRollPage = React.lazy(() => import('./pages/PianoRollPage.jsx'));
 const SongStudyPage = React.lazy(() => import('./pages/SongStudyPage.jsx'));
 const SoundDesignerPage = React.lazy(() => import('./pages/SoundDesignerPage.jsx'));
@@ -29,6 +31,7 @@ const Root = () => {
   const showPianoRoll = isPianoRollRoute(route);
   const showStudySongs = isStudySongsRoute(route);
   const studyRoute = getStudyRouteMatch(route);
+  const learnSlug = getLearnRouteSlug(route);
 
   React.useEffect(() => {
     const syncRoute = () => {
@@ -50,6 +53,10 @@ const Root = () => {
     window.scrollTo(0, 0);
     window.__vangelisPerf?.markRouteReady?.(window.location.hash || '#/');
   }, [route]);
+
+  if (learnSlug !== null) {
+    return <LearnPage slug={learnSlug} />;
+  }
 
   if (studyRoute?.kind === 'builtin') {
     return <SongStudyPage studySlug={studyRoute.slug} />;

@@ -174,6 +174,7 @@ const App = () => {
         title: libraryCurrent.name || 'MIDI file',
         composer: libraryCurrent.composer || file?.composer || null,
         journey: file?.journey || null,
+        learn: file?.learn || null,
         isPlaying: midiPlayback.isPlaying,
         isLoading: false
       };
@@ -184,6 +185,7 @@ const App = () => {
       title: piece.name,
       composer: piece.composer || null,
       journey: piece.journey || null,
+      learn: piece.learn || null,
       isPlaying: opening.isPlaying,
       isLoading: Boolean(opening.pendingPiece)
     };
@@ -681,6 +683,7 @@ const App = () => {
               title={nowPlaying.title}
               composer={nowPlaying.composer}
               journey={nowPlaying.journey}
+              learn={nowPlaying.learn}
               isPlaying={nowPlaying.isPlaying}
               isLoading={nowPlaying.isLoading}
               onToggle={toggleNowPlaying}
