@@ -263,23 +263,6 @@ const greenMemories = () => {
   const arps = new Part({ bpm, humanize: 0.02, seed: 41 });
   const melody = new Part({ bpm, humanize: 0.025, seed: 42 });
 
-  // Each bar: a slow broken chord, low to high, eighths.
-  const BARS = [
-    ['E2', 'B2', 'G#3', 'B3', 'F#4', 'B3', 'G#3', 'B2'],  // Emaj9
-    ['C#2', 'G#2', 'E3', 'B3', 'D#4', 'B3', 'E3', 'G#2'], // C#m9
-    ['A1', 'E2', 'C#3', 'G#3', 'B3', 'G#3', 'C#3', 'E2'], // Amaj9
-    ['B1', 'F#2', 'D#3', 'A3', 'C#4', 'A3', 'D#3', 'F#2'] // B13
-  ];
-
-  for (let round = 0; round < 4; round++) {
-    BARS.forEach((bar, barIndex) => {
-      const start = (round * 4 + barIndex) * 4;
-      bar.forEach((note, i) => {
-        arps.add(note, start + i * 0.5, 0.9, 0.5 + (i === 0 ? 0.1 : 0));
-      });
-    });
-  }
-
   const MELODY = [
     ['G#4', 16, 2, 0.6], ['F#4', 18, 1, 0.55], ['E4', 19, 5, 0.6],
     ['D#4', 24, 2, 0.55], ['E4', 26, 1, 0.52], ['F#4', 27, 5, 0.6],
@@ -289,6 +272,31 @@ const greenMemories = () => {
     ['A4', 60, 1.5, 0.55], ['G#4', 61.5, 2.5, 0.55]
   ];
   MELODY.forEach(([note, at, beats, vel]) => melody.add(note, at, beats, vel));
+
+  // Each bar: a rising broken chord that rings to the barline like a held
+  // sustain pedal. Every pitch sounds once per bar — the old up-and-back
+  // figure re-struck the inner chord tones (B3/G#3) on nearly every beat.
+  const BARS = [
+    ['E2', 'B2', 'G#3', 'D#4', 'F#4'], // Emaj9
+    ['C#2', 'G#2', 'E3', 'B3', 'D#4'], // C#m9
+    ['A1', 'E2', 'C#3', 'G#3', 'B3'],  // Amaj9
+    ['B1', 'F#2', 'D#3', 'A3', 'C#4']  // B9
+  ];
+  const ONSETS = [0, 0.5, 1, 1.5, 2.5];
+
+  for (let round = 0; round < 4; round++) {
+    BARS.forEach((bar, barIndex) => {
+      const start = (round * 4 + barIndex) * 4;
+      bar.forEach((note, i) => {
+        const at = start + ONSETS[i];
+        const beats = 4 - ONSETS[i];
+        // Leave the pitch to the melody when it's already holding it.
+        const doubled = MELODY.some(([m, mAt, mBeats]) =>
+          m === note && mAt <= at + beats && at < mAt + mBeats);
+        if (!doubled) arps.add(note, at, beats, 0.5 + (i === 0 ? 0.1 : 0));
+      });
+    });
+  }
 
   writeMidi({
     id: 'original-green-memories',
