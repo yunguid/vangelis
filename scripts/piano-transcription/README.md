@@ -69,7 +69,11 @@ In a scratch folder, `T=scripts/piano-transcription`, `G=scripts/guitar-transcri
     --span-db -8.7,-2.2,0` (spans and levels; the span levels from a render compared with the
     record on the comb lines), then `make_midi.py ... --glides glides.json`. Glide gain on the
     page: `MOG_GLIDE_GAIN`.
-11. The page's waveform: `node scripts/render_performance.mjs --piece
+11. Clean the false notes: `clean_notes.py out.mid public/midi/performances/memories-of-green.mid`
+    drops the model's clicks (notes at make_midi.py's 20 ms floor: the chirps and stray blips
+    such as every G#4) and merges stutters (same-key re-attacks under 0.4 s, e.g. F#6 at
+    0:07-0:12, C5 at 4:28) into one held note. 1,385 notes -> 935.
+12. The page's waveform: `node scripts/render_performance.mjs --piece
     performance-memories-of-green --out x.wav --peaks public/midi/performances/memories-of-green.waveform.json`.
 
 `piano_score.py` holds the pedal rule and the sample positions every script shares; the page

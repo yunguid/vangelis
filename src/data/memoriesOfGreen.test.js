@@ -18,10 +18,20 @@ it('holds a note while the pedal is down and cuts it when its key is struck agai
   expect(notes.map((note) => [note.midi, note.time, note.duration])).toEqual([[60, 0, 2], [60, 2, 1], [64, 3.5, 0.5]]);
 });
 
+it('keeps the transcription\'s clicks and stutters out of the piano (clean_notes.py)', () => {
+  const piano = new Midi(readFileSync('public/midi/performances/memories-of-green.mid')).tracks.find((t) => t.name === 'Piano').notes;
+  const lastOn = new Map();
+  for (const note of [...piano].sort((a, b) => a.time - b.time)) {
+    expect(note.duration, `${note.name} at ${note.time.toFixed(2)} s`).toBeGreaterThan(0.03);
+    if (lastOn.has(note.midi)) expect(note.time - lastOn.get(note.midi), `${note.name} at ${note.time.toFixed(2)} s`).toBeGreaterThanOrEqual(0.4);
+    lastOn.set(note.midi, note.time);
+  }
+});
+
 it('reads the piece as the transcription wrote it, with a recording for every note', () => {
   const score = readMemoriesOfGreen(new Midi(readFileSync('public/midi/performances/memories-of-green.mid')));
   expect(score.tuningCents).toBeCloseTo(RECORD_CENTS, 0);
-  expect(score.notes.length).toBeGreaterThan(1000);
+  expect(score.notes.length).toBeGreaterThan(900);
   for (const key of new Set(score.notes.map(pianoSampleKey))) {
     expect(existsSync(`public/samples/memories-of-green/${key}.mp3`), key).toBe(true);
   }
